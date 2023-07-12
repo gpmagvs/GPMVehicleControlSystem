@@ -17,6 +17,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="param\IO_Wago.ini" />
+	  <None Remove="task_name.txt" />
+	  <None Remove="VMS.db" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="GitVersion.Core" Version="5.12.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
 		<PackageReference Include="NModbus4.Core" Version="1.0.2" />
@@ -44,9 +50,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="param\IO_Wago.ini">
-			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		</None>
 		<None Update="param\IO_Wago_Inspection_AGV.ini">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
