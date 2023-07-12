@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
 using System.Net.Sockets;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
@@ -13,32 +14,39 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     {
         public enum DI_ITEM : byte
         {
-            Unknown = 0xff,
-            EMO = 0x08,
-            Bumper_Sensor = 0X0A,
+            Unknown,
+            EMO,
+            EMO_Button,
+            Bumper_Sensor,
             Panel_Reset_PB,
             Horizon_Motor_Switch,
-            LeftProtection_Area_Sensor_2,
-            RightProtection_Area_Sensor_2,
+            Monitor_Switch,
             Fork_Sensor_1,
             Fork_Under_Pressing_Sensor,
-            Horizon_Motor_Error_1 = 0x14,
-            Horizon_Motor_Error_2 = 0x16,
-            Vertical_Motor_Error = 0x18,
-            Vertical_Home_Pos = 0x1B,
-            Vertical_Up_Hardware_limit = 0x1E,
-            Vertical_Down_Hardware_limit = 0x1F,
-            EQ_L_REQ = 0x20,
-            EQ_U_REQ = 0x21,
-            EQ_READY = 0x23,
-            EQ_UP_READY = 0x24,
-            EQ_LOW_READY = 0x25,
-            EQ_BUSY = 0x26,
-            EQ_GO = 0x28,
-            Cst_Sensor_1 = 0X2D,
-            Cst_Sensor_2 = 0x2E,
-            FrontProtection_Obstacle_Sensor = 0x2F,
-            FrontProtection_Area_Sensor_1 = 0x30,
+            Horizon_Motor_Error_1,
+            Horizon_Motor_Error_2,
+            Horizon_Motor_Error_3,
+            Horizon_Motor_Error_4,
+            Vertical_Motor_Error,
+            Vertical_Home_Pos,
+            Vertical_Up_Hardware_limit,
+            Vertical_Down_Hardware_limit,
+            EQ_L_REQ,
+            EQ_U_REQ,
+            EQ_READY,
+            EQ_UP_READY,
+            EQ_LOW_READY,
+            EQ_BUSY,
+            EQ_GO,
+            EQ_COMPT,
+            EQ_VALID,
+            EQ_TR_REQ,
+            EQ_Check_Result,
+            EQ_Check_Ready,
+            Cst_Sensor_1,
+            Cst_Sensor_2,
+            FrontProtection_Obstacle_Sensor,
+            FrontProtection_Area_Sensor_1,
             FrontProtection_Area_Sensor_2,
             FrontProtection_Area_Sensor_3,
             FrontProtection_Area_Sensor_4,
@@ -46,7 +54,39 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             BackProtection_Area_Sensor_2,
             BackProtection_Area_Sensor_3,
             BackProtection_Area_Sensor_4,
+            LeftProtection_Area_Sensor_1,
+            LeftProtection_Area_Sensor_2,
+            LeftProtection_Area_Sensor_3,
+            RightProtection_Area_Sensor_1,
+            RightProtection_Area_Sensor_2,
+            RightProtection_Area_Sensor_3,
+            Battery_2_Exist_1,
+            Battery_2_Exist_2,
+            Battery_2_Exist_3,
+            Battery_2_Exist_4,
+            Battery_1_Exist_1,
+            Battery_1_Exist_2,
+            Battery_1_Exist_3,
+            Battery_1_Exist_4,
+            Battery_1_Lock_Sensor,
+            Battery_1_Unlock_Sensor,
+            Battery_2_Lock_Sensor,
+            Battery_2_Unlock_Sensor,
+            SMS_Error,
+            Ground_Hole_CCD_1,
+            Ground_Hole_CCD_2,
+            Ground_Hole_CCD_3,
+            Ground_Hole_CCD_4,
+            Ground_Hole_Sensor_1,
+            Ground_Hole_Sensor_2,
+            Ground_Hole_Sensor_3,
+            Ground_Hole_Sensor_4,
+            Smoke_Sensor_1,
+            N2_Sensor
+
+
         }
+        TcpClient client;
         protected ModbusIpMaster? master;
 
         public ManualResetEvent PauseSignal = new ManualResetEvent(true);
@@ -117,7 +157,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         virtual public void ReadIOSettingsFromIniFile()
         {
-            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"));
+            DI_ITEM di_item;
+            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.CurrentDirectory, $"param/IO_Wago.ini"));
+            var di_names = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().Select(i => i.ToString()).ToList();
             try
             {
                 Start = ushort.Parse(iniHelper.GetValue("INPUT", "Start"));
@@ -129,10 +171,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     var reg = new clsIOSignal(RigisterName, Address);
                     if (RigisterName != "")
                     {
-                        var di_item = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().First(di => di.ToString() == RigisterName);
-                        if (di_item != DI_ITEM.Unknown)
+                        if (di_names.Contains(RigisterName))
                         {
-                            INPUT_INDEXS.Add(di_item, i);
+                            var do_item = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().FirstOrDefault(di => di.ToString() == RigisterName);
+                            if (!INPUT_INDEXS.TryAdd(do_item, i))
+                            {
+                                throw new Exception("WAGO DI 名稱重複");
+                            }
+                        }
+                        else
+                        {
+
                         }
                     }
                     VCSInputs.Add(reg);
@@ -150,16 +199,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 throw new SocketException((int)SocketError.AddressNotAvailable);
             try
             {
-                var client = new TcpClient(IP, Port);
+                client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.ReadTimeout = 5000;
                 master.Transport.WriteTimeout = 5000;
                 master.Transport.Retries = 10;
-                Console.WriteLine("Wago DI/O Module Modbus TCP Connected!");
+                LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 return true;
             }
             catch (Exception ex)
             {
+                LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
                 master = null;
                 throw new SocketException((int)SocketError.ConnectionAborted);
@@ -168,13 +218,21 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public override void Disconnect()
         {
-            master?.Dispose();
-            master = null;
+            try
+            {
+                client?.Close();
+                master?.Dispose();
+                client = null;
+                master = null;
+            }
+            catch (Exception)
+            {
+            }
         }
 
         public override bool IsConnected()
         {
-            return master != null;
+            return client != null;
         }
 
         internal void SetState(string address, bool state)
@@ -214,7 +272,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
             VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            try
+            {
+                VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            }
+            catch (Exception)
+            {
+            }
 
         }
 

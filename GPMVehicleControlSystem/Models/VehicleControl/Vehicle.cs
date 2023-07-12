@@ -34,8 +34,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             GPM_VMS
         }
 
-
-
         public clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;
@@ -56,6 +54,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         public clsDriver[] WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT},
+             new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT},
+             new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT}
         };
         public clsSick SickData = new clsSick();
         public clsCSTReader CSTReader = new clsCSTReader();
@@ -84,7 +84,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 return ls;
             }
         }
-   
+
         /// <summary>
         /// 手動/自動模式
         /// </summary>
@@ -195,7 +195,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
             WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
-            AGVC = new CarController(RosBridge_IP, RosBridge_Port);
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
 
@@ -206,27 +205,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             Task RosConnTask = new Task(async () =>
             {
                 await Task.Delay(1).ContinueWith(t =>
-                AGVC.Connect());
-                AGVC.ManualController.vehicle = this;
-                BuzzerPlayer.rossocket = AGVC.rosSocket;
-                BuzzerPlayer.Alarm();
-            });
-
-            Task WagoDOConnTask = new Task(() =>
-            {
-                try
-                {
-                    WagoDO.Connect();
-                    Laser.Mode = LASER_MODE.Bypass;
-                    StatusLighter.CloseAll();
-                    StatusLighter.DOWN();
-                }
-                catch (SocketException ex)
-                {
-                }
-                catch (Exception ex)
-                {
-                }
+                 AGVCInit(RosBridge_IP, RosBridge_Port)
+                );
             });
 
             Task WagoDIConnTask = new Task(() =>
@@ -243,13 +223,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 {
                 }
             });
-            EventsRegist();
             if (!SimulationMode)
             {
                 RosConnTask.Start();
-                WagoDOConnTask.Start();
                 WagoDIConnTask.Start();
             }
+            Thread.Sleep(1000);
+            EventsRegist();
+            Laser.Mode = LASER_MODE.Bypass;
+            StatusLighter.CloseAll();
+            StatusLighter.DOWN();
             AGVSMessageFactory.Setup(SID, CarName);
             //Pilot = new AGVPILOT(this);
             IsSystemInitialized = true;
@@ -274,7 +257,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         }
 
 
-        internal async Task<(bool confirm, string message)> Initialize()
+        internal virtual async Task<(bool confirm, string message)> Initialize()
         {
             try
             {
@@ -337,6 +320,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             }
             catch (Exception ex)
             {
+                LOG.Critical(ex.Message, ex);
                 return (false, $"系統例外:{ex.Message}");
             }
 
@@ -350,6 +334,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             return new(tag, x, y, theta);
         }
 
+        protected internal virtual void AGVCInit(string RosBridge_IP, int RosBridge_Port)
+        {
+            AGVC = new CarController(RosBridge_IP, RosBridge_Port);
+            AGVC.Connect();
+            AGVC.ManualController.vehicle = this;
+            BuzzerPlayer.rossocket = AGVC.rosSocket;
+            BuzzerPlayer.Alarm();
+        }
 
         internal async Task<bool> CancelInitialize()
         {
@@ -528,7 +520,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         internal bool HasAnyCargoOnAGV()
         {
-            return !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_1) && !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_2);
+            try
+            {
+
+                return !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_1) && !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_2);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
 

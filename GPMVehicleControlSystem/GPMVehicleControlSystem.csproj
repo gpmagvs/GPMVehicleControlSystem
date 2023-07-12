@@ -45,7 +45,13 @@
 
 	<ItemGroup>
 		<None Update="param\IO_Wago.ini">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="param\IO_Wago_Inspection_AGV.ini">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="param\IO_Wago_Submarine_AGV.ini">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="param\sounds\action.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -165,7 +165,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             DirectionLighter.WaitPassLights();
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
-            WagoDO.SetState(DO_ITEM.AGV_AGV_READY, true);
+            WagoDO.SetState(DO_ITEM.AGV_READY, true);
 
             Task wait_eq_busy_ON = new Task(() =>
             {
@@ -201,7 +201,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             {
                 wait_eq_busy_OFF.Start();
                 wait_eq_busy_OFF.Wait(waitEQSignalCST.Token);
-                WagoDO.SetState(DO_ITEM.AGV_AGV_READY, false); //AGV BUSY 開始退出
+                WagoDO.SetState(DO_ITEM.AGV_READY, false); //AGV BUSY 開始退出
                 WagoDO.SetState(DO_ITEM.AGV_BUSY, true); //AGV BUSY 開始退出
                 return (true, AlarmCodes.None);
             }
@@ -264,7 +264,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                         {
                             await Task.Delay(1);
                         }
-                        WagoDO.SetState(DO_ITEM.AGV_AGV_READY, false);
+                        WagoDO.SetState(DO_ITEM.AGV_READY, false);
                         WagoDO.SetState(DO_ITEM.AGV_VALID, false);
                         break;
                     }
@@ -280,7 +280,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                         {
                             await Task.Delay(1);
                         }
-                        WagoDO.SetState(DO_ITEM.AGV_AGV_READY, false);
+                        WagoDO.SetState(DO_ITEM.AGV_READY, false);
                         WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
                         WagoDO.SetState(DO_ITEM.AGV_VALID, false);
                     }

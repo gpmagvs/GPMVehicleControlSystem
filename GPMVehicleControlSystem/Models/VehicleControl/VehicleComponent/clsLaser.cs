@@ -13,7 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public enum LASER_MODE
         {
             Unknow = 444,
-            Bypass = 0,
+            Bypass =0,
             Move = 1,
             Secondary = 2,
             Spin = 5,

@@ -311,6 +311,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
             InitTaskCommandActionClient();
+            LOG.WARN("Task download from AGVS :  " + JsonConvert.SerializeObject(RunningTaskData, Formatting.Indented));
+            LOG.INFO("Task download to 車控 :  " + JsonConvert.SerializeObject(RunningTaskData.RosTaskCommandGoal, Formatting.Indented));
             bool agvc_accept = await SendGoal(RunningTaskData.RosTaskCommandGoal);
             return agvc_accept;
         }

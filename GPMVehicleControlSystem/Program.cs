@@ -18,7 +18,16 @@ _ = Task.Run(() =>
     //StaEmuManager.StartWagoEmu();
     DBhelper.Initialize();
     int AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
-    StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicle();
+    if (AgvTypeInt == 0 | AgvTypeInt == 1)
+    {
+        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Submarine_AGV.ini"),Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"),true);
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicle();
+    }
+    if (AgvTypeInt == 2)
+    {
+        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Inspection_AGV.ini"), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.InspectorVechile();
+    }
 });
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();

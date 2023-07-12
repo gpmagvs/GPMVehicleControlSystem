@@ -8,11 +8,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public enum DRIVER_LOCATION
         {
-            LEFT, RIGHT
+            LEFT,
+            RIGHT,
+            LEFT_FORWARD,
+            RIGHT_FORWARD,
+            LEFT_BACKWARD,
+            RIGHT_BACKWARD,
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.DRIVER;
         public DRIVER_LOCATION location = DRIVER_LOCATION.RIGHT;
-        public new DriverState Data =>StateData==null? new DriverState():  (DriverState)StateData;
+        public new DriverState Data => StateData == null ? new DriverState() : (DriverState)StateData;
         public override STATE CheckStateDataContent()
         {
 

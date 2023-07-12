@@ -190,7 +190,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             {
                 Batteries.Add(battery_id, new clsBattery()
                 {
-                    StateData = _ModuleInformation.Battery
+                    StateData = _ModuleInformation.Battery	
                 });
             }
 
@@ -198,6 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             GuideSensor.StateData = _ModuleInformation.GuideSensor;
             BarcodeReader.StateData = _ModuleInformation.reader;
             CSTReader.StateData = _ModuleInformation.CSTReader;
+
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 

@@ -1,8 +1,8 @@
 ﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
-using System.Linq;
+using Modbus.Device;
 using System.Net.Sockets;
-using static AGVSystemCommonNet6.Abstracts.CarComponent;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
@@ -10,18 +10,20 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     {
         public enum DO_ITEM : byte
         {
-            Unknown = 0xFF,
-            EMU_EQ_L_REQ = 0x00,
-            EMU_EQ_U_REQ = 0x01,
-            EMU_EQ_READY = 0x02,
-            EMU_EQ_UP_READY = 0x03,
-            EMU_EQ_LOW_READY = 0x04,
-            EMU_EQ_BUSY = 0x05,
-            Recharge_Circuit = 0x08,
-            Safety_Relays_Reset = 0x09,
-            Horizon_Motor_Stop = 0x0A,
+            Unknown,
+            EMU_EQ_L_REQ,
+            EMU_EQ_U_REQ,
+            EMU_EQ_READY,
+            EMU_EQ_UP_READY,
+            EMU_EQ_LOW_READY,
+            EMU_EQ_BUSY,
+            Recharge_Circuit,
+            Motor_Safety_Relay,
+            Safety_Relays_Reset,
+            Horizon_Motor_Stop,
             Horizon_Motor_Free,
             Horizon_Motor_Reset,
+            Horizon_Motor_Brake,
             Vertical_Motor_Stop,
             Vertical_Motor_Free,
             Vertical_Motor_Reset,
@@ -31,7 +33,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Left_LsrBypass,
             Right_LsrBypass,
 
-            AGV_DiractionLight_Front = 0x16,
+            AGV_DiractionLight_Front,
             AGV_DiractionLight_Back,
             AGV_DiractionLight_R,
             AGV_DiractionLight_Y,
@@ -39,18 +41,25 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             AGV_DiractionLight_B,
             AGV_DiractionLight_Left,
             AGV_DiractionLight_Right,
-            Vertical_Hardware_limit_bypass = 0x1F,
+            AGV_DiractionLight_Left_2,
+            AGV_DiractionLight_Right_2,
+            Vertical_Hardware_limit_bypass,
 
-            AGV_VALID = 0x20,
-            AGV_AGV_READY = 0x23,
-            AGV_TR_REQ = 0x24,
-            AGV_BUSY = 0x25,
-            AGV_COMPT = 0x26,
-            TO_EQ_Low = 0x28,
-            TO_EQ_Up = 0x29,
-            CMD_reserve_Up = 0x2A,
-            CMD_reserve_Low = 0x2B,
-            Front_Protection_Sensor_IN_1 = 0x30,
+            AGV_VALID,
+            AGV_READY,
+            AGV_TR_REQ,
+            AGV_BUSY,
+            AGV_COMPT,
+            AGV_L_REQ,
+            AGV_U_REQ,
+            AGV_CS_0,
+            AGV_CS_1,
+            AGV_Check_REQ,
+            TO_EQ_Low,
+            TO_EQ_Up,
+            CMD_reserve_Up,
+            CMD_reserve_Low,
+            Front_Protection_Sensor_IN_1,
             Front_Protection_Sensor_CIN_1,
             Front_Protection_Sensor_IN_2,
             Front_Protection_Sensor_CIN_2,
@@ -67,6 +76,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Back_Protection_Sensor_CIN_3,
             Back_Protection_Sensor_IN_4,
             Back_Protection_Sensor_CIN_4,
+            Left_Protection_Sensor_IN_1,
+            Left_Protection_Sensor_IN_2,
+            Left_Protection_Sensor_IN_3,
+            Left_Protection_Sensor_IN_4,
+            Ultrasound_Bypass,
+            N2_Open,
+            Instrument_Servo_On,
+            Battery_2_Lock,
+            Battery_2_Unlock,
+            Battery_1_Lock,
+            Battery_1_Unlock,
+            Infrared_Door_1,
+            Infrared_PW_2,
+            Infrared_PW_1,
+            Infrared_PW_0,
+            Infrared_Door_2,
+
         }
         Dictionary<DO_ITEM, int> OUTPUT_INDEXS = new Dictionary<DO_ITEM, int>();
 
@@ -94,6 +120,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 Start = ushort.Parse(iniHelper.GetValue("OUTPUT", "Start"));
                 Size = ushort.Parse(iniHelper.GetValue("OUTPUT", "Size"));
+                var do_names = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().Select(i => i.ToString()).ToList();
                 for (ushort i = 0; i < Size; i++)
                 {
                     var Address = $"Y{i.ToString("X4")}";
@@ -103,11 +130,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     reg.State = false;
                     if (RigisterName != "")
                     {
-
-                        var do_item = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().First(di => di.ToString() == RigisterName);
-                        if (do_item != DO_ITEM.Unknown)
+                        if (do_names.Contains(RigisterName))
                         {
-                            OUTPUT_INDEXS.Add(do_item, i);
+                            var do_item = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().FirstOrDefault(di => di.ToString() == RigisterName);
+                            if (!OUTPUT_INDEXS.TryAdd(do_item, i))
+                            {
+                                throw new Exception("WAGO DO名稱重複");
+                            }
+                        }
+                        else
+                        {
+
                         }
                     }
 
@@ -130,7 +163,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 SetState(DO_ITEM.Safety_Relays_Reset, true);
                 await Task.Delay(200);
                 SetState(DO_ITEM.Safety_Relays_Reset, false);
-
                 SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 SetState(DO_ITEM.Horizon_Motor_Reset, true);
                 await Task.Delay(200);
@@ -146,109 +178,135 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
             }
 
-
         }
 
         public void SetState(string address, bool state)
         {
-            IOMutex.WaitOne();
-            clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address + "");
-            DO.State = state;
-            if (!IsConnected())
-                Connect();
             try
             {
-                master?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
+                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
+                if (DO != null)
+                {
+                    DO.State = state;
+                    bool connected = Connect(out var tcpclient, out var modbusMaster);
+                    if (connected)
+                    {
+                        modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
+                        Disconnect(tcpclient, modbusMaster);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, true);
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                throw ex;
             }
-            IOMutex.ReleaseMutex();
-
         }
-
-        public void SetState(DO_ITEM signal, bool state)
+        public new bool Connect(out TcpClient client, out ModbusIpMaster master)
         {
-            IOMutex.WaitOne();
+            client = null;
+            master = null;
+            if (IP == null | Port <= 0)
+                throw new SocketException((int)SocketError.AddressNotAvailable);
             try
             {
-                if (!IsConnected())
-                    Connect();
-
+                client = new TcpClient(IP, Port);
+                master = ModbusIpMaster.CreateIp(client);
+                master.Transport.ReadTimeout = 5000;
+                master.Transport.WriteTimeout = 5000;
+                master.Transport.Retries = 10;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+                master = null;
+                throw new SocketException((int)SocketError.ConnectionAborted);
+            }
+        }
+        public void SetState(DO_ITEM signal, bool state)
+        {
+            try
+            {
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
                 if (DO != null)
                 {
                     DO.State = state;
-                    Task.Factory.StartNew(() =>
+                    bool connected = Connect(out var tcpclient, out var modbusMaster);
+                    if (connected)
                     {
-                        try
-                        {
-                            master?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
-                        }
-                        catch (Exception ex)
-                        {
-                            Disconnect();
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                        }
-                        IOMutex.ReleaseMutex();
-                    });
+                        modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
+                        Disconnect(tcpclient, modbusMaster);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                master = null;
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
                 throw ex;
             }
+        }
 
+        private bool Disconnect(TcpClient tcpclient, ModbusIpMaster? modbusMaster)
+        {
+            try
+            {
+                tcpclient?.Close();
+                modbusMaster?.Dispose();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         internal void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            IOMutex.WaitOne();
             try
             {
-                if (!IsConnected())
-                    Connect();
                 clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
-                if (DO_Start != null)
+                if (DO_Start == null)
                 {
-                    for (int i = 0; i < writeStates.Length; i++)
-                    {
-                        clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == DO_Start.index + i);
+                    throw new Exception();
+                }
+                for (int i = 0; i < writeStates.Length; i++)
+                {
+                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == DO_Start.index + i);
+                    if (_DO != null)
                         _DO.State = writeStates[i];
-                    }
-                    Task.Factory.StartNew(() =>
-                    {
-                        try
-                        {
-                            master?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
-                        }
-                        catch (Exception)
-                        {
-                            Disconnect();
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                        }
-                        IOMutex.ReleaseMutex();
-                    });
+                }
+
+                bool connected = Connect(out var tcpclient, out var modbusMaster);
+                if (connected)
+                {
+                    modbusMaster?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
+                    Disconnect(tcpclient, modbusMaster);
                 }
             }
             catch (Exception ex)
             {
-                master = null;
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
                 throw ex;
             }
-
         }
         public new bool GetState(DO_ITEM signal)
         {
-            return VCSOutputs.FirstOrDefault(k => k.Name == signal + "").State;
+            try
+            {
+                return VCSOutputs.FirstOrDefault(k => k.Name == signal + "").State;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
         public void ResetHandshakeSignals()
         {
             SetState(DO_ITEM.AGV_COMPT, false);
             SetState(DO_ITEM.AGV_BUSY, false);
-            SetState(DO_ITEM.AGV_AGV_READY, false);
+            SetState(DO_ITEM.AGV_READY, false);
             SetState(DO_ITEM.AGV_TR_REQ, false);
             SetState(DO_ITEM.AGV_VALID, false);
         }
