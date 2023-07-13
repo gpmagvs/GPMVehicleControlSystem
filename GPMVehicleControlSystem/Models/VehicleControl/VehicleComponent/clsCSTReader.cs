@@ -16,15 +16,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             STATE _state = STATE.NORMAL;
 
-            if (Data.state != 1)
-            {
-                _state = STATE.ABNORMAL;
-                AddAlarm(AlarmCodes.Read_Cst_ID_Fail);
-            }
-            else
-            {
-                RemoveAlarm(AlarmCodes.Read_Cst_ID_Fail);
-            }
+            //if (Data.state != 1)
+            //{
+            //    _state = STATE.ABNORMAL;
+            //    AddAlarm(AlarmCodes.Read_Cst_ID_Fail);
+            //}
+            //else
+            //{
+            //    RemoveAlarm(AlarmCodes.Read_Cst_ID_Fail);
+            //}
 
             return _state;
         }

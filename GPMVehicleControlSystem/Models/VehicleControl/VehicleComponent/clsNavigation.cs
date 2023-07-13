@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 
@@ -15,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public new NavigationState Data => StateData == null ? new NavigationState()
         {
-            lastVisitedNode= new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(17),
+            lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(17),
         } : (NavigationState)StateData;
 
         public event EventHandler<AGV_DIRECTION> OnDirectionChanged;
@@ -68,6 +69,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             else
                 return AGV_DIRECTION.STOP;
         }
+
+        public AlarmCodes current_alarm_code { get; private set; } = AlarmCodes.None;
         public override STATE CheckStateDataContent()
         {
             LastVisitedTag = Data.lastVisitedNode.data;
@@ -78,6 +81,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             last_theta = Angle;
             if (Data.errorCode != 0)
             {
+                var code = Data.errorCode;
+                if (code == 1)
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Received_Msg;
+                else if (code == 2)
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Extend_Path;
+                else if (code == 3)
+                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
+                else if (code == 4)
+                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
+                else if (code == 5)
+                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
+                else if (code == 6)
+                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
+                else if (code == 7)
+                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
+                else if (code == 8)
+                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
+                else if (code == 9)
+                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
+                else if (code == 10)
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
+                else if (code == 11)
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
+                else if (code == 12)
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
+                else if (code == 13)
+                    current_alarm_code = AlarmCodes.Map_Recognition_Rate_Too_Low;
+                else
+                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
                 return STATE.ABNORMAL;
             }
             else

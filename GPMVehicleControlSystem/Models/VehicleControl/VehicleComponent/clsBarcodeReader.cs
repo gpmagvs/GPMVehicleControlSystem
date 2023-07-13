@@ -36,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             else
             {
+                
                 RemoveAlarm(AlarmCodes.Barcode_Module_Error);
             }
 

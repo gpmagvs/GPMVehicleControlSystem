@@ -23,17 +23,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             STATE _state = STATE.NORMAL;
             DriverState _driverState = (DriverState)StateData;
-
-            if (_driverState.state != 2 && _driverState.state != 3 && _driverState.state != 5 && _driverState.state != 7)
+            if (_driverState.errorCode != 0)
             {
-                _state = STATE.ABNORMAL;
-                AddAlarm(AlarmCodes.Wheel_Motor_Alarm);
+                var code = _driverState.errorCode;
+                AlarmCodes alarm_code = AlarmCodes.Wheel_Motor_Alarm;
+                if (code == 1)
+                    alarm_code = AlarmCodes.Under_voltage_protection;
+                if (code == 2)
+                    alarm_code = AlarmCodes.Under_current_protection;
+                if (code == 3)
+                    alarm_code = AlarmCodes.Over_voltage_protection;
+                if (code == 4)
+                    alarm_code = AlarmCodes.Over_current_protection;
+                if (code == 5)
+                    alarm_code = AlarmCodes.Over_heat_protection;
+                if (code == 6)
+                    alarm_code = AlarmCodes.Over_load_protection;
+                if (code == 7)
+                    alarm_code = AlarmCodes.Over_regeneration_load_protection;
+                if (code == 8)
+                    alarm_code = AlarmCodes.Over_speed_protection;
+                if (code == 9)
+                    alarm_code = AlarmCodes.Deviation_excess_protection;
+                if (code == 10)
+                    alarm_code = AlarmCodes.AConnection_error_protection;
+                if (code == 11)
+                    alarm_code = AlarmCodes.Status_Error;
+                if (code == 12)
+                    alarm_code = AlarmCodes.Communication_error;
+                if (code == 13)
+                    alarm_code = AlarmCodes.Alarm_input_protection;
+                if (code == 14)
+                    alarm_code = AlarmCodes.Command_error;
+                if (code == 15)
+                    alarm_code = AlarmCodes.Overtorque;
+                if (code == 16)
+                    alarm_code = AlarmCodes.Other_error;
+                AddAlarm(alarm_code);
             }
-            else
-            {
-                RemoveAlarm(AlarmCodes.Wheel_Motor_Alarm);
-            }
-
             return _state;
 
         }
