@@ -177,7 +177,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal void EMOHandler(object? sender, EventArgs e)
         {
-            Console.Error.WriteLine($"EMO 觸發,緊急停止.");
             AbortTask();
             ManualController?.Stop();
             if (wait_agvc_execute_action_cts != null)
@@ -204,6 +203,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.OnTaskCommandActionDone += this.OnTaskCommandActionDone;
             actionClient.OnActionStatusChanged += (status) =>
             {
+
                 currentTaskCmdActionStatus = status;
             };
             actionClient.Initialize();
@@ -245,12 +245,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (Status == ActionStatus.SUCCEEDED | Status == ActionStatus.PENDING)
                     OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
-                else
+                else if (Status == ActionStatus.ABORTED)
                     OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
                 _currentTaskCmdActionStatus = ActionStatus.NO_GOAL;
             }
             else
             {
+                if (Status == ActionStatus.ABORTED)
+                    OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
                 OnTaskActionFinishButNeedToExpandPath?.Invoke(this, this.RunningTaskData);
             }
         }

@@ -11,6 +11,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Alarm;
 using System.Security.Claims;
+using GPMVehicleControlSystem.Models.Buzzer;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl
 {
@@ -22,20 +23,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
             AGVC.OnModuleInformationUpdated += CarController_OnModuleInformationUpdated;
             AGVC.OnSickDataUpdated += CarController_OnSickDataUpdated;
+            AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
+
+            WagoDO.OnDisonnected += WagoDO_OnDisonnected;
+            WagoDI.OnDisonnected += WagoDI_OnDisonnected;
+            WagoDI.OnEMO += AGVC.EMOHandler;
             WagoDI.OnEMO += WagoDI_OnEMO;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
-            WagoDI.OnEMO += AGVC.EMOHandler;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-
             WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
             WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
             WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             clsTaskDownloadData.OnCurrentPoseReq = CurrentPoseReqCallback;
 
+            //AGVS
+            AGVS.OnDisconnected += AGVSDisconnectedHandler;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+
             Navigation.OnTagReach += OnTagReachHandler;
             BarcodeReader.OnTagLeave += OnTagLeaveHandler;
             AGVC.OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
@@ -44,6 +51,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         }
 
+        private void WagoDI_OnDisonnected(object? sender, EventArgs e)
+        {
+            Sub_Status = SUB_STATUS.DOWN;
+            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
+        }
+
+        private void WagoDO_OnDisonnected(object? sender, EventArgs e)
+        {
+            Sub_Status = SUB_STATUS.DOWN;
+            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+        }
+
+        private void AGVSDisconnectedHandler(object? sender, EventArgs e)
+        {
+            AlarmManager.AddWarning(AlarmCodes.AGVS_Disconnect);
+            BuzzerPlayer.Alarm();
+        }
+
+        private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
+        {
+            if (Navigation.current_alarm_code != AlarmCodes.None)
+            {
+                AlarmManager.AddAlarm(Navigation.current_alarm_code, false);
+                AGVC.AbortTask();
+                ExecutingTask.Abort();
+                Sub_Status = SUB_STATUS.DOWN;
+                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+            }
+        }
 
         private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, EventArgs e)
         {
@@ -164,23 +201,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void WagoDI_OnEMO(object? sender, EventArgs e)
         {
+            Sub_Status = SUB_STATUS.STOP;
             IsInitialized = false;
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
-            Sub_Status = SUB_STATUS.ALARM;
+            AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
+            Sub_Status = SUB_STATUS.DOWN;
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
         {
-            IsInitialized = false;
-            ExecutingTask?.Abort();
             AlarmManager.AddAlarm(AlarmCodes.Bumper, false);
-            Sub_Status = SUB_STATUS.DOWN;
         }
 
         private void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
         {
-
             if (_ModuleInformation.AlarmCode.Length > 0)
             {
                 foreach (var agvc_alarm in _ModuleInformation.AlarmCode)
@@ -217,7 +252,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 
-            var _lastVisitedMapPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
+            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
+            {
+                Name = Navigation.LastVisitedTag.ToString(),
+                TagNumber = Navigation.LastVisitedTag
+            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
             Task.Factory.StartNew(async () =>
             {

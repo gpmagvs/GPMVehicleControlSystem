@@ -209,13 +209,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         {
             try
             {
-                if (TaskTrackingTags.TryGetValue(ExecutingTask.RunningTaskData.Task_Simplex, out List<int> tags))
+                clsMapPoint? currentPt = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
+                if (currentPt == null)
                 {
-                    return tags.IndexOf(tags.First(tag => tag == Navigation.LastVisitedTag));
+                    LOG.ERROR("計算目前點位在移動路徑中的INDEX過程發生錯誤 !");
+                    return -1;
                 }
                 else
                 {
-                    return -1;
+                    return ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(currentPt);
                 }
             }
             catch (Exception ex)

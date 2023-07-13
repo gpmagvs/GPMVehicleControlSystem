@@ -142,7 +142,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                     else if (value == SUB_STATUS.IDLE)
                     {
                         AGVC.IsAGVExecutingTask = false;
-                        BuzzerPlayer.Stop();
                         Main_Status = MAIN_STATUS.IDLE;
                         StatusLighter.IDLE();
                         DirectionLighter.CloseAll();
@@ -159,7 +158,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                         {
                             Task.Run(async () =>
                             {
-                                await BuzzerPlayer.Stop();
                                 await Task.Delay(50);
                                 if (ExecutingTask.action == ACTION_TYPE.None)
                                     BuzzerPlayer.Move();
@@ -261,7 +259,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         {
             try
             {
-                BuzzerPlayer.Stop();
                 if (SimulationMode)
                 {
                     IsInitialized = true;
@@ -354,19 +351,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+            AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
             Task.Factory.StartNew(async () =>
             {
-                Sub_Status = SUB_STATUS.DOWN;
-                await Task.Delay(100);
                 Sub_Status = SUB_STATUS.ALARM;
-                AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
+                await Task.Delay(10);
+                Sub_Status = SUB_STATUS.DOWN;
             });
 
         }
 
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            BuzzerPlayer.Stop();
+            if (AlarmManager.CurrentAlarms.Values.Count == 0)
+                return;
+
+           await BuzzerPlayer.Stop();
 
             _ = Task.Factory.StartNew(async () =>
              {
@@ -389,9 +389,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                      AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                  }
                  AlarmManager.ClearAlarm();
-
+                 CarComponents.ForEach(comp => comp.ClearAlarms());
                  if (!IsTriggerByButton)
-                     await WagoDO.ResetMotor();
+                 {
+                     bool motor_reset_success = await WagoDO.ResetMotor();
+                     if (!motor_reset_success)
+                     {
+                         Sub_Status = SUB_STATUS.STOP;
+                         await Task.Delay(100);
+                         Sub_Status = SUB_STATUS.DOWN;
+                     }
+                 }
                  else
                      await Task.Delay(2000);
 
