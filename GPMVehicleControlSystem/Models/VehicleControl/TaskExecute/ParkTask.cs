@@ -5,7 +5,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsL
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
-    public class ParkTask : TaskBase
+    public class ParkTask : ChargeTask
     {
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Park;
         public ParkTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)

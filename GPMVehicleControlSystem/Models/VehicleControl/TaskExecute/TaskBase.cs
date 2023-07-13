@@ -74,12 +74,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AlarmManager.AddAlarm(AlarmCodes.Cant_TransferTask_TO_AGVC, false);
                     Agv.Sub_Status = SUB_STATUS.ALARM;
                 }
+                else
+                {
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                }
             }
             catch (Exception ex)
             {
                 throw ex;
             }
-         
+
         }
 
         internal async Task AGVSPathExpand(clsTaskDownloadData taskDownloadData)
