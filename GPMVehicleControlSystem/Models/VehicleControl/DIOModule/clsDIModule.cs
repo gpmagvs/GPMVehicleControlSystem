@@ -104,6 +104,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         bool isRightLaserTrigger => !GetState(DI_ITEM.RightProtection_Area_Sensor_2);
         bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
 
+        public event EventHandler OnDisonnected;
 
         public event EventHandler<ROBOT_CONTROL_CMD> OnLaserDIRecovery;
         public event EventHandler OnFarLaserDITrigger;
@@ -120,7 +121,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnBumpSensorPressed;
 
         public event EventHandler OnResetButtonPressed;
-
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
         public Action OnResetButtonPressing { get; set; }
@@ -210,9 +210,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             catch (Exception ex)
             {
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+                OnDisonnected?.Invoke(this, EventArgs.Empty);
+                client = null;
                 master = null;
-                throw new SocketException((int)SocketError.ConnectionAborted);
+
+                return false;
             }
         }
 

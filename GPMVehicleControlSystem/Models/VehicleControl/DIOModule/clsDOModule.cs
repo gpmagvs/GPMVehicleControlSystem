@@ -95,7 +95,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         }
         Dictionary<DO_ITEM, int> OUTPUT_INDEXS = new Dictionary<DO_ITEM, int>();
-
+        public event EventHandler OnDisonnected;
         public List<clsIOSignal> VCSOutputs = new List<clsIOSignal>();
         public clsDOModule() : base()
         {
@@ -153,7 +153,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        public async Task ResetMotor()
+        public async Task<bool> ResetMotor()
         {
             try
             {
@@ -168,14 +168,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 await Task.Delay(200);
                 SetState(DO_ITEM.Horizon_Motor_Reset, false);
                 Console.WriteLine("Reset Motor Process End");
+                return true;
             }
             catch (SocketException ex)
             {
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                return false;
             }
             catch (Exception ex)
             {
-
+                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
+                return false;
             }
 
         }
@@ -220,11 +223,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             catch (Exception ex)
             {
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+                OnDisonnected?.Invoke(this, EventArgs.Empty);
                 master = null;
                 throw new SocketException((int)SocketError.ConnectionAborted);
             }
         }
+
         public void SetState(DO_ITEM signal, bool state)
         {
             try
