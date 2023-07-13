@@ -24,42 +24,36 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
         public static async void Alarm()
         {
-            if (IsAlarmPlaying)
-                return;
-            Play(SOUNDS.Alarm);
+            await Stop();
+            await Play(SOUNDS.Alarm);
             IsAlarmPlaying = true;
         }
         public static async void Action()
         {
-            if (IsActionPlaying)
-                return;
-            Play(SOUNDS.Action);
+            await Stop();
+            await Play(SOUNDS.Action);
             IsActionPlaying = true;
         }
         public static async void Move()
         {
-            if (IsMovingPlaying)
-                return;
-            Play(SOUNDS.Move);
+            await Stop();
+            await Play(SOUNDS.Move);
             IsMovingPlaying = true;
         }
         internal static async Task Stop()
         {
-            Play(SOUNDS.Stop);
+            await Play(SOUNDS.Stop);
             IsAlarmPlaying = IsActionPlaying = IsMovingPlaying = false;
         }
 
-        public static void Play(SOUNDS sound)
+        public static async Task Play(SOUNDS sound)
         {
             if (rossocket == null)
                 return;
-
-            Task.Factory.StartNew(() =>
+            await Task.Delay(10);
+            PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
             {
-                PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
-                {
-                    file_path = sound.ToString().ToLower()
-                });
+                file_path = sound.ToString().ToLower()
             });
         }
     }
