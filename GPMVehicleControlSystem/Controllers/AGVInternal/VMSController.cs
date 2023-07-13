@@ -156,7 +156,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> RemoveCassette()
         {
             await Task.Delay(1);
-            var retcode = await agv.RemoveCstData();
+            if (agv.AgvType == AGV_TYPE.INSPECTION_AGV)
+                return Ok(false);
+
+            var retcode = await (agv as SubmarinAGV).RemoveCstData();
             return Ok(retcode == RETURN_CODE.OK);
         }
 

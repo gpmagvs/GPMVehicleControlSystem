@@ -14,7 +14,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Tests
         [TestMethod()]
         public void VehicleTest()
         {
-            Vehicle submarin_agv = new Vehicle();
+            Vehicle submarin_agv = new SubmarinAGV();
         }
     }
 }

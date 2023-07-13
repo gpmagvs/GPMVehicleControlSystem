@@ -10,12 +10,14 @@ using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
+using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using static AGVSystemCommonNet6.Abstracts.CarComponent;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -25,7 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
     /// <summary>
     /// 車子
     /// </summary>
-    public partial class Vehicle
+    public abstract partial class Vehicle
     {
 
         public enum VMS_PROTOCOL
@@ -51,6 +53,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         public clsIMU IMU = new clsIMU();
         public clsGuideSensor GuideSensor = new clsGuideSensor();
         public clsBarcodeReader BarcodeReader = new clsBarcodeReader();
+        public abstract clsCSTReader CSTReader { get; set; }
+
         public clsDriver[] WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT},
@@ -58,26 +62,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT}
         };
         public clsSick SickData = new clsSick();
-        public clsCSTReader CSTReader = new clsCSTReader();
         public Map NavingMap = new Map()
         {
             Name = "No_load",
             Points = new Dictionary<int, MapPoint>()
         };
-
+        public bool IsHasCSTReader => CSTReader != null;
         /// <summary>
         /// 里程數
         /// </summary>
         public double Odometry;
         VehicleEmu emulator;
 
-        private List<CarComponent> CarComponents
+        protected virtual List<CarComponent> CarComponents
         {
             get
             {
                 var ls = new List<CarComponent>()
                 {
-                    Navigation,IMU,GuideSensor, BarcodeReader,CSTReader,
+                    Navigation,IMU,GuideSensor, BarcodeReader
                 };
                 ls.AddRange(Batteries.Values.ToArray());
                 ls.AddRange(WheelDrivers);
@@ -174,6 +177,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         public Vehicle()
         {
+            LOG.INFO($"{GetType().Name} Start create instance...");
+
             ReadTaskNameFromFile();
             IsSystemInitialized = false;
             SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
@@ -203,7 +208,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             Task RosConnTask = new Task(async () =>
             {
                 await Task.Delay(1).ContinueWith(t =>
-                 AGVCInit(RosBridge_IP, RosBridge_Port)
+                {
+                    InitAGVControl(RosBridge_IP, RosBridge_Port);
+                    if (AGVC?.rosSocket != null)
+                    {
+                        BuzzerPlayer.rossocket = AGVC.rosSocket;
+                        BuzzerPlayer.Alarm();
+                    }
+                }
                 );
             });
 
@@ -331,13 +343,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             return new(tag, x, y, theta);
         }
 
-        protected internal virtual void AGVCInit(string RosBridge_IP, int RosBridge_Port)
+        protected internal virtual void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
-            AGVC = new CarController(RosBridge_IP, RosBridge_Port);
+            AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
             AGVC.Connect();
             AGVC.ManualController.vehicle = this;
-            BuzzerPlayer.rossocket = AGVC.rosSocket;
-            BuzzerPlayer.Alarm();
+
         }
 
         internal async Task<bool> CancelInitialize()
@@ -366,7 +377,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             if (AlarmManager.CurrentAlarms.Values.Count == 0)
                 return;
 
-           await BuzzerPlayer.Stop();
+            await BuzzerPlayer.Stop();
 
             _ = Task.Factory.StartNew(async () =>
              {
@@ -451,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         /// </summary>
         /// <param name="getLastPtPoseOfTrajectory"></param>
         /// <returns></returns>
-        internal RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
+        internal virtual RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
         {
             clsCoordination clsCorrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
@@ -491,7 +502,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                     Electric_Volume = batteryLevels,
                     Last_Visited_Node = Navigation.Data.lastVisitedNode.data,
                     Coordination = clsCorrdination,
-                    CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID },
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
@@ -539,24 +549,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             }
         }
 
-
-        /// <summary>
-        /// 移除卡夾 
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        internal async Task<RETURN_CODE> RemoveCstData()
-        {
-            //向AGVS請求移除卡匣
-            string currentCSTID = CSTReader.Data.data;
-            string toRemoveCSTID = currentCSTID.ToLower() == "error" ? "" : currentCSTID;
-            var retCode = await AGVS.TryRemoveCSTData(toRemoveCSTID, "");
-            //清帳
-            if (retCode == RETURN_CODE.OK)
-                CSTReader.ValidCSTID = "";
-
-            return retCode;
-        }
 
 
         internal async Task<(bool confirm, string message)> TrackingTagCenter(double finalAngle = 90)

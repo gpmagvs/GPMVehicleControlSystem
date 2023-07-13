@@ -3,7 +3,7 @@ using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
-    public partial class CarController
+    public partial class SubmarinAGVControl
     {
         /// <summary>
         /// 當Reader拍照完成事件
@@ -34,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<(bool request_success, bool action_done)> AbortCSTReader()
+        public override async Task<(bool request_success, bool action_done)> AbortCSTReader()
         {
             CSTReaderCommandResponse? response = rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
               new CSTReaderCommandRequest() { command = "stop", model = "FORK" });
@@ -52,7 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// 請求CST拍照
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool request_success, bool action_done)> TriggerCSTReader()
+        public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
             CSTReaderCommandResponse? response = rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
                 new CSTReaderCommandRequest() { command = "read_try", model = "FORK" });

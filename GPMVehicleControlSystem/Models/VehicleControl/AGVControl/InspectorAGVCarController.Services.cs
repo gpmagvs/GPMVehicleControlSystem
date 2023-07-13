@@ -6,6 +6,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
     public partial class InspectorAGVCarController
     {
+        public override void AdertiseROSServices()
+        {
+            //
+        }
 
         /// <summary>
         /// 確認儀器狀態
@@ -25,13 +29,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await CallVerticalCommandService(COMMANDS.pose);
         }
 
+        public override Task<(bool request_success, bool action_done)> TriggerCSTReader()
+        {
+            throw new NotImplementedException("巡檢AGV不具有CST Reader 功能");
+        }
+
+        public override Task<(bool request_success, bool action_done)> AbortCSTReader()
+        {
+            throw new NotImplementedException("巡檢AGV不具有CST Reader 功能");
+        }
 
         private async Task<(bool confirm, string message)> CallVerticalCommandService(COMMANDS command)
         {
             try
             {
-                VerticalCommandResponse response = rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
-
+                VerticalCommandResponse? response = rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
                         new VerticalCommandRequest
                         {
                             command = command.ToString(),

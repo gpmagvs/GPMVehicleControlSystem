@@ -124,6 +124,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
         {
+
             Agv.CSTReader.ValidCSTID = "";
             //await Agv.AGVC.TriggerCSTReader();
             return (true, AlarmCodes.None);

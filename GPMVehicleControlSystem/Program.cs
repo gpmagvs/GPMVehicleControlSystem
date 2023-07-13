@@ -20,13 +20,13 @@ _ = Task.Run(() =>
     int AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
     if (AgvTypeInt == 0 | AgvTypeInt == 1)
     {
-        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Submarine_AGV.ini"),Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"),true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicle();
+        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Submarine_AGV.ini"), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.SubmarinAGV();
     }
     if (AgvTypeInt == 2)
     {
         File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Inspection_AGV.ini"), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.InspectorVechile();
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.InspectionAGV();
     }
 });
 var builder = WebApplication.CreateBuilder(args);

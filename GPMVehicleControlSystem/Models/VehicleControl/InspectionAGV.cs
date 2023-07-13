@@ -7,9 +7,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
     /// <summary>
     /// 巡檢AGV
     /// </summary>
-    public class InspectorVechile : Vehicle
+    public partial class InspectionAGV : Vehicle
     {
-        public InspectorVechile()
+        public InspectionAGV()
         {
             WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_FORWARD},
@@ -19,17 +19,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         };
         }
 
-        private InspectorAGVCarController InspectorAGVC => AGVC as InspectorAGVCarController;
+        private InspectorAGVCarController? InspectorAGVC => AGVC as InspectorAGVCarController;
+
+        public override clsCSTReader CSTReader { get; set; } = null;
+
         internal override async Task<(bool confirm, string message)> Initialize()
         {
             //初始化儀器
-            (bool confirm, string message) measurementInitResult = await InspectorAGVC.MeasurementInit();
+            (bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
             if (!measurementInitResult.confirm)
                 return (false, measurementInitResult.message);
 
             return await base.Initialize();
         }
-        protected internal override void AGVCInit(string RosBridge_IP, int RosBridge_Port)
+        protected internal override void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
             AGVC.Connect();

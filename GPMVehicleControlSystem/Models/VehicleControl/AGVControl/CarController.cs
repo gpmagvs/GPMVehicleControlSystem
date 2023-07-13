@@ -15,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
     /// <summary>
     /// 使用ＲＯＳ與車控端通訊
     /// </summary>
-    public partial class CarController : Connection
+    public abstract partial class CarController : Connection
     {
         public enum LOCALIZE_STATE : byte
         {
@@ -153,13 +153,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             rosSocket.protocol.OnClosed += Protocol_OnClosed;
             LOG.INFO($"ROS Connected ! ws://{IP}:{Port}");
-            rosSocket.Subscribe<ModuleInformation>("/module_information", new SubscriptionHandler<ModuleInformation>(ModuleInformationCallback), queue_length: 50);
-            rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, 100);
-            rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", CSTReaderDoneActionHandle);
+            SubscribeROSTopics();
+            AdertiseROSServices();
             ManualController = new MoveControl(rosSocket);
             return true;
         }
 
+
+        /// <summary>
+        /// 訂閱ROS主題
+        /// </summary>
+        public virtual void SubscribeROSTopics()
+        {
+            rosSocket.Subscribe<ModuleInformation>("/module_information", new SubscriptionHandler<ModuleInformation>(ModuleInformationCallback), queue_length: 50);
+            rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, 100);
+        }
+
+        /// <summary>
+        /// 建立車載端的ROS Service server 
+        /// </summary>
+        public abstract void AdertiseROSServices();
 
         private void Protocol_OnClosed(object? sender, EventArgs e)
         {
@@ -348,6 +361,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.SendGoal();
         }
 
+        public abstract  Task<(bool request_success, bool action_done)> TriggerCSTReader();
+        public abstract Task<(bool request_success, bool action_done)> AbortCSTReader();
 
     }
 }

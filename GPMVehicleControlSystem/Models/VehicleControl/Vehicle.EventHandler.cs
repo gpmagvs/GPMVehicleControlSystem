@@ -17,7 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 {
     public partial class Vehicle
     {
-        private void EventsRegist() //TODO EventRegist
+        protected virtual void EventsRegist() //TODO EventRegist
         {
             AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
             AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
@@ -45,7 +45,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             Navigation.OnTagReach += OnTagReachHandler;
             BarcodeReader.OnTagLeave += OnTagLeaveHandler;
-            AGVC.OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
 
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
 
@@ -214,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AlarmManager.AddAlarm(AlarmCodes.Bumper, false);
         }
 
-        private void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
+        protected virtual void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
         {
             if (_ModuleInformation.AlarmCode.Length > 0)
             {
@@ -247,7 +246,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             IMU.StateData = _ModuleInformation.IMU;
             GuideSensor.StateData = _ModuleInformation.GuideSensor;
             BarcodeReader.StateData = _ModuleInformation.reader;
-            CSTReader.StateData = _ModuleInformation.CSTReader;
 
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
@@ -258,6 +256,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 TagNumber = Navigation.LastVisitedTag
             } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
+
+
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
