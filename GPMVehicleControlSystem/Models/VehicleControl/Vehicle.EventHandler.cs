@@ -9,6 +9,8 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Alarm;
+using System.Security.Claims;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl
 {
@@ -178,9 +180,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
         {
+
             if (_ModuleInformation.AlarmCode.Length > 0)
             {
-
+                foreach (var agvc_alarm in _ModuleInformation.AlarmCode)
+                {
+                    var alarm = AlarmManager.ConvertAGVCAlarmCode(agvc_alarm, out var level);
+                    if (level == AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode.LEVEL.Warning)
+                        AlarmManager.AddWarning(alarm);
+                    else
+                        AlarmManager.AddAlarm(alarm, false);
+                }
             }
 
             Odometry = _ModuleInformation.Mileage;
@@ -209,18 +219,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             var _lastVisitedMapPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
-            //Task.Factory.StartNew(async() =>
-            //{
-            //    await Task.Delay(1000);
-
-            //    foreach (var item in CarComponents.Select(comp => comp.ErrorCodes).ToList())
-            //    {
-            //        foreach (var alarm in item.Keys)
-            //        {
-            //            AlarmManager.AddWarning(alarm);
-            //        }
-            //    }
-            //});
+            Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                foreach (var item in CarComponents.Select(comp => comp.ErrorCodes).ToList())
+                {
+                    foreach (var alarm in item.Keys)
+                    {
+                        AlarmManager.AddWarning(alarm);
+                    }
+                }
+            });
             if (Batteries.Values.Any(battery => battery.IsCharging))
             {
                 Sub_Status = SUB_STATUS.Charging;
