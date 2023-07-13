@@ -17,6 +17,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETDIOTable,
             GETFORKTestState,
             GETAGVSMSGIODATA,
+            GETSystemMessages,
         }
 
         public static void ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
@@ -51,6 +52,9 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                             // viewmodel = ViewModelFactory.GetForkTestStateVM();
                             break;
                         case WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA:
+                            break;
+                        case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
+                            viewmodel = ViewModelFactory.GetSystemMessagesVM();
                             break;
                         default:
                             break;

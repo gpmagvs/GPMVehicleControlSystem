@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Abstracts;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6;
+using GPMVehicleControlSystem.Models.VCSSystem;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -70,13 +71,29 @@ namespace GPMVehicleControlSystem.ViewModels
                         PathPlan = AgvEntity.ExecutingTask == null ? new int[0] : AgvEntity.ExecutingTask.RunningTaskData.ExecutingTrajecory.GetRemainPath(AgvEntity.Navigation.LastVisitedTag)
                     },
                     Current_LASER_MODE = AgvEntity.Laser.Mode.ToString(),
-                   
+
                 };
                 return data_view_model;
             }
             catch (Exception ex)
             {
-                return new AGVCStatusVM();
+                return new AGVCStatusVM()
+                {
+                    Agv_Type = clsEnums.AGV_TYPE.INSPECTION_AGV,
+
+                    BatteryStatus = new BatteryStateVM
+                    {
+                        BatteryLevel = 77
+
+                    },
+                    BCR_State_MoveBase = new BarcodeReaderState
+                    {
+                        tagID = 69,
+                        theta = -44,
+                        xValue = 3,
+                        yValue = -2
+                    }
+                };
             }
 
         }
@@ -113,5 +130,9 @@ namespace GPMVehicleControlSystem.ViewModels
             };
         }
 
+        internal static object GetSystemMessagesVM()
+        {
+            return StaSysMessageManager.SysMessages;
+        }
     }
 }

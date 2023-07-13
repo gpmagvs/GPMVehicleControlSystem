@@ -13,6 +13,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;
         public int CurrentTag => Data == null ? 0 : (int)Data.tagID;
+
+        public double CurrentAngle => Data == null ? 0 : (int)Data.theta;
+        public double CurrentX => Data == null ? 0 : (int)Data.xValue;
+        public double CurrentY => Data == null ? 0 : (int)Data.yValue;
+
         private uint PreviousTag = 0;
         public override STATE CheckStateDataContent()
         {

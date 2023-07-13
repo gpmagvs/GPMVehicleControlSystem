@@ -178,6 +178,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
         {
+            if (_ModuleInformation.AlarmCode.Length > 0)
+            {
+
+            }
+
             Odometry = _ModuleInformation.Mileage;
             Navigation.StateData = _ModuleInformation.nav_state;
 
@@ -190,7 +195,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             {
                 Batteries.Add(battery_id, new clsBattery()
                 {
-                    StateData = _ModuleInformation.Battery	
+                    StateData = _ModuleInformation.Battery
                 });
             }
 
@@ -201,7 +206,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
-
 
             var _lastVisitedMapPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
@@ -228,15 +232,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         }
 
-        private void WagoDI_OnResetButtonPressed(object? sender, EventArgs e)
+        private void CarController_OnSickDataUpdated(object? sender, LocalizationControllerResultMessage0502 sick_loc_data)
         {
-
-        }
-
-
-        private void CarController_OnSickDataUpdated(object? sender, LocalizationControllerResultMessage0502 e)
-        {
-            SickData.StateData = e;
+            SickData.StateData = sick_loc_data;
         }
     }
 }

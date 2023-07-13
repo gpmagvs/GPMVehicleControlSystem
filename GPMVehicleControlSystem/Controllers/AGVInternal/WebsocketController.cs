@@ -78,5 +78,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
         }
+
+        [HttpGet("/ws/Sys_Messages")]
+        public async Task Sys_Messages()
+        {
+            if (HttpContext.WebSockets.IsWebSocketRequest)
+            {
+
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETSystemMessages);
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            }
+        }
     }
 }

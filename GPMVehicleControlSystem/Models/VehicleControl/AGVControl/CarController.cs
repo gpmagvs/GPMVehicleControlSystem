@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
@@ -103,9 +104,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (value != null)
                     OnModuleInformationUpdated?.Invoke(this, value);
                 _module_info = value;
+
             }
         }
         public int lastVisitedNode => module_info.nav_state.lastVisitedNode.data;
+
+        public List<AlarmCodes> alarm_codes { get; private set; }
+
         public clsTaskDownloadData RunningTaskData { get; private set; } = new clsTaskDownloadData();
         /// <summary>
         /// 手動操作控制器
@@ -279,10 +284,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
         {
             module_info = _ModuleInformation;
-            if (module_info.AlarmCode.Length > 0)
-            {
-
-            }
         }
 
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
@@ -344,6 +345,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.goal = taskDownloadData.RosTaskCommandGoal;
             actionClient.SendGoal();
         }
+
 
     }
 }

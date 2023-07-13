@@ -551,5 +551,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         }
 
 
+        internal async Task<(bool confirm, string message)> TrackingTagCenter(double finalAngle = 90)
+        {
+
+            if (!Debugger.IsAttached)
+            {
+                if (this.lastVisitedMapPoint == null)
+                {
+                    return (false, "AGV位於未知的點位,禁止操作自動移動到TAG中心功能");
+                }
+                if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
+                    return (false, "AGV位於非一般點位,禁止操作自動移動到TAG中心功能");
+                if (BarcodeReader.CurrentTag == 0)
+                    return (false, "AGV並未在Tag上,無法操作自動移動到TAG中心功能");
+
+                if (Sub_Status != SUB_STATUS.IDLE)
+                    return (false, "AGV非IDLE狀態, 無法操作自動移動到TAG中心功能");
+            }
+
+            _ = Task.Factory.StartNew(async () =>
+            {
+
+                var currentAngle = Convert.ToDouble(BarcodeReader.CurrentAngle + "");
+                double distance_to_tag_center = Math.Sqrt(Math.Pow(BarcodeReader.CurrentX, 2) + Math.Pow(BarcodeReader.CurrentY, 2));
+                var rotationAngle = currentAngle + Math.Cosh(BarcodeReader.CurrentX / distance_to_tag_center) * 180.0 / Math.PI;
+
+                LOG.INFO($"[Find Tag] Rotation Angle : {rotationAngle}");
+
+                var rotationAngleAim = currentAngle - rotationAngle;
+
+                AGVC.ManualController.TurnLeft();
+                while (Math.Abs(BarcodeReader.CurrentAngle - rotationAngleAim) > 1)
+                {
+                    if (BarcodeReader.CurrentTag == 0)
+                        break;
+                    await Task.Delay(1);
+                }
+                AGVC.ManualController.Stop();
+                AGVC.ManualController.Forward();
+                while (Math.Abs(BarcodeReader.CurrentX - 0) > 5)
+                {
+                    await Task.Delay(1);
+                }
+                AGVC.ManualController.Stop();
+            });
+
+            return (true, "");
+        }
     }
 }

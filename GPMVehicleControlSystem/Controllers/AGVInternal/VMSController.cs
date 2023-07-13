@@ -10,6 +10,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicle;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using Microsoft.AspNetCore.Identity;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -119,7 +120,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> Initialize()
         {
             var result = await agv.Initialize();
-            return Ok(new {confirm =result.confirm,message = result.message });
+            return Ok(new { confirm = result.confirm, message = result.message });
         }
 
 
@@ -217,6 +218,17 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> GetRunningStatus()
         {
             return Ok(agv.GenRunningStateReportData());
+        }
+
+        [HttpGet("FindTagCenter")]
+        public async Task<IActionResult> FindTagCenter()
+        {
+            (bool confirm, string message) response = await agv.TrackingTagCenter(90);
+            return Ok(new
+            {
+                confirm = response.confirm,
+                message = response.message
+            });
         }
     }
 }
