@@ -11,19 +11,19 @@ using AGVSystemCommonNet6.AGVDispatch.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using Microsoft.AspNetCore.Identity;
+using GPMVehicleControlSystem.Models.VCSSystem;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
 
     [Route("api/[controller]")]
     [ApiController]
-    public class VMSController : ControllerBase
+    public partial class VMSController : ControllerBase
     {
 
         private Vehicle agv => StaStored.CurrentVechicle;
 
         [HttpGet("Where_r_u")]
-        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task Where_r_u()
         {
             await Task.Delay(1);
@@ -54,13 +54,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                if (agv.BarcodeReader.CurrentTag == 0 && mode == REMOTE_MODE.ONLINE)
+                if (agv.AgvType != AGV_TYPE.INSPECTION_AGV)
                 {
-                    return Ok(new
+                    if (agv.BarcodeReader.CurrentTag == 0 && mode == REMOTE_MODE.ONLINE)
                     {
-                        Success = false,
-                        Message = "上線時車子必須停在Tag上."
-                    });
+                        return Ok(new
+                        {
+                            Success = false,
+                            Message = "上線時車子必須停在Tag上."
+                        });
+                    }
                 }
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 return Ok(new
@@ -112,7 +115,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> EMO()
         {
-            agv.SoftwareEMO();
+            StaSysMessageManager.AddNewMessage("Software EMO !", 2);
+            try
+            {
+                agv.SoftwareEMO();
+            }
+            catch (Exception ex)
+            {
+                StaSysMessageManager.AddNewMessage(ex.Message, 1);
+
+            }
             return Ok("OK");
         }
 

@@ -7,5 +7,6 @@
         public int ChargeCurrent { get; set; }
         public bool IsError { get; set; }
         public bool CircuitOpened { get; set; }
+        public ushort BatteryID { get; internal set; }
     }
 }

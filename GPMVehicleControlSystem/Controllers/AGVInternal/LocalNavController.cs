@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (agv.Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE)
+            if (agv.Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE && agv.Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Charging)
             {
                 return Ok(new
                 {

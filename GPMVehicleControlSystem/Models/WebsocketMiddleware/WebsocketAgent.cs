@@ -19,10 +19,13 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETAGVSMSGIODATA,
             GETSystemMessages,
         }
-
+        public static void ClientRequest(HttpContext _HttpContext, out System.Net.WebSockets.WebSocket webSocket)
+        {
+             webSocket = _HttpContext.WebSockets.AcceptWebSocketAsync().Result;
+        }
         public static void ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
         {
-            var webSocket = _HttpContext.WebSockets.AcceptWebSocketAsync().Result;
+            System.Net.WebSockets.WebSocket webSocket = _HttpContext.WebSockets.AcceptWebSocketAsync().Result;
             byte[] buffer = new byte[256];
             var bufferSegment = new ArraySegment<byte>(buffer);
             Stopwatch sw = Stopwatch.StartNew();

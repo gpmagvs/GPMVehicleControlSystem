@@ -1,5 +1,9 @@
-﻿using GPMVehicleControlSystem.Models.WebsocketMiddleware;
+﻿using GPMVehicleControlSystem.Models.VCSSystem;
+using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using System.Diagnostics;
+using System.Text;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -15,7 +19,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
 
-                 WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETVMSStates);
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETVMSStates);
             }
             else
             {
@@ -27,7 +31,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                 WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETConnectionStates);
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETConnectionStates);
             }
             else
             {
@@ -42,7 +46,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
 
-                 WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETAGVCModuleInformation);
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETAGVCModuleInformation);
             }
             else
             {
@@ -56,7 +60,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
 
-                 WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETDIOTable);
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETDIOTable);
             }
             else
             {
@@ -71,7 +75,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
 
-                 WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA);
+                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA);
             }
             else
             {
@@ -84,13 +88,51 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
+                System.Net.WebSockets.WebSocket webSocket = HttpContext.WebSockets.AcceptWebSocketAsync().Result;
+                void StaSysMessageManager_OnSystemMessageAdd(object? sender, clsSysMessage e)
+                {
+                    Task.Factory.StartNew(() =>
+                    {
+                        try
+                        {
+                            webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(e))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                        }
+                        catch (Exception)
+                        {
+                            StaSysMessageManager.OnSystemMessageAdd -= StaSysMessageManager_OnSystemMessageAdd;
+                        }
+                    });
+                }
 
-                WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETSystemMessages);
+                byte[] buffer = new byte[256];
+                var bufferSegment = new ArraySegment<byte>(buffer);
+                Stopwatch sw = Stopwatch.StartNew();
+                sw.Start();
+                StaSysMessageManager.OnSystemMessageAdd += StaSysMessageManager_OnSystemMessageAdd;
+                webSocket?.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new clsSysMessage
+                {
+                    Message = "車載系統"
+                }))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+
+                while (webSocket.State == System.Net.WebSockets.WebSocketState.Open)
+                {
+                    await Task.Delay(1);
+                    try
+                    {
+                        webSocket.ReceiveAsync(bufferSegment, CancellationToken.None);
+                    }
+                    catch
+                    {
+                        break;
+                    }
+                }
+                StaSysMessageManager.OnSystemMessageAdd -= StaSysMessageManager_OnSystemMessageAdd;
             }
             else
             {
                 HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
         }
+
     }
 }

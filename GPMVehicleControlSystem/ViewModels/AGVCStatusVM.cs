@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public int Tag { get; set; }
         public MapPoint Last_Visit_MapPoint { get; set; } = new MapPoint();
         public int Last_Visited_Tag { get; set; }
-        public BatteryStateVM BatteryStatus { get; set; } = new BatteryStateVM(); //TODO Multi battery data should define
+        public BatteryStateVM[] BatteryStatus { get; set; } = new BatteryStateVM[0]; //TODO Multi battery data should define
         public double Mileage { get; set; }
         public Pose Pose { get; set; } = new Pose();
         public double LinearSpeed { get; set; } = 0;

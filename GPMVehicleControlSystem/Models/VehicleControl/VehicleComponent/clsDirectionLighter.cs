@@ -35,7 +35,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
         }
 
-        public void TurnRight(bool opened = true)
+        public virtual void TurnRight(bool opened = true)
         {
             CloseAll();
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             }
         }
-        public void TurnLeft(bool opened = true)
+        public virtual void TurnLeft(bool opened = true)
         {
             CloseAll();
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public async void Forward(bool opened = true)
+        public async virtual void Forward(bool opened = true)
         {
             await Task.Delay(500);
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, opened);
@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
         }
-        public async void Backward(bool opened = true,int delay = 500)
+        public async virtual void Backward(bool opened = true,int delay = 500)
         {
             await Task.Delay(delay);
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);

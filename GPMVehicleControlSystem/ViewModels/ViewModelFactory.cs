@@ -39,18 +39,23 @@ namespace GPMVehicleControlSystem.ViewModels
                     Last_Visit_MapPoint = AGV.lastVisitedMapPoint,
                     Last_Visited_Tag = AGV.Navigation.LastVisitedTag,
                     CST_Data = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
-                    BatteryStatus = AGV.Batteries.Count == 0 ? new BatteryStateVM()
+                    BatteryStatus = AGV.Batteries.Count == 0 ? new BatteryStateVM[1]
                     {
+                        new BatteryStateVM
+                        {
                         BatteryLevel = 66
-                    } : new BatteryStateVM
+                        }
+                    } :
+                    AGV.Batteries.Values.Select(bat => new BatteryStateVM
                     {
-                        BatteryLevel = AGV.Batteries.Values.First().Data.batteryLevel,
-                        ChargeCurrent = AGV.Batteries.Values.First().Data.chargeCurrent,
-                        IsCharging = AGV.Batteries.Values.First().Data.chargeCurrent != 0,
-                        IsError = AGV.Batteries.Values.First().State == CarComponent.STATE.ABNORMAL,
-                        CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit)
+                        BatteryLevel = bat.Data.batteryLevel,
+                        ChargeCurrent = bat.Data.chargeCurrent,
+                        IsCharging = bat.Data.chargeCurrent != 0,
+                        IsError = bat.State == CarComponent.STATE.ABNORMAL,
+                        CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
+                        BatteryID =bat.Data.batteryID
 
-                    },
+                    }).ToArray(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
                     Angle = AGV.SickData.HeadingAngle,
                     Mileage = AGV.Odometry,
@@ -79,12 +84,37 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 return new AGVCStatusVM()
                 {
+                    AlarmCodes = new clsAlarmCode[]
+                    {
+                        new clsAlarmCode
+                        {
+                            Time=DateTime.Now,
+                             Code =  (int)AlarmCodes.AGVS_Disconnect,
+                              Description ="系統異常",
+                              ELevel = clsAlarmCode.LEVEL.Alarm
+                        },
+                        new clsAlarmCode
+                        {
+                            Time=DateTime.Now,
+                             Code =  (int)AlarmCodes.Code_Error_In_System,
+                              Description ="系統異常",
+                              ELevel = clsAlarmCode.LEVEL.Alarm
+                        }
+                    },
                     Agv_Type = clsEnums.AGV_TYPE.INSPECTION_AGV,
 
-                    BatteryStatus = new BatteryStateVM
+                    BatteryStatus = new BatteryStateVM[2]
                     {
-                        BatteryLevel = 77
-
+                        new BatteryStateVM
+                        {
+                            BatteryLevel = 69,
+                             BatteryID=0
+                        },
+                        new BatteryStateVM
+                        {
+                            BatteryLevel = 21,
+                            BatteryID=2
+                        }
                     },
                     BCR_State_MoveBase = new BarcodeReaderState
                     {

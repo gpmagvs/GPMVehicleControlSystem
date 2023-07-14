@@ -133,6 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             {
                 if (_Sub_Status != value)
                 {
+                    BuzzerPlayer.Stop();
                     if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                     {
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
@@ -178,7 +179,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         public Vehicle()
         {
             LOG.INFO($"{GetType().Name} Start create instance...");
-
+            StaSysMessageManager.AddNewMessage("Start", 0);
             ReadTaskNameFromFile();
             IsSystemInitialized = false;
             SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
@@ -201,8 +202,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
 
-            DirectionLighter = new clsDirectionLighter(WagoDO);
+            DirectionLighter = AgvType == AGV_TYPE.INSPECTION_AGV ? new clsInspectorAGVDirectionLighter(WagoDO) : new clsDirectionLighter(WagoDO);
             StatusLighter = new clsStatusLighter(WagoDO);
+
             Laser = new clsLaser(WagoDO, WagoDI);
 
             Task RosConnTask = new Task(async () =>
@@ -271,6 +273,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         {
             try
             {
+                DirectionLighter.CloseAll();
                 if (SimulationMode)
                 {
                     IsInitialized = true;
@@ -303,7 +306,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                     return (false, "解煞車旋鈕尚未復歸");
                 }
 
-                DirectionLighter.CloseAll();
                 IsInitialized = false;
                 Sub_Status = SUB_STATUS.Initializing;
                 Laser.LeftLaserBypass = true;
