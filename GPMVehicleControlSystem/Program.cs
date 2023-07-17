@@ -18,17 +18,34 @@ _ = Task.Run(() =>
     //StaEmuManager.StartWagoEmu();
     DBhelper.Initialize();
     int AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
-    if (AgvTypeInt == 0 | AgvTypeInt == 1)
+    VehicheAndWagoIOConfiguraltion(AgvTypeInt);
+
+});
+
+void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
+{
+    string wago_file_source = "param/IO_Wago_Submarine_AGV.ini";
+    if (agvTypeInt == 0)
     {
-        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Submarine_AGV.ini"), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+        wago_file_source = "param/IO_Wago_Fork_AGV.ini";
+        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.ForkAGV();
+    }
+    else if (agvTypeInt == 1)
+    {
+        wago_file_source = "param/IO_Wago_Submarine_AGV.ini";
+        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.SubmarinAGV();
     }
-    if (AgvTypeInt == 2)
+    else if (agvTypeInt == 2)
     {
-        File.Copy(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Inspection_AGV.ini"), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+        wago_file_source = "param/IO_Wago_Inspection_AGV.ini";
+        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.InspectionAGV();
     }
-});
+
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

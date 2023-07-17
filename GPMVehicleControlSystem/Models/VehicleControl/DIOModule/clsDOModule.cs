@@ -32,6 +32,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Back_LsrBypass,
             Left_LsrBypass,
             Right_LsrBypass,
+            Fork_Under_Pressing_SensorBypass,
+            Vertical_Belt_SensorBypass,
 
             AGV_DiractionLight_Front,
             AGV_DiractionLight_Back,
@@ -93,6 +95,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Infrared_PW_0,
             Infrared_Door_2,
 
+            /// <summary>
+            /// 牙叉電動肛伸出
+            /// </summary>
+            Fork_Extend,
+            /// <summary>
+            /// 牙叉電動肛縮回
+            /// </summary>
+            Fork_Shortend,
+
         }
         Dictionary<DO_ITEM, int> OUTPUT_INDEXS = new Dictionary<DO_ITEM, int>();
         public event EventHandler OnDisonnected;
@@ -153,35 +164,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        public async Task<bool> ResetMotor()
-        {
-            try
-            {
-                Console.WriteLine("Reset Motor Process Start");
-                SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                //安全迴路RELAY
-                SetState(DO_ITEM.Safety_Relays_Reset, true);
-                await Task.Delay(200);
-                SetState(DO_ITEM.Safety_Relays_Reset, false);
-                SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                await Task.Delay(200);
-                SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                Console.WriteLine("Reset Motor Process End");
-                return true;
-            }
-            catch (SocketException ex)
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
-                return false;
-            }
-
-        }
 
         public void SetState(string address, bool state)
         {
@@ -229,7 +211,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        public void SetState(DO_ITEM signal, bool state)
+        public bool SetState(DO_ITEM signal, bool state)
         {
             try
             {
@@ -242,13 +224,18 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     {
                         modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
                         Disconnect(tcpclient, modbusMaster);
+                        return true;
                     }
+                    else
+                        return false;
                 }
+                else
+                    return false;
             }
             catch (Exception ex)
             {
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                throw ex;
+                return false;
             }
         }
 
@@ -266,6 +253,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
+        internal void AllOFF()
+        {
+            bool connected = Connect(out var tcpclient, out var modbusMaster);
+            if (connected)
+            {
+                modbusMaster?.WriteMultipleCoils(Start, new bool[Size]);
+                Disconnect(tcpclient, modbusMaster);
+            }
+        }
         internal void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             try

@@ -18,13 +18,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.Backward();
         }
 
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
+
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            Agv.Laser.Mode = VehicleComponent.clsLaser.LASER_MODE.Loading;
-            Agv.Laser.LeftLaserBypass = Agv.Laser.RightLaserBypass = true;
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             return (true, AlarmCodes.None);
-            //return base.BeforeExecute();
         }
 
     }

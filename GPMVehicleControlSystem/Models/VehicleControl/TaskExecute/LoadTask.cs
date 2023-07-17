@@ -6,6 +6,7 @@ using System.Diagnostics;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using System.Formats.Asn1;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -30,7 +31,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
 
@@ -53,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             StartFrontendObstcleDetection();
-            return await base.BeforeExecute();
+            return await base.BeforeTaskExecuteActions();
         }
 
 
@@ -103,11 +104,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await base.AfterMoveDone();
         }
 
-        public override void LaserSettingBeforeTaskExecute()
+        public override async void LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.LeftLaserBypass = true;
             Agv.Laser.RightLaserBypass = true;
-            Agv.Laser.Mode = VehicleComponent.clsLaser.LASER_MODE.Loading;
+            await Agv.Laser.ModeSwitch( LASER_MODE.Loading);
         }
         private void AGVC_OnBackTOSecondary(object? sender, clsTaskDownloadData e)
         {

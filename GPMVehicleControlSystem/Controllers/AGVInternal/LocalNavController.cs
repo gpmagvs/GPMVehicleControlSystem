@@ -146,7 +146,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                  },
                 Destination = 2
             };
-            agv.AGVC.SendGoal(data.RosTaskCommandGoal);
+            agv.AGVC.AGVSTaskDownloadHandler(data);
+            //agv.AGVC.SendGoal(data.RosTaskCommandGoal);
             return Ok();
         }
 
@@ -162,6 +163,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Station_Type = STATION_TYPE.Normal,
                 Task_Sequence = Task_Sequence,
                 Trajectory = PathFinder.GetTrajectory(mapData.Name, pathPlanDto.stations),
+
             };
             return actionData;
         }

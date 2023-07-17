@@ -21,6 +21,7 @@ using System.Runtime.CompilerServices;
 using static AGVSystemCommonNet6.Abstracts.CarComponent;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl
 {
@@ -227,6 +228,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 {
                     WagoDI.Connect();
                     WagoDI.StartAsync();
+                    DOSignalDefaultSetting();
                 }
                 catch (SocketException ex)
                 {
@@ -242,9 +244,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             }
             Thread.Sleep(1000);
             EventsRegist();
-            Laser.Mode = LASER_MODE.Bypass;
-            StatusLighter.CloseAll();
-            StatusLighter.DOWN();
             IsSystemInitialized = true;
 
             Task.Run(async () =>
@@ -266,6 +265,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         }
 
+        protected virtual async void DOSignalDefaultSetting()
+        {
+            WagoDO.AllOFF();
+            WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await Laser.ModeSwitch(0);
+        }
 
         internal virtual async Task<(bool confirm, string message)> Initialize()
         {
@@ -301,7 +306,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 Laser.RightLaserBypass = true;
                 Laser.FrontLaserBypass = true;
                 Laser.BackLaserBypass = true;
-                Laser.Mode = LASER_MODE.Bypass;
+
+                Laser.ModeSwitch(LASER_MODE.Bypass);
+
                 StatusLighter.CloseAll();
                 StatusLighter.INITIALIZE();
                 await Task.Delay(1000);
@@ -386,13 +393,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                          if (Sub_Status != SUB_STATUS.IDLE)
                              Sub_Status = SUB_STATUS.STOP;
                      }
-                     AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                  }
                  AlarmManager.ClearAlarm();
                  CarComponents.ForEach(comp => comp.ClearAlarms());
                  if (!IsTriggerByButton)
                  {
-                     bool motor_reset_success = await WagoDO.ResetMotor();
+                     bool motor_reset_success = await ResetMotor();
                      if (!motor_reset_success)
                      {
                          Sub_Status = SUB_STATUS.STOP;
@@ -408,7 +414,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             return;
         }
 
+        public virtual async Task<bool> ResetMotor()
+        {
+            try
+            {
+                Console.WriteLine("Reset Motor Process Start");
+                WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                //安全迴路RELAY
+                WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+                await Task.Delay(200);
+                WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+                WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                await Task.Delay(200);
+                WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                Console.WriteLine("Reset Motor Process End");
+                return true;
+            }
+            catch (SocketException ex)
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
+                return false;
+            }
 
+        }
 
         /// <summary>
         /// 成功完成移動任務的處理

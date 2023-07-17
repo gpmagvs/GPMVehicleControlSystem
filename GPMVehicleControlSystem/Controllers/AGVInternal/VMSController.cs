@@ -12,6 +12,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using Microsoft.AspNetCore.Identity;
 using GPMVehicleControlSystem.Models.VCSSystem;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -244,6 +245,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 confirm = response.confirm,
                 message = response.message
             });
+        }
+
+
+        [HttpGet("RechargeCircuit")]
+        public async Task<IActionResult> RechargeCircuit()
+        {
+            bool open = !agv.WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+            bool success = agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
+            if (success)
+                StaSysMessageManager.AddNewMessage($"充電迴路已{(open ? "開啟" : "關閉")}");
+            else
+                StaSysMessageManager.AddNewMessage($"充電迴路{(open ? "開啟" : "關閉")}失敗",1);
+            return Ok(success);
         }
     }
 }

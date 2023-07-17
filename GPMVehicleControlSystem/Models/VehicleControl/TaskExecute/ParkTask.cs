@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -12,9 +13,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            return base.BeforeExecute();
+            Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+            return (true, AlarmCodes.None);
         }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
@@ -23,11 +25,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }
-        public override void LaserSettingBeforeTaskExecute()
+        public override async void LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.LeftLaserBypass = true;
             Agv.Laser.RightLaserBypass = true;
-            Agv.Laser.Mode = LASER_MODE.Loading;
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {

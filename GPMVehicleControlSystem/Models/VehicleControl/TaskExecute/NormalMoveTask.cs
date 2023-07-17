@@ -16,16 +16,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
+        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
+        {
+            return base.BeforeTaskExecuteActions();
+        }
+
         public override void LaserSettingBeforeTaskExecute()
         {
-            base.LaserSettingBeforeTaskExecute();
         }
-
-        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
-        {
-            return base.BeforeExecute();
-        }
-
-
     }
 }

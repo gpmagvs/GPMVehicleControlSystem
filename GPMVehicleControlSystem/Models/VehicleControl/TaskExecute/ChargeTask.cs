@@ -21,13 +21,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.Laser.LeftLaserBypass = true;
             Agv.Laser.RightLaserBypass = true;
-            Agv.Laser.Mode = LASER_MODE.Loading;
+            Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
 
-        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
+        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
-            return base.BeforeExecute();
+            return base.BeforeTaskExecuteActions();
         }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()

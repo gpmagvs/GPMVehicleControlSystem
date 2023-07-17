@@ -58,18 +58,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+
+                Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
                 DirectionLighterSwitchBeforeTaskExecute();
-                (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeExecute();
-
+                LaserSettingBeforeTaskExecute();
+                (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
                     AlarmManager.AddAlarm(checkResult.alarm_code, false);
                     Agv.Sub_Status = SUB_STATUS.ALARM;
                     return;
                 }
-
+                Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
                 bool agvc_executing = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_executing)
                 {
@@ -78,7 +80,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    await Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                    Agv.Sub_Status = SUB_STATUS.RUN;
+                    Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
             }
@@ -131,9 +134,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// 執行任務前的各項設定
         /// </summary>
         /// <returns></returns>
-        public virtual async Task<(bool confirm, AlarmCodes alarm_code)> BeforeExecute()
+        public virtual async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            LaserSettingBeforeTaskExecute();
             return (true, AlarmCodes.None);
         }
 
@@ -145,10 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 任務開始前的雷射設定
         /// </summary>
-        public virtual async void LaserSettingBeforeTaskExecute()
-        {
-            Agv.Laser.Mode = LASER_MODE.Move;
-        }
+        public abstract  void LaserSettingBeforeTaskExecute();
 
         internal void Abort()
         {

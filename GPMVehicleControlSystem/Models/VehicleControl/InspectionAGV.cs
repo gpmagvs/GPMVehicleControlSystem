@@ -60,6 +60,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             return await base.Initialize();
         }
+        protected override void DOSignalDefaultSetting()
+        {
+            base.DOSignalDefaultSetting();
+            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, true);
+            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_2, true);
+            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
+            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
+            WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
+
+        }
         protected internal override void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
@@ -111,7 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                     WagoDO.SetState(unlockDO, true);
 
                 CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                while (! (battery_no == 1 ? (lockBattery ? IsBattery1Locked : IsBattery1UnLocked) : (lockBattery ? IsBattery2Locked : IsBattery2UnLocked)))
+                while (!(battery_no == 1 ? (lockBattery ? IsBattery1Locked : IsBattery1UnLocked) : (lockBattery ? IsBattery2Locked : IsBattery2UnLocked)))
                 {
                     if (cst.IsCancellationRequested)
                     {

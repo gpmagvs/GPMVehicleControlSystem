@@ -12,6 +12,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Alarm;
 using System.Security.Claims;
 using GPMVehicleControlSystem.Models.Buzzer;
+using RosSharp.RosBridgeClient.Actionlib;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl
 {
@@ -27,7 +28,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             WagoDO.OnDisonnected += WagoDO_OnDisonnected;
             WagoDI.OnDisonnected += WagoDI_OnDisonnected;
-            WagoDI.OnEMO += AGVC.EMOHandler;
             WagoDI.OnEMO += WagoDI_OnEMO;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
@@ -92,23 +92,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void NearLaserTriggerHandler(object? sender, EventArgs e)
         {
+            if (!AGVC.IsAGVExecutingTask)
+                return;
 
             if (Operation_Mode == OPERATOR_MODE.AUTO && AGVC.IsAGVExecutingTask)
             {
                 AGVC.NearLaserTriggerHandler(sender, e);
-
                 Sub_Status = SUB_STATUS.ALARM;
                 clsIOSignal LaserSignal = sender as clsIOSignal;
                 DI_ITEM LaserType = LaserSignal.DI_item;
-
                 AlarmCodes alarm_code = GetAlarmCodeByLsrDI(LaserType);
-
                 if (alarm_code != AlarmCodes.None)
                     AlarmManager.AddAlarm(alarm_code, true);
-                else
-                {
-                    LOG.WARN("Near Laser Trigger but NO Alarm Added!");
-                }
             }
         }
 
@@ -130,6 +125,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void FarLaserTriggerHandler(object? sender, EventArgs e)
         {
+            if (!AGVC.IsAGVExecutingTask)
+                return;
+
             AGVC.FarLaserTriggerHandler(sender, e);
 
         }
@@ -140,16 +138,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AGVC.LaserRecoveryHandler(sender, cmd);
             if ((cmd == ROBOT_CONTROL_CMD.NONE))
                 return;
+
+            if (!AGVC.IsAGVExecutingTask)
+                return;
+
+
             clsIOSignal LaserSignal = sender as clsIOSignal;
             DI_ITEM LaserType = LaserSignal.DI_item;
 
-            AlarmCodes alarm_code = GetAlarmCodeByLsrDI(LaserType);
-            if (alarm_code != AlarmCodes.None)
-                AlarmManager.ClearAlarm(alarm_code);
+            if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+            {
+                AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
+            }
             if (Operation_Mode != OPERATOR_MODE.AUTO)
                 return;
             if (!AGVC.IsAGVExecutingTask)
                 return;
+
             if (LaserType != DI_ITEM.FrontProtection_Area_Sensor_3 && LaserType != DI_ITEM.BackProtection_Area_Sensor_3)
                 Sub_Status = SUB_STATUS.RUN;
 
@@ -190,9 +202,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         {
             if (AGVC.IsAGVExecutingTask && ExecutingTask.action == ACTION_TYPE.None)
             {
-
+                //方向燈
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-
+                //雷射
                 if (ExecutingTask.action == ACTION_TYPE.None && direction != clsNavigation.AGV_DIRECTION.STOP)
                     Laser.LaserChangeByAGVDirection(sender, direction);
             }
@@ -200,12 +212,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
         private void WagoDI_OnEMO(object? sender, EventArgs e)
         {
+            AGVC.EMOHandler(sender, e);
             Sub_Status = SUB_STATUS.STOP;
             IsInitialized = false;
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
             Sub_Status = SUB_STATUS.DOWN;
+
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)

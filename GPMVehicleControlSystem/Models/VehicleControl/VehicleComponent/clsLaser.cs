@@ -13,7 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public enum LASER_MODE
         {
             Unknow = 444,
-            Bypass =0,
+            Bypass = 0,
             Move = 1,
             Secondary = 2,
             Spin = 5,
@@ -34,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         private LASER_MODE _Mode = LASER_MODE.Bypass;
-        private int _mode_int;
+        private int _mode_int = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
@@ -69,11 +69,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     return LASER_MODE.Unknow;
                 }
-            }
-            set
-            {
-                Task.Factory.StartNew(async () => await ModeSwitch((int)value));
-                _Mode = value;
             }
         }
 
@@ -129,44 +124,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
+            if (AgvsLsrSetting == 0)
+            {
+                ModeSwitch(LASER_MODE.Bypass);
+                return;
+            }
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
                 await ModeSwitch(AgvsLsrSetting);
                 LOG.INFO($"雷射設定組 = {AgvsLsrSetting}");
             }
             else // 左.右轉
-            {
-                if (AgvsLsrSetting == 0)
-                {
-                    Mode = LASER_MODE.Bypass;
-                    return;
-                }
-
-
-                if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
-                    Mode = LASER_MODE.Move;
-                else if (direction == clsNavigation.AGV_DIRECTION.LEFT | direction == clsNavigation.AGV_DIRECTION.RIGHT)
-                    Mode = LASER_MODE.Spin;
-            }
+                ModeSwitch(LASER_MODE.Spin);
         }
-
-        public async Task ModeSwitch(int mode_int)
+        public async Task<bool> ModeSwitch(LASER_MODE mode)
+        {
+            return await ModeSwitch((int)mode);
+        }
+        public async Task<bool> ModeSwitch(int mode_int)
         {
             if (_mode_int == mode_int)
-                return;
+                return true;
 
-            bool[] lsSet = mode_int.To4Booleans();
-            bool IN_1 = lsSet[0];
-            bool IN_2 = lsSet[1];
-            bool IN_3 = lsSet[2];
-            bool IN_4 = lsSet[3];
-            bool[] writeStates = new bool[]
+            try
             {
+
+                bool[] lsSet = mode_int.To4Booleans();
+                bool IN_1 = lsSet[0];
+                bool IN_2 = lsSet[1];
+                bool IN_3 = lsSet[2];
+                bool IN_4 = lsSet[3];
+                bool[] writeStates = new bool[]
+                {
                 IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
-            };
-            DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
-            _mode_int = mode_int;
-            LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
+                };
+                DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
+                _mode_int = mode_int;
+                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

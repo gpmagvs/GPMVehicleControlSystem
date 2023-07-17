@@ -91,8 +91,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                     {
                         throw new NotImplementedException();
                     }
-
-                    Sub_Status = SUB_STATUS.RUN;
                     await Task.Delay(500);
                     ExecutingTask.OnTaskFinish = async (task_name) =>
                     {

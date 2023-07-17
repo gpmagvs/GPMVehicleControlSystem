@@ -194,8 +194,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             ManualController?.Stop();
             if (wait_agvc_execute_action_cts != null)
                 wait_agvc_execute_action_cts.Cancel();
-            _currentTaskCmdActionStatus = ActionStatus.ABORTED;
-            //CarSpeedControl(ROBOT_CONTROL_CMD.STOP, "");
         }
         public override bool IsConnected()
         {

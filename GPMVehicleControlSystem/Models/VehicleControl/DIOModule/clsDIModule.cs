@@ -21,16 +21,76 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Panel_Reset_PB,
             Horizon_Motor_Switch,
             Monitor_Switch,
-            Fork_Sensor_1,
+            /// <summary>
+            /// 牙叉電動缸_伸出到位檢
+            /// </summary>
+            Fork_Extend_Exist_Sensor,
+            /// <summary>
+            /// 牙叉電動缸_縮回到位檢
+            /// </summary>
+            Fork_Short_Exist_Sensor,
+            /// <summary>
+            /// 牙叉_左在席檢知(框)
+            /// </summary>
+            Fork_RACK_Left_Exist_Sensor,
+            /// <summary>
+            /// 牙叉_右在席檢知(框)
+            /// </summary>
+            Fork_RACK_Right_Exist_Sensor,
+
+            /// <summary>
+            /// 牙叉_左在席檢知(TRAY)
+            /// </summary>
+            Fork_TRAY_Left_Exist_Sensor,
+            /// <summary>
+            /// 牙叉_右在席檢知(TRAY)
+            /// </summary>
+            Fork_TRAY_Right_Exist_Sensor,
+            /// <summary>
+            /// 牙叉_障礙檢知 (前方)
+            /// </summary>
+            Fork_Frontend_Abstacle_Sensor,
+            /// <summary>
+            /// 牙叉_防壓檢知
+            /// </summary>
             Fork_Under_Pressing_Sensor,
-            Horizon_Motor_Error_1,
-            Horizon_Motor_Error_2,
-            Horizon_Motor_Error_3,
-            Horizon_Motor_Error_4,
-            Vertical_Motor_Error,
+
+            Horizon_Motor_Alarm_1,
+            Horizon_Motor_Alarm_2,
+            Horizon_Motor_Alarm_3,
+            Horizon_Motor_Alarm_4,
+            Horizon_Motor_Busy_1,
+            Horizon_Motor_Busy_2,
+            Horizon_Motor_Busy_3,
+            Horizon_Motor_Busy_4,
+
+            Vertical_Motor_Alarm,
+            Vertical_Motor_Busy,
+            /// <summary>
+            /// 升降軸待命位(Home)
+            /// </summary>
             Vertical_Home_Pos,
+
+            /// <summary>
+            /// 升降軸上定位
+            /// </summary>
+            Vertical_Up_Pose,
+            /// <summary>
+            /// 升降軸下定位
+            /// </summary>
+            Vertical_Down_Pose,
+            /// <summary>
+            /// 升降軸上極限
+            /// </summary>
             Vertical_Up_Hardware_limit,
+            /// <summary>
+            /// 升降軸下極限
+            /// </summary>
             Vertical_Down_Hardware_limit,
+            /// <summary>
+            /// 升降軸皮帶檢知
+            /// </summary>
+            Vertical_Belt_Sensor,
             EQ_L_REQ,
             EQ_U_REQ,
             EQ_READY,
@@ -82,7 +142,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             Ground_Hole_Sensor_3,
             Ground_Hole_Sensor_4,
             Smoke_Sensor_1,
-            N2_Sensor
+            N2_Sensor,
+            /// <summary>
+            /// 上層物料檢知
+            /// </summary>
+            Up_Cargo_Exist_Sernsor,
+            /// <summary>
+            /// 下層物料檢知
+            /// </summary>
+            Down_Cargo_Exist_Sernsor,
 
 
         }
@@ -327,6 +395,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             clsIOSignal laserSignal = sender as clsIOSignal;
             DI_ITEM DI = laserSignal.DI_item;
+
             OnLaserDIRecovery?.Invoke(laserSignal, ROBOT_CONTROL_CMD.NONE);
             if (DI == DI_ITEM.RightProtection_Area_Sensor_2 | DI == DI_ITEM.LeftProtection_Area_Sensor_2) //左右雷射復原
             {

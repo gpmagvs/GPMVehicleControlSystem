@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         IsCharging = bat.Data.chargeCurrent != 0,
                         IsError = bat.State == CarComponent.STATE.ABNORMAL,
                         CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
-                        BatteryID =bat.Data.batteryID
+                        BatteryID = bat.Data.batteryID
 
                     }).ToArray(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
@@ -73,7 +73,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         Destination = AGV.ExecutingTask == null ? "" : AGV.ExecutingTask.RunningTaskData.Destination + "",
                         DestinationMapPoint = AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
-                        PathPlan = AGV.ExecutingTask == null ? new int[0] : AGV.ExecutingTask.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
+                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTask == null ? new int[0] : AGV.ExecutingTask.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
                     },
                     Current_LASER_MODE = AGV.Laser.Mode.ToString(),
 
