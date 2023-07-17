@@ -6,13 +6,13 @@ using System.Text;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl;
 using GPMVehicleControlSystem.Models.Buzzer;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicle;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using Microsoft.AspNetCore.Identity;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {

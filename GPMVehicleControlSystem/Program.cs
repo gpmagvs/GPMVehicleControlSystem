@@ -29,19 +29,19 @@ void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
     {
         wago_file_source = "param/IO_Wago_Fork_AGV.ini";
         File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.ForkAGV();
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV();
     }
     else if (agvTypeInt == 1)
     {
         wago_file_source = "param/IO_Wago_Submarine_AGV.ini";
         File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.SubmarinAGV();
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.SubmarinAGV();
     }
     else if (agvTypeInt == 2)
     {
         wago_file_source = "param/IO_Wago_Inspection_AGV.ini";
         File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.InspectionAGV();
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.InspectionAGV();
     }
 
 }

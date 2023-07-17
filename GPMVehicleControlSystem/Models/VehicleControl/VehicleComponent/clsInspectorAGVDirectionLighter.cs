@@ -3,9 +3,12 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class clsInspectorAGVDirectionLighter : clsDirectionLighter
     {
-        public clsInspectorAGVDirectionLighter(clsDOModule DOModule) : base(DOModule)
+        public clsInspectorAGVDirectionLighter( ) : base()
         {
 
         }
@@ -14,10 +17,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Left, true);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Left_2, true);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Right, true);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Right_2, true);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left_2, true);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, true);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right_2, true);
 
             }
             catch (Exception)
@@ -30,10 +33,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 AbortFlash();
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Left, false);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Left_2, false);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Right, false);
-                DOModule.SetState(clsDOModule.DO_ITEM.AGV_DiractionLight_Right_2, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left_2, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right_2, false);
 
             }
             catch (Exception)

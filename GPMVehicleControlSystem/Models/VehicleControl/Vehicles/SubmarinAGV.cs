@@ -4,8 +4,11 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
+    /// <summary>
+    /// 潛盾
+    /// </summary>
     public partial class SubmarinAGV : Vehicle
     {
 
@@ -24,6 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         }
 
         public override clsCSTReader CSTReader { get; set; } = new clsCSTReader();
+        public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
 
         internal override Task<(bool confirm, string message)> Initialize()
         {

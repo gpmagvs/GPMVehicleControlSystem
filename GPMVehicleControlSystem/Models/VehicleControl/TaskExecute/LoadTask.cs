@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using System.Formats.Asn1;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {

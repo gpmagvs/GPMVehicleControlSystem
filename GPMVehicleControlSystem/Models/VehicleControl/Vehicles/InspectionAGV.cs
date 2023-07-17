@@ -5,7 +5,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     /// <summary>
     /// 巡檢AGV
@@ -32,6 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         private InspectorAGVCarController? InspectorAGVC => AGVC as InspectorAGVCarController;
 
         public override clsCSTReader CSTReader { get; set; } = null;
+        public override clsDirectionLighter DirectionLighter { get; set; } = new clsInspectorAGVDirectionLighter();
 
         internal override async Task<(bool confirm, string message)> Initialize()
         {

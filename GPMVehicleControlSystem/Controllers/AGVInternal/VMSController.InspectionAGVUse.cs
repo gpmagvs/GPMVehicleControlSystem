@@ -1,4 +1,5 @@
 ﻿using GPMVehicleControlSystem.Models.VehicleControl;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal

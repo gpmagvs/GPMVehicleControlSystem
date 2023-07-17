@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.Abstracts;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6;
 using GPMVehicleControlSystem.Models.VCSSystem;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
 namespace GPMVehicleControlSystem.ViewModels
 {

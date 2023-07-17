@@ -1,8 +1,11 @@
 ﻿using AGVSystemCommonNet6.Log;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
+    /// <summary>
+    /// 叉車AGV
+    /// </summary>
     public class ForkAGV : SubmarinAGV
     {
         public ForkAGV()
@@ -12,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         {
             try
             {
-                base.ResetMotor();
+                await base.ResetMotor();
                 WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
                 await Task.Delay(100);
                 WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);

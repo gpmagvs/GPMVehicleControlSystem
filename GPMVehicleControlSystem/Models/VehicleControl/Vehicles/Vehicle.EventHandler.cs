@@ -14,7 +14,7 @@ using System.Security.Claims;
 using GPMVehicleControlSystem.Models.Buzzer;
 using RosSharp.RosBridgeClient.Actionlib;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {

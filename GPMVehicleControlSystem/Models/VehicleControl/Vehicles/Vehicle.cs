@@ -23,7 +23,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     /// <summary>
     /// 車子
@@ -37,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             GPM_VMS
         }
 
-        public clsDirectionLighter DirectionLighter { get; set; }
+        public abstract clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;
         public VMS_PROTOCOL VmsProtocol = VMS_PROTOCOL.GPM_VMS;
@@ -204,7 +204,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
 
-            DirectionLighter = AgvType == AGV_TYPE.INSPECTION_AGV ? new clsInspectorAGVDirectionLighter(WagoDO) : new clsDirectionLighter(WagoDO);
+            
+            DirectionLighter.DOModule = WagoDO;
             StatusLighter = new clsStatusLighter(WagoDO);
             Laser = new clsLaser(WagoDO, WagoDI);
 

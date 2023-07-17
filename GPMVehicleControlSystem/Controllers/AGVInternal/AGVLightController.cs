@@ -1,5 +1,6 @@
 ﻿using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Swagger;

@@ -7,7 +7,7 @@ using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {

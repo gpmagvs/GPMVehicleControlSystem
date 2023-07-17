@@ -1,8 +1,10 @@
-﻿namespace GPMVehicleControlSystem.Models
+﻿using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+
+namespace GPMVehicleControlSystem.Models
 {
     public static class StaStored
     {
         public static string APPVersion;
-        public static VehicleControl.Vehicle CurrentVechicle;
+        public static Vehicle CurrentVechicle;
     }
 }

@@ -2,6 +2,7 @@
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;

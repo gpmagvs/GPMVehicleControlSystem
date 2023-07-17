@@ -1,4 +1,4 @@
-﻿namespace GPMVehicleControlSystem.Models.VehicleControl
+﻿namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     /// <summary>
     ///  電池交換站交握

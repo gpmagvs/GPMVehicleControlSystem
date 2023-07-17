@@ -6,10 +6,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsDirectionLighter : Lighter
     {
-        public clsDOModule DOModule { get; }
-        public clsDirectionLighter(clsDOModule DOModule) : base(DOModule)
+        public clsDirectionLighter() : base()
         {
-            this.DOModule = DOModule;
+        }
+
+        public clsDirectionLighter(clsDOModule dOModule) : base(dOModule)
+        {
         }
 
         public override async void CloseAll()

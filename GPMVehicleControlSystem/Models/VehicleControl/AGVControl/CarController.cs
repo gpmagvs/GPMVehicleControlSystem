@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;

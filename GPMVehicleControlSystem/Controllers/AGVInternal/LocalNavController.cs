@@ -6,6 +6,7 @@ using GPMVehicleControlSystem.Models.VehicleControl;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {

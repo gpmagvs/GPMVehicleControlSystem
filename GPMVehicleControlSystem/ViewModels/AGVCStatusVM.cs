@@ -1,7 +1,6 @@
 ﻿using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Std;
 using AGV_VMS.ViewModels;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicle;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;

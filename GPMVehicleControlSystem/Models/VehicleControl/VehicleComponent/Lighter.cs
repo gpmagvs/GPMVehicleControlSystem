@@ -5,13 +5,18 @@ namespace AGVSystemCommonNet6.Abstracts
 {
     public abstract class Lighter
     {
-        public Lighter(clsDOModule DOModule)
+        public clsDOModule DOModule { get; set; }
+        public Lighter( )
         {
-            this.DOModule = DOModule;
         }
+
+        protected Lighter(clsDOModule dOModule)
+        {
+            DOModule = dOModule;
+        }
+
         CancellationTokenSource flash_cts = new CancellationTokenSource();
 
-        public clsDOModule DOModule { get; }
         public void AbortFlash()
         {
             flash_cts.Cancel();
