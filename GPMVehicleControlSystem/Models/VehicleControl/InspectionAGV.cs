@@ -12,10 +12,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
     /// </summary>
     public partial class InspectionAGV : Vehicle
     {
-        public bool IsBattery1Exist => WagoDI.GetState(DI_ITEM.Battery_1_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_2) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_3) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_4);
-        public bool IsBattery2Exist => WagoDI.GetState(DI_ITEM.Battery_2_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_2) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_3) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_4);
+        public bool IsBattery1Exist => WagoDI.GetState(DI_ITEM.Battery_1_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_4);
+        public bool IsBattery2Exist => WagoDI.GetState(DI_ITEM.Battery_2_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_4);
         public bool IsBattery1Locked => WagoDI.GetState(DI_ITEM.Battery_1_Lock_Sensor);
         public bool IsBattery2Locked => WagoDI.GetState(DI_ITEM.Battery_2_Lock_Sensor);
+        public bool IsBattery1UnLocked => WagoDI.GetState(DI_ITEM.Battery_1_Unlock_Sensor);
+        public bool IsBattery2UnLocked => WagoDI.GetState(DI_ITEM.Battery_2_Unlock_Sensor);
 
         public InspectionAGV()
         {
@@ -34,12 +36,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
         internal override async Task<(bool confirm, string message)> Initialize()
         {
             //初始化儀器
-            (bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
-            if (!measurementInitResult.confirm)
-                return (false, measurementInitResult.message);
-            bool Battery1LockOK = IsBattery1Exist && IsBattery1Locked;
-            bool Battery2LockOK = IsBattery2Exist && IsBattery2Locked;
-            if (!Battery1LockOK | !Battery2LockOK)
+            //(bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
+            //if (!measurementInitResult.confirm)
+            //    return (false, measurementInitResult.message);
+            bool Battery1LockNG = IsBattery1Exist && !IsBattery1Locked;
+            bool Battery2LockNG = IsBattery2Exist && !IsBattery2Locked;
+            if (Battery1LockNG | Battery2LockNG)
             {
                 string err_msg = "";
                 if (IsBattery1Exist)
@@ -66,38 +68,58 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             BuzzerPlayer.rossocket = AGVC.rosSocket;
             BuzzerPlayer.Alarm();
         }
-        public bool Battery1Lock()
+        public async Task<bool> Battery1Lock()
         {
-            return ChangeBatteryLockState(1, true);
+            return await ChangeBatteryLockState(1, true);
         }
 
-        public bool Battery2Lock()
+        public async Task<bool> Battery2Lock()
         {
-            return ChangeBatteryLockState(2, true);
+            return await ChangeBatteryLockState(2, true);
         }
 
-        public bool Battery1UnLock()
+        public async Task<bool> Battery1UnLock()
         {
-            return ChangeBatteryLockState(1, false);
+            return await ChangeBatteryLockState(1, false);
         }
 
-        public bool Battery2UnLock()
+        public async Task<bool> Battery2UnLock()
         {
-            return ChangeBatteryLockState(2, false);
+            return await ChangeBatteryLockState(2, false);
         }
-        private bool ChangeBatteryLockState(int battery_no, bool lockBattery)
+        private async Task<bool> ChangeBatteryLockState(int battery_no, bool lockBattery)
         {
             var noLockAlarmCode = battery_no == 1 ? AlarmCodes.Battery1_Not_Lock : AlarmCodes.Battery2_Not_Lock;
             try
             {
+                void OffAllBatLockUnlockDO()
+                {
+
+                    WagoDO.SetState(DO_ITEM.Battery_1_Lock, false);
+                    WagoDO.SetState(DO_ITEM.Battery_2_Lock, false);
+                    WagoDO.SetState(DO_ITEM.Battery_1_Unlock, false);
+                    WagoDO.SetState(DO_ITEM.Battery_2_Unlock, false);
+                }
+                var isBatLocking = battery_no == 1 ? IsBattery1Locked : IsBattery2Locked;
                 var lockDO = battery_no == 1 ? DO_ITEM.Battery_1_Lock : DO_ITEM.Battery_2_Lock;
                 var unlockDO = battery_no == 1 ? DO_ITEM.Battery_1_Unlock : DO_ITEM.Battery_2_Unlock;
-                WagoDO.SetState(lockDO, false);
+                OffAllBatLockUnlockDO();
                 WagoDO.SetState(unlockDO, false);
                 if (lockBattery)
                     WagoDO.SetState(lockDO, true);
                 else
                     WagoDO.SetState(unlockDO, true);
+
+                CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                while (! (battery_no == 1 ? (lockBattery ? IsBattery1Locked : IsBattery1UnLocked) : (lockBattery ? IsBattery2Locked : IsBattery2UnLocked)))
+                {
+                    if (cst.IsCancellationRequested)
+                    {
+                        OffAllBatLockUnlockDO();
+                        return false;
+                    }
+                }
+                OffAllBatLockUnlockDO();
                 return true;
             }
             catch (Exception)

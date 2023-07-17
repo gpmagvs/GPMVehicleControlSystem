@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -68,6 +69,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.Sub_Status = SUB_STATUS.ALARM;
                     return;
                 }
+
                 bool agvc_executing = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_executing)
                 {
@@ -76,6 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
+                    await Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
             }
@@ -144,7 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         public virtual async void LaserSettingBeforeTaskExecute()
         {
-            await Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+            Agv.Laser.Mode = LASER_MODE.Move;
         }
 
         internal void Abort()

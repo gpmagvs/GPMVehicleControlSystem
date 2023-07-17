@@ -12,11 +12,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public DischargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-        public override void LaserSettingBeforeTaskExecute()
-        {
-            Agv.Laser.RightLaserBypass = Agv.Laser.LeftLaserBypass = true;
-            base.LaserSettingBeforeTaskExecute();
-        }
 
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {

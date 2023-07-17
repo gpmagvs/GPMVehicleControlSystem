@@ -28,7 +28,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.Laser.LeftLaserBypass = true;
             Agv.Laser.RightLaserBypass = true;
             Agv.Laser.Mode = LASER_MODE.Loading;
-            base.LaserSettingBeforeTaskExecute();
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {

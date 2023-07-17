@@ -196,6 +196,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
             SID = AppSettingsHelper.GetValue<string>("VCS:SID");
             CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
+            AGVSMessageFactory.Setup(SID, CarName);
 
             WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
             WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
@@ -204,7 +205,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
 
             DirectionLighter = AgvType == AGV_TYPE.INSPECTION_AGV ? new clsInspectorAGVDirectionLighter(WagoDO) : new clsDirectionLighter(WagoDO);
             StatusLighter = new clsStatusLighter(WagoDO);
-
             Laser = new clsLaser(WagoDO, WagoDI);
 
             Task RosConnTask = new Task(async () =>
@@ -245,8 +245,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             Laser.Mode = LASER_MODE.Bypass;
             StatusLighter.CloseAll();
             StatusLighter.DOWN();
-            AGVSMessageFactory.Setup(SID, CarName);
-            //Pilot = new AGVPILOT(this);
             IsSystemInitialized = true;
 
             Task.Run(async () =>
@@ -274,15 +272,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
             try
             {
                 DirectionLighter.CloseAll();
-                if (SimulationMode)
-                {
-                    IsInitialized = true;
-                    AGVC.IsAGVExecutingTask = false;
-                    _Sub_Status = SUB_STATUS.IDLE;
-                    emulator.Runstatus.AGV_Status = Main_Status = MAIN_STATUS.IDLE;
-                    return (true, "");
-                }
-
                 if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
                 {
                     return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
@@ -313,12 +302,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 Laser.FrontLaserBypass = true;
                 Laser.BackLaserBypass = true;
                 Laser.Mode = LASER_MODE.Bypass;
-                //AGVSConnection.TryTaskFeedBackAsync(CarController.RunningTaskData, 0, TASK_RUN_STATUS.NO_MISSION);
                 StatusLighter.CloseAll();
                 StatusLighter.INITIALIZE();
                 await Task.Delay(1000);
                 StatusLighter.AbortFlash();
-
                 IsInitialized = true;
                 Sub_Status = SUB_STATUS.IDLE;
                 AGVC.IsAGVExecutingTask = false;

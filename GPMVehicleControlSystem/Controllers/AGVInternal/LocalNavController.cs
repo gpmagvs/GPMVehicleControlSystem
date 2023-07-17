@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.AGVDispatch.Messages;
 using GPMVehicleControlSystem.Models.VehicleControl;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -114,6 +115,40 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         }
 
+        [HttpGet("MoveTo")]
+        public async Task<IActionResult> MoveTo(double x, double y, double theta)
+        {
+            var currentX = agv.Navigation.Data.robotPose.pose.position.x;
+            var currentY = agv.Navigation.Data.robotPose.pose.position.y;
+
+            clsTaskDownloadData data = new clsTaskDownloadData()
+            {
+                Action_Type = ACTION_TYPE.None,
+                Task_Name = $"Test_{DateTime.Now.ToString("yyyyMMdd_HHmmssfff")}",
+                Trajectory = new clsMapPoint[]
+                 {
+                     new clsMapPoint
+                     {
+                          Point_ID = 1,
+                           X = currentX,
+                          Y = currentY,
+                          index = 0
+                     },
+
+                     new clsMapPoint
+                     {
+                          Point_ID = 2,
+                           X = x,
+                          Y =y,
+                          Theta = theta,
+                          index = 1
+                     }
+                 },
+                Destination = 2
+            };
+            agv.AGVC.SendGoal(data.RosTaskCommandGoal);
+            return Ok();
+        }
 
         private clsTaskDownloadData CreateMoveActionTaskJob(Map mapData, ACTION_TYPE actionType, string TaskName, int fromTag, int toTag, int Task_Sequence)
         {

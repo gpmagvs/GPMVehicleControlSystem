@@ -72,20 +72,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             set
             {
-                if (value == LASER_MODE.Bypass)
-                {
-                    FrontLaserBypass = BackLaserBypass = RightLaserBypass = LeftLaserBypass = true;
-                }
-                else if (value == LASER_MODE.Loading)
-                {
-                    FrontLaserBypass = BackLaserBypass = false;
-                    LeftLaserBypass = RightLaserBypass = true;
-                }
-                else
-                {
-                    FrontLaserBypass = BackLaserBypass = LeftLaserBypass = RightLaserBypass = false;
-                }
-
                 Task.Factory.StartNew(async () => await ModeSwitch((int)value));
                 _Mode = value;
             }
@@ -174,14 +160,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             bool IN_2 = lsSet[1];
             bool IN_3 = lsSet[2];
             bool IN_4 = lsSet[3];
-            //DIModule.PauseSignal.Reset();
             bool[] writeStates = new bool[]
             {
                 IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
             };
             DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
             _mode_int = mode_int;
-            //LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
+            LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
         }
     }
 }

@@ -15,7 +15,8 @@ namespace GPMVehicleControlSystem.Tools
                 {
                     var configBuilder = new ConfigurationBuilder()
                         .SetBasePath(Environment.CurrentDirectory)
-                        .AddJsonFile(Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json");
+                        .AddJsonFile(Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json");
+                        //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json");
                     var configuration = configBuilder.Build();
 
                     return configuration;

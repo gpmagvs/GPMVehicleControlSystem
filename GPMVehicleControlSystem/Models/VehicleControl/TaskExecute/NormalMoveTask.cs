@@ -18,7 +18,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override void LaserSettingBeforeTaskExecute()
         {
-            Agv.Laser.Mode = VehicleComponent.clsLaser.LASER_MODE.Bypass;
             base.LaserSettingBeforeTaskExecute();
         }
 
