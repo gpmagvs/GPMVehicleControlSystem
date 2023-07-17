@@ -222,11 +222,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl
                 );
             });
 
-            Task WagoDIConnTask = new Task(() =>
+            Task WagoDIConnTask = new Task(async () =>
             {
                 try
                 {
-                    WagoDI.Connect();
+                    while (!WagoDI.Connect())
+                    {
+                        await Task.Delay(1000);
+                    }
                     WagoDI.StartAsync();
                     DOSignalDefaultSetting();
                 }

@@ -281,7 +281,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
                 client = null;
                 master = null;
-
                 return false;
             }
         }
@@ -433,9 +432,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public virtual async void StartAsync()
         {
-            if (!IsConnected())
-                Connect();
-
             await Task.Run(() =>
             {
                 while (true)
