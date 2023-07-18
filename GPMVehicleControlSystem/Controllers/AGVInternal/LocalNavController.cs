@@ -44,7 +44,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             int fromtag = -1;
             int totag = int.Parse(to);
-            int currentTag = agv.Navigation.LastVisitedTag;
+            int currentTag = -1;
+
+            if (agv.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV)
+            {
+                IOrderedEnumerable<MapPoint> ordered = agv.NavingMap.Points.Values.OrderBy(pt => pt.CalculateDistance(agv.Navigation.Data.robotPose.pose.position.x, agv.Navigation.Data.robotPose.pose.position.y));
+                currentTag = ordered.First().TagNumber;
+            }
+            else
+                currentTag = agv.Navigation.LastVisitedTag;
 
             if (action != ACTION_TYPE.Carry)
                 fromtag = currentTag;
@@ -117,7 +125,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpGet("MoveTo")]
-        public async Task<IActionResult> MoveTo(double x, double y, double theta)
+        public async Task<IActionResult> MoveTo(double x, double y, double theta,int point_id)
         {
             var currentX = agv.Navigation.Data.robotPose.pose.position.x;
             var currentY = agv.Navigation.Data.robotPose.pose.position.y;
@@ -133,22 +141,32 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           Point_ID = 1,
                            X = currentX,
                           Y = currentY,
-                          index = 0
+                          index = 0,
+                          Speed=1,
+                          Laser=0,
+                          Control_Mode = new clsControlMode
+                          {
+                               Spin=0
+                          }
                      },
-
                      new clsMapPoint
                      {
-                          Point_ID = 2,
+                          Point_ID =point_id,
                            X = x,
                           Y =y,
                           Theta = theta,
-                          index = 1
+                          index = 1,
+                          Speed=1,
+                          Laser =0,
+                          Control_Mode = new clsControlMode
+                          {
+                               Spin=0
+                          }
                      }
                  },
-                Destination = 2
+                Destination = point_id
             };
             agv.AGVC.AGVSTaskDownloadHandler(data);
-            //agv.AGVC.SendGoal(data.RosTaskCommandGoal);
             return Ok();
         }
 
@@ -178,7 +196,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             int normal_move_final_tag;
             List<clsTaskDownloadData> taskList = new List<clsTaskDownloadData>();
 
-            MapPoint? currentStation = mapData.Points.First(i => i.Value.TagNumber == agv.Navigation.LastVisitedTag).Value;
+            MapPoint? currentStation = mapData.Points.First(i => i.Value.TagNumber == fromTag).Value;
             MapPoint? destineStation = mapData.Points.First(i => i.Value.TagNumber == toTag).Value;
             MapPoint secondaryLocStation = mapData.Points[destineStation.Target.First().Key];
 
