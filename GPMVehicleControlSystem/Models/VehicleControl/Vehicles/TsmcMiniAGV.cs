@@ -2,6 +2,8 @@
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using System.Net.Sockets;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -70,6 +72,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
             WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
 
+        }
+        public override async Task<bool> ResetMotor()
+        {
+            try
+            {
+                if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_2) |
+                    !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_4))
+                {
+                    Console.WriteLine("Reset Motor Process Start");
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                    //安全迴路RELAY
+                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                    Console.WriteLine("Reset Motor Process End");
+                }
+                return true;
+            }
+            catch (SocketException ex)
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
+                return false;
+            }
         }
         protected internal override void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {

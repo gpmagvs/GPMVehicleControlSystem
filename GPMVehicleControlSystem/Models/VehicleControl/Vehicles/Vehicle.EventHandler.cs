@@ -272,18 +272,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
 
 
-            Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(1000);
-                foreach (var item in CarComponents.Select(comp => comp.ErrorCodes).ToList())
-                {
+          
 
-                    foreach (var alarm in item.Keys)
-                    {
-                        AlarmManager.AddWarning(alarm);
-                    }
-                }
-            });
             if (Batteries.Values.Any(battery => battery.IsCharging))
             {
                 Sub_Status = SUB_STATUS.Charging;
