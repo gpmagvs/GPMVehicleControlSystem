@@ -180,11 +180,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public Vehicle()
         {
             LOG.INFO($"{GetType().Name} Start create instance...");
-            StaSysMessageManager.AddNewMessage("Start", 0);
             ReadTaskNameFromFile();
             IsSystemInitialized = false;
             SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
-            emulator = new VehicleEmu(7);
+            if (SimulationMode)
+                emulator = new VehicleEmu(7);
+
             AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
             string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
             int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
@@ -201,10 +202,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
             WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
+
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
 
-            
+
             DirectionLighter.DOModule = WagoDO;
             StatusLighter = new clsStatusLighter(WagoDO);
             Laser = new clsLaser(WagoDO, WagoDI);
