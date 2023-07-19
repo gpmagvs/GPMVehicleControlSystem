@@ -147,6 +147,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           Point_ID = agv.Navigation.LastVisitedTag,
                            X = currentX,
                           Y = currentY,
+                          Theta = agv.Navigation.Angle,
                           index = 0,
                           Speed=1,
                           Laser=0,
