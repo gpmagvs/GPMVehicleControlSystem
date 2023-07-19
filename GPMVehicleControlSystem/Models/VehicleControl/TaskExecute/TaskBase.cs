@@ -55,11 +55,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 執行任務
         /// </summary>
-        public async Task Execute()
+        public  async Task Execute()
         {
             try
             {
-
                 Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
@@ -69,6 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!checkResult.confirm)
                 {
                     AlarmManager.AddAlarm(checkResult.alarm_code, false);
+                    Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
                     Agv.Sub_Status = SUB_STATUS.ALARM;
                     return;
                 }

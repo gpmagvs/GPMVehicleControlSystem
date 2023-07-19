@@ -166,7 +166,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             {
                                 Task.Run(async () =>
                                 {
-                                    await Task.Delay(50);
                                     if (ExecutingTask.action == ACTION_TYPE.None)
                                         BuzzerPlayer.Move();
                                     else
@@ -241,6 +240,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     WagoDI.StartAsync();
                     DOSignalDefaultSetting();
+                    ResetMotor();
                 }
                 catch (SocketException ex)
                 {
@@ -373,11 +373,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
         }
-
+        private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            if (AlarmManager.CurrentAlarms.Values.Count == 0)
+            if (IsResetAlarmWorking)
                 return;
+
+            IsResetAlarmWorking = true;
+            bool motor_reset_success = await ResetMotor();
+            if (!motor_reset_success)
+            {
+                Sub_Status = SUB_STATUS.STOP;
+                await Task.Delay(100);
+                Sub_Status = SUB_STATUS.DOWN;
+                IsResetAlarmWorking = false;
+                return;
+            }
+
+            if (AlarmManager.CurrentAlarms.Values.Count == 0)
+            {
+                IsResetAlarmWorking = false;
+                return;
+            }
 
             await BuzzerPlayer.Stop();
 
@@ -390,7 +407,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  }
                  else
                  {
-                     if (CurrentTaskRunStatus == TASK_RUN_STATUS.NAVIGATING)
+                     if (AGVC.currentTaskCmdActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                      {
                          Sub_Status = SUB_STATUS.RUN;
                      }
@@ -402,21 +419,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  }
                  AlarmManager.ClearAlarm();
                  CarComponents.ForEach(comp => comp.ClearAlarms());
-                 if (!IsTriggerByButton)
-                 {
-                     Task.Run(async() =>
-                     {
-                         bool motor_reset_success = await ResetMotor();
-                         if (!motor_reset_success)
-                         {
-                             Sub_Status = SUB_STATUS.STOP;
-                             await Task.Delay(100);
-                             Sub_Status = SUB_STATUS.DOWN;
-                         }
-                     });
-                 }
-             });
 
+             });
+            IsResetAlarmWorking = false;
             return;
         }
 
@@ -424,17 +429,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                Console.WriteLine("Reset Motor Process Start");
-                WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                //安全迴路RELAY
-                WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
-                await Task.Delay(200);
-                WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
-                WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                await Task.Delay(200);
-                WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                Console.WriteLine("Reset Motor Process End");
+                if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_2))
+                {
+                    Console.WriteLine("Reset Motor Process Start");
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                    //安全迴路RELAY
+                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                    await Task.Delay(200);
+                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                    Console.WriteLine("Reset Motor Process End");
+                }
                 return true;
             }
             catch (SocketException ex)

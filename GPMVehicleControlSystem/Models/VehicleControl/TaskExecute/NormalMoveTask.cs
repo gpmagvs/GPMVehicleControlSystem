@@ -7,7 +7,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
     public class NormalMoveTask : TaskBase
     {
-        public override ACTION_TYPE action { get; set; } = ACTION_TYPE.None;
+        public   override ACTION_TYPE action { get; set; } = ACTION_TYPE.None;
         public NormalMoveTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }

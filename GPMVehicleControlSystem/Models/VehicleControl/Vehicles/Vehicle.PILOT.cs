@@ -82,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else if (action == ACTION_TYPE.Load)
                         ExecutingTask = new LoadTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Unload)
-                        ExecutingTask = new UnloadTask(this, _taskDownloadData);
+                         ExecutingTask = new UnloadTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Park)
                         ExecutingTask = new ParkTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Unpark)

@@ -31,7 +31,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
@@ -109,7 +108,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.Laser.LeftLaserBypass = true;
             Agv.Laser.RightLaserBypass = true;
-            await Agv.Laser.ModeSwitch( LASER_MODE.Loading);
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
         private void AGVC_OnBackTOSecondary(object? sender, clsTaskDownloadData e)
         {

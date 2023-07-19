@@ -277,6 +277,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(1000);
                 foreach (var item in CarComponents.Select(comp => comp.ErrorCodes).ToList())
                 {
+
                     foreach (var alarm in item.Keys)
                     {
                         AlarmManager.AddWarning(alarm);

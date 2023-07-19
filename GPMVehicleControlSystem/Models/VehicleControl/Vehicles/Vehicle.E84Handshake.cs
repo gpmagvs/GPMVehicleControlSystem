@@ -9,9 +9,9 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
-    public partial class Vehicle
+    public  partial class Vehicle
     {
-
+        
         private bool IsULReqOn(ACTION_TYPE action)
         {
             if (action == ACTION_TYPE.Load)
