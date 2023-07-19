@@ -10,7 +10,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// <summary>
     /// 巡檢AGV
     /// </summary>
-    public partial class InspectionAGV : Vehicle
+    public partial class TsmcMiniAGV : Vehicle
     {
         public bool IsBattery1Exist => WagoDI.GetState(DI_ITEM.Battery_1_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_4);
         public bool IsBattery2Exist => WagoDI.GetState(DI_ITEM.Battery_2_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_4);
@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsBattery1UnLocked => WagoDI.GetState(DI_ITEM.Battery_1_Unlock_Sensor);
         public bool IsBattery2UnLocked => WagoDI.GetState(DI_ITEM.Battery_2_Unlock_Sensor);
 
-        public InspectionAGV()
+        public TsmcMiniAGV()
         {
             WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_FORWARD},

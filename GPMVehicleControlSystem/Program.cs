@@ -41,7 +41,7 @@ void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
     {
         wago_file_source = "param/IO_Wago_Inspection_AGV.ini";
         File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.InspectionAGV();
+        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.TsmcMiniAGV();
     }
 
 }

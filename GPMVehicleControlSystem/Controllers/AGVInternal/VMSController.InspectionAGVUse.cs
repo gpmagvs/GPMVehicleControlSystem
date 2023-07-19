@@ -9,7 +9,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("BatteryLockCtrl")]
         public async Task<IActionResult> BatteryLockControl(int battery_no, bool islock)
         {
-            var inspAGV = (agv as InspectionAGV);
+            var inspAGV = (agv as TsmcMiniAGV);
             if (battery_no == 1)
             {
                 if (islock)
