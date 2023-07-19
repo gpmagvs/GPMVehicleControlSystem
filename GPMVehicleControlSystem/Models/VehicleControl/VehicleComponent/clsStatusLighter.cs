@@ -34,10 +34,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public void DOWN()
         {
+            try
+            {
 
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
         public void IDLE()
         {

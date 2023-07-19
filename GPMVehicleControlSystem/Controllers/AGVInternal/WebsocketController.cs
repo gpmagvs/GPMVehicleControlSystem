@@ -95,7 +95,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     {
                         try
                         {
-                            webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(e))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                            webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new clsSysMessage[] { e }))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
                         }
                         catch (Exception)
                         {
@@ -109,10 +109,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Stopwatch sw = Stopwatch.StartNew();
                 sw.Start();
                 StaSysMessageManager.OnSystemMessageAdd += StaSysMessageManager_OnSystemMessageAdd;
-                webSocket?.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new clsSysMessage
-                {
-                    Message = "車載系統"
-                }))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                webSocket?.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(
+                     StaSysMessageManager.SysMessages.Messages.Distinct()
+                    ))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
 
                 while (webSocket.State == System.Net.WebSockets.WebSocketState.Open)
                 {

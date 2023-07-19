@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Tools.Database;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
+using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Json;
@@ -13,7 +14,9 @@ _ = Task.Run(() =>
 {
     LOG.SetLogFolderName("GPM_AGV_LOG");
     StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-    AlarmManager.LoadAlarmList(AppSettingsHelper.GetValue<string>("VCS:AlarmList_json_Path"));
+    bool alarmListLoaded = AlarmManager.LoadAlarmList( Path.Combine(Environment.CurrentDirectory,"param/AlarmList.json"), out string message);
+    if (!alarmListLoaded)
+        StaSysMessageManager.AddNewMessage(message, 1);
     // StaEmuManager.Start();
     //StaEmuManager.StartWagoEmu();
     DBhelper.Initialize();

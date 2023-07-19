@@ -73,8 +73,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
                 Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
-                bool agvc_executing = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
-                if (!agvc_executing)
+               ( bool agvc_executing,string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
+                if (!agvc_response.agvc_executing)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.Cant_TransferTask_TO_AGVC, false);
                     Agv.Sub_Status = SUB_STATUS.ALARM;

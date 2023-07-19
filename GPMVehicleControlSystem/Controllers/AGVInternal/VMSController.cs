@@ -43,6 +43,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
 
+        [HttpPost("ResetAlarm")]
+        public async Task<IActionResult> ResetAlarm()
+        {
+            await Task.Delay(1);
+            await agv.ResetAlarmsAsync(false);
+            return Ok("OK");
+        }
+
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
@@ -148,14 +156,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
 
-        [HttpPost("ResetAlarm")]
-        public async Task<IActionResult> ResetAlarm()
-        {
-            await Task.Delay(1);
-            await agv.ResetAlarmsAsync(false);
-            return Ok("OK");
-        }
-
         [HttpPost("BuzzerOff")]
         public async Task<IActionResult> BuzzerOFF()
         {
@@ -252,11 +252,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> RechargeCircuit()
         {
             bool open = !agv.WagoDO.GetState(DO_ITEM.Recharge_Circuit);
-            bool success = agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
+            bool success = await agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
             if (success)
                 StaSysMessageManager.AddNewMessage($"充電迴路已{(open ? "開啟" : "關閉")}");
             else
-                StaSysMessageManager.AddNewMessage($"充電迴路{(open ? "開啟" : "關閉")}失敗",1);
+                StaSysMessageManager.AddNewMessage($"充電迴路{(open ? "開啟" : "關閉")}失敗", 1);
             return Ok(success);
         }
     }

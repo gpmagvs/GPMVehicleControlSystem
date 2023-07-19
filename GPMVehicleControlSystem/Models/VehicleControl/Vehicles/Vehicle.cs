@@ -134,45 +134,51 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (_Sub_Status != value)
                 {
-                    BuzzerPlayer.Stop();
-                    if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
-                    {
-                        if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
-                            Main_Status = MAIN_STATUS.DOWN;
-
-                        if (value != SUB_STATUS.Initializing)
-                            BuzzerPlayer.Alarm();
-                        StatusLighter.DOWN();
-                    }
-                    else if (value == SUB_STATUS.IDLE)
-                    {
-                        AGVC.IsAGVExecutingTask = false;
-                        Main_Status = MAIN_STATUS.IDLE;
-                        StatusLighter.IDLE();
-                        DirectionLighter.CloseAll();
-                    }
-                    else if (value == SUB_STATUS.Charging)
-                    {
-                        Main_Status = MAIN_STATUS.Charging;
-                    }
-                    else if (value == SUB_STATUS.RUN)
-                    {
-                        Main_Status = MAIN_STATUS.RUN;
-                        StatusLighter.RUN();
-                        if (ExecutingTask != null)
-                        {
-                            Task.Run(async () =>
-                            {
-                                await Task.Delay(50);
-                                if (ExecutingTask.action == ACTION_TYPE.None)
-                                    BuzzerPlayer.Move();
-                                else
-                                    BuzzerPlayer.Action();
-                            });
-                        }
-                    }
-
                     _Sub_Status = value;
+                    try
+                    {
+                        BuzzerPlayer.Stop();
+                        if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
+                        {
+                            if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
+                                Main_Status = MAIN_STATUS.DOWN;
+
+                            if (value != SUB_STATUS.Initializing)
+                                BuzzerPlayer.Alarm();
+                            StatusLighter.DOWN();
+                        }
+                        else if (value == SUB_STATUS.IDLE)
+                        {
+                            AGVC.IsAGVExecutingTask = false;
+                            Main_Status = MAIN_STATUS.IDLE;
+                            StatusLighter.IDLE();
+                            DirectionLighter.CloseAll();
+                        }
+                        else if (value == SUB_STATUS.Charging)
+                        {
+                            Main_Status = MAIN_STATUS.Charging;
+                        }
+                        else if (value == SUB_STATUS.RUN)
+                        {
+                            Main_Status = MAIN_STATUS.RUN;
+                            StatusLighter.RUN();
+                            if (ExecutingTask != null)
+                            {
+                                Task.Run(async () =>
+                                {
+                                    await Task.Delay(50);
+                                    if (ExecutingTask.action == ACTION_TYPE.None)
+                                        BuzzerPlayer.Move();
+                                    else
+                                        BuzzerPlayer.Action();
+                                });
+                            }
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                    }
                 }
             }
         }
@@ -262,13 +268,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                 }
             });
-
-            Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(1000);
-                AGVS.Start();
-            });
-
+            AGVS.Start();
         }
 
         protected virtual async void DOSignalDefaultSetting()
@@ -404,17 +404,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  CarComponents.ForEach(comp => comp.ClearAlarms());
                  if (!IsTriggerByButton)
                  {
-                     bool motor_reset_success = await ResetMotor();
-                     if (!motor_reset_success)
+                     Task.Run(async() =>
                      {
-                         Sub_Status = SUB_STATUS.STOP;
-                         await Task.Delay(100);
-                         Sub_Status = SUB_STATUS.DOWN;
-                     }
+                         bool motor_reset_success = await ResetMotor();
+                         if (!motor_reset_success)
+                         {
+                             Sub_Status = SUB_STATUS.STOP;
+                             await Task.Delay(100);
+                             Sub_Status = SUB_STATUS.DOWN;
+                         }
+                     });
                  }
-                 else
-                     await Task.Delay(2000);
-
              });
 
             return;

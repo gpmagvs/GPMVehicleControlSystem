@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
 using Modbus.Device;
+using System.Net.Http;
 using System.Net.Sockets;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
@@ -67,8 +68,25 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
+        private async Task<(bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster)> TryConnectAsync()
+        {
+            TcpClient tcpclient;
+            ModbusIpMaster modbusMaster;
+            int retry_cnt = 0;
+            while (!Connect(out tcpclient, out modbusMaster))
+            {
+                retry_cnt += 1;
+                if (retry_cnt >= 5)
+                {
+                    OnDisonnected?.Invoke(this, EventArgs.Empty);
+                    return (false, null, null);
+                }
+                await Task.Delay(1000);
+            }
+            return (true, tcpclient, modbusMaster);
+        }
 
-        public void SetState(string address, bool state)
+        public async void SetState(string address, bool state)
         {
             try
             {
@@ -76,11 +94,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO != null)
                 {
                     DO.State = state;
-                    bool connected = Connect(out var tcpclient, out var modbusMaster);
-                    if (connected)
+
+                    (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
+                    if (connresult.connected)
                     {
-                        modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
-                        Disconnect(tcpclient, modbusMaster);
+                        connresult.modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
+                        Disconnect(connresult.tcpclient, connresult.modbusMaster);
                     }
                 }
             }
@@ -107,14 +126,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
-                OnDisonnected?.Invoke(this, EventArgs.Empty);
-                master = null;
-                throw new SocketException((int)SocketError.ConnectionAborted);
+                return false;
             }
         }
 
-        public bool SetState(DO_ITEM signal, bool state)
+        public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
             try
             {
@@ -122,11 +138,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO != null)
                 {
                     DO.State = state;
-                    bool connected = Connect(out var tcpclient, out var modbusMaster);
-                    if (connected)
+                    (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
+                    if (connresult.connected)
                     {
-                        modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
-                        Disconnect(tcpclient, modbusMaster);
+                        connresult.modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
+                        Disconnect(connresult.tcpclient, connresult.modbusMaster);
                         return true;
                     }
                     else
@@ -155,17 +171,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
-
-        internal void AllOFF()
+        internal async void AllOFF()
         {
-            bool connected = Connect(out var tcpclient, out var modbusMaster);
-            if (connected)
+            (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
+            if (connresult.connected)
             {
-                modbusMaster?.WriteMultipleCoils(Start, new bool[Size]);
-                Disconnect(tcpclient, modbusMaster);
+                connresult.modbusMaster?.WriteMultipleCoils(Start, new bool[Size]);
+                Disconnect(connresult.tcpclient, connresult.modbusMaster);
             }
         }
-        internal void SetState(DO_ITEM start_signal, bool[] writeStates)
+        internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             try
             {
@@ -180,12 +195,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     if (_DO != null)
                         _DO.State = writeStates[i];
                 }
-
-                bool connected = Connect(out var tcpclient, out var modbusMaster);
-                if (connected)
+                (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
+                if (connresult.connected)
                 {
-                    modbusMaster?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
-                    Disconnect(tcpclient, modbusMaster);
+                    connresult.modbusMaster?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
+                    Disconnect(connresult.tcpclient, connresult.modbusMaster);
                 }
             }
             catch (Exception ex)

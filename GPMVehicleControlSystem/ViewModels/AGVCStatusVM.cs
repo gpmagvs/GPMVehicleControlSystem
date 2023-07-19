@@ -47,7 +47,27 @@ namespace GPMVehicleControlSystem.ViewModels
         public bool ForkCSTExist { get; set; }
         public bool ForkFrontEndSensorTrigger { get; set; }
         public clsAlarmCode[] AlarmCodes { get; set; } = new clsAlarmCode[0];
-
+        public object AlarmsGroup
+        {
+            get
+            {
+                List<clsAlarmCode> alarms = AlarmCodes.Where(alarm => alarm.EAlarmCode != AGVSystemCommonNet6.Alarm.VMS_ALARM.AlarmCodes.None).ToList();
+                if (alarms.Count > 0)
+                {
+                    Dictionary<int, object> group = new Dictionary<int, object>();
+                    IEnumerable<int> codes = alarms.OrderBy(al => al.Time).Select(alarm => alarm.Code).Distinct();
+                    foreach (var code in codes)
+                    {
+                        var cont = alarms.FindAll(alarm => alarm.Code == code).Count;
+                        clsAlarmCode alarm = alarms.FindAll(alarm => alarm.Code == code).Last();
+                        group.Add(code, new { Count = cont, Alarm = alarm });
+                    }
+                    return group;
+                }
+                else
+                    return new Dictionary<int, object>();
+            }
+        }
         public clsAlarmCode NewestAlarm
         {
             get

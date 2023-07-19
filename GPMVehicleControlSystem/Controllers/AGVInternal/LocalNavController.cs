@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.ViewModels;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -124,8 +125,58 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         }
 
+        [HttpPost("MoveTo")]
+        public async Task<IActionResult> MoveTest(MoveTestVM testVM)
+        {
+            if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE)
+            {
+                return Ok(new { confirm = false, message = "AGV狀態異常，請先進行初始化" });
+            }
+
+            var currentX = agv.Navigation.Data.robotPose.pose.position.x;
+            var currentY = agv.Navigation.Data.robotPose.pose.position.y;
+
+            clsTaskDownloadData data = new clsTaskDownloadData()
+            {
+                Action_Type = ACTION_TYPE.None,
+                Task_Name = $"Test_{DateTime.Now.ToString("yyyyMMdd_HHmmssfff")}",
+                Trajectory = new clsMapPoint[]
+                 {
+                     new clsMapPoint
+                     {
+                          Point_ID = agv.Navigation.LastVisitedTag,
+                           X = currentX,
+                          Y = currentY,
+                          index = 0,
+                          Speed=1,
+                          Laser=0,
+                          Control_Mode = new clsControlMode
+                          {
+                               Spin=testVM.Direction
+                          }
+                     },
+                     new clsMapPoint
+                     {
+                          Point_ID =testVM.DestinPointID,
+                           X =testVM.X,
+                          Y =testVM.Y,
+                          Theta = testVM.Theta,
+                          index = 1,
+                          Speed=testVM.Speed,
+                          Laser =testVM.LaserMode,
+                          Control_Mode = new clsControlMode
+                          {
+                               Spin=testVM.Direction
+                          }
+                     }
+                 },
+                Destination = testVM.DestinPointID
+            };
+            var confirmed = await agv.AGVC.AGVSTaskDownloadHandler(data);
+            return Ok(new { confirm = confirmed.confirm, message = confirmed.message });
+        }
         [HttpGet("MoveTo")]
-        public async Task<IActionResult> MoveTo(double x, double y, double theta,int point_id)
+        public async Task<IActionResult> MoveTo(double x, double y, double theta, int point_id)
         {
             var currentX = agv.Navigation.Data.robotPose.pose.position.x;
             var currentY = agv.Navigation.Data.robotPose.pose.position.y;

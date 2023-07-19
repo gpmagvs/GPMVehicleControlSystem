@@ -144,10 +144,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 try
                 {
                     rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{Port}"));
+                    if (!rosSocket.protocol.IsAlive())
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
+                        rosSocket.protocol.Close();
+                    }
                 }
                 catch (Exception ex)
                 {
                     rosSocket = null;
+                    AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
                     Console.WriteLine("ROS Bridge Server Connect Fail...Will Retry After 5 Secnonds...Error Message : " + ex.Message);
                     Thread.Sleep(5000);
                 }
@@ -204,18 +210,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void InitTaskCommandActionClient()
         {
+            currentTaskCmdActionStatus = ActionStatus.NO_GOAL;
             if (actionClient != null)
             {
                 actionClient.OnTaskCommandActionDone -= this.OnTaskCommandActionDone;
                 actionClient.Terminate();
                 actionClient.Dispose();
             }
-
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
             actionClient.OnTaskCommandActionDone += this.OnTaskCommandActionDone;
             actionClient.OnActionStatusChanged += (status) =>
             {
-
                 currentTaskCmdActionStatus = status;
             };
             actionClient.Initialize();
@@ -321,19 +326,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return res.confirm;
         }
 
-        internal async Task<bool> AGVSTaskDownloadHandler(clsTaskDownloadData taskDownloadData)
+        internal async Task<(bool confirm, string message)> AGVSTaskDownloadHandler(clsTaskDownloadData taskDownloadData)
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
             InitTaskCommandActionClient();
-            LOG.WARN("Task download from AGVS :  " + JsonConvert.SerializeObject(RunningTaskData, Formatting.Indented));
-            LOG.INFO("Task download to 車控 :  " + JsonConvert.SerializeObject(RunningTaskData.RosTaskCommandGoal, Formatting.Indented));
-            bool agvc_accept = await SendGoal(RunningTaskData.RosTaskCommandGoal);
-            return agvc_accept;
+            return await SendGoal(RunningTaskData.RosTaskCommandGoal);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
-        internal async Task<bool> SendGoal(TaskCommandGoal rosGoal)
+        internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal)
         {
             string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
 
@@ -349,8 +351,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.SendGoal();
             //wait goal status change to  ACTIVE
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (currentTaskCmdActionStatus != ActionStatus.ACTIVE)
+            {
+                if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                {
+                    LOG.Critical($"發送任務請求給車控但車控並未接收成功");
+                    AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
+                    return (false, $"發送任務請求給車控但車控並未接收成功");
+                }
+                await Task.Delay(1);
+            }
             LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}");
-            return true;
+            return (true, "");
 
         }
 
@@ -360,7 +372,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.SendGoal();
         }
 
-        public abstract  Task<(bool request_success, bool action_done)> TriggerCSTReader();
+        public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();
         public abstract Task<(bool request_success, bool action_done)> AbortCSTReader();
 
     }
