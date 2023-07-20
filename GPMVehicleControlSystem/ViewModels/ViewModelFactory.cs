@@ -8,6 +8,8 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using AGVSystemCommonNet6.MAP;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -40,23 +42,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     Last_Visit_MapPoint = AGV.lastVisitedMapPoint,
                     Last_Visited_Tag = AGV.Navigation.LastVisitedTag,
                     CST_Data = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
-                    BatteryStatus = AGV.Batteries.Count == 0 ? new BatteryStateVM[1]
-                    {
-                        new BatteryStateVM
-                        {
-                        BatteryLevel = 66
-                        }
-                    } :
-                    AGV.Batteries.Values.Select(bat => new BatteryStateVM
-                    {
-                        BatteryLevel = bat.Data.batteryLevel,
-                        ChargeCurrent = bat.Data.chargeCurrent,
-                        IsCharging = bat.Data.chargeCurrent != 0,
-                        IsError = bat.State == CarComponent.STATE.ABNORMAL,
-                        CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
-                        BatteryID = bat.Data.batteryID
-
-                    }).ToArray(),
+                    BatteryStatus = GetBatteryStatusVM(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
                     Angle = AGV.SickData.HeadingAngle,
                     Mileage = AGV.Odometry,
@@ -129,6 +115,66 @@ namespace GPMVehicleControlSystem.ViewModels
 
         }
 
+        private static BatteryStateVM[] GetBatteryStatusVM()
+        {
+            BatteryStateVM[] viewmodel = AGV.Batteries.Count == 0 ?
+            CreateFakeBatteryViewModelData() :
+                AGV.Batteries.Select(bat => new BatteryStateVM
+                {
+                    BatteryLevel = bat.Value.Data.batteryLevel,
+                    ChargeCurrent = bat.Value.Data.chargeCurrent,
+                    IsCharging = bat.Value.Data.chargeCurrent != 0,
+                    IsError = bat.Value.State == CarComponent.STATE.ABNORMAL,
+                    CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
+                    BatteryID = bat.Key,
+                    SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                    {
+                        IsExistSensor1ON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_1 : DI_ITEM.Battery_2_Exist_1),
+                        IsExistSensor2ON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_2 : DI_ITEM.Battery_2_Exist_2),
+                        IsDockingSensor1ON = !AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_3 : DI_ITEM.Battery_2_Exist_3),
+                        IsDockingSensor2ON = !AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_4 : DI_ITEM.Battery_2_Exist_4),
+                        IsLockSensorON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Lock_Sensor : DI_ITEM.Battery_2_Lock_Sensor),
+                        IsUnlockSensorON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Unlock_Sensor : DI_ITEM.Battery_2_Unlock_Sensor)
+                    } : new BatteryPositionInfoVM()
+                }).ToArray();
+            return viewmodel;
+        }
+
+        private static BatteryStateVM[] CreateFakeBatteryViewModelData()
+        {
+            return new BatteryStateVM[2]
+                            {
+                    new BatteryStateVM
+                    {
+                        BatteryID=1,
+                        BatteryLevel = 66,
+                         SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                         {
+                             IsExistSensor1ON = true,
+                             IsExistSensor2ON = true,
+                             IsDockingSensor1ON = false,
+                             IsDockingSensor2ON = false,
+                             IsLockSensorON = true,
+                             IsUnlockSensorON = false
+                         } : new BatteryPositionInfoVM()
+                    },
+                    new BatteryStateVM
+                    {
+                        BatteryID=2,
+                        BatteryLevel = 10,
+                         SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                         {
+                            IsExistSensor1ON = true,
+                            IsExistSensor2ON = true,
+                            IsDockingSensor1ON = false,
+                            IsDockingSensor2ON = false,
+                            IsLockSensorON = false,
+                            IsUnlockSensorON = false
+                         } : new BatteryPositionInfoVM()
+                    },
+
+                            };
+        }
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {

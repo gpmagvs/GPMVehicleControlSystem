@@ -50,7 +50,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         //public AGVPILOT Pilot { get; set; }
         public clsNavigation Navigation = new clsNavigation();
-        public Dictionary<ushort, clsBattery> Batteries = new Dictionary<ushort, clsBattery>();
+        public Dictionary<ushort, clsBattery> Batteries = new Dictionary<ushort, clsBattery>() {
+            {1,new clsBattery{ 
+            } },
+            {2,new clsBattery{ } },
+        };
         public clsIMU IMU = new clsIMU();
         public clsGuideSensor GuideSensor = new clsGuideSensor();
         public clsBarcodeReader BarcodeReader = new clsBarcodeReader();
