@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.Tests
 {
@@ -26,6 +27,65 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.Tests
 
         }
 
+        [TestMethod()]
+        public void CarControllerTest()
+        {
+            CarController agvc = new SubmarinAGVControl("10.22.141.217", 9090);
+            agvc.Connect();
+        }
 
+        [TestMethod()]
+        public void CarControllerTest1()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void ConnectTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void SubscribeROSTopicsTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void AdertiseROSServicesTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void DisconnectTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void IsConnectedTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void CarSpeedControlTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void TriggerCSTReaderTest()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void AbortCSTReaderTest()
+        {
+            Assert.Fail();
+        }
     }
 }

@@ -50,11 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         //public AGVPILOT Pilot { get; set; }
         public clsNavigation Navigation = new clsNavigation();
-        public Dictionary<ushort, clsBattery> Batteries = new Dictionary<ushort, clsBattery>() {
-            {1,new clsBattery{ 
-            } },
-            {2,new clsBattery{ } },
-        };
+        public abstract Dictionary<ushort, clsBattery> Batteries { get; set; }
         public clsIMU IMU = new clsIMU();
         public clsGuideSensor GuideSensor = new clsGuideSensor();
         public clsBarcodeReader BarcodeReader = new clsBarcodeReader();
@@ -364,17 +360,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void SoftwareEMO()
         {
+            Task.Factory.StartNew(async () =>
+            {
+                Sub_Status = SUB_STATUS.ALARM;
+                await Task.Delay(1);
+                Sub_Status = SUB_STATUS.DOWN;
+            });
             IsInitialized = false;
             AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
-            Task.Factory.StartNew(async () =>
-            {
-                Sub_Status = SUB_STATUS.ALARM;
-                await Task.Delay(10);
-                Sub_Status = SUB_STATUS.DOWN;
-            });
+       
 
         }
         private bool IsResetAlarmWorking = false;
@@ -422,7 +419,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      }
                  }
                  AlarmManager.ClearAlarm();
-                 CarComponents.ForEach(comp => comp.ClearAlarms());
 
              });
             IsResetAlarmWorking = false;

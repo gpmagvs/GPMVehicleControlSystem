@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -18,41 +19,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override COMPOENT_NAME component_name => COMPOENT_NAME.BATTERY;
 
-        public override STATE CheckStateDataContent()
+        public override void CheckStateDataContent()
         {
-
-            STATE _state = STATE.NORMAL;
             var error_code = Data.errorCode;
             if (error_code != 0)
             {
-                AlarmCodes alarm_code = AlarmCodes.None;
                 if (error_code == 1)
-                    alarm_code = AlarmCodes.Over_Voltage;
+                    current_alarm_code = AlarmCodes.Over_Voltage;
                 else if (error_code == 2)
-                    alarm_code = AlarmCodes.Under_Voltage;
+                    current_alarm_code = AlarmCodes.Under_Voltage;
                 else if (error_code == 4)
-                    alarm_code = AlarmCodes.Over_Current_Charge;
+                    current_alarm_code = AlarmCodes.Over_Current_Charge;
                 else if (error_code == 8)
-                    alarm_code = AlarmCodes.Over_Current_Discharge;
+                    current_alarm_code = AlarmCodes.Over_Current_Discharge;
                 else if (error_code == 16)
-                    alarm_code = AlarmCodes.Under_Current_Charge;
+                    current_alarm_code = AlarmCodes.Under_Current_Charge;
                 else if (error_code == 32)
-                    alarm_code = AlarmCodes.Over_Temperature;
+                    current_alarm_code = AlarmCodes.Over_Temperature;
                 else if (error_code == 64)
-                    alarm_code = AlarmCodes.Under_Temperature;
-                AddAlarm(alarm_code);
-                _state = STATE.ABNORMAL;
-            }
-            if (Data.batteryLevel == 0 )
-            {
-                _state = STATE.ABNORMAL;
-                AddAlarm(AlarmCodes.Cant_Check_Battery);
+                    current_alarm_code = AlarmCodes.Under_Temperature;
             }
             else
             {
-                RemoveAlarm(AlarmCodes.Cant_Check_Battery);
+                current_alarm_code = AlarmCodes.None;
             }
-            return _state;
         }
     }
 

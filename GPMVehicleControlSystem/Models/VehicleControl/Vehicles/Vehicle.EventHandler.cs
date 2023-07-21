@@ -66,14 +66,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void AGVSDisconnectedHandler(object? sender, EventArgs e)
         {
             AlarmManager.AddWarning(AlarmCodes.AGVS_Disconnect);
-            BuzzerPlayer.Alarm();
+            //  BuzzerPlayer.Alarm();
         }
 
         private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
         {
             if (Navigation.current_alarm_code != AlarmCodes.None)
             {
-                AlarmManager.AddAlarm(Navigation.current_alarm_code, false);
                 AGVC.AbortTask();
                 ExecutingTask.Abort();
                 Sub_Status = SUB_STATUS.DOWN;
@@ -270,9 +269,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 TagNumber = Navigation.LastVisitedTag
             } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
-
-
-          
 
             if (Batteries.Values.Any(battery => battery.IsCharging))
             {

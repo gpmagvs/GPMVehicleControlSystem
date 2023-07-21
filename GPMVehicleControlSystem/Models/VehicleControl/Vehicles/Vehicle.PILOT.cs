@@ -82,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else if (action == ACTION_TYPE.Load)
                         ExecutingTask = new LoadTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Unload)
-                         ExecutingTask = new UnloadTask(this, _taskDownloadData);
+                        ExecutingTask = new UnloadTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Park)
                         ExecutingTask = new ParkTask(this, _taskDownloadData);
                     else if (action == ACTION_TYPE.Unpark)
@@ -196,8 +196,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)
         {
             CurrentTaskRunStatus = status;
-            await Task.Delay(1000);
-
             if (Remote_Mode == REMOTE_MODE.OFFLINE)
                 return;
             await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag);

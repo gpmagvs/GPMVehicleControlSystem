@@ -13,8 +13,11 @@ using RosSharp.RosBridgeClient.Actionlib;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
+
+
     /// <summary>
     /// 使用ＲＯＳ與車控端通訊
+    /// /sick_safetyscanners/output_paths =>訂閱sick 雷射輸出結果(有包含雷射設定組數)
     /// </summary>
     public abstract partial class CarController : Connection
     {

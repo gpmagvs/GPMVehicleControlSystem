@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -70,8 +71,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 return AGV_DIRECTION.STOP;
         }
 
-        public AlarmCodes current_alarm_code { get; private set; } = AlarmCodes.None;
-        public override STATE CheckStateDataContent()
+        public override void CheckStateDataContent()
         {
             LastVisitedTag = Data.lastVisitedNode.data;
             LinearSpeed = CalculateLinearSpeed(Data.robotPose.pose.position);
@@ -110,13 +110,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     current_alarm_code = AlarmCodes.Map_Recognition_Rate_Too_Low;
                 else
                     current_alarm_code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
-                return STATE.ABNORMAL;
+
             }
             else
             {
-
+                current_alarm_code = AlarmCodes.None;
             }
-            return STATE.NORMAL;
         }
         //180d 3.14  
         private double CalculateAngularSpeed(double angle)

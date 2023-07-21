@@ -35,6 +35,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override clsCSTReader CSTReader { get; set; } = null;
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsInspectorAGVDirectionLighter();
+        public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>() {
+            {1,new clsBattery{
+            } },
+            {2,new clsBattery{ } },
+        };
 
         internal override async Task<(bool confirm, string message)> Initialize()
         {

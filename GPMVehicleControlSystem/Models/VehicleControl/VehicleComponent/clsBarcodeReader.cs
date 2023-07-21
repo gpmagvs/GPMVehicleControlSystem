@@ -19,28 +19,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public double CurrentY => Data == null ? 0 : (int)Data.yValue;
 
         private uint PreviousTag = 0;
-        public override STATE CheckStateDataContent()
+        public override void CheckStateDataContent()
         {
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;
             if (_brState.tagID == 0 && PreviousTag != _brState.tagID)
                 OnTagLeave?.Invoke(this, (int)_brState.tagID);
 
             PreviousTag = _brState.tagID;
-
-            STATE _state = STATE.NORMAL;
-
             if (_brState.state == -1)
             {
-                _state = STATE.ABNORMAL;
-                AddAlarm(AlarmCodes.Barcode_Module_Error);
+                current_alarm_code = AlarmCodes.Barcode_Module_Error;
             }
             else
             {
-                
-                RemoveAlarm(AlarmCodes.Barcode_Module_Error);
+                current_alarm_code = AlarmCodes.None;
             }
-
-            return _state;
         }
     }
 }
