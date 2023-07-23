@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -13,7 +14,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class ForkAGV : SubmarinAGV
     {
-        public override string WagoIOConfigFilePath =>   Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Fork_AGV.ini");
+        public override string WagoIOConfigFilePath => Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Fork_AGV.ini");
         /// <summary>
         /// Fork車控
         /// </summary>
@@ -40,6 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override async Task<(bool confirm, string message)> InitializeActions()
         {
+     
             (bool confirm, string message) baseInitize = await base.InitializeActions();
             if (!baseInitize.confirm)
                 return baseInitize;

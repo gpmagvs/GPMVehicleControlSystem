@@ -36,7 +36,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
-
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
@@ -50,7 +49,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
-
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
                 DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
@@ -78,14 +76,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             catch (Exception ex)
             {
             }
-        }
-        public void INITIALIZE()
-        {
-            Flash(new DO_ITEM[] {
-                 DO_ITEM.AGV_DiractionLight_R,
-                  DO_ITEM.AGV_DiractionLight_G,
-                  DO_ITEM.AGV_DiractionLight_Y,
-            }, 200);
         }
     }
 }

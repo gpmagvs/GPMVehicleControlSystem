@@ -148,8 +148,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
                                 Main_Status = MAIN_STATUS.DOWN;
 
+
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
+                            else
+                            {
+                                DirectionLighter.WaitPassLights(1000);
+                            }
+
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)
@@ -224,8 +230,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Laser = new clsLaser(WagoDO, WagoDI);
                 if (SimulationMode)
                 {
-                    emulator = new VehicleEmu(7);
-                    StaEmuManager.StartWagoEmu(WagoDI);
+                    try
+                    {
+                        emulator = new VehicleEmu(7);
+                        StaEmuManager.StartWagoEmu(WagoDI);
+                    }
+                    catch (SocketException)
+                    {
+                        StaSysMessageManager.AddNewMessage("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
+                    }
+                    catch (Exception ex)
+                    {
+                        StaSysMessageManager.AddNewMessage("\"模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
+                    }
                 }
                 Task RosConnTask = new Task(async () =>
                 {
@@ -282,6 +299,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
+                string msg = $"車輛實例化時於建構函式發生錯誤 : {ex.Message}:{ex.StackTrace}";
+                StaSysMessageManager.AddNewMessage(msg, 2);
                 throw ex;
             }
         }
@@ -313,14 +332,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 Sub_Status = SUB_STATUS.Initializing;
                 IsInitialized = false;
-                StatusLighter.CloseAll();
-                StatusLighter.INITIALIZE();
                 result = await InitializeActions();
 
                 if (!result.Item1)
+                {
+                    Sub_Status = SUB_STATUS.ALARM;
                     return result;
+                }
 
-                StatusLighter.AbortFlash();
                 await Laser.ModeSwitch(LASER_MODE.Bypass);
                 Sub_Status = SUB_STATUS.IDLE;
                 IsInitialized = true;
@@ -339,7 +358,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AGVC.IsAGVExecutingTask = false;
             BuzzerPlayer.Stop();
-            DirectionLighter.CloseAll();
             if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
             {
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
@@ -390,14 +408,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal void SoftwareEMO()
         {
             BuzzerPlayer.Alarm();
-            _Sub_Status = SUB_STATUS.DOWN;
+            Sub_Status = SUB_STATUS.DOWN;
             IsInitialized = false;
             AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
-
-
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)

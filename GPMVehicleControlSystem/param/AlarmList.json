@@ -1,5 +1,10 @@
 [
   {
+    "Code": 0,
+    "Description": "",
+    "CN": ""
+  },
+  {
     "Code": 10,
     "Description": "SoftwareEMS",
     "CN": "軟體EMS"
