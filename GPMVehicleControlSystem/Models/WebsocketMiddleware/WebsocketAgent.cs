@@ -1,14 +1,20 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.ViewModels;
 using Newtonsoft.Json;
+using Polly;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 
 namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 {
     public class WebsocketAgent
     {
+        private static ConcurrentDictionary<string, WebSocket> _sockets = new ConcurrentDictionary<string, WebSocket>();
+
         public enum WEBSOCKET_CLIENT_ACTION
         {
             GETConnectionStates,
@@ -19,61 +25,74 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETAGVSMSGIODATA,
             GETSystemMessages,
         }
-        public static void ClientRequest(HttpContext _HttpContext, out System.Net.WebSockets.WebSocket webSocket)
+  
+        public static async Task ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
         {
-             webSocket = _HttpContext.WebSockets.AcceptWebSocketAsync().Result;
-        }
-        public static void ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
-        {
-            System.Net.WebSockets.WebSocket webSocket = _HttpContext.WebSockets.AcceptWebSocketAsync().Result;
-            byte[] buffer = new byte[256];
-            var bufferSegment = new ArraySegment<byte>(buffer);
-            Stopwatch sw = Stopwatch.StartNew();
-            sw.Start();
-            while (webSocket.State == System.Net.WebSockets.WebSocketState.Open)
+            if (_HttpContext.WebSockets.IsWebSocketRequest)
             {
+                WebSocket webSocket = await _HttpContext.WebSockets.AcceptWebSocketAsync();
+                await SendMessagesAsync(webSocket, client_req);
+            }
+            else
+            {
+                _HttpContext.Response.StatusCode = 400;
+            }
+        }
+
+        private static async Task SendMessagesAsync(WebSocket webSocket, WEBSOCKET_CLIENT_ACTION client_req)
+        {
+            int count = 0;
+            var delay = TimeSpan.FromSeconds(0.1);
+
+            while (webSocket.State == WebSocketState.Open)
+            {
+                await Task.Delay(delay);
                 try
                 {
-                    webSocket.ReceiveAsync(bufferSegment, CancellationToken.None);
-                    object viewmodel = null;
-                    switch (client_req)
-                    {
-                        case WEBSOCKET_CLIENT_ACTION.GETConnectionStates:
-                            viewmodel = ViewModelFactory.GetConnectionStatesVM();
-
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETVMSStates:
-                            viewmodel = ViewModelFactory.GetVMSStatesVM();
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETAGVCModuleInformation:
-                            //viewmodel = AgvEntity.ModuleInformation;
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETDIOTable:
-                            viewmodel = ViewModelFactory.GetDIOTableVM();
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETFORKTestState:
-                            // viewmodel = ViewModelFactory.GetForkTestStateVM();
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA:
-                            break;
-                        case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
-                            viewmodel = ViewModelFactory.GetSystemMessagesVM();
-                            break;
-                        default:
-                            break;
-                    }
-
-                    if (viewmodel != null)
-                        webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(viewmodel))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
-                    Thread.Sleep(100);
+                  var viewmodel=   GetData(client_req);
+                   await  webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(viewmodel))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                
                 }
-                catch (Exception ex)
+                catch (WebSocketException)
                 {
-                    LOG.ERROR(ex.Message);
+                    // 客戶端已斷開連線，停止傳送訊息
                     break;
                 }
             }
-            webSocket.Dispose();
+
+            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
+
+        }
+        private static object GetData(WEBSOCKET_CLIENT_ACTION client_req)
+        {
+            object viewmodel = "";
+            switch (client_req)
+            {
+                case WEBSOCKET_CLIENT_ACTION.GETConnectionStates:
+                    viewmodel = ViewModelFactory.GetConnectionStatesVM();
+
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETVMSStates:
+                    viewmodel = ViewModelFactory.GetVMSStatesVM();
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETAGVCModuleInformation:
+                    //viewmodel = AgvEntity.ModuleInformation;
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETDIOTable:
+                    viewmodel = ViewModelFactory.GetDIOTableVM();
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETFORKTestState:
+                    // viewmodel = ViewModelFactory.GetForkTestStateVM();
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA:
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
+                    viewmodel = ViewModelFactory.GetSystemMessagesVM();
+                    break;
+                default:
+                    break;
+            }
+            return viewmodel;
         }
     }
 }

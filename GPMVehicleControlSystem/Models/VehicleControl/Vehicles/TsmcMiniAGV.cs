@@ -41,7 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {2,new clsBattery{ } },
         };
 
-        internal override async Task<(bool confirm, string message)> Initialize()
+        protected override async Task<(bool confirm, string message)> InitializeActions()
         {
             //初始化儀器
             //(bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
@@ -65,8 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 err_msg += " 尚未Lock";
                 return (false, $"[{AlarmCodes.Battery_Not_Lock}] {err_msg}");
             }
-
-            return await base.Initialize();
+            return (true, "");
         }
         protected override void DOSignalDefaultSetting()
         {

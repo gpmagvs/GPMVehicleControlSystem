@@ -46,6 +46,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("ResetAlarm")]
         public async Task<IActionResult> ResetAlarm()
         {
+            BuzzerPlayer.Stop();
             await Task.Delay(1);
             await agv.ResetAlarmsAsync(false);
             return Ok("OK");

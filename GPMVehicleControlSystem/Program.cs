@@ -17,8 +17,6 @@ _ = Task.Run(() =>
     bool alarmListLoaded = AlarmManager.LoadAlarmList( Path.Combine(Environment.CurrentDirectory,"param/AlarmList.json"), out string message);
     if (!alarmListLoaded)
         StaSysMessageManager.AddNewMessage(message, 1);
-    // StaEmuManager.Start();
-    //StaEmuManager.StartWagoEmu();
     DBhelper.Initialize();
     int AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
     VehicheAndWagoIOConfiguraltion(AgvTypeInt);
@@ -27,23 +25,16 @@ _ = Task.Run(() =>
 
 void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
 {
-    string wago_file_source = "param/IO_Wago_Submarine_AGV.ini";
     if (agvTypeInt == 0)
     {
-        wago_file_source = "param/IO_Wago_Fork_AGV.ini";
-        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV();
     }
     else if (agvTypeInt == 1)
     {
-        wago_file_source = "param/IO_Wago_Submarine_AGV.ini";
-        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.SubmarinAGV();
     }
     else if (agvTypeInt == 2)
     {
-        wago_file_source = "param/IO_Wago_Inspection_AGV.ini";
-        File.Copy(Path.Combine(Environment.CurrentDirectory, wago_file_source), Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.TsmcMiniAGV();
     }
 

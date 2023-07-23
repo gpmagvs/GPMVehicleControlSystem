@@ -7,8 +7,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         // Add services to the container.
         public static WagoEmulator wagoEmu = new WagoEmulator();
         public static AGVROSEmulator agvRosEmu;
-        public static void StartWagoEmu()
+        public static void StartWagoEmu(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule wagoDI)
         {
+            wagoEmu.WagoDI =wagoDI;
             wagoEmu.Connect();
             LOG.INFO("WAGO EMU Start");
         }
@@ -19,13 +20,5 @@ namespace GPMVehicleControlSystem.Models.Emulators
             LOG.INFO("AGVC(ROS) EMU Start");
         }
 
-        internal static void Start()
-        {
-            Task.Factory.StartNew(() =>
-            {
-                StartWagoEmu();
-                StartAGVROSEmu();
-            });
-        }
     }
 }

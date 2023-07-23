@@ -259,6 +259,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IMU.StateData = _ModuleInformation.IMU;
             GuideSensor.StateData = _ModuleInformation.GuideSensor;
             BarcodeReader.StateData = _ModuleInformation.reader;
+            VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
 
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];

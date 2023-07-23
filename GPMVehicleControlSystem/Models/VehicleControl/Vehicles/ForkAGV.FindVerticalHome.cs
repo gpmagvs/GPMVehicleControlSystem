@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -60,14 +61,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             await ForkAGVC.ZAxisDownSearch(); //向下搜尋
                         }
+                        bool Upsearching = false;
                         while (CurrentForkLocation != FORK_LOCATIONS.DOWN_POSE)//TODO 確認是A/B接 
                         {
+                            if (Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+                                return (false, AlarmCodes.UserAbort_Initialize_Process);
                             await Task.Delay(1);
-                            if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
+                            if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT && Upsearching == false)
                             {
+                                Upsearching = true;
                                 await ForkAGVC.ZAxisStop();
                                 await ForkAGVC.ZAxisUpSearch(); //改為向上搜尋
-
                             }
                         }
                     }
@@ -78,16 +82,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (true, AlarmCodes.None);
 
                 }
-                async Task<(bool find, AlarmCodes alarm_code)> SearchHomePose()
+                async Task<(bool find, AlarmCodes alarm_code)> SearchHomePose()//使用吋動的方式
                 {
                     try
                     {
-                        double current_position = ForkState.CurrentPosition;
+                        double current_position = VerticalDriverState.CurrentPosition;
                         while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                         {
-                            await Task.Delay(1);
+                            Thread.Sleep(500);
+
+                            if (Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+                                return (false, AlarmCodes.None);
+
                             await ForkAGVC.ZAxisGoTo(current_position - 0.1);
-                            if (CurrentForkLocation == FORK_LOCATIONS.DOWN_POSE)
+                            if (CurrentForkLocation == FORK_LOCATIONS.DOWN_POSE && !Debugger.IsAttached)
                                 return (false, AlarmCodes.Action_Timeout);
                         }
                         return (true, AlarmCodes.None);
@@ -112,8 +120,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 (bool found, AlarmCodes alarm_code) findHomeResult = await SearchHomePose();
                 await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
-
-                return (findHomeResult.found, AlarmCodes.None);
+                if (findHomeResult.found)
+                {
+                    result = await ForkAGVC.ZAxisInit();
+                    if (!result.success)
+                        throw new Exception();
+                }
+                return findHomeResult;
             }
             catch (Exception)
             {

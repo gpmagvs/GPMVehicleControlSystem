@@ -62,5 +62,43 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         }
 
 
+        [HttpGet("ForkReachDownlimit")]
+        public async Task ForkReachDownlimit()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Home_Pos, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Up_Hardware_limit, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Pose, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Hardware_limit, true);
+        }
+
+
+        [HttpGet("ForkReachDownPose")]
+        public async Task ForkReachDownPose()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Home_Pos, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Up_Hardware_limit, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Pose, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Hardware_limit, false);
+        }
+
+        [HttpGet("ForkReachHome")]
+        public async Task ForkReachHome()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Home_Pos, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Up_Hardware_limit, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Pose, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Hardware_limit, false);
+        }
+
+        [HttpGet("ForkAtUnknownLocation")]
+        public async Task ForkAtUnknownLocation()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Home_Pos, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Up_Hardware_limit, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Pose, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Hardware_limit, false);
+        }
+
+
     }
 }

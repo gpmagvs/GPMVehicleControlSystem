@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -12,11 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class ForkAGV : SubmarinAGV
     {
-
-        public clsDriver ForkState = new clsDriver()
-        {
-            location = clsDriver.DRIVER_LOCATION.FORK
-        };
+        public override string WagoIOConfigFilePath =>   Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Fork_AGV.ini");
         /// <summary>
         /// Fork車控
         /// </summary>
@@ -41,9 +38,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal override async Task<(bool confirm, string message)> Initialize()
+        protected override async Task<(bool confirm, string message)> InitializeActions()
         {
-            (bool confirm, string message) baseInitize = await base.Initialize();
+            (bool confirm, string message) baseInitize = await base.InitializeActions();
             if (!baseInitize.confirm)
                 return baseInitize;
             (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkInitialize();
@@ -60,7 +57,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
         {
             base.CarController_OnModuleInformationUpdated(sender, _ModuleInformation);
-            ForkState.StateData = _ModuleInformation.Action_Driver;
         }
 
     }

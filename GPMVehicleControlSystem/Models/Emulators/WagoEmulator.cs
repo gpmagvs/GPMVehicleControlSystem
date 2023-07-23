@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
 using System.Net;
 using System.Net.Sockets;
@@ -11,6 +12,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         ModbusTcpSlave? slave;
 
         Dictionary<DI_ITEM, int> INPUT_INDEXS;
+
+        public clsDIModule WagoDI { get; internal set; }
+
         public WagoEmulator()
         {
             INPUT_INDEXS = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().ToDictionary(e => e, e => (int)e);
@@ -40,22 +44,23 @@ namespace GPMVehicleControlSystem.Models.Emulators
         }
         private void InitializeInputState()
         {
-            SetState(DI_ITEM.EMO,true);
-            SetState(DI_ITEM.Bumper_Sensor,true);
-            SetState(DI_ITEM.Horizon_Motor_Switch,true);
-            SetState(DI_ITEM.FrontProtection_Area_Sensor_1,true);
-            SetState(DI_ITEM.FrontProtection_Area_Sensor_2,true);
-            SetState(DI_ITEM.FrontProtection_Area_Sensor_3,true);
-            SetState(DI_ITEM.FrontProtection_Area_Sensor_4,true);
-            SetState(DI_ITEM.BackProtection_Area_Sensor_1,true);
-            SetState(DI_ITEM.BackProtection_Area_Sensor_2,true);
-            SetState(DI_ITEM.BackProtection_Area_Sensor_3,true);
+            SetState(DI_ITEM.EMO, true);
+            SetState(DI_ITEM.Bumper_Sensor, true);
+            SetState(DI_ITEM.Horizon_Motor_Switch, true);
+            SetState(DI_ITEM.FrontProtection_Area_Sensor_1, true);
+            SetState(DI_ITEM.FrontProtection_Area_Sensor_2, true);
+            SetState(DI_ITEM.FrontProtection_Area_Sensor_3, true);
+            SetState(DI_ITEM.FrontProtection_Area_Sensor_4, true);
+            SetState(DI_ITEM.BackProtection_Area_Sensor_1, true);
+            SetState(DI_ITEM.BackProtection_Area_Sensor_2, true);
+            SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
             SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
 
         }
-        public void SetState(DI_ITEM item,bool state)
+        public void SetState(DI_ITEM item, bool state)
         {
-            slave.DataStore.InputDiscretes[INPUT_INDEXS[item] + 1] = state;
+            var index = WagoDI.INPUT_INDEXS[item];
+            slave.DataStore.InputDiscretes[index + 1] = state;
         }
         private void Slave_ModbusSlaveRequestReceived(object? sender, ModbusSlaveRequestEventArgs e)
         {

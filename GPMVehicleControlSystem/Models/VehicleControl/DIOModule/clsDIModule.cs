@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public Action OnHS_EQ_READY { get; internal set; }
 
-        Dictionary<DI_ITEM, int> INPUT_INDEXS = new Dictionary<DI_ITEM, int>();
+        internal Dictionary<DI_ITEM, int> INPUT_INDEXS = new Dictionary<DI_ITEM, int>();
 
         public List<clsIOSignal> VCSInputs = new List<clsIOSignal>();
         public ushort Start { get; set; }

@@ -1,4 +1,6 @@
-﻿namespace GPMVehicleControlSystem.Models.VCSSystem
+﻿using AGVSystemCommonNet6.Log;
+
+namespace GPMVehicleControlSystem.Models.VCSSystem
 {
     public static class StaSysMessageManager
     {
@@ -6,6 +8,12 @@
         public static event EventHandler<clsSysMessage> OnSystemMessageAdd;
         public static void AddNewMessage(string message, int level = 0)
         {
+            if (level == 0)
+                LOG.INFO(message);
+            if (level == 1)
+                LOG.WARN(message);
+            if (level == 2)
+                LOG.ERROR(message);
 
             var sameMessage = SysMessages.Messages.FirstOrDefault(x => x.Message == message);
 
@@ -31,6 +39,12 @@
             };
             SysMessages.Messages.Add(msg);
             OnSystemMessageAdd?.Invoke("", msg);
+        }
+
+        internal static void Clear()
+        {
+            SysMessages.Messages.Clear();
+            SysMessages.ReportIndex += 1;
         }
     }
 }

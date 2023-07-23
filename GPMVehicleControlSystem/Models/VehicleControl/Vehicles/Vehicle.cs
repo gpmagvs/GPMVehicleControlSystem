@@ -56,6 +56,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public clsBarcodeReader BarcodeReader = new clsBarcodeReader();
         public abstract clsCSTReader CSTReader { get; set; }
 
+        public clsDriver VerticalDriverState = new clsDriver()
+        {
+            location = clsDriver.DRIVER_LOCATION.FORK
+        };
+
         public clsDriver[] WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT},
@@ -182,93 +187,113 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        public abstract string WagoIOConfigFilePath { get; }
         public Vehicle()
         {
-            LOG.INFO($"{GetType().Name} Start create instance...");
-            ReadTaskNameFromFile();
-            IsSystemInitialized = false;
-            SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
-            if (SimulationMode)
-                emulator = new VehicleEmu(7);
-
-            AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
-            string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
-            int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
-            string AGVS_LocalIP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:LocalIP");
-            VmsProtocol = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Protocol") == 0 ? VMS_PROTOCOL.KGS : VMS_PROTOCOL.GPM_VMS;
-            string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
-            int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
-
-            string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
-            int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
-            SID = AppSettingsHelper.GetValue<string>("VCS:SID");
-            CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
-            AGVSMessageFactory.Setup(SID, CarName);
-
-            WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
-            WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
-
-            AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
-            AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
-
-
-            DirectionLighter.DOModule = WagoDO;
-            StatusLighter = new clsStatusLighter(WagoDO);
-            Laser = new clsLaser(WagoDO, WagoDI);
-
-            Task RosConnTask = new Task(async () =>
+            try
             {
-                await Task.Delay(1).ContinueWith(t =>
+                LOG.INFO($"{GetType().Name} Start create instance...");
+                ReadTaskNameFromFile();
+                IsSystemInitialized = false;
+                SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
+
+
+                AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
+                string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
+                int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
+                string AGVS_LocalIP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:LocalIP");
+                VmsProtocol = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Protocol") == 0 ? VMS_PROTOCOL.KGS : VMS_PROTOCOL.GPM_VMS;
+                string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
+                int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
+
+                string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
+                int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
+                SID = AppSettingsHelper.GetValue<string>("VCS:SID");
+                CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
+                AGVSMessageFactory.Setup(SID, CarName);
+                WagoIOIniSetting();
+                WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
+                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
+
+                AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
+                AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
+
+
+                DirectionLighter.DOModule = WagoDO;
+                StatusLighter = new clsStatusLighter(WagoDO);
+                Laser = new clsLaser(WagoDO, WagoDI);
+                if (SimulationMode)
                 {
-                    InitAGVControl(RosBridge_IP, RosBridge_Port);
-                    if (AGVC?.rosSocket != null)
+                    emulator = new VehicleEmu(7);
+                    StaEmuManager.StartWagoEmu(WagoDI);
+                }
+                Task RosConnTask = new Task(async () =>
+                {
+                    await Task.Delay(1).ContinueWith(t =>
                     {
-                        BuzzerPlayer.rossocket = AGVC.rosSocket;
-                        BuzzerPlayer.Alarm();
+                        InitAGVControl(RosBridge_IP, RosBridge_Port);
+                        if (AGVC?.rosSocket != null)
+                        {
+                            BuzzerPlayer.rossocket = AGVC.rosSocket;
+                            BuzzerPlayer.Alarm();
+                        }
                     }
-                }
-                );
-            });
+                    );
+                });
 
-            Task WagoDIConnTask = new Task(async () =>
-            {
-                try
+                Task WagoDIConnTask = new Task(async () =>
                 {
-                    while (!WagoDI.Connect())
+                    try
                     {
-                        await Task.Delay(1000);
+                        while (!WagoDI.Connect())
+                        {
+                            await Task.Delay(1000);
+                        }
+                        WagoDI.StartAsync();
+                        DOSignalDefaultSetting();
+                        ResetMotor();
                     }
-                    WagoDI.StartAsync();
-                    DOSignalDefaultSetting();
-                    ResetMotor();
-                }
-                catch (SocketException ex)
-                {
-                }
-                catch (Exception ex)
-                {
-                }
-            });
-            if (!SimulationMode)
-            {
+                    catch (SocketException ex)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                });
+
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
-            }
-            Thread.Sleep(1000);
-            EventsRegist();
-            IsSystemInitialized = true;
+                Thread.Sleep(1000);
+                EventsRegist();
+                IsSystemInitialized = true;
 
-            Task.Run(async () =>
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        NavingMap = await MapStore.GetMapFromServer();
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                });
+                AGVS.Start();
+
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    NavingMap = await MapStore.GetMapFromServer();
-                }
-                catch (Exception ex)
-                {
-                }
-            });
-            AGVS.Start();
+                throw ex;
+            }
+        }
+
+        private void WagoIOIniSetting()
+        {
+            if (!File.Exists(WagoIOConfigFilePath))
+            {
+                StaSysMessageManager.AddNewMessage($"Specfic DI/O Module ini File Not Exist [{WagoIOConfigFilePath}]", 2);
+                return;
+            }
+            File.Copy(WagoIOConfigFilePath, Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
         }
 
         protected virtual async void DOSignalDefaultSetting()
@@ -278,64 +303,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Laser.ModeSwitch(0);
         }
 
-        internal virtual async Task<(bool confirm, string message)> Initialize()
+        public async Task<(bool confirm, string message)> Initialize()
         {
             try
             {
-                DirectionLighter.CloseAll();
-                if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
-                {
-                    return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
-                }
+                (bool, string) result = await PreActionBeforeInitialize();
+                if (!result.Item1)
+                    return result;
 
-                AGVAlarmWhenEQBusyFlag = false;
-                EQAlarmWhenEQBusyFlag = false;
-                WagoDO.ResetHandshakeSignals();
-
-                if (!WagoDI.GetState(clsDIModule.DI_ITEM.EMO))
-                {
-                    AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
-                    BuzzerPlayer.Alarm();
-                    return (false, "EMO 按鈕尚未復歸");
-                }
-
-                if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Switch))
-                {
-                    AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
-                    BuzzerPlayer.Alarm();
-                    return (false, "解煞車旋鈕尚未復歸");
-                }
-
-                IsInitialized = false;
                 Sub_Status = SUB_STATUS.Initializing;
-                Laser.LeftLaserBypass = true;
-                Laser.RightLaserBypass = true;
-                Laser.FrontLaserBypass = true;
-                Laser.BackLaserBypass = true;
-
-                Laser.ModeSwitch(LASER_MODE.Bypass);
-
+                IsInitialized = false;
                 StatusLighter.CloseAll();
                 StatusLighter.INITIALIZE();
-                await Task.Delay(1000);
+                result = await InitializeActions();
+
+                if (!result.Item1)
+                    return result;
+
                 StatusLighter.AbortFlash();
-                IsInitialized = true;
+                await Laser.ModeSwitch(LASER_MODE.Bypass);
                 Sub_Status = SUB_STATUS.IDLE;
-                AGVC.IsAGVExecutingTask = false;
+                IsInitialized = true;
                 return (true, "");
-            }
-            catch (SocketException ex)
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                return (false, "WAGO IO 寫入異常");
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
-                return (false, $"系統例外:{ex.Message}");
+                _Sub_Status = SUB_STATUS.DOWN;
+                BuzzerPlayer.Alarm();
+                IsInitialized = false;
+                return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
+            }
+        }
+
+        protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
+        {
+            AGVC.IsAGVExecutingTask = false;
+            BuzzerPlayer.Stop();
+            DirectionLighter.CloseAll();
+            if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
+            {
+                return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
             }
 
+            AGVAlarmWhenEQBusyFlag = false;
+            EQAlarmWhenEQBusyFlag = false;
+            WagoDO.ResetHandshakeSignals();
+
+            if (!WagoDI.GetState(clsDIModule.DI_ITEM.EMO))
+            {
+                AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
+                BuzzerPlayer.Alarm();
+                return (false, "EMO 按鈕尚未復歸");
+            }
+
+            if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Switch))
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
+                BuzzerPlayer.Alarm();
+                return (false, "解煞車旋鈕尚未復歸");
+            }
+            return (true, "");
         }
+        protected abstract Task<(bool confirm, string message)> InitializeActions();
         private (int tag, double locx, double locy, double theta) CurrentPoseReqCallback()
         {
             var tag = Navigation.Data.lastVisitedNode.data;
@@ -360,23 +389,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void SoftwareEMO()
         {
-            Task.Factory.StartNew(async () =>
-            {
-                Sub_Status = SUB_STATUS.ALARM;
-                await Task.Delay(1);
-                Sub_Status = SUB_STATUS.DOWN;
-            });
+            BuzzerPlayer.Alarm();
+            _Sub_Status = SUB_STATUS.DOWN;
             IsInitialized = false;
             AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
-       
+
 
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            StaSysMessageManager.Clear();
             if (IsResetAlarmWorking)
                 return;
 
@@ -384,9 +410,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool motor_reset_success = await ResetMotor();
             if (!motor_reset_success)
             {
-                Sub_Status = SUB_STATUS.STOP;
-                await Task.Delay(100);
-                Sub_Status = SUB_STATUS.DOWN;
+                BuzzerPlayer.Alarm();
+                _Sub_Status = SUB_STATUS.DOWN;
                 IsResetAlarmWorking = false;
                 return;
             }
@@ -432,17 +457,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_2))
                 {
                     Console.WriteLine("Reset Motor Process Start");
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                     //安全迴路RELAY
-                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
-                    await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
-                    await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                    await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                    await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                    await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+                    await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                     Console.WriteLine("Reset Motor Process End");
                 }
                 return true;

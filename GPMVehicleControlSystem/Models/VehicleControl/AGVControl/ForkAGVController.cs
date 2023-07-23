@@ -25,6 +25,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", VerticalDoneActionCallback);
         }
 
+        private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
+        {
+            response = new VerticalCommandResponse()
+            {
+                confirm = true
+            };
+            IsZAxisActionDone = tin.command == "done";
+            Task.Factory.StartNew(() =>
+            {
+                if (OnZAxisActionDone != null)
+                    OnZAxisActionDone(IsZAxisActionDone);
+            });
+            return IsZAxisActionDone;
+        }
         public async Task<(bool confirm, string message)> ZAxisInit()
         {
             VerticalCommandRequest request = new VerticalCommandRequest
@@ -168,20 +182,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await CallVerticalCommandService(request);
         }
 
-        private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
-        {
-            response = new VerticalCommandResponse()
-            {
-                confirm = true
-            };
-            IsZAxisActionDone = tin.command == "done";
-            Task.Factory.StartNew(() =>
-            {
-                if (OnZAxisActionDone != null)
-                    OnZAxisActionDone(IsZAxisActionDone);
-            });
-            return true;
-        }
         private async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request)
         {
             try

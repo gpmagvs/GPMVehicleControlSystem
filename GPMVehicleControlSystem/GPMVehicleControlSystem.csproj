@@ -50,6 +50,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="param\IO_Wago_Fork_AGV.ini">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="param\IO_Wago_Inspection_AGV.ini">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
