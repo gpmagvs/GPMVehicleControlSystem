@@ -13,7 +13,6 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -148,14 +147,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
                                 Main_Status = MAIN_STATUS.DOWN;
 
-
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
                             else
                             {
-                                DirectionLighter.WaitPassLights(1000);
+                                DirectionLighter.WaitPassLights(500);
                             }
-
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)
@@ -333,13 +330,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Sub_Status = SUB_STATUS.Initializing;
                 IsInitialized = false;
                 result = await InitializeActions();
-
                 if (!result.Item1)
-                {
-                    Sub_Status = SUB_STATUS.ALARM;
                     return result;
-                }
 
+                StatusLighter.AbortFlash();
                 await Laser.ModeSwitch(LASER_MODE.Bypass);
                 Sub_Status = SUB_STATUS.IDLE;
                 IsInitialized = true;
@@ -358,6 +352,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AGVC.IsAGVExecutingTask = false;
             BuzzerPlayer.Stop();
+            DirectionLighter.CloseAll();
             if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
             {
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
@@ -408,12 +403,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal void SoftwareEMO()
         {
             BuzzerPlayer.Alarm();
-            Sub_Status = SUB_STATUS.DOWN;
+            _Sub_Status = SUB_STATUS.DOWN;
             IsInitialized = false;
             AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
+
+
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
@@ -426,6 +423,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool motor_reset_success = await ResetMotor();
             if (!motor_reset_success)
             {
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail);
                 BuzzerPlayer.Alarm();
                 _Sub_Status = SUB_STATUS.DOWN;
                 IsResetAlarmWorking = false;
@@ -486,12 +484,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (SocketException ex)
             {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
                 return false;
             }
             catch (Exception ex)
             {
-                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
                 return false;
             }
 

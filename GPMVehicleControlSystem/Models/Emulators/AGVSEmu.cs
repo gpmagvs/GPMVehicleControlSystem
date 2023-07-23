@@ -3,6 +3,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
 {
     public class AGVSEmu : Connection
     {
+        public override string alarm_locate_in_name => throw new NotImplementedException();
+
         public override bool Connect()
         {
 

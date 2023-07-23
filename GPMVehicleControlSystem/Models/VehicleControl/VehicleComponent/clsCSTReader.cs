@@ -12,6 +12,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public string ValidCSTID { get; set; } = "";
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         public override void CheckStateDataContent()
         {
         }

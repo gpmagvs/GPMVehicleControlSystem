@@ -59,6 +59,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public double Angle => Data.robotPose.pose.orientation.ToTheta();
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         private AGV_DIRECTION ConvertToDirection(ushort direction)
         {
             if (direction == 0)
@@ -83,38 +85,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 var code = Data.errorCode;
                 if (code == 1)
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Received_Msg;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Received_Msg;
                 else if (code == 2)
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Extend_Path;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Extend_Path;
                 else if (code == 3)
-                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
                 else if (code == 4)
-                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
                 else if (code == 5)
-                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
                 else if (code == 6)
-                    current_alarm_code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
                 else if (code == 7)
-                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
                 else if (code == 8)
-                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
                 else if (code == 9)
-                    current_alarm_code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
                 else if (code == 10)
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
                 else if (code == 11)
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
                 else if (code == 12)
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
                 else if (code == 13)
-                    current_alarm_code = AlarmCodes.Map_Recognition_Rate_Too_Low;
+                    Current_Warning_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
                 else
-                    current_alarm_code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
+                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
 
             }
             else
             {
-                current_alarm_code = AlarmCodes.None;
+                Current_Warning_Code = AlarmCodes.None;
             }
         }
         //180d 3.14  

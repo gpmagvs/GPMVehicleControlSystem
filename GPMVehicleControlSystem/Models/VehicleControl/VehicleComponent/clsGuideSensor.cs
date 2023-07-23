@@ -8,6 +8,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.GUID_SENSOR;
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         public override void CheckStateDataContent()
         {
         }

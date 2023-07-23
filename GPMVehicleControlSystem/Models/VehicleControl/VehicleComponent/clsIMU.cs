@@ -8,16 +8,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         public override void CheckStateDataContent()
         {
             GpmImuMsg _imu_state = (GpmImuMsg)base.StateData;
             if (_imu_state.state != 0)
             {
-                current_alarm_code = AlarmCodes.IMU_Module_Error;
+                Current_Warning_Code = AlarmCodes.IMU_Module_Error;
             }
             else
             {
-                current_alarm_code = AlarmCodes.None;
+                Current_Warning_Code = AlarmCodes.None;
             }
         }
     }

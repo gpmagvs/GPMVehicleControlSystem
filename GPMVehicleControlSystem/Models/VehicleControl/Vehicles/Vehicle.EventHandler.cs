@@ -26,8 +26,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickDataUpdated += CarController_OnSickDataUpdated;
             AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
 
-            WagoDO.OnDisonnected += WagoDO_OnDisonnected;
-            WagoDI.OnDisonnected += WagoDI_OnDisonnected;
             WagoDI.OnEMO += WagoDI_OnEMO;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
@@ -38,7 +36,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsTaskDownloadData.OnCurrentPoseReq = CurrentPoseReqCallback;
 
             //AGVS
-            AGVS.OnDisconnected += AGVSDisconnectedHandler;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
@@ -50,28 +47,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        private void WagoDI_OnDisonnected(object? sender, EventArgs e)
-        {
-            Sub_Status = SUB_STATUS.DOWN;
-            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
-            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
-        }
-
-        private void WagoDO_OnDisonnected(object? sender, EventArgs e)
-        {
-            Sub_Status = SUB_STATUS.DOWN;
-            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-        }
-
-        private void AGVSDisconnectedHandler(object? sender, EventArgs e)
-        {
-            AlarmManager.AddWarning(AlarmCodes.AGVS_Disconnect);
-            //  BuzzerPlayer.Alarm();
-        }
 
         private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
         {
-            if (Navigation.current_alarm_code != AlarmCodes.None)
+            if (Navigation.Current_Warning_Code != AlarmCodes.None)
             {
                 AGVC.AbortTask();
                 ExecutingTask.Abort();

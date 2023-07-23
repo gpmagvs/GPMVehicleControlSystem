@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace GPMVehicleControlSystem.Tools
+namespace GPMVehicleControlSystem
 {
     public class AppSettingsHelper
     {

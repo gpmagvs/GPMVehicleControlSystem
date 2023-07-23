@@ -12,6 +12,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
         }
 
+        public override string alarm_locate_in_name => "SubmarinAGVControl";
+
         public override void AdertiseROSServices()
         {
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", CSTReaderDoneActionHandle);

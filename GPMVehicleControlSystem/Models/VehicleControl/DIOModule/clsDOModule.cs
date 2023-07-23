@@ -79,10 +79,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (retry_cnt >= 5)
                 {
                     OnDisonnected?.Invoke(this, EventArgs.Empty);
+                    Current_Alarm_Code = AlarmCodes.Wago_IO_Read_Fail;
                     return (false, null, null);
                 }
                 await Task.Delay(1000);
             }
+            Current_Alarm_Code = AlarmCodes.None;
             return (true, tcpclient, modbusMaster);
         }
 

@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6.MAP;
-using GPMVehicleControlSystem.Tools;
 using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.NaviMap

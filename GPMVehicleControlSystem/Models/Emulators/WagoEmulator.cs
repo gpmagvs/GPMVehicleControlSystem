@@ -15,6 +15,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
         public clsDIModule WagoDI { get; internal set; }
 
+        public override string alarm_locate_in_name => throw new NotImplementedException();
+
         public WagoEmulator()
         {
             INPUT_INDEXS = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().ToDictionary(e => e, e => (int)e);

@@ -1,5 +1,4 @@
-﻿using GPMVehicleControlSystem.Tools;
-using RosSharp.RosBridgeClient;
+﻿using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Protocols;
 using RosSharp.RosBridgeClient.MessageTypes.Std;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;

@@ -31,6 +31,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
 
         public event EventHandler OnDisonnected;
+        public override string alarm_locate_in_name => "DI Module";
 
         public event EventHandler<ROBOT_CONTROL_CMD> OnLaserDIRecovery;
         public event EventHandler OnFarLaserDITrigger;
@@ -58,6 +59,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public List<clsIOSignal> VCSInputs = new List<clsIOSignal>();
         public ushort Start { get; set; }
         public ushort Size { get; set; }
+
 
         protected Mutex IOMutex = new Mutex();
 
@@ -130,11 +132,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 master.Transport.ReadTimeout = 5000;
                 master.Transport.WriteTimeout = 5000;
                 master.Transport.Retries = 10;
+                Current_Alarm_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 return true;
             }
             catch (Exception ex)
             {
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
                 client = null;

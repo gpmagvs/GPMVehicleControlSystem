@@ -8,5 +8,7 @@
         public InspectorAGVCarController(string IP, int Port) : base(IP, Port)
         {
         }
+
+        public override string alarm_locate_in_name => "InspectorAGVCarController";
     }
 }

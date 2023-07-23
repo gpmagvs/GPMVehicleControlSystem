@@ -23,6 +23,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public double CurrentPosition { get => Data.position; }
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         public override void CheckStateDataContent()
         {
 
@@ -31,40 +33,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 var code = _driverState.errorCode;
                 if (code == 1)
-                    current_alarm_code = AlarmCodes.Under_voltage_protection;
+                    Current_Warning_Code = AlarmCodes.Under_voltage_protection;
                 if (code == 2)
-                    current_alarm_code = AlarmCodes.Under_current_protection;
+                    Current_Warning_Code = AlarmCodes.Under_current_protection;
                 if (code == 3)
-                    current_alarm_code = AlarmCodes.Over_voltage_protection;
+                    Current_Warning_Code = AlarmCodes.Over_voltage_protection;
                 if (code == 4)
-                    current_alarm_code = AlarmCodes.Over_current_protection;
+                    Current_Warning_Code = AlarmCodes.Over_current_protection;
                 if (code == 5)
-                    current_alarm_code = AlarmCodes.Over_heat_protection;
+                    Current_Warning_Code = AlarmCodes.Over_heat_protection;
                 if (code == 6)
-                    current_alarm_code = AlarmCodes.Over_load_protection;
+                    Current_Warning_Code = AlarmCodes.Over_load_protection;
                 if (code == 7)
-                    current_alarm_code = AlarmCodes.Over_regeneration_load_protection;
+                    Current_Warning_Code = AlarmCodes.Over_regeneration_load_protection;
                 if (code == 8)
-                    current_alarm_code = AlarmCodes.Over_speed_protection;
+                    Current_Warning_Code = AlarmCodes.Over_speed_protection;
                 if (code == 9)
-                    current_alarm_code = AlarmCodes.Deviation_excess_protection;
+                    Current_Warning_Code = AlarmCodes.Deviation_excess_protection;
                 if (code == 10)
-                    current_alarm_code = AlarmCodes.AConnection_error_protection;
+                    Current_Warning_Code = AlarmCodes.AConnection_error_protection;
                 if (code == 11)
-                    current_alarm_code = AlarmCodes.Status_Error;
+                    Current_Warning_Code = AlarmCodes.Status_Error;
                 if (code == 12)
-                    current_alarm_code = AlarmCodes.Communication_error;
+                    Current_Warning_Code = AlarmCodes.Communication_error;
                 if (code == 13)
-                    current_alarm_code = AlarmCodes.Alarm_input_protection;
+                    Current_Warning_Code = AlarmCodes.Alarm_input_protection;
                 if (code == 14)
-                    current_alarm_code = AlarmCodes.Command_error;
+                    Current_Warning_Code = AlarmCodes.Command_error;
                 if (code == 15)
-                    current_alarm_code = AlarmCodes.Overtorque;
+                    Current_Warning_Code = AlarmCodes.Overtorque;
                 if (code == 16)
-                    current_alarm_code = AlarmCodes.Other_error;
+                    Current_Warning_Code = AlarmCodes.Other_error;
             }
             else
-                current_alarm_code = AlarmCodes.None;
+                Current_Warning_Code = AlarmCodes.None;
 
         }
     }

@@ -18,6 +18,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public double CurrentX => Data == null ? 0 : (int)Data.xValue;
         public double CurrentY => Data == null ? 0 : (int)Data.yValue;
 
+        public override string alarm_locate_in_name => component_name.ToString();
+
         private uint PreviousTag = 0;
         public override void CheckStateDataContent()
         {
@@ -28,11 +30,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             PreviousTag = _brState.tagID;
             if (_brState.state == -1)
             {
-                current_alarm_code = AlarmCodes.Barcode_Module_Error;
+                Current_Warning_Code = AlarmCodes.Barcode_Module_Error;
             }
             else
             {
-                current_alarm_code = AlarmCodes.None;
+                Current_Warning_Code = AlarmCodes.None;
             }
         }
     }
