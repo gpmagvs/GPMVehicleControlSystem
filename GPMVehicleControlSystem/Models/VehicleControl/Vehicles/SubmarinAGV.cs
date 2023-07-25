@@ -14,7 +14,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public SubmarinAGV()
         {
-            (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
         }
         protected override List<CarComponent> CarComponents
         {
@@ -30,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
 
-        public override string WagoIOConfigFilePath => Path.Combine(Environment.CurrentDirectory, "param/IO_Wago_Submarine_AGV.ini");
+        public override string WagoIOConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago_Submarine_AGV.ini");
 
         internal override RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
         {
@@ -67,6 +66,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async Task<(bool confirm, string message)> InitializeActions()
         {
             return (true, "");
+        }
+   
+        protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
+        {
+            base.InitAGVControl(RosBridge_IP, RosBridge_Port);
+            (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
+
         }
     }
 }

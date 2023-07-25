@@ -66,6 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     return callSerivceResult;
                 else
                 {
+                    IsZAxisActionDone = false;
                     return await WaitActionDone();
                 }
             }

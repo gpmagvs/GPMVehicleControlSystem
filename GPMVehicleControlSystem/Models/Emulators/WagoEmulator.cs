@@ -61,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         }
         public void SetState(DI_ITEM item, bool state)
         {
-            var index = WagoDI.INPUT_INDEXS[item];
+            var index = WagoDI.Indexs[item];
             slave.DataStore.InputDiscretes[index + 1] = state;
         }
         private void Slave_ModbusSlaveRequestReceived(object? sender, ModbusSlaveRequestEventArgs e)

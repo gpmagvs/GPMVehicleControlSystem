@@ -18,36 +18,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
-        protected virtual void EventsRegist() //TODO EventRegist
-        {
-            AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
-            AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
-            AGVC.OnModuleInformationUpdated += CarController_OnModuleInformationUpdated;
-            AGVC.OnSickDataUpdated += CarController_OnSickDataUpdated;
-            AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
-
-            WagoDI.OnEMO += WagoDI_OnEMO;
-            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
-            WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-            WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
-            WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
-            WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
-            Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
-            clsTaskDownloadData.OnCurrentPoseReq = CurrentPoseReqCallback;
-
-            //AGVS
-            AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
-            AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
-            AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
-
-            Navigation.OnTagReach += OnTagReachHandler;
-            BarcodeReader.OnTagLeave += OnTagLeaveHandler;
-
-            AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-
-        }
-
-
         private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
         {
             if (Navigation.Current_Warning_Code != AlarmCodes.None)

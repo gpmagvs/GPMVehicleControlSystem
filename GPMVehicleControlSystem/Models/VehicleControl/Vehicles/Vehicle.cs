@@ -60,6 +60,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             location = clsDriver.DRIVER_LOCATION.FORK
         };
 
+
+
         public clsDriver[] WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT},
@@ -195,6 +197,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+                Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
+                Navigation.OnTagReach += OnTagReachHandler;
+                BarcodeReader.OnTagLeave += OnTagLeaveHandler;
+
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
@@ -215,16 +221,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
                 AGVSMessageFactory.Setup(SID, CarName);
                 WagoIOIniSetting();
-                WagoDO = new clsDOModule(Wago_IP, Wago_Port, null);
-                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO);
-
-                AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
-                AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
-
-
+                WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
+                {
+                    AgvType = AgvType
+                };
+                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO)
+                {
+                    AgvType = AgvType
+                };
                 DirectionLighter.DOModule = WagoDO;
+
                 StatusLighter = new clsStatusLighter(WagoDO);
                 Laser = new clsLaser(WagoDO, WagoDI);
+
                 if (SimulationMode)
                 {
                     try
@@ -255,51 +264,91 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     );
                 });
 
-                Task WagoDIConnTask = new Task(async () =>
-                {
-                    try
-                    {
-                        while (!WagoDI.Connect())
-                        {
-                            await Task.Delay(1000);
-                        }
-                        WagoDI.StartAsync();
-                        DOSignalDefaultSetting();
-                        ResetMotor();
-                    }
-                    catch (SocketException ex)
-                    {
-                    }
-                    catch (Exception ex)
-                    {
-                    }
-                });
+                Task WagoDIConnTask = WagoDIInit();
 
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
-                Thread.Sleep(1000);
-                EventsRegist();
+                DownloadMapFromServer();
+                AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
+                AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
+                AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
-
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        NavingMap = await MapStore.GetMapFromServer();
-                    }
-                    catch (Exception ex)
-                    {
-                    }
-                });
-                AGVS.Start();
-
             }
             catch (Exception ex)
             {
+                IsSystemInitialized = false;
                 string msg = $"車輛實例化時於建構函式發生錯誤 : {ex.Message}:{ex.StackTrace}";
                 StaSysMessageManager.AddNewMessage(msg, 2);
                 throw ex;
             }
+
+        }
+
+        private void DownloadMapFromServer()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    NavingMap = await MapStore.GetMapFromServer();
+                    LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                }
+                catch (Exception ex)
+                {
+                    LOG.WARN($"Map Download Fail....{ex.Message}");
+                }
+            });
+        }
+
+        private void AGVSInit(string AGVS_IP, int AGVS_Port, string AGVS_LocalIP)
+        {
+            //AGVS
+            AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
+            AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
+            AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
+            AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
+            AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
+            AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+            AGVS.Start();
+        }
+
+        private Task WagoDIInit()
+        {
+            return new Task(async () =>
+            {
+                try
+                {
+                    WagoDIEventRegist();
+                    while (!WagoDI.Connect())
+                    {
+                        await Task.Delay(1000);
+                    }
+                    WagoDI.StartAsync();
+                    if (!Debugger.IsAttached)
+                    {
+                        DOSignalDefaultSetting();
+                        ResetMotor();
+                    }
+                }
+                catch (SocketException ex)
+                {
+                    LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+                }
+                catch (Exception ex)
+                {
+                    LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
+                }
+            });
+        }
+
+        protected virtual void WagoDIEventRegist()
+        {
+            WagoDI.OnEMO += WagoDI_OnEMO;
+            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
+            WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
+            WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
+            WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
+            WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
         }
 
         private void WagoIOIniSetting()
@@ -309,13 +358,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StaSysMessageManager.AddNewMessage($"Specfic DI/O Module ini File Not Exist [{WagoIOConfigFilePath}]", 2);
                 return;
             }
-            File.Copy(WagoIOConfigFilePath, Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"), true);
+            File.Copy(WagoIOConfigFilePath, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini"), true);
         }
 
         protected virtual async void DOSignalDefaultSetting()
         {
             WagoDO.AllOFF();
-            WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await WagoDO.SetState(DO_ITEM.Back_LsrBypass, false);
+            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, false);
+            await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
+            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await Laser.ModeSwitch(0);
         }
 
@@ -387,12 +440,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return new(tag, x, y, theta);
         }
 
-        protected internal virtual void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+        protected internal void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
-            AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
+            CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
             AGVC.Connect();
             AGVC.ManualController.vehicle = this;
+            AGVC.OnModuleInformationUpdated += CarController_OnModuleInformationUpdated;
+            AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
+            AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
+            AGVC.OnSickActiveMonitoringCaseChnaged += (ros_agv, active_monitor_case) => { Laser.CurrentLaserMonitoringCase = active_monitor_case; };
 
+        }
+
+        protected virtual void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
+        {
+            AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
         }
 
         internal async Task<bool> CancelInitialize()
@@ -400,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
-        internal void SoftwareEMO()
+        protected internal virtual void SoftwareEMO()
         {
             BuzzerPlayer.Alarm();
             _Sub_Status = SUB_STATUS.DOWN;
@@ -415,7 +477,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            AlarmManager.ClearAlarm();
+            AGVAlarmReportable.ResetAlarmCodes();
             StaSysMessageManager.Clear();
+
             if (IsResetAlarmWorking)
                 return;
 
@@ -436,7 +501,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
 
-            await BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop();
 
             _ = Task.Factory.StartNew(async () =>
              {
@@ -457,7 +522,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                              Sub_Status = SUB_STATUS.STOP;
                      }
                  }
-                 AlarmManager.ClearAlarm();
 
              });
             IsResetAlarmWorking = false;

@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using Newtonsoft.Json;
@@ -71,7 +72,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private LocalizationControllerResultMessage0502 LocalizationControllerResult = new LocalizationControllerResultMessage0502();
 
         public event EventHandler<ModuleInformation> OnModuleInformationUpdated;
-        public event EventHandler<LocalizationControllerResultMessage0502> OnSickDataUpdated;
+        public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
+        public event EventHandler<int> OnSickActiveMonitoringCaseChnaged;
 
         /// <summary>
         /// 機器人任務結束且是成功完成的狀態
@@ -177,6 +179,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             rosSocket.Subscribe<ModuleInformation>("/module_information", new SubscriptionHandler<ModuleInformation>(ModuleInformationCallback), queue_length: 50);
             rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, 100);
+            rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, 100);
+            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, 100);
+        }
+        public OutputPathsMsg SickOutPutPaths { get; private set; } = new OutputPathsMsg();
+        private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
+        {
+            if (SickOutPutPaths.active_monitoring_case != sick_scanner_out_data.active_monitoring_case)
+                OnSickActiveMonitoringCaseChnaged(this, sick_scanner_out_data.active_monitoring_case);
+            SickOutPutPaths = sick_scanner_out_data;
+        }
+
+        private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)
+        {
+            GeneralSystemStateMsg general_system_state = sick_scanner_raw_data.general_system_state;
         }
 
         /// <summary>
@@ -300,7 +316,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private void SickStateCallback(LocalizationControllerResultMessage0502 _LocalizationControllerResult)
         {
             LocalizationControllerResult = _LocalizationControllerResult;
-            OnSickDataUpdated?.Invoke(this, _LocalizationControllerResult);
+            OnSickLocalicationDataUpdated?.Invoke(this, _LocalizationControllerResult);
         }
 
         private void ModuleInformationCallback(ModuleInformation _ModuleInformation)

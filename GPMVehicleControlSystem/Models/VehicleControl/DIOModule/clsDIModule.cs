@@ -5,6 +5,8 @@ using GPMVehicleControlSystem.Tools;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
 using System.Net.Sockets;
+using System.Security.AccessControl;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -14,7 +16,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     {
         TcpClient client;
         protected ModbusIpMaster? master;
-
+        private AGV_TYPE _AgvType = AGV_TYPE.UNKNOWN;
+        public AGV_TYPE AgvType
+        {
+            get => _AgvType;
+            set
+            {
+                _AgvType = value;
+                RegistSignalEvents();
+            }
+        }
         public ManualResetEvent PauseSignal = new ManualResetEvent(true);
 
         bool isFrontLaserA1Trigger => !GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
@@ -30,6 +41,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         bool isRightLaserTrigger => !GetState(DI_ITEM.RightProtection_Area_Sensor_2);
         bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
 
+
         public event EventHandler OnDisonnected;
         public override string alarm_locate_in_name => "DI Module";
 
@@ -41,7 +53,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         /// EMO按壓
         /// </summary>
         public event EventHandler OnEMO;
-
         /// <summary>
         /// Bump Sensor觸發
         /// </summary>
@@ -50,29 +61,26 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnResetButtonPressed;
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
+
+
         public Action OnResetButtonPressing { get; set; }
 
         public Action OnHS_EQ_READY { get; internal set; }
 
-        internal Dictionary<DI_ITEM, int> INPUT_INDEXS = new Dictionary<DI_ITEM, int>();
+        internal Dictionary<Enum, int> Indexs = new Dictionary<Enum, int>();
 
         public List<clsIOSignal> VCSInputs = new List<clsIOSignal>();
         public ushort Start { get; set; }
         public ushort Size { get; set; }
 
-
-        protected Mutex IOMutex = new Mutex();
-
         public clsDIModule()
         {
-
         }
         public clsDIModule(string IP, int Port)
         {
             this.IP = IP;
             this.Port = Port;
             ReadIOSettingsFromIniFile();
-            RegistSignalEvents();
         }
         public clsDIModule(string IP, int Port, clsDOModule DoModuleRef)
         {
@@ -80,13 +88,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             this.Port = Port;
             this.DoModuleRef = DoModuleRef;
             ReadIOSettingsFromIniFile();
-            RegistSignalEvents();
         }
 
         virtual public void ReadIOSettingsFromIniFile()
         {
             DI_ITEM di_item;
-            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.CurrentDirectory, $"param/IO_Wago.ini"));
+            IniHelper iniHelper = new IniHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"param/IO_Wago.ini"));
             var di_names = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().Select(i => i.ToString()).ToList();
             try
             {
@@ -102,7 +109,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         if (di_names.Contains(RigisterName))
                         {
                             var do_item = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().FirstOrDefault(di => di.ToString() == RigisterName);
-                            if (!INPUT_INDEXS.TryAdd(do_item, i))
+                            if (!Indexs.TryAdd(do_item, i))
                             {
                                 throw new Exception("WAGO DI 名稱重複");
                             }
@@ -175,42 +182,43 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             return VCSInputs.FirstOrDefault(k => k.Name == signal + "").State;
         }
+
+
+        //監視某個輸入的變化事件??
+
+        public void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        {
+            VCSInputs[Indexs[signal]].OnStateChanged += handler;
+        }
         protected virtual void RegistSignalEvents()
         {
-            VCSInputs[INPUT_INDEXS[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
-            VCSInputs[INPUT_INDEXS[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
-            VCSInputs[INPUT_INDEXS[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
+            VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
+            VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+            VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
+            VCSInputs[Indexs[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
+            VCSInputs[Indexs[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
 
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle;
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle; ;
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle; ;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle; ;
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; ;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle; ;
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
+            VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
 
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            VCSInputs[INPUT_INDEXS[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
-
-            try
-            {
-                VCSInputs[INPUT_INDEXS[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
-            }
-            catch (Exception)
-            {
-            }
-
+            if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+                VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
         }
 
         private void NearLaserDiTriggerHandle(object? sender, EventArgs e)

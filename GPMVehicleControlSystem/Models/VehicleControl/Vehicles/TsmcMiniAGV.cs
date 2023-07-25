@@ -111,13 +111,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
-        protected internal override void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+
+        protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
-            AGVC.Connect();
-            AGVC.ManualController.vehicle = this;
-            BuzzerPlayer.rossocket = AGVC.rosSocket;
-            BuzzerPlayer.Alarm();
         }
         public async Task<bool> Battery1Lock()
         {

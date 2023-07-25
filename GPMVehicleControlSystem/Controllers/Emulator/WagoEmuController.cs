@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models.Emulators;
+﻿using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.Emulators;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -10,10 +11,11 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
     public class WagoEmuController : ControllerBase
     {
         [HttpGet("SetInput")]
-        public async Task<IActionResult> SetInput(DI_ITEM Input, bool State)
+        public async Task<IActionResult> SetInput(int YAddress, bool State)
         {
-            StaEmuManager.wagoEmu.SetState(Input, State);
-            return Ok(new { Address = Input.ToString(), State });
+            VehicleControl.DIOModule.clsIOSignal add = StaStored.CurrentVechicle.WagoDI.VCSInputs.First(ad => ad.Address == $"X{YAddress.ToString("X4")}");
+            StaEmuManager.wagoEmu.SetState(add.DI_item, State);
+            return Ok(new { Address = add.Address, State });
         }
 
 

@@ -34,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         private LASER_MODE _Mode = LASER_MODE.Bypass;
-        private int _mode_int = -1;
+        internal int CurrentLaserMonitoringCase = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == _mode_int);
+                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserMonitoringCase);
                 }
                 catch (Exception)
                 {
@@ -143,7 +143,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(int mode_int)
         {
-            if (_mode_int == mode_int)
+            if (CurrentLaserMonitoringCase == mode_int)
                 return true;
 
             try
@@ -159,7 +159,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
                 };
                 DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
-                _mode_int = mode_int;
+                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                while (CurrentLaserMonitoringCase != mode_int)
+                {
+                    if (cts.IsCancellationRequested)
+                    {
+                        return false;
+                    }
+                    await Task.Delay(1);
+                }
+
                 LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
                 return true;
             }

@@ -9,7 +9,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
     public partial class clsDOModule : clsDIModule
     {
-        Dictionary<DO_ITEM, int> OUTPUT_INDEXS = new Dictionary<DO_ITEM, int>();
         public event EventHandler OnDisonnected;
         public List<clsIOSignal> VCSOutputs = new List<clsIOSignal>();
         public clsDOModule() : base()
@@ -29,7 +28,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override void ReadIOSettingsFromIniFile()
         {
-            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.CurrentDirectory, "param/IO_Wago.ini"));
+            IniHelper iniHelper = new IniHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini"));
 
             try
             {
@@ -48,7 +47,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         if (do_names.Contains(RigisterName))
                         {
                             var do_item = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().FirstOrDefault(di => di.ToString() == RigisterName);
-                            if (!OUTPUT_INDEXS.TryAdd(do_item, i))
+                            if (!Indexs.TryAdd(do_item, i))
                             {
                                 throw new Exception("WAGO DO名稱重複");
                             }

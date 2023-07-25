@@ -14,7 +14,7 @@ _ = Task.Run(() =>
 {
     LOG.SetLogFolderName("GPM_AGV_LOG");
     StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-    bool alarmListLoaded = AlarmManager.LoadAlarmList( Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"param/AlarmList.json"), out string message);
+    bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/AlarmList.json"), out string message);
     if (!alarmListLoaded)
         StaSysMessageManager.AddNewMessage(message, 1);
     DBhelper.Initialize();
@@ -38,6 +38,7 @@ void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
         StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.TsmcMiniAGV();
     }
 
+    LOG.INFO($"AGV-{StaStored.CurrentVechicle.AgvType} Created¡I¡I");
 }
 
 var builder = WebApplication.CreateBuilder(args);

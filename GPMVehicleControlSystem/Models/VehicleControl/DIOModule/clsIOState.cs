@@ -11,12 +11,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public event EventHandler OnSignalON;
         public event EventHandler OnSignalOFF;
+        public event EventHandler<bool> OnStateChanged;
 
         internal DI_ITEM DI_item
         {
             get
             {
-               return  Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().First(di => di.ToString() == Name);
+                return Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().First(di => di.ToString() == Name);
             }
         }
 
@@ -29,6 +30,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 if (_State != value)
                 {
+                    OnStateChanged?.Invoke(this, value);
                     //Console.WriteLine($"{this.ToJson()}");
                     _State = value;
                     Task.Factory.StartNew(() =>
