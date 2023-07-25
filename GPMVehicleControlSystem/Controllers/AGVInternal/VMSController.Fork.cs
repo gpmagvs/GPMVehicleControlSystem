@@ -43,14 +43,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Up")]
         public async Task<IActionResult> VerticalUp(double speed = 1.0)
         {
-            var result = await forkAgv.ForkLifter.ForkUpAsync(speed);
+            var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + 0.1;
+            var result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
             return Ok(new { confirm = result.confirm, message = result.message });
         }
 
         [HttpGet("Fork/Down")]
         public async Task<IActionResult> VerticalDown(double speed = 1.0)
         {
-            var result = await forkAgv.ForkLifter.ForkDownAsync(speed);
+            var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition - 0.1;
+            var result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
             return Ok(new { confirm = result.confirm, message = result.message });
         }
 
