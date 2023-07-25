@@ -14,7 +14,7 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         public async Task<IActionResult> SetInput(int YAddress, bool State)
         {
             VehicleControl.DIOModule.clsIOSignal add = StaStored.CurrentVechicle.WagoDI.VCSInputs.First(ad => ad.Address == $"X{YAddress.ToString("X4")}");
-            StaEmuManager.wagoEmu.SetState(add.DI_item, State);
+            StaEmuManager.wagoEmu.SetState(add.Input, State);
             return Ok(new { Address = add.Address, State });
         }
 

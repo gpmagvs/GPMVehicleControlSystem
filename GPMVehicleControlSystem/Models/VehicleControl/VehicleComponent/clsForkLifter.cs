@@ -85,38 +85,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             set
             {
                 _DIModule = value;
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkArmSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkArmSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Under_Pressing_Sensor, OnForkUnderPressingSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Down_Hardware_limit, OnForkUnderPressingSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkUnderPressingSensorStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Under_Pressing_Sensor, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Down_Hardware_limit, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkLifterSensorsStateChange);
 
             }
         }
 
-        private void OnForkUnderPressingSensorStateChange(object? sender, bool state)
+
+        private void OnForkLifterSensorsStateChange(object? sender, bool state)
         {
             Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    clsIOSignal DI = sender as clsIOSignal;
-                    if (!state && DI.DI_item == DI_ITEM.Fork_Under_Pressing_Sensor)
+                    clsIOSignal? DI = sender as clsIOSignal;
+                    if (!state && DI?.Input == DI_ITEM.Fork_Under_Pressing_Sensor)
                         Current_Alarm_Code = AlarmCodes.Fork_Bumper_Error;
-                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Down_Hardware_limit)
+                    else if (!state && DI?.Input == DI_ITEM.Vertical_Down_Hardware_limit)
                     {
-                        fork_ros_controller.ZAxisStop();
+                        fork_ros_controller?.ZAxisStop();
                         Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
                     }
-                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Up_Hardware_limit)
+                    else if (!state && DI?.Input == DI_ITEM.Vertical_Up_Hardware_limit)
                     {
-                        fork_ros_controller.ZAxisStop();
+                        fork_ros_controller?.ZAxisStop();
                         Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
+                    }
+                    else if (!state && (DI?.Input == DI_ITEM.Fork_Short_Exist_Sensor | DI?.Input == DI_ITEM.Fork_Extend_Exist_Sensor)) //牙叉伸縮極限Sensor
+                    {
+                        ForkARMStop();
                     }
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR($"{OnForkUnderPressingSensorStateChange} code error", ex);
+                    LOG.ERROR($"{OnForkLifterSensorsStateChange} code error", ex);
                 }
             });
         }
@@ -207,29 +210,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
         }
 
-        /// <summary>
+        /// <summary>停止動作
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
         public async Task ForkARMStop()
         {
             await DOModule.SetState(DO_ITEM.Fork_Extend, false);
-            await Task.Delay(100);
+            await Task.Delay(10);
             await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
         }
 
-
-        private void OnForkArmSensorStateChange(object? sender, bool actived)
-        {
-            if (!actived)
-            {
-                Task.Factory.StartNew(async () =>
-                {
-                    if (!actived)
-                        await ForkARMStop();
-                });
-            }
-        }
 
 
 

@@ -13,7 +13,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnSignalOFF;
         public event EventHandler<bool> OnStateChanged;
 
-        internal DI_ITEM DI_item
+        /// <summary>
+        /// Input定義
+        /// </summary>
+        internal DI_ITEM Input
         {
             get
             {

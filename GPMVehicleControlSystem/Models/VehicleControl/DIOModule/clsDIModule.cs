@@ -224,7 +224,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private void NearLaserDiTriggerHandle(object? sender, EventArgs e)
         {
             clsIOSignal laserSignal = sender as clsIOSignal;
-            DI_ITEM DI = laserSignal.DI_item;
+            DI_ITEM DI = laserSignal.Input;
 
             if (DI == DI_ITEM.RightProtection_Area_Sensor_2 && IsRightLsrBypass)
                 return;
@@ -244,7 +244,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private void FarLsrTriggerHandle(object? sender, EventArgs e)
         {
             clsIOSignal laserSignal = sender as clsIOSignal;
-            DI_ITEM DI = laserSignal.DI_item;
+            DI_ITEM DI = laserSignal.Input;
             if (DI == DI_ITEM.FrontProtection_Area_Sensor_1 && IsFrontLsrBypass)
             {
                 LOG.WARN($"前方遠處雷射觸發但Bypass");
@@ -263,7 +263,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private void LaserRecoveryHandle(object? sender, EventArgs e)
         {
             clsIOSignal laserSignal = sender as clsIOSignal;
-            DI_ITEM DI = laserSignal.DI_item;
+            DI_ITEM DI = laserSignal.Input;
 
             OnLaserDIRecovery?.Invoke(laserSignal, ROBOT_CONTROL_CMD.NONE);
             if (DI == DI_ITEM.RightProtection_Area_Sensor_2 | DI == DI_ITEM.LeftProtection_Area_Sensor_2) //左右雷射復原

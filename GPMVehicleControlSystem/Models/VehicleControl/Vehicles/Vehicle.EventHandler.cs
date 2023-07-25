@@ -48,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVC.NearLaserTriggerHandler(sender, e);
                 Sub_Status = SUB_STATUS.ALARM;
                 clsIOSignal LaserSignal = sender as clsIOSignal;
-                DI_ITEM LaserType = LaserSignal.DI_item;
+                DI_ITEM LaserType = LaserSignal.Input;
                 AlarmCodes alarm_code = GetAlarmCodeByLsrDI(LaserType);
                 if (alarm_code != AlarmCodes.None)
                     AlarmManager.AddAlarm(alarm_code, true);
@@ -91,7 +91,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
             clsIOSignal LaserSignal = sender as clsIOSignal;
-            DI_ITEM LaserType = LaserSignal.DI_item;
+            DI_ITEM LaserType = LaserSignal.Input;
 
             if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery)
             {
