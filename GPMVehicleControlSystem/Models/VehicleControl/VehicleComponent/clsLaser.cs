@@ -1,6 +1,7 @@
 ﻿
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Reflection;
@@ -32,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             BYPASS,
             NORMAL,
         }
-
+        public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         private LASER_MODE _Mode = LASER_MODE.Bypass;
         internal int CurrentLaserMonitoringCase = -1;
         private int _AgvsLsrSetting = 1;

@@ -12,7 +12,7 @@ using System.Reflection;
 
 _ = Task.Run(() =>
 {
-    LOG.SetLogFolderName("GPM_AGV_LOG");
+    LOG.SetLogFolderName(AppSettingsHelper.LogFolder);
     StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/AlarmList.json"), out string message);
     if (!alarmListLoaded)

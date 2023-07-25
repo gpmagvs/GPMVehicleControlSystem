@@ -39,10 +39,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        protected override void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
+        protected override void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
             CSTReader.StateData = _ModuleInformation.CSTReader;
-            base.CarController_OnModuleInformationUpdated(sender, _ModuleInformation);
+            base.ModuleInformationHandler(sender, _ModuleInformation);
         }
 
         /// <summary>

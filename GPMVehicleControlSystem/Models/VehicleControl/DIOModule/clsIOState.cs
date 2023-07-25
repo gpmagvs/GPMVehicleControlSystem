@@ -30,8 +30,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 if (_State != value)
                 {
+                    Console.WriteLine($"{Address},{(value ? 1 : 0)}");
                     OnStateChanged?.Invoke(this, value);
-                    //Console.WriteLine($"{this.ToJson()}");
                     _State = value;
                     Task.Factory.StartNew(() =>
                     {

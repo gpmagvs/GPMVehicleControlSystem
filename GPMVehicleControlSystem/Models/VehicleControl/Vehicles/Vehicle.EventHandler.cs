@@ -65,7 +65,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (LaserType == DI_ITEM.FrontProtection_Area_Sensor_2 | LaserType == DI_ITEM.FrontProtection_Area_Sensor_3)
                 alarm_code = AlarmCodes.FrontProtection_Area3;
-
             if (LaserType == DI_ITEM.BackProtection_Area_Sensor_2 | LaserType == DI_ITEM.BackProtection_Area_Sensor_3)
                 alarm_code = AlarmCodes.BackProtection_Area3;
             return alarm_code;
@@ -175,7 +174,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.AddAlarm(AlarmCodes.Bumper, false);
         }
 
-        protected virtual void CarController_OnModuleInformationUpdated(object? sender, ModuleInformation _ModuleInformation)
+        /// <summary>
+        /// 處理車控發佈的 Moduleinformation
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="_ModuleInformation"></param>
+        protected virtual void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
             if (_ModuleInformation.AlarmCode.Length > 0)
             {

@@ -228,6 +228,30 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             SetState(DO_ITEM.AGV_TR_REQ, false);
             SetState(DO_ITEM.AGV_VALID, false);
         }
+
+        public async Task<bool> ResetSaftyRelay()
+        {
+            //安全迴路RELAY
+            bool RelayON = false;
+            while (true)
+            {
+                await Task.Delay(300);
+                bool do_writen_confirm = false;
+                if (!RelayON)
+                {
+                    do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, true);
+                    RelayON = do_writen_confirm;
+                }
+                else
+                {
+                    do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false);
+                    break;
+                }
+                if (!do_writen_confirm)
+                    return false;
+            }
+            return true;
+        }
         public override async void StartAsync()
         {
             if (!IsConnected())

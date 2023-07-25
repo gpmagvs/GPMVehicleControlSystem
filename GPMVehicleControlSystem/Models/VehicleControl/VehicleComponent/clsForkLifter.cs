@@ -14,132 +14,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsForkLifter : CarComponent, IDIOUsagable
     {
-        public clsForkLifter()
-        {
-        }
-
-        public override COMPOENT_NAME component_name => COMPOENT_NAME.FORK;
-        public clsDriver Driver { get; set; }
-        public override string alarm_locate_in_name => "FORK";
-
-        public clsDOModule DOModule { get; set; }
-        private clsDIModule _DIModule;
-        public clsDIModule DIModule
-        {
-            get => _DIModule;
-            set
-            {
-                _DIModule = value;
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkArmSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkArmSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Under_Pressing_Sensor, OnForkUnderPressingSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Down_Hardware_limit, OnForkUnderPressingSensorStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkUnderPressingSensorStateChange);
-            }
-        }
-
-        private void OnForkUnderPressingSensorStateChange(object? sender, bool state)
-        {
-            Task.Factory.StartNew(() =>
-            {
-                try
-                {
-                    clsIOSignal DI = sender as clsIOSignal;
-                    if (!state && DI.DI_item == DI_ITEM.Fork_Under_Pressing_Sensor)
-                        Current_Alarm_Code = AlarmCodes.Fork_Bumper_Error;
-                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Down_Hardware_limit)
-                        Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
-                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Up_Hardware_limit)
-                        Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR($"{OnForkUnderPressingSensorStateChange} code error", ex);
-                }
-            });
-        }
-
-        public ForkAGVController fork_ros_controller { get; set; }
-
-        public override void CheckStateDataContent()
-        {
-        }
-        public async Task<(bool confirm, string message)> ForkStopAsync()
-        {
-            return await fork_ros_controller.ZAxisStop();
-        }
-        public async Task<(bool confirm, string message)> ForkPositionInit()
-        {
-            return await fork_ros_controller.ZAxisInit();
-        }
-        public async Task<(bool confirm, string message)> ForkGoHome(double speed = 1, bool wait_done = true)
-        {
-            return await fork_ros_controller.ZAxisGoHome(speed, wait_done);
-        }
-        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
-        {
-            return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
-        }
-
-        public async Task<(bool confirm, string message)> ForkUpAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisUp(speed);
-        }
-        public async Task<(bool confirm, string message)> ForkDownAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisDown(speed);
-        }
-        public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisUpSearch(speed);
-        }
-
-        public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisDownSearch(speed);
-        }
-        /// <summary>
-        /// 牙叉伸出
-        /// </summary>
-        /// <returns></returns>
-        public async Task ForkExtendOutAsync()
-        {
-            await ForkARMStop();
-            await DOModule.SetState(DO_ITEM.Fork_Extend, true);
-        }
-
-        /// <summary>
-        /// 牙叉縮回
-        /// </summary>
-        /// <returns></returns>
-        public async Task ForkShortenInAsync()
-        {
-            await ForkARMStop();
-            await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
-        }
-
-        /// <summary>
-        /// 牙叉縮回
-        /// </summary>
-        /// <returns></returns>
-        public async Task ForkARMStop()
-        {
-            await DOModule.SetState(DO_ITEM.Fork_Extend, false);
-            await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
-        }
-
-
-        private void OnForkArmSensorStateChange(object? sender, bool actived)
-        {
-            if (actived)
-            {
-                Task.Factory.StartNew(async () =>
-                {
-                    await ForkARMStop();
-                });
-            }
-        }
-
         public enum FORK_LOCATIONS
         {
             UP_HARDWARE_LIMIT,
@@ -150,6 +24,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             UNKNOWN
         }
 
+        /// <summary>
+        /// 牙叉伸縮位置
+        /// </summary>
+        public enum FORK_ARM_LOCATIONS
+        {
+            HOME,
+            END,
+            UNKNOWN
+        }
+
+        public clsForkLifter()
+        {
+        }
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -168,21 +55,202 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else return FORK_LOCATIONS.UNKNOWN;
             }
         }
-
+        public FORK_ARM_LOCATIONS CurrentForkARMLocation
+        {
+            get
+            {
+                if (DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
+                    return FORK_ARM_LOCATIONS.HOME;
+                else if (DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
+                    return FORK_ARM_LOCATIONS.END;
+                else
+                    return FORK_ARM_LOCATIONS.UNKNOWN;
+            }
+        }
         private SUB_STATUS Sub_Status = SUB_STATUS.IDLE;
+        /// <summary>
+        /// 可以走的上極限位置
+        /// </summary>
+        public double UpPosePostion = 60;
+        public double DownPosePostion = 0;
+        public override COMPOENT_NAME component_name => COMPOENT_NAME.VERTIVAL_DRIVER;
+        public clsDriver Driver { get; set; }
+        public override string alarm_locate_in_name => "FORK";
+
+        public clsDOModule DOModule { get; set; }
+        private clsDIModule _DIModule;
+        public clsDIModule DIModule
+        {
+            get => _DIModule;
+            set
+            {
+                _DIModule = value;
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkArmSensorStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkArmSensorStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Under_Pressing_Sensor, OnForkUnderPressingSensorStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Down_Hardware_limit, OnForkUnderPressingSensorStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkUnderPressingSensorStateChange);
+
+            }
+        }
+
+        private void OnForkUnderPressingSensorStateChange(object? sender, bool state)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    clsIOSignal DI = sender as clsIOSignal;
+                    if (!state && DI.DI_item == DI_ITEM.Fork_Under_Pressing_Sensor)
+                        Current_Alarm_Code = AlarmCodes.Fork_Bumper_Error;
+                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Down_Hardware_limit)
+                    {
+                        fork_ros_controller.ZAxisStop();
+                        Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
+                    }
+                    else if (!state && DI.DI_item == DI_ITEM.Vertical_Up_Hardware_limit)
+                    {
+                        fork_ros_controller.ZAxisStop();
+                        Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR($"{OnForkUnderPressingSensorStateChange} code error", ex);
+                }
+            });
+        }
+
+        internal ForkAGVController fork_ros_controller;
+
+        public override void CheckStateDataContent()
+        {
+        }
+        public async Task<(bool confirm, string message)> ForkStopAsync()
+        {
+            return await fork_ros_controller.ZAxisStop();
+        }
+        public async Task<(bool confirm, string message)> ForkPositionInit()
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisInit();
+        }
+
+        private async Task<bool> HardwareLimitSaftyCheck()
+        {
+            if (CurrentForkLocation == FORK_LOCATIONS.UNKNOWN)
+                return await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+            return true;
+        }
+
+        public async Task<(bool confirm, string message)> ForkGoHome(double speed = 1, bool wait_done = true)
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisGoHome(speed, wait_done);
+        }
+        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
+        {
+            if (pose < 0)
+                return (false, "Initialize is reqeired.");
+            await HardwareLimitSaftyCheck();
+            if (pose > UpPosePostion)
+                pose = UpPosePostion;
+            if (pose < DownPosePostion)
+                pose = DownPosePostion;
+            return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
+        }
+
+        public async Task<(bool confirm, string message)> ForkUpAsync(double speed = 0.1)
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisUp(speed);
+        }
+        public async Task<(bool confirm, string message)> ForkDownAsync(double speed = 0.1)
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisDown(speed);
+        }
+        public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisUpSearch(speed);
+        }
+
+        public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
+        {
+            await HardwareLimitSaftyCheck();
+            return await fork_ros_controller.ZAxisDownSearch(speed);
+        }
+        /// <summary>
+        /// 牙叉伸出
+        /// </summary>
+        /// <returns></returns>
+        public async Task ForkExtendOutAsync()
+        {
+            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
+                return;
+
+            await ForkARMStop();
+            await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+        }
+
+        /// <summary>
+        /// 牙叉縮回
+        /// </summary>
+        /// <returns></returns>
+        public async Task ForkShortenInAsync()
+        {
+            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
+                return;
+
+            await ForkARMStop();
+            await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
+        }
+
+        /// <summary>
+        /// 牙叉縮回
+        /// </summary>
+        /// <returns></returns>
+        public async Task ForkARMStop()
+        {
+            await DOModule.SetState(DO_ITEM.Fork_Extend, false);
+            await Task.Delay(100);
+            await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
+        }
+
+
+        private void OnForkArmSensorStateChange(object? sender, bool actived)
+        {
+            if (!actived)
+            {
+                Task.Factory.StartNew(async () =>
+                {
+                    if (!actived)
+                        await ForkARMStop();
+                });
+            }
+        }
+
+
+
 
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize()
         {
+
             try
             {
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
 
+                if (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                    await ForkShortenInAsync();
+
+                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
                 //尋找下點位位置(在Home點的下方 _ cm)
                 async Task<(bool find, AlarmCodes alarm_code)> SearchDownLimitPose()
                 {
+                    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
                     try
                     {
                         if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
@@ -194,9 +262,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         bool Upsearching = false;
                         while (CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)//TODO 確認是A/B接 
                         {
-                            if (Sub_Status != SUB_STATUS.Initializing)
-                                return (false, AlarmCodes.UserAbort_Initialize_Process);
-
                             await Task.Delay(1);
                         }
                         await fork_ros_controller.ZAxisStop();
@@ -216,13 +281,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                         {
                             Thread.Sleep(500);
-
-                            if (Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
-                                return (false, AlarmCodes.None);
                             var pose = Driver.CurrentPosition - 0.1;
                             await fork_ros_controller.ZAxisGoTo(pose);
-                            if (CurrentForkLocation == FORK_LOCATIONS.DOWN_POSE && !Debugger.IsAttached)
-                                return (false, AlarmCodes.Action_Timeout);
                         }
                         return (true, AlarmCodes.None);
                     }
@@ -235,15 +295,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 (bool find, AlarmCodes alarm_code) searchDonwPoseResult = await SearchDownLimitPose();
                 if (!searchDonwPoseResult.find)
                     return searchDonwPoseResult;
-
+                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //重新啟動垂直軸硬體極限防護
                 (bool success, string message) result = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
                 if (!result.success)
                     throw new Exception();
-
-                bool do_set_success = await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //bypass 垂直軸硬體極限防護
                 result = await fork_ros_controller.ZAxisGoTo(7, wait_done: true); //移動到上方五公分
                 await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
-
                 if (!result.success)
                     throw new Exception();
 

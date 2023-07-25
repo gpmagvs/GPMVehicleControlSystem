@@ -28,7 +28,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
-
         }
 
 
@@ -55,13 +54,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool confirm, string message) baseInitize = await base.InitializeActions();
             if (!baseInitize.confirm)
                 return baseInitize;
-            (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkInitialize();
+            (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter. ForkInitialize();
             return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new ForkAGVController(RosBridge_IP, RosBridge_Port);
+            ForkLifter.fork_ros_controller = ForkAGVC;
         }
 
         protected internal override void SoftwareEMO()

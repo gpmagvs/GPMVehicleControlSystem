@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
+using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -17,7 +18,6 @@ using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using static AGVSystemCommonNet6.Abstracts.CarComponent;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -374,6 +374,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<(bool confirm, string message)> Initialize()
         {
+            if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
+                return (false, $"當前狀態不可進行初始化({Sub_Status})");
             try
             {
                 (bool, string) result = await PreActionBeforeInitialize();
@@ -382,6 +384,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 Sub_Status = SUB_STATUS.Initializing;
                 IsInitialized = false;
+
                 result = await InitializeActions();
                 if (!result.Item1)
                     return result;
@@ -445,11 +448,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
             AGVC.Connect();
             AGVC.ManualController.vehicle = this;
-            AGVC.OnModuleInformationUpdated += CarController_OnModuleInformationUpdated;
+            AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
             AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
+            AGVC.OnSickRawDataUpdated += SickRawDataHandler;
+            AGVC.OnSickOutputPathsDataUpdated += SickOutputPathsDataHandler;
             AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
-            AGVC.OnSickActiveMonitoringCaseChnaged += (ros_agv, active_monitor_case) => { Laser.CurrentLaserMonitoringCase = active_monitor_case; };
 
+        }
+
+        private void SickOutputPathsDataHandler(object? sender, OutputPathsMsg OutputPaths)
+        {
+            Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
+        }
+
+
+        private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
+        {
+            SickData.LaserModeSettingError = RawData.general_system_state.application_error;
+            SickData.SickConnectionError = RawData.general_system_state.contamination_error;
         }
 
         protected virtual void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
@@ -532,18 +548,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_2))
-                {
-                    Console.WriteLine("Reset Motor Process Start");
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                    //安全迴路RELAY
-                    await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
-                    await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                    Console.WriteLine("Reset Motor Process End");
-                }
+                await WagoDO.ResetSaftyRelay();
+                Console.WriteLine("Reset Motor Process Start");
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                Console.WriteLine("Reset Motor Process End");
                 return true;
             }
             catch (SocketException ex)

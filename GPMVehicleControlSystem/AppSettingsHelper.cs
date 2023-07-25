@@ -30,6 +30,15 @@ namespace GPMVehicleControlSystem
                 }
             }
         }
+
+        public static string LogFolder
+        {
+            get
+            {
+                return GetValue<string>("VCS:LogFolder");
+            }
+        }
+
         public static T GetValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key)
         {
             return configuration.GetValue(key, default(T));

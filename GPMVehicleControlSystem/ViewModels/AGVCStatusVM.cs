@@ -83,19 +83,13 @@ namespace GPMVehicleControlSystem.ViewModels
                     return null;
             }
         }
-
         public DriverState[] DriversStates { get; set; } = new DriverState[0];
         public int Laser_Mode { get; set; } = 0;
-
         public UltrasonicSensorState UltrSensorState { get; set; } = new UltrasonicSensorState();
-
         public bool IsAGVPoseError { get; set; } = false;
-
         public NavStateVM NavInfo { get; set; } = new NavStateVM();
-
         public string Current_LASER_MODE { get; set; } = "";
-
         public LightsStatesVM LightsStates { get; set; } = new LightsStatesVM();
-
+        public bool IsLaserModeSettingError { get; set; } = false;
     }
 }
