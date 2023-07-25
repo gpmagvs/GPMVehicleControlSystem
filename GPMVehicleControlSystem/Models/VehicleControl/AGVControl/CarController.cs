@@ -73,8 +73,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public event EventHandler<ModuleInformation> OnModuleInformationUpdated;
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
-        public event EventHandler<int> OnSickActiveMonitoringCaseChnaged;
-
+        public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
+        public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
         /// <summary>
         /// 機器人任務結束且是成功完成的狀態
         /// </summary>
@@ -177,22 +177,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         public virtual void SubscribeROSTopics()
         {
-            rosSocket.Subscribe<ModuleInformation>("/module_information", new SubscriptionHandler<ModuleInformation>(ModuleInformationCallback), queue_length: 50);
+            rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, queue_length: 50);
             rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, 100);
             rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, 100);
             rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, 100);
         }
+        private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
+        {
+            module_info = _ModuleInformation;
+        }
         public OutputPathsMsg SickOutPutPaths { get; private set; } = new OutputPathsMsg();
         private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
         {
-            if (SickOutPutPaths.active_monitoring_case != sick_scanner_out_data.active_monitoring_case)
-                OnSickActiveMonitoringCaseChnaged(this, sick_scanner_out_data.active_monitoring_case);
+            OnSickOutputPathsDataUpdated?.Invoke(this, sick_scanner_out_data);
             SickOutPutPaths = sick_scanner_out_data;
         }
 
         private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)
         {
-            GeneralSystemStateMsg general_system_state = sick_scanner_raw_data.general_system_state;
+            string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
+            LogSickRawData(json);
+            OnSickRawDataUpdated?.Invoke(this, sick_scanner_raw_data);
+        }
+
+        private void LogSickRawData(string json)
+        {
+            try
+            {
+                string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), Path.Combine(AppSettingsHelper.LogFolder, "SickData"));
+                Directory.CreateDirectory(LogFolder);
+                var fileName = Path.Combine(LogFolder, "tmp_sick_data.json");
+                using (StreamWriter writer = new StreamWriter(fileName))
+                {
+                    writer.Write(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
+            }
         }
 
         /// <summary>
@@ -319,10 +342,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             OnSickLocalicationDataUpdated?.Invoke(this, _LocalizationControllerResult);
         }
 
-        private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
-        {
-            module_info = _ModuleInformation;
-        }
 
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
         {
