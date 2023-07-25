@@ -36,9 +36,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await base.ResetMotor();
-                WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
                 await Task.Delay(100);
-                WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
                 return true;
             }
             catch (Exception ex)
