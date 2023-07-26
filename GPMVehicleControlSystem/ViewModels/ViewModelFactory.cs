@@ -24,6 +24,7 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 List<DriverState> driverStates = new List<DriverState>();
                 driverStates.AddRange(AGV.WheelDrivers.Select(d => d.Data).ToArray());
+                driverStates.Add(AGV.VerticalDriverState.Data);
 
                 AGVCStatusVM data_view_model = new AGVCStatusVM()
                 {

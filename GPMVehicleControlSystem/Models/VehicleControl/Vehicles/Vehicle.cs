@@ -214,6 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 VmsProtocol = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Protocol") == 0 ? VMS_PROTOCOL.KGS : VMS_PROTOCOL.GPM_VMS;
                 string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
                 int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
+                int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS:LastVisitedTag");
 
                 string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
                 int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
@@ -324,11 +325,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(1000);
                     }
                     WagoDI.StartAsync();
-                    if (!Debugger.IsAttached)
-                    {
-                        DOSignalDefaultSetting();
-                        ResetMotor();
-                    }
+                    DOSignalDefaultSetting();
+                    ResetMotor();
                 }
                 catch (SocketException ex)
                 {
@@ -389,7 +387,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 result = await InitializeActions();
                 if (!result.Item1)
+                {
+                    Sub_Status = SUB_STATUS.STOP;
+                    IsInitialized = false;
+                    StatusLighter.AbortFlash();
                     return result;
+                }
 
                 StatusLighter.AbortFlash();
                 await Laser.ModeSwitch(LASER_MODE.Bypass);
@@ -466,8 +469,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
-            SickData.LaserModeSettingError = RawData.general_system_state.application_error;
-            SickData.SickConnectionError = RawData.general_system_state.contamination_error;
+            Task.Factory.StartNew(() =>
+            {
+                SickData.LaserModeSettingError = RawData.general_system_state.application_error;
+                SickData.SickConnectionError = RawData.general_system_state.contamination_error;
+            });
         }
 
         protected virtual void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
@@ -495,6 +501,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            BuzzerPlayer.Stop();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
             StaSysMessageManager.Clear();
@@ -519,7 +526,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
 
-            BuzzerPlayer.Stop();
 
             _ = Task.Factory.StartNew(async () =>
              {

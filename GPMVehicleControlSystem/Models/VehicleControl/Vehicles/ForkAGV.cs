@@ -20,6 +20,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// Fork車控
         /// </summary>
         private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
+        public bool IsForkInitialized => ForkLifter.IsInitialized;
 
         public clsForkLifter ForkLifter = new clsForkLifter();
 
@@ -54,7 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool confirm, string message) baseInitize = await base.InitializeActions();
             if (!baseInitize.confirm)
                 return baseInitize;
-            (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter. ForkInitialize();
+            (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize();
             return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
         }
 

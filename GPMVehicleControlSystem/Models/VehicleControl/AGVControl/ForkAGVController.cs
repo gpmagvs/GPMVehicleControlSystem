@@ -45,6 +45,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 model = "FORK",
                 command = "init",
+                target = 0,
+                speed = 0
             };
             return await CallVerticalCommandService(request);
         }
@@ -78,7 +80,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private async Task<(bool success, string message)> WaitActionDone(int timeout = 60)
         {
-            CancellationTokenSource wtd = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            CancellationTokenSource wtd = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             while (!IsZAxisActionDone)
             {
                 await Task.Delay(1);
@@ -192,12 +194,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                      request
                 );
                 if (response == null)
-                    throw new TimeoutException();
+                    return (false, "Timeout");
                 return (response.confirm, "");
             }
             catch (Exception ex)
             {
-                throw ex;
+                return (false, ex.Message);
             }
         }
     }

@@ -13,8 +13,8 @@ namespace GPMVehicleControlSystem
             {
                 try
                 {
-                    var configBuilder = new ConfigurationBuilder()
-                        .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    var baseDir = Debugger.IsAttached ? Environment.CurrentDirectory : AppDomain.CurrentDomain.BaseDirectory;
+                    var configBuilder = new ConfigurationBuilder().SetBasePath(baseDir)
                     //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json"); //測試潛盾AGV
                     .AddJsonFile(Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"); //測試FORK AGV
                     //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"); //測試巡檢AGV

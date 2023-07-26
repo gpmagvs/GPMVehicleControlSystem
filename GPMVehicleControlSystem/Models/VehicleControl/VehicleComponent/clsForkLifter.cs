@@ -9,10 +9,14 @@ using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Security.AccessControl;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.ForkTeach;
+using Newtonsoft.Json;
+using GPMVehicleControlSystem.Models.VCSSystem;
+using GPMVehicleControlSystem.ViewModels.ForkTeach;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
-    public class clsForkLifter : CarComponent, IDIOUsagable
+    public partial class clsForkLifter : CarComponent, IDIOUsagable
     {
         public enum FORK_LOCATIONS
         {
@@ -36,7 +40,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsForkLifter()
         {
+            LoadTeachDataSettingFromJsonConfigs();
         }
+
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -69,16 +75,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         private SUB_STATUS Sub_Status = SUB_STATUS.IDLE;
         /// <summary>
+        /// 是否以初始化
+        /// </summary>
+        public bool IsInitialized { get; private set; } = false;
+        /// <summary>
         /// 可以走的上極限位置
         /// </summary>
-        public double UpPosePostion = 60;
-        public double DownPosePostion = 0;
+
+
         public override COMPOENT_NAME component_name => COMPOENT_NAME.VERTIVAL_DRIVER;
         public clsDriver Driver { get; set; }
         public override string alarm_locate_in_name => "FORK";
 
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
+        public clsForkTeach ForkTeachData { get; set; } = new clsForkTeach();
+
         public clsDIModule DIModule
         {
             get => _DIModule;
@@ -88,6 +100,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Under_Pressing_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Down_Hardware_limit, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
 
             }
         }
@@ -156,10 +170,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (pose < 0)
                 return (false, "Initialize is reqeired.");
             await HardwareLimitSaftyCheck();
-            if (pose > UpPosePostion)
-                pose = UpPosePostion;
-            if (pose < DownPosePostion)
-                pose = DownPosePostion;
+            if (pose > ForkTeachData.Up_Pose_Limit)
+                pose = ForkTeachData.Up_Pose_Limit;
+            if (pose < ForkTeachData.Down_Pose_Limit)
+                pose = ForkTeachData.Down_Pose_Limit;
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
@@ -188,27 +202,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
-        public async Task ForkExtendOutAsync()
+        public async Task<bool> ForkExtendOutAsync()
         {
-            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
-                return;
-
             await ForkARMStop();
-            await DOModule.SetState(DO_ITEM.Fork_Extend, true);
-            //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
+            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
+                return true;
+
+            try
+            {
+                await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+                //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         /// <summary>
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public async Task ForkShortenInAsync()
+        public async Task<bool> ForkShortenInAsync()
         {
-            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
-                return;
-
             await ForkARMStop();
-            await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
+            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
+                return true;
+
+            try
+            {
+                await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
             //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
@@ -219,7 +249,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task ForkARMStop()
         {
             await DOModule.SetState(DO_ITEM.Fork_Extend, false);
-            await Task.Delay(10);
+            await Task.Delay(100);
             await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
         }
 
@@ -232,7 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize()
         {
-
+            IsInitialized = false;
             try
             {
 
@@ -243,7 +273,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 //尋找下點位位置(在Home點的下方 _ cm)
                 async Task<(bool find, AlarmCodes alarm_code)> SearchDownLimitPose()
                 {
-                    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
                     try
                     {
                         if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
@@ -288,12 +317,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 (bool find, AlarmCodes alarm_code) searchDonwPoseResult = await SearchDownLimitPose();
                 if (!searchDonwPoseResult.find)
                     return searchDonwPoseResult;
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //重新啟動垂直軸硬體極限防護
+
                 (bool success, string message) result = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
                 if (!result.success)
                     throw new Exception();
+
+                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
+                });
                 result = await fork_ros_controller.ZAxisGoTo(7, wait_done: true); //移動到上方五公分
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
                 if (!result.success)
                     throw new Exception();
 
@@ -303,6 +338,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     result = await fork_ros_controller.ZAxisInit();
                     if (!result.success)
                         throw new Exception();
+
+                    IsInitialized = true;
                 }
                 return findHomeResult;
             }
@@ -312,8 +349,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 return (false, AlarmCodes.Action_Timeout);
             }
         }
-
-
 
     }
 }

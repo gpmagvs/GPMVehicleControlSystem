@@ -125,10 +125,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> EMO()
         {
-            StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             try
             {
                 agv.SoftwareEMO();
+
+                StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             }
             catch (Exception ex)
             {

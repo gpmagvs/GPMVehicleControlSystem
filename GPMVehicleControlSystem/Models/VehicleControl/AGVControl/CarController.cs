@@ -178,9 +178,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public virtual void SubscribeROSTopics()
         {
             rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, queue_length: 50);
-            rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, 100);
-            rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, 100);
-            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, 100);
+            rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, queue_length: 50);
+            rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 1, queue_length: 1);
+            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 1, queue_length: 1);
         }
         private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
         {
@@ -195,15 +195,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)
         {
-            string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
-            LogSickRawData(json);
-            OnSickRawDataUpdated?.Invoke(this, sick_scanner_raw_data);
+            Task.Factory.StartNew(() =>
+            {
+               // LogSickRawData(sick_scanner_raw_data);
+                OnSickRawDataUpdated?.Invoke(this, sick_scanner_raw_data);
+            });
         }
 
-        private void LogSickRawData(string json)
+        private void LogSickRawData(RawMicroScanDataMsg sick_scanner_raw_data)
         {
             try
             {
+                string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
                 string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), Path.Combine(AppSettingsHelper.LogFolder, "SickData"));
                 Directory.CreateDirectory(LogFolder);
                 var fileName = Path.Combine(LogFolder, "tmp_sick_data.json");
