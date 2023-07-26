@@ -195,6 +195,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             await ForkARMStop();
             await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+            //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
         /// <summary>
@@ -208,10 +209,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             await ForkARMStop();
             await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
+            //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
-        /// <summary>停止動作
-        /// 牙叉縮回
+        /// <summary>
+        /// 牙叉伸縮停止動作
         /// </summary>
         /// <returns></returns>
         public async Task ForkARMStop()

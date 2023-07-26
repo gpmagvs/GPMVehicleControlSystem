@@ -353,12 +353,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void WagoIOIniSetting()
         {
+            string IO_Wago_ini_Use = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini");
+
             if (!File.Exists(WagoIOConfigFilePath))
             {
                 StaSysMessageManager.AddNewMessage($"Specfic DI/O Module ini File Not Exist [{WagoIOConfigFilePath}]", 2);
                 return;
             }
-            File.Copy(WagoIOConfigFilePath, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini"), true);
+            File.Copy(WagoIOConfigFilePath, IO_Wago_ini_Use, true);
         }
 
         protected virtual async void DOSignalDefaultSetting()
