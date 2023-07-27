@@ -214,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 VmsProtocol = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Protocol") == 0 ? VMS_PROTOCOL.KGS : VMS_PROTOCOL.GPM_VMS;
                 string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
                 int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
-                int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS:LastVisitedTag");
+                int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS: LastVisitedTag");
 
                 string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
                 int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
