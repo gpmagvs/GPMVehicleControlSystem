@@ -88,10 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.fork_ros_controller = ForkAGVC;
         }
 
-        protected internal override void SoftwareEMO()
-        {
-            base.SoftwareEMO();
-        }
+       
         protected override void EMOPushedHandler(object? sender, EventArgs e)
         {
             ForkLifter.ForkARMStop();
