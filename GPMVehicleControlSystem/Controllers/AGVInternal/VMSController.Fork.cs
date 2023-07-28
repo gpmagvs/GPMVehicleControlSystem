@@ -55,79 +55,44 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
 
-
-        [HttpGet("Fork/Init")]
-        public async Task<IActionResult> VerticalInit()
-        {
-            var result = await forkAgv.ForkLifter.ForkPositionInit();
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
-
-
-        /// <summary>
-        /// 回到定義的Home點
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("Fork/Home")]
-        public async Task<IActionResult> VerticalHome(double speed = 1.0)
+        [HttpGet("Fork")]
+        public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 0)
         {
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            var result = await forkAgv.ForkLifter.ForkGoHome();
-            return Ok(new { confirm = result.confirm, message = result.message });
+            if (action == "home")
+            {
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkGoHome(speed);
+                return Ok(new { confirm = result.success, message = result.message });
+
+            }
+            else if (action == "init")
+            {
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPositionInit();
+                return Ok(result);
+            }
+            else if (action == "pose")
+            {
+
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
+                return Ok(new { confirm = result.success, message = result.message });
+            }
+            else if (action == "up")
+            {
+                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + 0.1;
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                return Ok(new { confirm = result.success, message = result.message });
+            }
+            else if (action == "down")
+            {
+                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition - 0.1;
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                return Ok(new { confirm = result.success, message = result.message });
+            }
+            else
+                return Ok(new { confirm = false, message = "invalid action type" });
         }
 
-        [HttpGet("Fork/Pose")]
-        public async Task<IActionResult> VerticalPose(double pose, double? speed = 1.0)
-        {
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, (double)speed);
-            return Ok(new { confirm = result.success, message = result.message });
-        }
-        [HttpGet("Fork/Stop")]
-        public async Task<IActionResult> VerticalStop()
-        {
-            var result = await forkAgv.ForkLifter.ForkStopAsync();
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
-        [HttpGet("Fork/Up")]
-        public async Task<IActionResult> VerticalUp(double speed = 1.0)
-        {
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + 0.1;
-            var result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
-
-        [HttpGet("Fork/Down")]
-        public async Task<IActionResult> VerticalDown(double speed = 1.0)
-        {
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition - 0.1;
-            var result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
-
-        [HttpGet("Fork/Down_Search")]
-        public async Task<IActionResult> VerticalDownSearch(double speed = 1.0)
-        {
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            var result = await forkAgv.ForkLifter.ForkDownSearchAsync(speed);
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
-
-        [HttpGet("Fork/Up_Search")]
-        public async Task<IActionResult> VerticalUpSearch(double speed = 1.0)
-        {
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            var result = await forkAgv.ForkLifter.ForkUpSearchAsync(speed);
-            return Ok(new { confirm = result.confirm, message = result.message });
-        }
         [HttpGet("Fork/Arm/Extend")]
         public async Task<IActionResult> ForkArmExtend()
         {

@@ -119,6 +119,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsSystemInitialized { get; internal set; }
         private SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint { Name = "Unkown" };
+        public bool _IsCharging = false;
+        public bool IsCharging
+        {
+            get => _IsCharging;
+            set
+            {
+                if (_IsCharging != value)
+                {
+                    if (value)
+                    {
+                        BeforeChargingSubStatus = _Sub_Status;
+                        Sub_Status = SUB_STATUS.Charging;
+                        StatusLighter.ActiveGreen();
+                    }
+                    else
+                    {
+                        StatusLighter.InActiveGreen();
+                        Sub_Status = BeforeChargingSubStatus;
+                    }
+                    _IsCharging = value;
+                }
+            }
+        }
+
         public MapPoint DestinationMapPoint
         {
             get
@@ -166,7 +190,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.Charging)
                         {
                             Main_Status = MAIN_STATUS.Charging;
-                            StatusLighter.RUN();
                         }
                         else if (value == SUB_STATUS.RUN)
                         {
@@ -326,7 +349,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     WagoDI.StartAsync();
                     DOSignalDefaultSetting();
-                    ResetMotor();
                 }
                 catch (SocketException ex)
                 {

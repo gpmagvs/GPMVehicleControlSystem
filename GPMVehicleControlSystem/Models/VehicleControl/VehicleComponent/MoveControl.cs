@@ -23,6 +23,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public void Stop()
         {
             PublishCmdVel(0, 0);
+            vehicle.DirectionLighter.CloseAll();
         }
         public void Backward(double speed = 0.08)
         {
@@ -49,12 +50,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal void FordwardRight(double speed)
         {
-            PublishCmdVel(speed, 0.08);
+            PublishCmdVel(speed, -0.08);
         }
 
         internal void FordwardLeft(double speed)
         {
-            PublishCmdVel(speed, -0.08);
+            PublishCmdVel(speed, 0.08);
         }
 
         internal void BackwardRight(double speed)
