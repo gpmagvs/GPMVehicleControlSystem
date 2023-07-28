@@ -197,7 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             Task.Factory.StartNew(() =>
             {
-               // LogSickRawData(sick_scanner_raw_data);
+                // LogSickRawData(sick_scanner_raw_data);
                 OnSickRawDataUpdated?.Invoke(this, sick_scanner_raw_data);
             });
         }
@@ -242,10 +242,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal void EMOHandler(object? sender, EventArgs e)
         {
-            AbortTask();
-            ManualController?.Stop();
-            if (wait_agvc_execute_action_cts != null)
-                wait_agvc_execute_action_cts.Cancel();
+            Task.Factory.StartNew(() =>
+            {
+                AbortTask();
+                if (wait_agvc_execute_action_cts != null)
+                    wait_agvc_execute_action_cts.Cancel();
+            });
         }
         public override bool IsConnected()
         {
