@@ -231,6 +231,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
             {
                 Sub_Status = BeforeChargingSubStatus;
+
             }
 
         }
