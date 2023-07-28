@@ -338,7 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void WagoDIEventRegist()
         {
-            WagoDI.OnEMO += WagoDI_OnEMO;
+            WagoDI.OnEMO += EMOPushedHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
             WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
@@ -485,15 +485,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual void SoftwareEMO()
         {
-            BuzzerPlayer.Alarm();
-            _Sub_Status = SUB_STATUS.DOWN;
-            IsInitialized = false;
-            AGVC.EMOHandler("SoftwareEMO", EventArgs.Empty);
-            ExecutingTask?.Abort();
-            AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
-            AlarmManager.AddAlarm(AlarmCodes.SoftwareEMS, false);
-
-
+            EMOPushedHandler(this, EventArgs.Empty);
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)

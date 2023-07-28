@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void WagoDI_OnEMO(object? sender, EventArgs e)
+        private void EMOPushedHandler(object? sender, EventArgs e)
         {
             BuzzerPlayer.Alarm();
             _Sub_Status = SUB_STATUS.DOWN;
