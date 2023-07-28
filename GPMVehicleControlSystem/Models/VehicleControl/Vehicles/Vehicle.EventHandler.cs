@@ -230,7 +230,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                _Sub_Status = BeforeChargingSubStatus;
+                Sub_Status = BeforeChargingSubStatus;
             }
 
         }

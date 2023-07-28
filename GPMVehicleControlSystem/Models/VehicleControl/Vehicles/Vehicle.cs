@@ -166,6 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.Charging)
                         {
                             Main_Status = MAIN_STATUS.Charging;
+                            StatusLighter.RUN();
                         }
                         else if (value == SUB_STATUS.RUN)
                         {
