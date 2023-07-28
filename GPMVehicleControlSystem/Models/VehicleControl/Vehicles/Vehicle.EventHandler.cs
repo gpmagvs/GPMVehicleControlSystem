@@ -157,16 +157,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void WagoDI_OnEMO(object? sender, EventArgs e)
+        protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
+            BuzzerPlayer.Alarm();
+            _Sub_Status = SUB_STATUS.DOWN;
+            AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
             AGVC.EMOHandler(sender, e);
-            Sub_Status = SUB_STATUS.STOP;
             IsInitialized = false;
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
-            AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
-            Sub_Status = SUB_STATUS.DOWN;
-
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)

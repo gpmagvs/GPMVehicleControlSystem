@@ -174,9 +174,7 @@ namespace GPMVehicleControlSystem.ViewModels
                             IsLockSensorON = false,
                             IsUnlockSensorON = false
                          } : new BatteryPositionInfoVM()
-                    },
-
-                            };
+                    }, };
         }
 
         internal static ConnectionStateVM GetConnectionStatesVM()

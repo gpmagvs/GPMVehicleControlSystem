@@ -22,79 +22,73 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public void Stop()
         {
-
-            if (rosSocket == null)
-                return;
-            string id = rosSocket.Advertise<Twist>("/cmd_vel");
-            Twist message = new Twist();
-            message.linear.x = 0;
-            message.linear.y = 0;
-            message.linear.z = 0;
-            rosSocket.Publish(id, message);
-            vehicle?.DirectionLighter.CloseAll();
+            PublishCmdVel(0, 0);
         }
         public void Backward(double speed = 0.08)
         {
-            if (rosSocket == null)
-                return;
-            string id = rosSocket.Advertise<Twist>("/cmd_vel");
-            Twist message = new Twist();
-            message.linear.x = -speed;
-            message.linear.y = 0;
-            message.linear.z = 0;
-            rosSocket.Publish(id, message);
-            vehicle?.DirectionLighter.CloseAll();
-            vehicle?.DirectionLighter.Backward();
+            PublishCmdVel(-speed, 0);
         }
 
         public void Forward(double speed = 0.08)
         {
-
-            if (rosSocket == null)
-                return;
-
-            string id = rosSocket.Advertise<Twist>("/cmd_vel");
-            Twist message = new Twist();
-            message.linear.x = speed;
-            message.linear.y = 0;
-            message.linear.z = 0;
-            rosSocket.Publish(id, message);
-
-            vehicle?.DirectionLighter.CloseAll();
-            vehicle?.DirectionLighter.Forward();
+            PublishCmdVel(speed, 0);
         }
-
 
         /// <summary>
         /// 向左轉
         /// </summary>
         public void TurnLeft(double speed = 0.1)
         {
-            if (rosSocket == null)
-                return;
-            string id = rosSocket.Advertise<Twist>("/cmd_vel");
-            Twist message = new Twist();
-            message.angular.x = 0;
-            message.angular.y = 0;
-            message.angular.z = speed;
-            rosSocket.Publish(id, message);
-            vehicle?.DirectionLighter.CloseAll();
-            vehicle?.DirectionLighter.TurnLeft(true);
+            PublishCmdVel(0, speed);
         }
 
         public void TurnRight(double speed = 0.1)
         {
+            PublishCmdVel(0, -speed);
+        }
 
+        internal void FordwardRight(double speed)
+        {
+            PublishCmdVel(speed, 0.08);
+        }
+
+        internal void FordwardLeft(double speed)
+        {
+            PublishCmdVel(speed, -0.08);
+        }
+
+        internal void BackwardRight(double speed)
+        {
+            PublishCmdVel(-speed, 0.08);
+        }
+
+        internal void BackwardLeft(double speed)
+        {
+            PublishCmdVel(-speed, -0.08);
+        }
+        private void PublishCmdVel(double linear_speed, double angular_speed)
+        {
             if (rosSocket == null)
                 return;
             string id = rosSocket.Advertise<Twist>("/cmd_vel");
             Twist message = new Twist();
+            message.linear.x = linear_speed;
+            message.linear.y = 0;
+            message.linear.z = 0;
             message.angular.x = 0;
             message.angular.y = 0;
-            message.angular.z = -speed;
+            message.angular.z = angular_speed;
             rosSocket.Publish(id, message);
             vehicle?.DirectionLighter.CloseAll();
-            vehicle?.DirectionLighter.TurnRight(true);
+            if (angular_speed > 0)
+                vehicle?.DirectionLighter.TurnRight(true);
+            else
+                vehicle?.DirectionLighter.TurnLeft(true);
+
+            if (linear_speed > 0)
+                vehicle?.DirectionLighter.Forward();
+            else
+                vehicle?.DirectionLighter.Backward();
 
         }
     }

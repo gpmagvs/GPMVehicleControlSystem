@@ -65,9 +65,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             get
             {
-                if (DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
+                if (!DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
                     return FORK_ARM_LOCATIONS.HOME;
-                else if (DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
+                else if (!DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
                     return FORK_ARM_LOCATIONS.END;
                 else
                     return FORK_ARM_LOCATIONS.UNKNOWN;
@@ -102,10 +102,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
-
+                _DIModule.OnEMO += OnEmoButtonPushHandler;
             }
         }
 
+        private void OnEmoButtonPushHandler(object? sender, EventArgs e)
+        {
+            ForkARMStop();
+        }
 
         private void OnForkLifterSensorsStateChange(object? sender, bool state)
         {

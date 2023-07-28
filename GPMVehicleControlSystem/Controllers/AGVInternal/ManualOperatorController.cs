@@ -47,5 +47,30 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
              agv.ManualController?.TurnLeft(speed);
             return Ok();
         }
+
+        [HttpGet("FordwardRight")]
+        public async Task<IActionResult> FordwardRight(double speed = 0.1)
+        {
+            agv.ManualController?.FordwardRight(speed);
+            return Ok();
+        }
+        [HttpGet("FordwardLeft")]
+        public async Task<IActionResult> FordwardLeft(double speed = 0.1)
+        {
+            agv.ManualController?.FordwardLeft(speed);
+            return Ok();
+        }
+        [HttpGet("BackwardRight")]
+        public async Task<IActionResult> BackwardRight(double speed = 0.1)
+        {
+            agv.ManualController?.BackwardRight(speed);
+            return Ok();
+        }
+        [HttpGet("BackwardLeft")]
+        public async Task<IActionResult> BackwardLeft(double speed = 0.1)
+        {
+            agv.ManualController?.BackwardLeft(speed);
+            return Ok();
+        }
     }
 }
