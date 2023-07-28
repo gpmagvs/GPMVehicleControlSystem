@@ -151,10 +151,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
-                            else
-                            {
-                                DirectionLighter.WaitPassLights(500);
-                            }
+
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)
