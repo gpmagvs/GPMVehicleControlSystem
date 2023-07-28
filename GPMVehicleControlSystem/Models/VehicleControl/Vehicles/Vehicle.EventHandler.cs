@@ -223,13 +223,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
 
-            if (Batteries.Values.Any(battery => battery.IsCharging))
+            if (Batteries.Values.Any(battery => battery.IsCharging) && _Sub_Status != SUB_STATUS.Charging)
             {
+                BeforeChargingSubStatus = _Sub_Status;
                 Sub_Status = SUB_STATUS.Charging;
             }
             else
             {
-
+                _Sub_Status = BeforeChargingSubStatus;
             }
 
         }

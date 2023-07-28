@@ -133,6 +133,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private SUB_STATUS BeforeChargingSubStatus;
+
         public SUB_STATUS Sub_Status
         {
             get => _Sub_Status;
