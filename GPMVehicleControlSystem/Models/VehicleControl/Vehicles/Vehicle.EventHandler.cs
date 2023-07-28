@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void EMOPushedHandler(object? sender, EventArgs e)
+        protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
             BuzzerPlayer.Alarm();
             _Sub_Status = SUB_STATUS.DOWN;

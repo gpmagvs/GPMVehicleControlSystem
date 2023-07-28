@@ -88,10 +88,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal override void SoftwareEMO()
         {
-            ForkAGVC.ZAxisStop();
             base.SoftwareEMO();
         }
-
+        protected override void EMOPushedHandler(object? sender, EventArgs e)
+        {
+            base.EMOPushedHandler(sender, e);
+            ForkAGVC.ZAxisStop();
+            ForkLifter.ForkARMStop();
+        }
         protected override async void DOSignalDefaultSetting()
         {
             base.DOSignalDefaultSetting();
