@@ -70,7 +70,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
    
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
-            base.InitAGVControl(RosBridge_IP, RosBridge_Port);
+            AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
 
         }
