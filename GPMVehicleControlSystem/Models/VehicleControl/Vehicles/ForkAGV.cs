@@ -55,6 +55,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
+            if(Sub_Status == SUB_STATUS.Charging)
+                return (false, "無法在充電狀態下進行初始化");
             bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
             if (forkRackExistAbnormal)
                 return (false, "無法在有Rack的狀態下進行初始化");
