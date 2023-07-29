@@ -91,9 +91,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override void EMOPushedHandler(object? sender, EventArgs e)
         {
-            ForkLifter.ForkARMStop();
-            ForkAGVC.ZAxisStop();
             base.EMOPushedHandler(sender, e);
+            Task.Factory.StartNew(() =>
+            {
+                ForkLifter.ForkARMStop();
+                ForkAGVC.ZAxisStop();
+            });
         }
         protected override async void DOSignalDefaultSetting()
         {
