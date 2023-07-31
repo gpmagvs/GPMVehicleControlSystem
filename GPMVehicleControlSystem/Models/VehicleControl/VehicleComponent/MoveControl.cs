@@ -80,16 +80,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             message.angular.y = 0;
             message.angular.z = angular_speed;
             rosSocket.Publish(id, message);
-            vehicle?.DirectionLighter.CloseAll();
-            if (angular_speed > 0)
-                vehicle?.DirectionLighter.TurnRight(true);
+            
+            if (angular_speed == 0 && linear_speed == 0)
+            {
+                vehicle?.DirectionLighter.CloseAll();
+            }
             else
-                vehicle?.DirectionLighter.TurnLeft(true);
+            {
+                vehicle?.DirectionLighter.CloseAll();
 
-            if (linear_speed > 0)
-                vehicle?.DirectionLighter.Forward();
-            else
-                vehicle?.DirectionLighter.Backward();
+                if (angular_speed > 0)
+                    vehicle?.DirectionLighter.TurnRight(true);
+                else
+                    vehicle?.DirectionLighter.TurnLeft(true);
+
+                if (linear_speed > 0)
+                    vehicle?.DirectionLighter.Forward();
+                else
+                    vehicle?.DirectionLighter.Backward();
+            }
 
         }
     }
