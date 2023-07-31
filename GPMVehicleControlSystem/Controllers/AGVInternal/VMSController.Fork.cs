@@ -60,7 +60,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            if (action == "home")
+            if (action == "home"｜action == "orig")
             {
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkGoHome(speed);
                 return Ok(new { confirm = result.success, message = result.message });
