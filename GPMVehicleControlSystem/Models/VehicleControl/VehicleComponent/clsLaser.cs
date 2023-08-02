@@ -22,6 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             Special = 10,
             Move_Short = 11,
             Spin_Shor = 12,
+            Bypass16 = 16,
 
         }
 
