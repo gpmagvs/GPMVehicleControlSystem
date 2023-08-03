@@ -117,7 +117,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool SimulationMode { get; internal set; } = false;
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
-        private SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
+        internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint { Name = "Unkown" };
         public bool _IsCharging = false;
         public bool IsCharging
