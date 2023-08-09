@@ -92,6 +92,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         throw new NotImplementedException();
                     }
+
+
+                    ExecutingTask.ForkLifter = ForkLifter;
                     await Task.Delay(500);
                     ExecutingTask.OnTaskFinish = async (task_name) =>
                     {
