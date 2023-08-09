@@ -180,7 +180,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public bool GetState(DI_ITEM signal)
         {
-            return VCSInputs.FirstOrDefault(k => k.Name == signal + "").State;
+            clsIOSignal di = VCSInputs.FirstOrDefault(k => k.Name == signal + "");
+            return di == null ? false : di.State;
         }
 
 

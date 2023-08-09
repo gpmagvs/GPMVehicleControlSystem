@@ -20,8 +20,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override void LaserSettingBeforeTaskExecute()
         {
-            Agv.Laser.LeftLaserBypass = true;
-            Agv.Laser.RightLaserBypass = true;
+            //Agv.Laser.LeftLaserBypass = true;
+            //Agv.Laser.RightLaserBypass = true;
+            Agv.Laser.AllLaserDisable();
             Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
 

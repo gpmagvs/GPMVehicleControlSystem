@@ -100,7 +100,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public OPERATOR_MODE Operation_Mode { get; internal set; } = OPERATOR_MODE.MANUAL;
 
-        public MAIN_STATUS Main_Status { get; internal set; } = MAIN_STATUS.DOWN;
+        public MAIN_STATUS Main_Status
+        {
+            get
+            {
+                switch (_Sub_Status)
+                {
+                    case SUB_STATUS.IDLE:
+                        return MAIN_STATUS.IDLE;
+                    case SUB_STATUS.RUN:
+                        return MAIN_STATUS.RUN;
+                    case SUB_STATUS.DOWN:
+                        return MAIN_STATUS.DOWN;
+                    case SUB_STATUS.Charging:
+                        return MAIN_STATUS.Charging;
+                    case SUB_STATUS.Initializing:
+                        return MAIN_STATUS.IDLE;
+                    case SUB_STATUS.ALARM:
+                        return MAIN_STATUS.DOWN;
+                    case SUB_STATUS.WARNING:
+                        return MAIN_STATUS.IDLE;
+                    case SUB_STATUS.STOP:
+                        return MAIN_STATUS.DOWN;
+                    default:
+                        return MAIN_STATUS.DOWN;
+                }
+            }
+        }
         public bool AGV_Reset_Flag { get; internal set; }
 
         public MoveControl ManualController => AGVC.ManualController;
@@ -172,8 +198,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         BuzzerPlayer.Stop();
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
-                            if (value == SUB_STATUS.DOWN | value == SUB_STATUS.Initializing)
-                                Main_Status = MAIN_STATUS.DOWN;
 
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
@@ -183,17 +207,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.IDLE)
                         {
                             AGVC.IsAGVExecutingTask = false;
-                            Main_Status = MAIN_STATUS.IDLE;
                             StatusLighter.IDLE();
                             DirectionLighter.CloseAll();
                         }
-                        else if (value == SUB_STATUS.Charging)
-                        {
-                            Main_Status = MAIN_STATUS.Charging;
-                        }
                         else if (value == SUB_STATUS.RUN)
                         {
-                            Main_Status = MAIN_STATUS.RUN;
                             StatusLighter.RUN();
                             if (ExecutingTask != null)
                             {
@@ -396,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<(bool confirm, string message)> Initialize()
         {
-            if(SimulationMode)
+            if (SimulationMode)
             {
 
                 Sub_Status = SUB_STATUS.IDLE;
@@ -646,6 +664,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination clsCorrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
+            if (SimulationMode)
+                emulator.Runstatus.AGV_Status = _Main_Status;
             if (getLastPtPoseOfTrajectory)
             {
                 var lastPt = ExecutingTask.RunningTaskData.ExecutingTrajecory.Last();

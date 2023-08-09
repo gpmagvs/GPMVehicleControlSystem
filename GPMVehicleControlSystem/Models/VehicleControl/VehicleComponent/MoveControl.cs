@@ -27,11 +27,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public void Backward(double speed = 0.08)
         {
+            vehicle?.DirectionLighter.Backward();
             PublishCmdVel(-speed, 0);
         }
 
         public void Forward(double speed = 0.08)
         {
+            vehicle?.DirectionLighter.Forward();
             PublishCmdVel(speed, 0);
         }
 
@@ -40,31 +42,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public void TurnLeft(double speed = 0.1)
         {
+            vehicle?.DirectionLighter.TurnLeft(true);
             PublishCmdVel(0, speed);
         }
 
         public void TurnRight(double speed = 0.1)
         {
+            vehicle?.DirectionLighter.TurnRight(true);
             PublishCmdVel(0, -speed);
         }
 
         internal void FordwardRight(double speed)
         {
+            vehicle?.DirectionLighter.TurnRight(true);
+            vehicle?.DirectionLighter.Forward();
             PublishCmdVel(speed, -0.08);
         }
 
         internal void FordwardLeft(double speed)
         {
+            vehicle?.DirectionLighter.TurnLeft(true);
+            vehicle?.DirectionLighter.Forward();
             PublishCmdVel(speed, 0.08);
         }
 
         internal void BackwardRight(double speed)
         {
+            vehicle?.DirectionLighter.TurnRight(true);
+            vehicle?.DirectionLighter.Backward();
             PublishCmdVel(-speed, 0.08);
         }
 
         internal void BackwardLeft(double speed)
         {
+            vehicle?.DirectionLighter.TurnLeft(true);
+            vehicle?.DirectionLighter.Backward();
             PublishCmdVel(-speed, -0.08);
         }
         private void PublishCmdVel(double linear_speed, double angular_speed)
@@ -80,26 +92,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             message.angular.y = 0;
             message.angular.z = angular_speed;
             rosSocket.Publish(id, message);
-            
-            if (angular_speed == 0 && linear_speed == 0)
-            {
-                vehicle?.DirectionLighter.CloseAll();
-            }
-            else
-            {
-                vehicle?.DirectionLighter.CloseAll();
-
-                if (angular_speed > 0)
-                    vehicle?.DirectionLighter.TurnRight(true);
-                else
-                    vehicle?.DirectionLighter.TurnLeft(true);
-
-                if (linear_speed > 0)
-                    vehicle?.DirectionLighter.Forward();
-                else
-                    vehicle?.DirectionLighter.Backward();
-            }
-
         }
     }
 }
