@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -56,7 +57,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
             bool confirm = await agv.Auto_Mode_Siwtch(mode);
-            return Ok(confirm);
+            return Ok(new
+            {
+                Success = confirm,
+                Message = ""
+            });
         }
 
         [HttpGet("OnlineMode")]

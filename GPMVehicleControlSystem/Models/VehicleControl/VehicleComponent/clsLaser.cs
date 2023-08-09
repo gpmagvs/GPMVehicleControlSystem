@@ -102,9 +102,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 前後左右雷射Bypass全部關閉
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        internal void AllLaserActive()
+        internal async Task AllLaserActive()
         {
-            FrontLaserBypass = BackLaserBypass = RightLaserBypass = LeftLaserBypass = false;
+            await DOModule.SetState(DO_ITEM.Front_LsrBypass, false);
+            await DOModule.SetState(DO_ITEM.Back_LsrBypass, false);
+            await DOModule.SetState(DO_ITEM.Right_LsrBypass, false);
+            await DOModule.SetState(DO_ITEM.Left_LsrBypass, false);
         }
 
 
@@ -112,9 +115,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 前後左右雷射Bypass全部開啟
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        internal void AllLaserDisable()
+        internal async Task AllLaserDisable()
         {
-            FrontLaserBypass = BackLaserBypass = RightLaserBypass = LeftLaserBypass = true;
+            await DOModule.SetState(DO_ITEM.Front_LsrBypass, true);
+            await DOModule.SetState(DO_ITEM.Back_LsrBypass, true);
+            await DOModule.SetState(DO_ITEM.Right_LsrBypass, true);
+            await DOModule.SetState(DO_ITEM.Left_LsrBypass, true);
         }
 
         internal async void ApplyAGVSLaserSetting()

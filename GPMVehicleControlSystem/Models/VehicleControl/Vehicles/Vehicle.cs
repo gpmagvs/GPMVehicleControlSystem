@@ -396,6 +396,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<(bool confirm, string message)> Initialize()
         {
+            if(SimulationMode)
+            {
+
+                Sub_Status = SUB_STATUS.IDLE;
+                IsInitialized = true;
+                return (true, "");
+
+            }
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
             try
@@ -699,11 +707,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Operation_Mode = mode;
             if (mode == OPERATOR_MODE.AUTO)
             {
-                Laser.AllLaserActive();
+                await Laser.AllLaserActive();
             }
             else
             {
-                Laser.AllLaserDisable();
+                await Laser.AllLaserDisable();
             }
             return true;
         }
