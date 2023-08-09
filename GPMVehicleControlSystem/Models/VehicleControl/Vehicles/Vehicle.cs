@@ -117,8 +117,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool SimulationMode { get; internal set; } = false;
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
-        private SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
+        internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint { Name = "Unkown" };
+        public bool _IsCharging = false;
+        public bool IsCharging
+        {
+            get => _IsCharging;
+            set
+            {
+                if (_IsCharging != value)
+                {
+                    if (value)
+                    {
+                        BeforeChargingSubStatus = _Sub_Status;
+                        Sub_Status = SUB_STATUS.Charging;
+                        StatusLighter.ActiveGreen();
+                    }
+                    else
+                    {
+                        StatusLighter.InActiveGreen();
+                        Sub_Status = BeforeChargingSubStatus;
+                    }
+                    _IsCharging = value;
+                }
+            }
+        }
+
         public MapPoint DestinationMapPoint
         {
             get
@@ -132,6 +156,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+
+        private SUB_STATUS BeforeChargingSubStatus;
 
         public SUB_STATUS Sub_Status
         {
@@ -323,7 +349,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     WagoDI.StartAsync();
                     DOSignalDefaultSetting();
-                    ResetMotor();
                 }
                 catch (SocketException ex)
                 {
@@ -371,6 +396,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<(bool confirm, string message)> Initialize()
         {
+            if(SimulationMode)
+            {
+
+                Sub_Status = SUB_STATUS.IDLE;
+                IsInitialized = true;
+                return (true, "");
+
+            }
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
             try
@@ -674,11 +707,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Operation_Mode = mode;
             if (mode == OPERATOR_MODE.AUTO)
             {
-                Laser.AllLaserActive();
+                await Laser.AllLaserActive();
             }
             else
             {
-                Laser.AllLaserDisable();
+                await Laser.AllLaserDisable();
             }
             return true;
         }

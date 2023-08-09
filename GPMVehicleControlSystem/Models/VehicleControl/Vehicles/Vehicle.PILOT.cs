@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.HttpHelper;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.TASK;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using YamlDotNet.Core;
 using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
@@ -97,6 +98,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(5000);
                         TaskTrackingTags.Remove(task_name);
                     };
+                    if (action == ACTION_TYPE.None)
+                    {
+                        BuzzerPlayer.Move();
+                    }
+                    else
+                        BuzzerPlayer.Action();
+                    _Sub_Status = SUB_STATUS.RUN;
                     await ExecutingTask.Execute();
 
                 }

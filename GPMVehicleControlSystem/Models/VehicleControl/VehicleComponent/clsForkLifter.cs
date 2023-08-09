@@ -65,9 +65,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             get
             {
-                if (!DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
+                if (!DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
                     return FORK_ARM_LOCATIONS.HOME;
-                else if (!DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
+                else if (!DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
                     return FORK_ARM_LOCATIONS.END;
                 else
                     return FORK_ARM_LOCATIONS.UNKNOWN;
@@ -172,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
         {
             if (pose < 0)
-                return (false, "Initialize is reqeired.");
+                pose = 0;
             await HardwareLimitSaftyCheck();
             if (pose > ForkTeachData.Up_Pose_Limit)
                 pose = ForkTeachData.Up_Pose_Limit;
@@ -273,14 +273,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     await ForkShortenInAsync();
 
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
                 //尋找下點位位置(在Home點的下方 _ cm)
-                async Task<(bool find, AlarmCodes alarm_code)> SearchDownLimitPose()
+                async Task<(bool find, AlarmCodes alarm_code, bool isFindHome)> SearchDownLimitPose()
                 {
+                    bool isFindHome = false;
                     try
                     {
+                        if (CurrentForkLocation == FORK_LOCATIONS.HOME)
+                            return (true, AlarmCodes.None, true);
                         if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
-                            return (true, AlarmCodes.None);
+                            return (true, AlarmCodes.None, false);
                         else
                         {
                             await fork_ros_controller.ZAxisDownSearch(); //向下搜尋
@@ -288,16 +290,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         bool Upsearching = false;
                         while (CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)//TODO 確認是A/B接 
                         {
-                            await Task.Delay(1);
+                            Thread.Sleep(1);
+                            if (CurrentForkLocation == FORK_LOCATIONS.HOME)
+                            {
+                                isFindHome = true;
+                                break;
+                            }
                         }
                         await fork_ros_controller.ZAxisStop();
 
                     }
                     catch (Exception ex)
                     {
-                        return (false, AlarmCodes.Action_Timeout);
+                        return (false, AlarmCodes.Action_Timeout, false);
                     }
-                    return (true, AlarmCodes.None);
+                    return (true, AlarmCodes.None, isFindHome);
 
                 }
                 async Task<(bool find, AlarmCodes alarm_code)> SearchHomePose()//使用吋動的方式
@@ -318,21 +325,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                 }
 
-                (bool find, AlarmCodes alarm_code) searchDonwPoseResult = await SearchDownLimitPose();
-                if (!searchDonwPoseResult.find)
-                    return searchDonwPoseResult;
+                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+                bool isHomeReachFirst = false;
+                if (CurrentForkLocation != FORK_LOCATIONS.HOME)
+                {
 
-                (bool success, string message) result = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
-                if (!result.success)
+                    (bool find, AlarmCodes alarm_code, bool isFindHome) searchDonwPoseResult = await SearchDownLimitPose();
+                    if (!searchDonwPoseResult.find)
+                        return (searchDonwPoseResult.find, searchDonwPoseResult.alarm_code);
+                    isHomeReachFirst = searchDonwPoseResult.isFindHome;
+
+                    if (!isHomeReachFirst)
+                    {
+                        await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(1000);
+                            await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
+                        });
+
+                    }
+                }
+                else
+                    isHomeReachFirst = true;
+
+                (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
+                if (!Initresult.success)
                     throw new Exception();
 
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);  //
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(1000);
-                    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
-                });
-                result = await fork_ros_controller.ZAxisGoTo(7, wait_done: true); //移動到上方五公分
+                var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true); //移動到上方五公分
                 if (!result.success)
                     throw new Exception();
 

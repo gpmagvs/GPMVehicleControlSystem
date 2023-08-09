@@ -26,5 +26,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(MapManager.LoadMapFromFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/Map_UMTC_3F_Yellow.json")));
             }
         }
+        [HttpGet("UploadCoordination")]
+        public async Task<IActionResult> UploadCoordintaion(string AGVName, int tagNumber, double x, double y, double theta)
+        {
+            string agvsHost = $"{StaStored.CurrentVechicle.AGVS.IP}:5216";
+            string url = $"http://{agvsHost}/api/Map/UploadCoordination?AGVName={AGVName}&tagNumber={tagNumber}&x={x}&y={y}&theta={theta}";
+            bool response = await AGVSystemCommonNet6.HttpHelper.Http.GetAsync<bool>(url);
+            return Ok(response);
+        }
     }
 }

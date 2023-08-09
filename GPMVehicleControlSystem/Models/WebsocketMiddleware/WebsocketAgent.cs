@@ -41,7 +41,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 
         private static async Task SendMessagesAsync(WebSocket webSocket, WEBSOCKET_CLIENT_ACTION client_req)
         {
-            int count = 0;
             var delay = TimeSpan.FromSeconds(0.1);
 
             while (webSocket.State == WebSocketState.Open)
@@ -50,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 try
                 {
                   var viewmodel=   GetData(client_req);
-                   await  webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(viewmodel))), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                   await  webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(viewmodel))), WebSocketMessageType.Text, true, CancellationToken.None);
                 
                 }
                 catch (WebSocketException)

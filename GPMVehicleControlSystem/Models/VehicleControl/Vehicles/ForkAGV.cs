@@ -54,8 +54,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
-
-            if(Sub_Status == SUB_STATUS.Charging)
+            return (true, "");
+            if (Sub_Status == SUB_STATUS.Charging)
                 return (false, "無法在充電狀態下進行初始化");
             bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
             if (forkRackExistAbnormal)
@@ -88,15 +88,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.fork_ros_controller = ForkAGVC;
         }
 
-        protected internal override void SoftwareEMO()
-        {
-            base.SoftwareEMO();
-        }
+
         protected override void EMOPushedHandler(object? sender, EventArgs e)
         {
-            ForkLifter.ForkARMStop();
-            ForkAGVC.ZAxisStop();
             base.EMOPushedHandler(sender, e);
+            Task.Factory.StartNew(() =>
+            {
+                ForkLifter.ForkARMStop();
+                ForkAGVC.ZAxisStop();
+            });
         }
         protected override async void DOSignalDefaultSetting()
         {

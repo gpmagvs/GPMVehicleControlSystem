@@ -23,6 +23,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public void Stop()
         {
             PublishCmdVel(0, 0);
+            vehicle.DirectionLighter.CloseAll();
         }
         public void Backward(double speed = 0.08)
         {
@@ -49,12 +50,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal void FordwardRight(double speed)
         {
-            PublishCmdVel(speed, 0.08);
+            PublishCmdVel(speed, -0.08);
         }
 
         internal void FordwardLeft(double speed)
         {
-            PublishCmdVel(speed, -0.08);
+            PublishCmdVel(speed, 0.08);
         }
 
         internal void BackwardRight(double speed)
@@ -79,16 +80,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             message.angular.y = 0;
             message.angular.z = angular_speed;
             rosSocket.Publish(id, message);
-            vehicle?.DirectionLighter.CloseAll();
-            if (angular_speed > 0)
-                vehicle?.DirectionLighter.TurnRight(true);
+            
+            if (angular_speed == 0 && linear_speed == 0)
+            {
+                vehicle?.DirectionLighter.CloseAll();
+            }
             else
-                vehicle?.DirectionLighter.TurnLeft(true);
+            {
+                vehicle?.DirectionLighter.CloseAll();
 
-            if (linear_speed > 0)
-                vehicle?.DirectionLighter.Forward();
-            else
-                vehicle?.DirectionLighter.Backward();
+                if (angular_speed > 0)
+                    vehicle?.DirectionLighter.TurnRight(true);
+                else
+                    vehicle?.DirectionLighter.TurnLeft(true);
+
+                if (linear_speed > 0)
+                    vehicle?.DirectionLighter.Forward();
+                else
+                    vehicle?.DirectionLighter.Backward();
+            }
 
         }
     }

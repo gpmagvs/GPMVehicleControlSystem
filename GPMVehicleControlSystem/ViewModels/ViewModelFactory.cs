@@ -186,6 +186,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     AGVC = ConnectionStateVM.CONNECTION.CONNECTED,
                     RosbridgeServer = ConnectionStateVM.CONNECTION.CONNECTED,
                     WAGO = ConnectionStateVM.CONNECTION.CONNECTED,
+                    VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+
                 };
             }
 
