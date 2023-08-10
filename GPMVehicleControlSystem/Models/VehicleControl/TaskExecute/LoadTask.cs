@@ -105,8 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async void LaserSettingBeforeTaskExecute()
         {
-            Agv.Laser.LeftLaserBypass = true;
-            Agv.Laser.RightLaserBypass = true;
+            Agv.Laser.AllLaserDisable();
             await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
         private void AGVC_OnBackTOSecondary(object? sender, clsTaskDownloadData e)

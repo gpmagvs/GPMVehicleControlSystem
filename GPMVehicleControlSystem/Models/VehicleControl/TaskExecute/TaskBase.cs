@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
@@ -44,11 +45,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public abstract ACTION_TYPE action { get; set; }
         public List<int> TrackingTags { get; private set; } = new List<int>();
+        public clsForkLifter ForkLifter { get; internal set; }
+        public int destineTag => _RunningTaskData == null ? -1 : _RunningTaskData.Destination;
+
         public TaskBase(Vehicle Agv, clsTaskDownloadData taskDownloadData)
         {
             this.Agv = Agv;
             RunningTaskData = taskDownloadData;
-
             LOG.INFO($"New Task : \r\nTask Name:{taskDownloadData.Task_Name}\r\n Task_Simplex:{taskDownloadData.Task_Simplex}\r\nTask_Sequence:{taskDownloadData.Task_Sequence}");
 
         }
@@ -74,6 +77,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
                 Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
+
+                if (ForkLifter != null)
+                {
+                     ChangeForkPositionBeforeInWorkStation();
+                }
+
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
@@ -108,6 +117,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.INFO($" [{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
 
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
+
+            if (ForkLifter != null)
+            {
+                await ForkLifter.ForkGoHome(1);
+            }
+
             (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
             if (!check_result.confirm)
             {
@@ -153,6 +168,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal void Abort()
         {
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
+        }
+
+
+        public virtual async void ChangeForkPositionBeforeInWorkStation()
+        {
+            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 1, ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
         }
     }
 }
