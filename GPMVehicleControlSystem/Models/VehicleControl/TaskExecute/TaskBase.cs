@@ -80,7 +80,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (ForkLifter != null)
                 {
-                     ChangeForkPositionBeforeInWorkStation();
+                    ChangeForkPositionBeforeInWorkStation();
                 }
 
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
@@ -134,6 +134,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             Agv.AGVC.IsAGVExecutingTask = false;
             OnTaskFinish(RunningTaskData.Task_Simplex);
+            _ = Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                Agv.DirectionLighter.CloseAll();
+            });
         }
 
         public virtual async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
@@ -173,7 +178,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public virtual async void ChangeForkPositionBeforeInWorkStation()
         {
-            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 1, ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
+            LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},ForkTeach.FORK_HEIGHT_POSITION.DOWN_");
+
+            bool forkArmMoveResult = ForkLifter.ForkShortenInAsync().Result;
+            if (action == ACTION_TYPE.None)
+            {
+                (bool confirm, string message) homeResult = ForkLifter.ForkGoHome().Result;
+            }
+            else
+            {
+                (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 1, ForkTeach.FORK_HEIGHT_POSITION.DOWN_).Result;
+            }
         }
     }
 }

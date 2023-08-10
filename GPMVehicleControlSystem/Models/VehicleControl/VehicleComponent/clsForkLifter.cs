@@ -404,11 +404,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 int tryCnt = 0;
                 double positionError = 0;
                 double errorTorlence = 0.5;
+
+                LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
+
                 //
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
                     Thread.Sleep(1);
                     tryCnt++;
+                    LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
                     forkMoveREsult = await ForkPose(position_to_reach, 0.5);
 
                     if (!forkMoveREsult.confirm && tryCnt > 5)
