@@ -60,7 +60,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             location = clsDriver.DRIVER_LOCATION.FORK
         };
 
-        public clsForkLifter ForkLifter;
+        public virtual clsForkLifter ForkLifter { get; set; }
 
         public clsDriver[] WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT},

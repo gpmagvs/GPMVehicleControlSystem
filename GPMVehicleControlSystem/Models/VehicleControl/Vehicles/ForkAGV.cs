@@ -22,10 +22,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
         public bool IsForkInitialized => ForkLifter.IsInitialized;
 
-
+        public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {
-            ForkLifter = new clsForkLifter();
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
