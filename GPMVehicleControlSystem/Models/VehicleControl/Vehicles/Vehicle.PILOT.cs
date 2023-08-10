@@ -102,12 +102,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         TaskTrackingTags.Remove(task_name);
                     };
                     if (action == ACTION_TYPE.None)
-                    {
                         BuzzerPlayer.Move();
-                    }
                     else
                         BuzzerPlayer.Action();
                     _Sub_Status = SUB_STATUS.RUN;
+                    StatusLighter.RUN();
+                    
                     await ExecutingTask.Execute();
 
                 }

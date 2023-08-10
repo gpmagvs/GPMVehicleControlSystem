@@ -63,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+
                 Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
@@ -80,7 +81,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (ForkLifter != null)
                 {
-                    ChangeForkPositionBeforeInWorkStation();
+                    ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? ForkTeach.FORK_HEIGHT_POSITION.UP_ : ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
                 }
 
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
@@ -117,11 +118,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.INFO($" [{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
 
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
-
-            if (ForkLifter != null)
-            {
-                await ForkLifter.ForkGoHome(1);
-            }
 
             (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
             if (!check_result.confirm)
@@ -176,9 +172,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        public virtual async void ChangeForkPositionBeforeInWorkStation()
+        public async void ChangeForkPositionBeforeGoToWorkStation(ForkTeach.FORK_HEIGHT_POSITION position)
         {
-            LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},ForkTeach.FORK_HEIGHT_POSITION.DOWN_");
+            LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
 
             bool forkArmMoveResult = ForkLifter.ForkShortenInAsync().Result;
             if (action == ACTION_TYPE.None)
@@ -187,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             else
             {
-                (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 1, ForkTeach.FORK_HEIGHT_POSITION.DOWN_).Result;
+                (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position).Result;
             }
         }
     }

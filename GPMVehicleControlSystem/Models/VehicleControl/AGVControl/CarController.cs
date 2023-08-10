@@ -130,7 +130,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <value></value>
         public bool IsAGVExecutingTask { get; set; } = false;
         public bool TaskIsSegment => RunningTaskData.IsTaskSegmented;
-        private bool EmergencyStopFlag = false;
         public CarController()
         {
 
@@ -285,13 +284,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private void CycleStop()
         {
             CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
-            AbortTask();
+            IsAGVExecutingTask = false;
+            //AbortTask();
         }
 
         internal void AbortTask()
         {
             _currentTaskCmdActionStatus = ActionStatus.ABORTED;
-            EmergencyStopFlag = true;
             if (actionClient != null)
             {
                 actionClient.goal = new TaskCommandGoal();
@@ -315,6 +314,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             else
             {
+                if (Status == ActionStatus.SUCCEEDED)
+                {
+                    OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
+                }
                 if (Status == ActionStatus.ABORTED)
                     OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
                 OnTaskActionFinishButNeedToExpandPath?.Invoke(this, this.RunningTaskData);
@@ -389,7 +392,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 $"\r\nmobilityModes = {rosGoal.mobilityModes}" +
                 $"\r\n==========================================================");
 
-            EmergencyStopFlag = false;
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             //wait goal status change to  ACTIVE

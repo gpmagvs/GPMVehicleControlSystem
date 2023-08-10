@@ -43,6 +43,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             LoadTeachDataSettingFromJsonConfigs();
         }
 
+        public clsForkLifter(ForkAGV forkAGV)
+        {
+            this.forkAGV = forkAGV;
+            LoadTeachDataSettingFromJsonConfigs();
+        }
+
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -143,6 +149,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         internal ForkAGVController fork_ros_controller;
+        private ForkAGV forkAGV;
 
         public override void CheckStateDataContent()
         {
@@ -410,6 +417,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 //
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
+                    if (forkAGV.Sub_Status != SUB_STATUS.RUN)
+                    {
+                        LOG.WARN($"Tag:{tag},{position} AGV Status Not RUN ,Break Try ");
+                        return (false, AlarmCodes.None);
+                    }
                     Thread.Sleep(1);
                     tryCnt++;
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
@@ -420,7 +432,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                         return (false, AlarmCodes.Action_Timeout);
                     }
-                    else if (positionError> errorTorlence && tryCnt>5)
+                    else if (positionError > errorTorlence && tryCnt > 5)
                     {
                         return (false, AlarmCodes.Fork_Height_Setting_Error);
                     }

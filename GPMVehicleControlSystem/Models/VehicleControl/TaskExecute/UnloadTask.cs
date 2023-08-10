@@ -59,5 +59,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             FrontendSecondarSensorTriggerAlarmCode = AlarmCodes.EQP_UNLOAD_BUT_EQP_HAS_NO_CARGO;
             base.StartFrontendObstcleDetection();
         }
+        protected override async Task ChangeForkPositionInWorkStation()
+        {
+            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, ForkTeach.FORK_HEIGHT_POSITION.UP_);
+        }
     }
 }

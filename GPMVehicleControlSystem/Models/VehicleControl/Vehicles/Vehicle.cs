@@ -115,7 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Charging:
                         return MAIN_STATUS.Charging;
                     case SUB_STATUS.Initializing:
-                        return MAIN_STATUS.IDLE;
+                        return MAIN_STATUS.DOWN;
                     case SUB_STATUS.ALARM:
                         return MAIN_STATUS.DOWN;
                     case SUB_STATUS.WARNING:
@@ -156,13 +156,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (value)
                     {
                         BeforeChargingSubStatus = _Sub_Status;
-                        Sub_Status = SUB_STATUS.Charging;
+                        _Sub_Status = SUB_STATUS.Charging;
                         StatusLighter.ActiveGreen();
                     }
                     else
                     {
                         StatusLighter.InActiveGreen();
-                        Sub_Status = BeforeChargingSubStatus;
+                        _Sub_Status = BeforeChargingSubStatus;
                     }
                     _IsCharging = value;
                 }

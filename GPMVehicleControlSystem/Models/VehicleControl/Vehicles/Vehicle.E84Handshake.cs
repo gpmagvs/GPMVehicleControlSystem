@@ -11,7 +11,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public  partial class Vehicle
     {
-        
+        private bool IsHandShakeBypass => AppSettingsHelper.GetValue<bool>("VCS:EQHandshakeBypass");
         private bool IsULReqOn(ACTION_TYPE action)
         {
             if (action == ACTION_TYPE.Load)
@@ -43,6 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eqready, AlarmCodes alarmCode)> WaitEQReadyON(ACTION_TYPE action)
         {
+            if (IsHandShakeBypass)
+            {
+                return (true, AlarmCodes.None);
+            }
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             Task wait_eq_UL_req_ON = new Task(() =>
             {
@@ -101,6 +105,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eqready_off, AlarmCodes alarmCode)> WaitEQReadyOFF(ACTION_TYPE action)
         {
+            if (IsHandShakeBypass)
+            {
+                return (true, AlarmCodes.None);
+            }
             LOG.Critical("[EQ Handshake] 等待EQ READY OFF");
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             Task wait_eq_UL_req_OFF = new Task(() =>
@@ -161,6 +169,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eq_busy_off, AlarmCodes alarmCode)> WaitEQBusyOFF(ACTION_TYPE action)
         {
+            if (IsHandShakeBypass)
+            {
+                return (true, AlarmCodes.None);
+            }
             LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
             DirectionLighter.WaitPassLights();
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));

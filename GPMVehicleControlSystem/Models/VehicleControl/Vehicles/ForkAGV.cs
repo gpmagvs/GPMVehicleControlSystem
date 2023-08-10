@@ -25,6 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {
+            ForkLifter =new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;

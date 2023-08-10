@@ -74,6 +74,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             back_to_secondary_flag = false;
             await Task.Delay(1000);
+
+            if (ForkLifter != null)
+            {
+                await ChangeForkPositionInWorkStation();
+            }
+
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
@@ -95,12 +101,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, HSResult.alarmCode);
             }
 
+            if (ForkLifter != null)
+            {
+                await ForkLifter.ForkGoHome();
+            }
+
 
             (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
             if (!CstBarcodeCheckResult.confirm)
                 return (false, CstBarcodeCheckResult.alarmCode);
 
             return await base.AfterMoveDone();
+        }
+
+        protected async virtual Task ChangeForkPositionInWorkStation()
+        {
+            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
+
         }
 
         public override async void LaserSettingBeforeTaskExecute()
@@ -235,6 +252,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.DirectionLighter.Forward();
         }
-
     }
 }
