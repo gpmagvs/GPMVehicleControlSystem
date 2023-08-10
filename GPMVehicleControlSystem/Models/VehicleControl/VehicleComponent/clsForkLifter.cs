@@ -375,5 +375,63 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tag">工位的TAG</param>
+        /// <param name="layer">第N層(Zero-base)</param>
+        /// <param name="position">該層之上/下位置</param>
+        /// <exception cref="NotImplementedException"></exception>
+        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position)
+        {
+            try
+            {
+
+                if (!ForkTeachData.Teaches.TryGetValue(tag, out Dictionary<int, clsTeachData>? layerTeaches))
+                    return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
+
+                if (!layerTeaches.TryGetValue(layer, out clsTeachData? teach))
+                    return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
+                (bool confirm, string message) forkMoveREsult = (false, "");
+
+                double position_to_reach = 0;
+
+                if (position == FORK_HEIGHT_POSITION.UP_)
+                    position_to_reach = teach.Up_Pose;
+                if (position == FORK_HEIGHT_POSITION.DOWN_)
+                    position_to_reach = teach.Down_Pose;
+
+                int tryCnt = 0;
+                double positionError = 0;
+                double errorTorlence = 0.5;
+                //
+                while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
+                {
+                    Thread.Sleep(1);
+                    tryCnt++;
+                    forkMoveREsult = await ForkPose(position_to_reach, 0.5);
+
+                    if (!forkMoveREsult.confirm && tryCnt > 5)
+                    {
+
+                        return (false, AlarmCodes.Action_Timeout);
+                    }
+                    else if (positionError> errorTorlence && tryCnt>5)
+                    {
+                        return (false, AlarmCodes.Fork_Height_Setting_Error);
+                    }
+                }
+
+                return (true, AlarmCodes.None);
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+
+
+        }
     }
 }

@@ -92,6 +92,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         throw new NotImplementedException();
                     }
+
+
+                    ExecutingTask.ForkLifter = ForkLifter;
                     await Task.Delay(500);
                     ExecutingTask.OnTaskFinish = async (task_name) =>
                     {
@@ -185,6 +188,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      {
                          if (!stopedFlag)
                          {
+                             LOG.WARN($"交管訊號觸發 等待{NextTagPoint.Point_ID} Release...");
                              await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
                              await Task.Delay(50);
                              await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
@@ -195,6 +199,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      }
                      DirectionLighter.CloseAll();
                      DirectionLighter.Forward();
+                     LOG.WARN($"交管訊號以解除 {NextTagPoint.Point_ID} Release...");
                      await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
 
                  });

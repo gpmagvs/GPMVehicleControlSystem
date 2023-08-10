@@ -1,6 +1,8 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.TASK;
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -11,17 +13,37 @@ namespace GPMVehicleControlSystem.Controllers
     [ApiController]
     public class TaskDispatchController : ControllerBase
     {
+        Vehicle Agv => StaStored.CurrentVechicle;
         [HttpPost("Execute")]
         public async Task<IActionResult> Execute([FromBody] object taskDto)
         {
             clsTaskDownloadData? data = JsonConvert.DeserializeObject<clsTaskDownloadData>(taskDto.ToString());
-            StaStored.CurrentVechicle.ExecuteAGVSTask(this, data);
+            Agv.ExecuteAGVSTask(this, data);
             await Task.Delay(200);
             SimpleRequestResponse clsTaskDto = new SimpleRequestResponse()
             {
                 ReturnCode = RETURN_CODE.OK
             };
             return Ok(clsTaskDto);
+        }
+        [HttpPost("Cancel")]
+        public async Task<IActionResult> CancelTask([FromBody] clsCancelTaskCmd cancelCmd)
+        {
+            SimpleRequestResponse reply = new SimpleRequestResponse()
+            {
+                ReturnCode = RETURN_CODE.OK
+            };
+
+            if (Agv.ExecutingTask.RunningTaskData.Task_Name == cancelCmd.Task_Name)
+            {
+                Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
+            }
+            else
+            {
+                reply.ReturnCode = RETURN_CODE.NG;
+                reply.Message = "AGVS取消之任務ID與當前任務不符";
+            }
+            return Ok(reply);
         }
     }
 }
