@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -81,7 +82,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (ForkLifter != null)
                 {
-                    ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? ForkTeach.FORK_HEIGHT_POSITION.UP_ : ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
+                    if (action == ACTION_TYPE.None)
+                        ForkLifter.ForkGoHome();
+                    else
+                        ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                 }
 
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
@@ -172,19 +176,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        public async void ChangeForkPositionBeforeGoToWorkStation(ForkTeach.FORK_HEIGHT_POSITION position)
+        public async void ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
-
-            bool forkArmMoveResult = ForkLifter.ForkShortenInAsync().Result;
-            if (action == ACTION_TYPE.None)
-            {
-                (bool confirm, string message) homeResult = ForkLifter.ForkGoHome().Result;
-            }
-            else
-            {
-                (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position).Result;
-            }
+            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position).Result;
         }
     }
 }

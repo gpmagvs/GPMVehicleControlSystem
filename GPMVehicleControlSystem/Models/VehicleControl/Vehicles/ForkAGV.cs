@@ -3,6 +3,9 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -25,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {
-            ForkLifter =new clsForkLifter(this);
+            ForkLifter = new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
@@ -109,6 +112,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void WagoDIEventRegist()
         {
             base.WagoDIEventRegist();
+        }
+
+        protected override clsWorkStationModel DeserializeWorkStationJson(string json)
+        {
+            clsForkWorkStationModel? dat = JsonConvert.DeserializeObject<clsForkWorkStationModel>(json);
+            foreach (KeyValuePair<int, clsForkWorkStationData> station in dat.Stations)
+            {
+                while (station.Value.LayerDatas.Count != 3)
+                {
+                    station.Value.LayerDatas.Add(station.Value.LayerDatas.Count , new clsStationLayerData
+                    {
+                        Down_Pose = 0,
+                        Up_Pose = 0
+                    });
+                }
+            }
+            return dat;
         }
     }
 }

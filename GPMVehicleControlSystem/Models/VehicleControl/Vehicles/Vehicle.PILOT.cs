@@ -92,8 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         throw new NotImplementedException();
                     }
-
-
+                    previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
                     await Task.Delay(500);
                     ExecutingTask.OnTaskFinish = async (task_name) =>
@@ -107,7 +106,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         BuzzerPlayer.Action();
                     _Sub_Status = SUB_STATUS.RUN;
                     StatusLighter.RUN();
-                    
+
                     await ExecutingTask.Execute();
 
                 }
@@ -132,12 +131,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             Task.Factory.StartNew(() =>
             {
-                TrafficStop();
+                int TagPointIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().FindIndex(pt => pt.Point_ID == previousTagPoint.Point_ID);
+                int nextPointIndex = TagPointIndex + 1;
+                clsMapPoint nextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextPointIndex];
+                Laser.AgvsLsrSetting = nextTagPoint.Laser;
                 if (ExecutingTask.action == ACTION_TYPE.None)
+                {
                     Laser.ApplyAGVSLaserSetting();
+                    LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID},雷射切換為 Tag {nextTagPoint.Point_ID},{nextTagPoint.Laser}");
+                }
+                TrafficStop();
             });
 
         }
+
+        private clsMapPoint? previousTagPoint;
         private void OnTagReachHandler(object? sender, int currentTag)
         {
             Task.Factory.StartNew(() =>
@@ -147,13 +155,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTask == null)
                     return;
 
-                clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == currentTag);
-                if (TagPoint == null)
+                previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == currentTag);
+                if (previousTagPoint == null)
                 {
                     LOG.Critical($"AGV抵達 {currentTag} 但在任務軌跡上找不到該站點。");
                     return;
                 }
-                PathInfo? pathInfoRos = ExecutingTask.RunningTaskData.RosTaskCommandGoal?.pathInfo.FirstOrDefault(path => path.tagid == TagPoint.Point_ID);
+                PathInfo? pathInfoRos = ExecutingTask.RunningTaskData.RosTaskCommandGoal?.pathInfo.FirstOrDefault(path => path.tagid == previousTagPoint.Point_ID);
                 if (pathInfoRos == null)
                 {
                     AGVC.AbortTask();
@@ -161,7 +169,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Sub_Status = SUB_STATUS.DOWN;
                     return;
                 }
-                Laser.AgvsLsrSetting = TagPoint.Laser;
+
+                Laser.AgvsLsrSetting = previousTagPoint.Laser;
+                if (ExecutingTask.action == ACTION_TYPE.None)
+                {
+                    Laser.FrontLaserBypass = true;
+                    Laser.ApplyAGVSLaserSetting();
+                    Laser.FrontLaserBypass = false;
+                }
+
                 if (ExecutingTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
                 {
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);

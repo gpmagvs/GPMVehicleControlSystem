@@ -9,10 +9,10 @@ using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Security.AccessControl;
 using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.ForkTeach;
 using Newtonsoft.Json;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.ViewModels.ForkTeach;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -40,13 +40,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsForkLifter()
         {
-            LoadTeachDataSettingFromJsonConfigs();
         }
 
         public clsForkLifter(ForkAGV forkAGV)
         {
             this.forkAGV = forkAGV;
-            LoadTeachDataSettingFromJsonConfigs();
         }
 
         public FORK_LOCATIONS CurrentForkLocation
@@ -95,7 +93,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
-        public clsForkTeach ForkTeachData { get; set; } = new clsForkTeach();
+
+        public Dictionary<int, clsForkWorkStationData> StationDatas
+        {
+            get
+            {
+                return (forkAGV.WorkStations as clsForkWorkStationModel).Stations;
+            }
+        }
 
         public clsDIModule DIModule
         {
@@ -181,10 +186,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (pose < 0)
                 pose = 0;
             await HardwareLimitSaftyCheck();
-            if (pose > ForkTeachData.Up_Pose_Limit)
-                pose = ForkTeachData.Up_Pose_Limit;
-            if (pose < ForkTeachData.Down_Pose_Limit)
-                pose = ForkTeachData.Down_Pose_Limit;
+            //if (pose > ForkTeachData.Up_Pose_Limit)
+            //    pose = ForkTeachData.Up_Pose_Limit;
+            //if (pose < ForkTeachData.Down_Pose_Limit)
+            //    pose = ForkTeachData.Down_Pose_Limit;
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
@@ -394,10 +399,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
 
-                if (!ForkTeachData.Teaches.TryGetValue(tag, out Dictionary<int, clsTeachData>? layerTeaches))
+                if (!StationDatas.TryGetValue(tag, out clsForkWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
-                if (!layerTeaches.TryGetValue(layer, out clsTeachData? teach))
+
+                if (!workStation.LayerDatas.TryGetValue(layer, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
                 (bool confirm, string message) forkMoveREsult = (false, "");
 

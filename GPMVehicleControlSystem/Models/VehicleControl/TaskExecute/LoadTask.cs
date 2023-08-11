@@ -7,6 +7,9 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using System.Formats.Asn1;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -77,7 +80,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                await ChangeForkPositionInWorkStation();
+                bool armMoveing = await ForkLifter.ForkExtendOutAsync();
+                if (armMoveing)
+                {
+                    bool arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
+                    await ChangeForkPositionInWorkStation();
+                    armMoveing = await ForkLifter.ForkShortenInAsync();
+                    arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
+                }
+                else
+                    return (false, AlarmCodes.Fork_Arm_Pose_Error);
             }
 
             //下Homing Trajectory 任務讓AGV退出
@@ -103,7 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                await ForkLifter.ForkGoHome();
+                await ForkLifter.ForkGoHome(wait_done: action == ACTION_TYPE.Unload);
             }
 
 
@@ -116,10 +128,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task ChangeForkPositionInWorkStation()
         {
-            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
+            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_);
 
         }
-
+        private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)
+        {
+            CancellationTokenSource timeout_check = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            while (ForkLifter.CurrentForkARMLocation != locationExpect)
+            {
+                Thread.Sleep(1);
+                if (timeout_check.IsCancellationRequested)
+                    return false;
+            }
+            return true;
+        }
         public override async void LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.AllLaserDisable();

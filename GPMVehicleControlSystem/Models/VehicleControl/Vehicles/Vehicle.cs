@@ -14,7 +14,10 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -60,6 +63,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             location = clsDriver.DRIVER_LOCATION.FORK
         };
 
+        /// <summary>
+        /// 工位數據
+        /// </summary>
+        public clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public virtual clsForkLifter ForkLifter { get; set; }
 
         public clsDriver[] WheelDrivers = new clsDriver[] {
@@ -241,13 +248,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
                 Navigation.OnTagReach += OnTagReachHandler;
                 BarcodeReader.OnTagLeave += OnTagLeaveHandler;
-
+                LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
                 SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
-
-
                 AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
                 string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
                 int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
@@ -325,7 +330,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+        public string WorkStationSettingsJsonFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/WorkStation.json");
 
+        private void LoadWorkStationConfigs()
+        {
+            try
+            {
+
+                if (File.Exists(WorkStationSettingsJsonFilePath))
+                {
+                    string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
+                    if (json == null)
+                    {
+                        StaSysMessageManager.AddNewMessage("Load Fork Teach Data Fail...Read Json Null", 2);
+                        return;
+                    }
+                    WorkStations = DeserializeWorkStationJson(json);
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                StaSysMessageManager.AddNewMessage($"Load Fork Teach Data Fail...{ex.Message}", 2);
+            }
+            finally
+            {
+                SaveTeachDAtaSettings();
+            }
+        }
+        protected virtual clsWorkStationModel DeserializeWorkStationJson(string json)
+        {
+            return JsonConvert.DeserializeObject<clsWorkStationModel>(json);
+        }
+        internal bool SaveTeachDAtaSettings()
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(WorkStations, Formatting.Indented);
+                File.WriteAllText(WorkStationSettingsJsonFilePath, json);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         private void DownloadMapFromServer()
         {
             Task.Run(async () =>

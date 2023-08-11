@@ -2,6 +2,7 @@
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Net.Sockets;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;

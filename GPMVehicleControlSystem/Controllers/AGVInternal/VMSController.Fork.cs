@@ -1,6 +1,6 @@
-﻿using GPMVehicleControlSystem.Models.ForkTeach;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 using GPMVehicleControlSystem.ViewModels.ForkTeach;
 using Microsoft.AspNetCore.Mvc;
 using static SQLite.SQLite3;
@@ -13,10 +13,38 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         private object GetMappData()
         {
-            var mapped_data = forkAgv.ForkLifter.ForkTeachData.Teaches.OrderBy(dat => dat.Key).Select(dat => new
+            var mapped_data = forkAgv.ForkLifter.StationDatas.OrderBy(dat => dat.Key).Select(dat => new
             {
                 Tag = dat.Key,
-                Layers = dat.Value.Select(layDat => layDat).ToList()
+                Layers = new List<object> {
+                    new {
+                        Key=0,
+                        Value= new
+                        {
+                            Name= dat.Value.Name,
+                            Up_Pose= dat.Value.LayerDatas[0].Up_Pose,
+                            Down_Pose= dat.Value.LayerDatas[0].Down_Pose
+                        }
+                    },new {
+                        Key=1,
+                        Value= new
+                        {
+                            Name= dat.Value.Name,
+                            Up_Pose= dat.Value.LayerDatas[1].Up_Pose,
+                            Down_Pose= dat.Value.LayerDatas[1].Down_Pose
+                        }
+                    },
+                    new{
+                        Key=2,
+                        Value= new
+                        {
+                            Name= dat.Value.Name,
+                            Up_Pose= dat.Value.LayerDatas[2].Up_Pose,
+                            Down_Pose= dat.Value.LayerDatas[2].Down_Pose
+                        }
+                    }
+                }
+
             }).ToArray();
             return mapped_data;
         }
@@ -27,10 +55,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(GetMappData());
         }
         [HttpPost("Fork/SaveTeachDatas")]
-        public async Task<IActionResult> SaveTeachDatas(Dictionary<int, Dictionary<int, clsTeachData>> data)
+        public async Task<IActionResult> SaveTeachDatas(Dictionary<int, Dictionary<int, clsStationLayerData>> data)
         {
-            forkAgv.ForkLifter.ForkTeachData.Teaches = data;
-            bool confirm = forkAgv.ForkLifter.SaveTeachDAtaSettings();
+            (forkAgv.WorkStations as clsForkWorkStationModel).Stations = data.ToDictionary(d => d.Key, d => new clsForkWorkStationData()
+            {
+                LayerDatas = d.Value
+            });
+            bool confirm = forkAgv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });
         }
         [HttpPost("Fork/SaveUnitTeachData")]
@@ -95,19 +126,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Extend")]
         public async Task<IActionResult> ForkArmExtend()
         {
-            var result = await forkAgv.ForkLifter.ForkExtendOutAsync();
+            var result = forkAgv.ForkLifter.ForkExtendOutAsync();
             return Ok(new { confirm = result });
         }
         [HttpGet("Fork/Arm/Shorten")]
         public async Task<IActionResult> ForkArmShorten()
         {
-            var result = await forkAgv.ForkLifter.ForkShortenInAsync();
+            var result =  forkAgv.ForkLifter.ForkShortenInAsync();
             return Ok(new { confirm = result });
         }
         [HttpGet("Fork/Arm/Stop")]
         public async Task<IActionResult> ForkArmStop()
         {
-            await forkAgv.ForkLifter.ForkARMStop();
+             forkAgv.ForkLifter.ForkARMStop();
             return Ok();
         }
     }

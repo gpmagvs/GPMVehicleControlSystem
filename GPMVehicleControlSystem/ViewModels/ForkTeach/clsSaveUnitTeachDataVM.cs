@@ -1,4 +1,4 @@
-﻿using GPMVehicleControlSystem.Models.ForkTeach;
+﻿using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 
 namespace GPMVehicleControlSystem.ViewModels.ForkTeach
 {
@@ -6,6 +6,6 @@ namespace GPMVehicleControlSystem.ViewModels.ForkTeach
     {
         public int Tag { get; set; } = 0;
         public int Layer { get; set; } = 0;
-        public clsTeachData TeachData { get; set; } = new clsTeachData();
+        public clsForkWorkStationData TeachData { get; set; } = new clsForkWorkStationData();
     }
 }
