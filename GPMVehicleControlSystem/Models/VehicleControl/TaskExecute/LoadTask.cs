@@ -80,16 +80,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                bool armMoveing = await ForkLifter.ForkExtendOutAsync();
-                if (armMoveing)
+                bool arm_move_Done = false;
+                bool armMoveing = false;
+                var isNeedArmExtend =( (Agv as ForkAGV).WorkStations as clsForkWorkStationModel).Stations[destineTag].ForkArmExtend;
+                if (isNeedArmExtend)
                 {
-                    bool arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
-                    await ChangeForkPositionInWorkStation();
-                    armMoveing = await ForkLifter.ForkShortenInAsync();
-                    arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
+                    armMoveing = await ForkLifter.ForkExtendOutAsync();
+                    arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
                 }
                 else
-                    return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                {
+                    arm_move_Done = true;
+                }
+                if (arm_move_Done)
+                {
+                    await ChangeForkPositionInWorkStation();
+                    if (isNeedArmExtend)
+                    {
+                        armMoveing = await ForkLifter.ForkShortenInAsync();
+                        arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
+                        if (!arm_move_Done)
+                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
+                }
+
             }
 
             //下Homing Trajectory 任務讓AGV退出
@@ -136,6 +150,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             CancellationTokenSource timeout_check = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             while (ForkLifter.CurrentForkARMLocation != locationExpect)
             {
+                if (Agv.Sub_Status != SUB_STATUS.RUN)
+                    return false;
                 Thread.Sleep(1);
                 if (timeout_check.IsCancellationRequested)
                     return false;

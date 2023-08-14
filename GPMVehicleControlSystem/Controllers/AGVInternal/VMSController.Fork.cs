@@ -13,7 +13,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         private object GetMappData()
         {
-            var mapped_data = forkAgv.ForkLifter.StationDatas.OrderBy(dat => dat.Key).Select(dat => new
+            Dictionary<int, clsForkWorkStationData> settings = forkAgv.ForkLifter.StationDatas;
+            var mapped_data = settings.OrderBy(dat => dat.Key).Select(dat => new
             {
                 Tag = dat.Key,
                 Layers = new List<object> {

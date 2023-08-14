@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 工位數據
         /// </summary>
-        public clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
+        public virtual clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public virtual clsForkLifter ForkLifter { get; set; }
 
         public clsDriver[] WheelDrivers = new clsDriver[] {
@@ -169,8 +169,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        StatusLighter.InActiveGreen();
-                        _Sub_Status = BeforeChargingSubStatus;
+                        if (AGVC.IsAGVExecutingTask)
+                        {
+
+                            Sub_Status = SUB_STATUS.RUN;
+                        }
+                        else
+                        {
+                            StatusLighter.InActiveGreen();
+                            Sub_Status = BeforeChargingSubStatus;
+                        }
                     }
                     _IsCharging = value;
                 }

@@ -16,7 +16,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
-            Agv.DirectionLighter.Backward();
+            Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                Agv.DirectionLighter.Backward();
+            });
         }
 
 

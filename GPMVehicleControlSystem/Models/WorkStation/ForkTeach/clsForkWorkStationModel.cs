@@ -9,6 +9,6 @@ namespace GPMVehicleControlSystem.Models.WorkStation.ForkTeach
     }
     public class clsForkWorkStationModel : clsWorkStationModel
     {
-        public new Dictionary<int, clsForkWorkStationData> Stations { get; set; } = new Dictionary<int, clsForkWorkStationData>();
+        public  Dictionary<int, clsForkWorkStationData> Stations { get; set; } = new Dictionary<int, clsForkWorkStationData>();
     }
 }

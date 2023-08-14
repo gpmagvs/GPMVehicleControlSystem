@@ -8,7 +8,7 @@
     {
         public double Up_Pose_Limit { get; set; } = 5.0;
         public double Down_Pose_Limit { get; set; } = 0.0;
-
+        public bool ForkArmExtend { get; set; } = false;
         public Dictionary<int, clsStationLayerData> LayerDatas { get; set; } = new Dictionary<int, clsStationLayerData>();
 
     }

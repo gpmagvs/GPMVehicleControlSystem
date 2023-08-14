@@ -361,7 +361,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                     isHomeReachFirst = true;
 
+                await Task.Delay(500);
                 (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
+
                 if (!Initresult.success)
                     throw new Exception();
 

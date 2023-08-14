@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
         public bool IsForkInitialized => ForkLifter.IsInitialized;
-
+        public override clsWorkStationModel WorkStations { get; set; } = new clsForkWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {

@@ -140,7 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Laser.ApplyAGVSLaserSetting();
                     LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID},雷射切換為 Tag {nextTagPoint.Point_ID},{nextTagPoint.Laser}");
                 }
-                TrafficStop();
+                //TrafficStop();
             });
 
         }
