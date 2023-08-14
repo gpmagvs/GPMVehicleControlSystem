@@ -33,12 +33,16 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         }
         public static async void Action()
         {
+            if (IsActionPlaying)
+                return;
             await Stop();
             await Play(SOUNDS.Action);
             IsActionPlaying = true;
         }
         public static async void Move()
         {
+            if (IsMovingPlaying)
+                return;
             await Stop();
             await Play(SOUNDS.Move);
             IsMovingPlaying = true;

@@ -5,6 +5,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -121,7 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (station.Value.LayerDatas.Count != 3)
                 {
-                    station.Value.LayerDatas.Add(station.Value.LayerDatas.Count , new clsStationLayerData
+                    station.Value.LayerDatas.Add(station.Value.LayerDatas.Count, new clsStationLayerData
                     {
                         Down_Pose = 0,
                         Up_Pose = 0
@@ -129,6 +130,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
             return dat;
+        }
+        internal override bool HasAnyCargoOnAGV()
+        {
+            try
+            {
+                return WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        protected override int GetCargoType()
+        {
+            var tray_sensor1 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor);
+            var tray_sensor2 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+            var rack_sensor1 = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+            var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+
+            if (tray_sensor1 | tray_sensor2)
+                return 0;
+            else if (rack_sensor1 | rack_sensor2)
+                return 1;
+            else return -1;
         }
     }
 }

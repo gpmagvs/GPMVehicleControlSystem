@@ -110,7 +110,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             if (LaserType != DI_ITEM.FrontProtection_Area_Sensor_3 && LaserType != DI_ITEM.BackProtection_Area_Sensor_3)
-                Sub_Status = SUB_STATUS.RUN;
+            {
+                _Sub_Status = SUB_STATUS.RUN;
+                if (ExecutingTask.action == ACTION_TYPE.None)
+                    BuzzerPlayer.Move();
+                else
+                    BuzzerPlayer.Action();
+            }
 
         }
 
