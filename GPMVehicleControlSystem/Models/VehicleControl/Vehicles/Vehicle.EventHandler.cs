@@ -177,6 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsInitialized = false;
             ExecutingTask?.Abort();
             AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+            DirectionLighter.CloseAll();
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)

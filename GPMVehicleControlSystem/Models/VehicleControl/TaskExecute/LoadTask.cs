@@ -290,5 +290,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.DirectionLighter.Forward();
         }
+        internal override void Abort()
+        {
+            base.Abort();
+            Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
+        }
     }
 }

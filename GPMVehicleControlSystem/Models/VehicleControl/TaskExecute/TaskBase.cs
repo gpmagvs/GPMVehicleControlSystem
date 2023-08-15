@@ -118,20 +118,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async void AfterMoveFinishHandler(object? sender, clsTaskDownloadData e)
         {
-
-            LOG.INFO($" [{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
-
+            LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
 
-            (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
-            if (!check_result.confirm)
+            if(Agv.Sub_Status== SUB_STATUS.DOWN)
             {
-                AlarmManager.AddAlarm(check_result.alarm_code, false);
-                Agv.Sub_Status = SUB_STATUS.ALARM;
+                LOG.Critical($"AfterMoveFinishHandler BUT AGV STATUS DOWN");
             }
             else
-                Agv.Sub_Status = SUB_STATUS.IDLE;
-
+            {
+                (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
+                if (!check_result.confirm)
+                {
+                    AlarmManager.AddAlarm(check_result.alarm_code, false);
+                    Agv.Sub_Status = SUB_STATUS.ALARM;
+                }
+                else
+                    Agv.Sub_Status = SUB_STATUS.IDLE;
+            }
             Agv.AGVC.IsAGVExecutingTask = false;
             OnTaskFinish(RunningTaskData.Task_Simplex);
             _ = Task.Factory.StartNew(async () =>
@@ -170,7 +174,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         public abstract void LaserSettingBeforeTaskExecute();
 
-        internal void Abort()
+        internal virtual void Abort()
         {
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
         }

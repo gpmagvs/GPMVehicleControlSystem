@@ -367,6 +367,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (!Initresult.success)
                     throw new Exception();
 
+
                 var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true); //移動到上方五公分
                 if (!result.success)
                     throw new Exception();
