@@ -27,6 +27,6 @@ namespace GPMVehicleControlSystem.Models.WorkStation
         /// <summary>
         /// 工位交握方式
         /// </summary>
-        public WORKSTATION_HS_METHOD HandShakeMode { get; set; } = WORKSTATION_HS_METHOD.NO_HS;
+        public WORKSTATION_HS_METHOD HandShakeModeHandShakeMode { get; set; } = WORKSTATION_HS_METHOD.NO_HS;
     }
 }

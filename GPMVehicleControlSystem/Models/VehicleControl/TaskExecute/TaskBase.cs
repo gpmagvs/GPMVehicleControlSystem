@@ -16,6 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public Vehicle Agv { get; }
         private clsTaskDownloadData _RunningTaskData;
         public Action<string> OnTaskFinish;
+        protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;
@@ -64,7 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-
+                TaskCancelCTS = new CancellationTokenSource();
                 Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
@@ -121,7 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
 
-            if(Agv.Sub_Status== SUB_STATUS.DOWN)
+            if (Agv.Sub_Status == SUB_STATUS.DOWN)
             {
                 LOG.Critical($"AfterMoveFinishHandler BUT AGV STATUS DOWN");
             }
@@ -136,6 +137,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                     Agv.Sub_Status = SUB_STATUS.IDLE;
             }
+
             Agv.AGVC.IsAGVExecutingTask = false;
             OnTaskFinish(RunningTaskData.Task_Simplex);
             _ = Task.Factory.StartNew(async () =>
@@ -176,6 +178,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal virtual void Abort()
         {
+            TaskCancelCTS.Cancel();
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
         }
 

@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient;
@@ -129,10 +130,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         /// <value></value>
         public bool IsAGVExecutingTask { get; set; } = false;
-        public bool TaskIsSegment => RunningTaskData.IsTaskSegmented;
         public CarController()
         {
-
         }
 
         public CarController(string IP, int Port) : base(IP, Port)

@@ -434,7 +434,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Thread.Sleep(1);
                     tryCnt++;
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
-                    forkMoveREsult = await ForkPose(position_to_reach, 0.5);
+                    forkMoveREsult = await ForkPose(position_to_reach, 0.3);
 
                     if (!forkMoveREsult.confirm && tryCnt > 5)
                     {

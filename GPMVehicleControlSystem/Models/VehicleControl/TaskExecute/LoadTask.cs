@@ -82,7 +82,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 bool arm_move_Done = false;
                 bool armMoveing = false;
-                var isNeedArmExtend =( (Agv as ForkAGV).WorkStations as clsForkWorkStationModel).Stations[destineTag].ForkArmExtend;
+                var isNeedArmExtend = ((Agv as ForkAGV).WorkStations as clsForkWorkStationModel).Stations[destineTag].ForkArmExtend;
+
                 if (isNeedArmExtend)
                 {
                     armMoveing = await ForkLifter.ForkExtendOutAsync();
@@ -106,6 +107,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             }
 
+            if (TaskCancelCTS.IsCancellationRequested)
+                return (false, AlarmCodes.None);
+
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
@@ -118,6 +122,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             while (!back_to_secondary_flag)
             {
+                if (TaskCancelCTS.IsCancellationRequested)
+                    return (false, AlarmCodes.None);
                 Thread.Sleep(1);
             }
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
@@ -129,7 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                await ForkLifter.ForkGoHome(wait_done: action == ACTION_TYPE.Unload);
+                await ForkLifter.ForkGoHome();
             }
 
 
@@ -150,11 +156,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             CancellationTokenSource timeout_check = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             while (ForkLifter.CurrentForkARMLocation != locationExpect)
             {
+                if (TaskCancelCTS.IsCancellationRequested)
+                    return false;
                 if (Agv.Sub_Status != SUB_STATUS.RUN)
                     return false;
                 Thread.Sleep(1);
                 if (timeout_check.IsCancellationRequested)
                     return false;
+
             }
             return true;
         }
