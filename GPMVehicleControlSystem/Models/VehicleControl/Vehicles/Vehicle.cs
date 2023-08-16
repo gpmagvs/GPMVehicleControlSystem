@@ -121,11 +121,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Initializing:
                         return MAIN_STATUS.DOWN;
                     case SUB_STATUS.ALARM:
-                        return MAIN_STATUS.DOWN;
+                        return MAIN_STATUS.IDLE;
                     case SUB_STATUS.WARNING:
                         return MAIN_STATUS.IDLE;
                     case SUB_STATUS.STOP:
-                        return MAIN_STATUS.DOWN;
+                        return MAIN_STATUS.IDLE;
                     default:
                         return MAIN_STATUS.DOWN;
                 }
@@ -266,9 +266,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
                 int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
                 int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS: LastVisitedTag");
-
                 string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
                 int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
+
+                string EQHSMethod = AppSettingsHelper.GetValue<string>("VCS:EQHandshakeMethod");
+                EQ_HS_Method = Enum.GetValues(typeof(EQ_HS_METHOD)).Cast<EQ_HS_METHOD>().First(v => v.ToString() == EQHSMethod);
+
                 SID = AppSettingsHelper.GetValue<string>("VCS:SID");
                 CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
                 AGVSMessageFactory.Setup(SID, CarName);
@@ -325,6 +328,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
+                LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
             }
             catch (Exception ex)
             {
@@ -448,6 +452,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
             WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
             WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
         }
 
 
@@ -840,7 +848,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 clsCorrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                 clsCorrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                clsCorrdination.Theta = Math.Round(BarcodeReader.Data.theta, 3);
+                clsCorrdination.Theta = Math.Round(Navigation.Angle, 3);
             }
             //gen alarm codes 
 
@@ -868,7 +876,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag
+                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+              
                 };
             }
             catch (Exception ex)

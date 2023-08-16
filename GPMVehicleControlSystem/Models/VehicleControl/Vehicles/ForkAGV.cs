@@ -4,7 +4,6 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
-using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -25,7 +24,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
         public bool IsForkInitialized => ForkLifter.IsInitialized;
-        public override clsWorkStationModel WorkStations { get; set; } = new clsForkWorkStationModel();
+        public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {
@@ -117,8 +116,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)
         {
-            clsForkWorkStationModel? dat = JsonConvert.DeserializeObject<clsForkWorkStationModel>(json);
-            foreach (KeyValuePair<int, clsForkWorkStationData> station in dat.Stations)
+            clsWorkStationModel? dat = JsonConvert.DeserializeObject<clsWorkStationModel>(json);
+            foreach (KeyValuePair<int, clsWorkStationData> station in dat.Stations)
             {
                 while (station.Value.LayerDatas.Count != 3)
                 {

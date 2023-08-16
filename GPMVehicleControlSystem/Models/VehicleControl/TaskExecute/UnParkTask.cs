@@ -13,6 +13,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public UnParkTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-
     }
 }

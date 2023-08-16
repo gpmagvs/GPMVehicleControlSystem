@@ -1,7 +1,7 @@
 ﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
-using GPMVehicleControlSystem.ViewModels.ForkTeach;
+using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Microsoft.AspNetCore.Mvc;
 using static SQLite.SQLite3;
 
@@ -13,7 +13,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         private object GetMappData()
         {
-            Dictionary<int, clsForkWorkStationData> settings = forkAgv.ForkLifter.StationDatas;
+            Dictionary<int, clsWorkStationData> settings = forkAgv.ForkLifter.StationDatas;
             var mapped_data = settings.OrderBy(dat => dat.Key).Select(dat => new
             {
                 Tag = dat.Key,
@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Fork/SaveTeachDatas")]
         public async Task<IActionResult> SaveTeachDatas(Dictionary<int, Dictionary<int, clsStationLayerData>> data)
         {
-            (forkAgv.WorkStations as clsForkWorkStationModel).Stations = data.ToDictionary(d => d.Key, d => new clsForkWorkStationData()
+            (forkAgv.WorkStations as clsWorkStationModel).Stations = data.ToDictionary(d => d.Key, d => new clsWorkStationData()
             {
                 LayerDatas = d.Value
             });

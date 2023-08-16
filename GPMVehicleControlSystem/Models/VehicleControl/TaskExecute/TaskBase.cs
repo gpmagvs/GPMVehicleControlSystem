@@ -4,7 +4,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
+using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -84,7 +84,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (ForkLifter != null)
                 {
                     if (action == ACTION_TYPE.None)
-                        ForkLifter.ForkGoHome();
+                        await ForkLifter.ForkGoHome();
                     else
                         ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                 }
@@ -186,7 +186,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public async void ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
-            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position).Result;
+            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1.0).Result;
         }
     }
 }

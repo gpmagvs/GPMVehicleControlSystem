@@ -39,7 +39,7 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("agv_online")]
         public async Task<IActionResult> agv_online()
         {
-            if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE)
+            if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE && agv.Sub_Status != clsEnums.SUB_STATUS.Charging)
             {
                 return Ok(new { ReturnCode = 4231, Message = $"當前狀態不可上線({agv.Sub_Status})" });
             }

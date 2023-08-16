@@ -11,8 +11,7 @@ using System.Security.AccessControl;
 using AGVSystemCommonNet6.Log;
 using Newtonsoft.Json;
 using GPMVehicleControlSystem.Models.VCSSystem;
-using GPMVehicleControlSystem.ViewModels.ForkTeach;
-using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
+using GPMVehicleControlSystem.Models.WorkStation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -94,11 +93,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
 
-        public Dictionary<int, clsForkWorkStationData> StationDatas
+        public Dictionary<int, clsWorkStationData> StationDatas
         {
             get
             {
-                return (forkAGV.WorkStations as clsForkWorkStationModel).Stations;
+                return forkAGV.WorkStations.Stations;
             }
         }
 
@@ -397,12 +396,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <param name="layer">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position)
+        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position, double speed)
         {
             try
             {
 
-                if (!StationDatas.TryGetValue(tag, out clsForkWorkStationData? workStation))
+                if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
 
@@ -434,7 +433,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Thread.Sleep(1);
                     tryCnt++;
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
-                    forkMoveREsult = await ForkPose(position_to_reach, 0.3);
+                    forkMoveREsult = await ForkPose(position_to_reach, speed);
 
                     if (!forkMoveREsult.confirm && tryCnt > 5)
                     {

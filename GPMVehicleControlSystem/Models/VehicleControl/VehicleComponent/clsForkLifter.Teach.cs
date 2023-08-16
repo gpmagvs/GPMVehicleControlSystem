@@ -1,7 +1,6 @@
 ﻿using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.WorkStation;
-using GPMVehicleControlSystem.Models.WorkStation.ForkTeach;
-using GPMVehicleControlSystem.ViewModels.ForkTeach;
+using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Newtonsoft.Json;
 using System.Security.Cryptography.X509Certificates;
 
@@ -16,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             int tag = unit_teach_data_model.Tag;
             int layer = unit_teach_data_model.Layer;
-            if (StationDatas.TryGetValue(tag, out clsForkWorkStationData? station))
+            if (StationDatas.TryGetValue(tag, out clsWorkStationData? station))
             {
                 if (station.LayerDatas.TryGetValue(layer, out var LayerTeachData))
                 {
@@ -34,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             else
             {
-                StationDatas.Add(tag, new clsForkWorkStationData
+                StationDatas.Add(tag, new clsWorkStationData
                 {
                     LayerDatas = new Dictionary<int, clsStationLayerData>
                      {
@@ -70,7 +69,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal bool RemoveUnitTeachData(int tag, int layer)
         {
-            if (StationDatas.TryGetValue(tag, out clsForkWorkStationData? dat))
+            if (StationDatas.TryGetValue(tag, out clsWorkStationData? dat))
             {
                 if (!dat.LayerDatas.TryGetValue(layer, out var unit_data))
                     return false;
