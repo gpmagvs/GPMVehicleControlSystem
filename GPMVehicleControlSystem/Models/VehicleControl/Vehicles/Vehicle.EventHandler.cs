@@ -177,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.EMOHandler(sender, e);
             IsInitialized = false;
             ExecutingTask?.Abort();
-            AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+            HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             DirectionLighter.CloseAll();
         }
 

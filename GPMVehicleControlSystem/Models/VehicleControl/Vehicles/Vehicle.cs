@@ -21,6 +21,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -320,7 +321,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 Task WagoDIConnTask = WagoDIInit();
-
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
                 DownloadMapFromServer();
@@ -328,6 +328,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
+                TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
             }
             catch (Exception ex)
@@ -406,7 +407,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //AGVS
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
-            AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
+            AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
@@ -476,6 +477,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
             else
             {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
                 {
                     AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
@@ -503,6 +507,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
                 {
                     AlarmManager.ClearAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
@@ -536,6 +543,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
                 {
                     AlarmManager.ClearAlarm(diState.Input == DI_ITEM.RightProtection_Area_Sensor_2 ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2);
@@ -789,18 +799,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        /// <summary>
-        /// 成功完成移動任務的處理
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="taskData"></param>
 
-
-        private bool AGVSRemoteModeChangeReq(REMOTE_MODE mode)
+        internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
+            string request_user_name = IsAGVSRequest ? "派車" : "車載用戶";
+            LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
             if (mode != Remote_Mode)
             {
-
+                (bool success, RETURN_CODE return_code) result = new(false, RETURN_CODE.NG);
                 Task reqTask = new Task(async () =>
                 {
                     if (OnlineModeChangingFlag)
@@ -808,21 +814,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return;
                     }
                     OnlineModeChangingFlag = true;
-                    (bool success, RETURN_CODE return_code) result = await Online_Mode_Switch(mode);
+                    result = await Online_Mode_Switch(mode);
                     if (result.success)
                     {
                         Remote_Mode = mode;
-                        Console.WriteLine($"[Online Mode Change] 請求 {mode} 成功!");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[Online Mode Change] 請求 {mode} 失敗!(Return Code = {(int)result.return_code}-{result.return_code}) 現在是 {Remote_Mode}");
                     }
                     OnlineModeChangingFlag = false;
                 });
                 reqTask.Start();
+                Task.WaitAll(new Task[] { reqTask });
+
+                bool isChanged = Remote_Mode == mode;
+                if (isChanged)
+                {
+                    LOG.WARN($"{request_user_name} 請求變更Online模式---成功");
+                }
+                else
+                {
+                    LOG.ERROR($"{request_user_name} 請求變更Online模式---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
+                }
+                return Remote_Mode == mode;
             }
-            return true;
+            else
+            {
+
+                LOG.WARN($"已經是{mode}");
+                return true;
+            }
         }
 
         /// <summary>
@@ -877,7 +895,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
-              
+
                 };
             }
             catch (Exception ex)
