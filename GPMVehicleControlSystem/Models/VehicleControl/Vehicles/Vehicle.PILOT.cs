@@ -133,18 +133,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(() =>
             {
                 LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID}");
-
-                //int TagPointIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().FindIndex(pt => pt.Point_ID == previousTagPoint.Point_ID);
-                //int nextPointIndex = TagPointIndex + 1;
-                //clsMapPoint nextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextPointIndex];
-                //Laser.AgvsLsrSetting = nextTagPoint.Laser;
-                //if (ExecutingTask.action == ACTION_TYPE.None)
-                //{
-                //    Laser.ApplyAGVSLaserSetting();
-                //    LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID},雷射切換為 Tag {nextTagPoint.Point_ID},{nextTagPoint.Laser}");
-                //}
-                if (ActiveTrafficControl)
-                    TrafficStop();
             });
 
         }
