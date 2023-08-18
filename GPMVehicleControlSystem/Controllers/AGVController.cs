@@ -39,11 +39,11 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("agv_online")]
         public async Task<IActionResult> agv_online()
         {
-            if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE)
-            {
-                return Ok(new { ReturnCode = 4231, Message = $"當前狀態不可上線({agv.Sub_Status})" });
-            }
-            agv.Remote_Mode = REMOTE_MODE.ONLINE;
+            //if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE && agv.Sub_Status != clsEnums.SUB_STATUS.Charging)
+            //{
+            //    return Ok(new { ReturnCode = 4231, Message = $"當前狀態不可上線({agv.Sub_Status})" });
+            //}
+            agv.HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE , IsAGVSRequest:true);
             return Ok(new
             {
                 ReturnCode = 0,
@@ -55,7 +55,7 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("agv_offline")]
         public async Task<IActionResult> agv_offline()
         {
-            agv.Remote_Mode = REMOTE_MODE.OFFLINE;
+            agv.HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE, IsAGVSRequest:true);
             return Ok(new { Success = true, Message = "" });
         }
 

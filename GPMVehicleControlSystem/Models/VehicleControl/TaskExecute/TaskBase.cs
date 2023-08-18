@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -15,6 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public Vehicle Agv { get; }
         private clsTaskDownloadData _RunningTaskData;
         public Action<string> OnTaskFinish;
+        protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;
@@ -63,6 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                TaskCancelCTS = new CancellationTokenSource();
                 Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
@@ -80,7 +83,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (ForkLifter != null)
                 {
-                     ChangeForkPositionBeforeInWorkStation();
+                    if (action == ACTION_TYPE.None)
+                        await ForkLifter.ForkGoHome();
+                    else
+                        ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                 }
 
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
@@ -113,27 +119,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async void AfterMoveFinishHandler(object? sender, clsTaskDownloadData e)
         {
-
-            LOG.INFO($" [{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
-
+            LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
 
-            if (ForkLifter != null)
+            if (Agv.Sub_Status == SUB_STATUS.DOWN)
             {
-                await ForkLifter.ForkGoHome(1);
-            }
-
-            (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
-            if (!check_result.confirm)
-            {
-                AlarmManager.AddAlarm(check_result.alarm_code, false);
-                Agv.Sub_Status = SUB_STATUS.ALARM;
+                LOG.Critical($"AfterMoveFinishHandler BUT AGV STATUS DOWN");
             }
             else
-                Agv.Sub_Status = SUB_STATUS.IDLE;
+            {
+                (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
+                if (!check_result.confirm)
+                {
+                    AlarmManager.AddAlarm(check_result.alarm_code, false);
+                    Agv.Sub_Status = SUB_STATUS.ALARM;
+                }
+                else
+                    Agv.Sub_Status = SUB_STATUS.IDLE;
+            }
 
             Agv.AGVC.IsAGVExecutingTask = false;
             OnTaskFinish(RunningTaskData.Task_Simplex);
+            _ = Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                Agv.DirectionLighter.CloseAll();
+            });
         }
 
         public virtual async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
@@ -165,15 +176,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         public abstract void LaserSettingBeforeTaskExecute();
 
-        internal void Abort()
+        internal virtual void Abort()
         {
+            TaskCancelCTS.Cancel();
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
         }
 
 
-        public virtual async void ChangeForkPositionBeforeInWorkStation()
+        public async void ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
         {
-            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 1, ForkTeach.FORK_HEIGHT_POSITION.DOWN_);
+            LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
+            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1.0).Result;
         }
     }
 }

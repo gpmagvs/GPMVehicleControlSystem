@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             CSTActionDone = true;
             return true;
         }
-
+        protected virtual string cst_reader_command { get; set; } = "read_try";
         /// <summary>
         /// 中止 Reader 拍照
         /// </summary>
@@ -55,7 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
             CSTReaderCommandResponse? response = rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
-                new CSTReaderCommandRequest() { command = "read_try", model = "FORK" });
+                new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
 
             if (response == null)
             {

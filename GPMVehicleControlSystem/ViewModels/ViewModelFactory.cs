@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using AGVSystemCommonNet6.MAP;
+using GPMVehicleControlSystem.Models.RDTEST;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -213,6 +214,14 @@ namespace GPMVehicleControlSystem.ViewModels
         internal static object GetSystemMessagesVM()
         {
             return StaSysMessageManager.SysMessages;
+        }
+
+        internal static object GetRDTestData()
+        {
+            return new
+            {
+                move_test = StaRDTestManager.MoveTester.testing_data
+            };
         }
     }
 }

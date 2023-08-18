@@ -1,11 +1,13 @@
-﻿using GPMVehicleControlSystem.Models.ForkTeach;
+﻿
 
-namespace GPMVehicleControlSystem.ViewModels.ForkTeach
+using GPMVehicleControlSystem.Models.WorkStation;
+
+namespace GPMVehicleControlSystem.ViewModels.WorkStation
 {
     public class clsSaveUnitTeachDataVM
     {
         public int Tag { get; set; } = 0;
         public int Layer { get; set; } = 0;
-        public clsTeachData TeachData { get; set; } = new clsTeachData();
+        public clsWorkStationData TeachData { get; set; } = new clsWorkStationData();
     }
 }

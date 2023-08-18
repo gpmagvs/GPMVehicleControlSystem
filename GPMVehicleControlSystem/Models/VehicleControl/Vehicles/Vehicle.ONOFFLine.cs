@@ -29,8 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
-            (bool success, RETURN_CODE return_code) result = (false, RETURN_CODE.System_Error);
-            result = await AGVS.TrySendOnlineModeChangeRequest(Navigation.LastVisitedTag, mode);
+            (bool success, RETURN_CODE return_code) result =   AGVS.TrySendOnlineModeChangeRequest(Navigation.LastVisitedTag, mode).Result;
             if (!result.success)
                 LOG.ERROR($"車輛{mode}失敗 : Return Code : {result.return_code}");
             else

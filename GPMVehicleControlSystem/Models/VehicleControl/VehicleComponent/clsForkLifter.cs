@@ -9,10 +9,9 @@ using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Security.AccessControl;
 using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.ForkTeach;
 using Newtonsoft.Json;
 using GPMVehicleControlSystem.Models.VCSSystem;
-using GPMVehicleControlSystem.ViewModels.ForkTeach;
+using GPMVehicleControlSystem.Models.WorkStation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -40,7 +39,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsForkLifter()
         {
-            LoadTeachDataSettingFromJsonConfigs();
+        }
+
+        public clsForkLifter(ForkAGV forkAGV)
+        {
+            this.forkAGV = forkAGV;
         }
 
         public FORK_LOCATIONS CurrentForkLocation
@@ -89,7 +92,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
-        public clsForkTeach ForkTeachData { get; set; } = new clsForkTeach();
+
+        public Dictionary<int, clsWorkStationData> StationDatas
+        {
+            get
+            {
+                return forkAGV.WorkStations.Stations;
+            }
+        }
 
         public clsDIModule DIModule
         {
@@ -143,6 +153,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         internal ForkAGVController fork_ros_controller;
+        private ForkAGV forkAGV;
 
         public override void CheckStateDataContent()
         {
@@ -174,10 +185,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (pose < 0)
                 pose = 0;
             await HardwareLimitSaftyCheck();
-            if (pose > ForkTeachData.Up_Pose_Limit)
-                pose = ForkTeachData.Up_Pose_Limit;
-            if (pose < ForkTeachData.Down_Pose_Limit)
-                pose = ForkTeachData.Down_Pose_Limit;
+            //if (pose > ForkTeachData.Up_Pose_Limit)
+            //    pose = ForkTeachData.Up_Pose_Limit;
+            //if (pose < ForkTeachData.Down_Pose_Limit)
+            //    pose = ForkTeachData.Down_Pose_Limit;
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
@@ -349,9 +360,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                     isHomeReachFirst = true;
 
+                await Task.Delay(500);
                 (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
+
                 if (!Initresult.success)
                     throw new Exception();
+
 
                 var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true); //移動到上方五公分
                 if (!result.success)
@@ -382,15 +396,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <param name="layer">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position)
+        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position, double speed)
         {
             try
             {
 
-                if (!ForkTeachData.Teaches.TryGetValue(tag, out Dictionary<int, clsTeachData>? layerTeaches))
+                if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
-                if (!layerTeaches.TryGetValue(layer, out clsTeachData? teach))
+
+                if (!workStation.LayerDatas.TryGetValue(layer, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
                 (bool confirm, string message) forkMoveREsult = (false, "");
 
@@ -404,19 +419,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 int tryCnt = 0;
                 double positionError = 0;
                 double errorTorlence = 0.5;
+
+                LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
+
                 //
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
+                    if (forkAGV.Sub_Status != SUB_STATUS.RUN)
+                    {
+                        LOG.WARN($"Tag:{tag},{position} AGV Status Not RUN ,Break Try ");
+                        return (false, AlarmCodes.None);
+                    }
                     Thread.Sleep(1);
                     tryCnt++;
-                    forkMoveREsult = await ForkPose(position_to_reach, 0.5);
+                    LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
+                    forkMoveREsult = await ForkPose(position_to_reach, speed);
 
                     if (!forkMoveREsult.confirm && tryCnt > 5)
                     {
 
                         return (false, AlarmCodes.Action_Timeout);
                     }
-                    else if (positionError> errorTorlence && tryCnt>5)
+                    else if (positionError > errorTorlence && tryCnt > 5)
                     {
                         return (false, AlarmCodes.Fork_Height_Setting_Error);
                     }

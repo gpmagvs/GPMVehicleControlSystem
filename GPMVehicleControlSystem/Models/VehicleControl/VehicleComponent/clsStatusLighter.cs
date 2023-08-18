@@ -11,47 +11,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         }
 
-        public override void CloseAll()
+        public override async void CloseAll()
         {
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
         }
 
-        public override void OpenAll()
+        public override async void OpenAll()
         {
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
         }
-        public void RUN()
+        public async void RUN()
         {
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
         }
-        public void DOWN()
+        public async void DOWN()
         {
             try
             {
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
             }
             catch (Exception ex)
             {
 
             }
         }
-        public void IDLE()
+        public async void IDLE()
         {
             try
             {
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
             }
             catch (Exception ex)
             {

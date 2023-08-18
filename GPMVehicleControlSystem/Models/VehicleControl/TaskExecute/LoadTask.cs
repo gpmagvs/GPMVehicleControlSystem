@@ -7,6 +7,9 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using System.Formats.Asn1;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
+using GPMVehicleControlSystem.Models.WorkStation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -24,6 +27,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Load;
+
+        private WORKSTATION_HS_METHOD eqHandshakeMode
+        {
+            get
+            {
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                {
+                    WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
+                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
+                    return mode;
+                }
+                else
+                {
+                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined!");
+                    return WORKSTATION_HS_METHOD.NO_HS;
+                }
+            }
+        }
 
         private bool back_to_secondary_flag = false;
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
@@ -44,8 +65,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, CstBarcodeCheckResult.alarmCode);
 
 
-            if (RunningTaskData.IsNeedHandshake)
+            if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
+                if (Agv.EQ_HS_Method == Vehicle.EQ_HS_METHOD.MODBUS)
+                {
+                    var eqModbusConn = await Agv.ModbusTcpConnect();
+                    if (!eqModbusConn)
+                    {
+                        return (false, AlarmCodes.Waiting_EQ_Handshake);
+                    }
+                }
+
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
                 if (!HSResult.eqready)
                 {
@@ -60,20 +90,59 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
         {
             Agv.DirectionLighter.CloseAll();
-            (bool hs_success, AlarmCodes alarmCode) HSResult = await Agv.WaitEQBusyOFF(action);
-            if (!HSResult.hs_success)
+            (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
+            var _eqHandshakeMode = eqHandshakeMode;
+            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                Agv.DirectionLighter.CloseAll();
-                return (false, HSResult.alarmCode);
+                HSResult = await Agv.WaitEQBusyOFF(action);
+                if (!HSResult.hs_success)
+                {
+                    Agv.DirectionLighter.CloseAll();
+                    return (false, HSResult.alarmCode);
+                }
             }
             Agv.DirectionLighter.CloseAll();
+
+            back_to_secondary_flag = false;
+            await Task.Delay(1000);
+
+            if (ForkLifter != null)
+            {
+                bool arm_move_Done = false;
+                bool armMoveing = false;
+                var isNeedArmExtend = Agv.WorkStations.Stations[destineTag].ForkArmExtend;
+
+                if (isNeedArmExtend)
+                {
+                    armMoveing = await ForkLifter.ForkExtendOutAsync();
+                    arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
+                }
+                else
+                {
+                    arm_move_Done = true;
+                }
+                if (arm_move_Done)
+                {
+                    await ChangeForkPositionInWorkStation();
+                    if (isNeedArmExtend)
+                    {
+                        armMoveing = await ForkLifter.ForkShortenInAsync();
+                        arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
+                        if (!arm_move_Done)
+                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
+                }
+
+            }
+
             //檢查在席
             (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
-            back_to_secondary_flag = false;
-            await Task.Delay(1000);
+            if (TaskCancelCTS.IsCancellationRequested)
+                return (false, AlarmCodes.None);
+
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
@@ -86,13 +155,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             while (!back_to_secondary_flag)
             {
+                if (TaskCancelCTS.IsCancellationRequested)
+                    return (false, AlarmCodes.None);
                 Thread.Sleep(1);
             }
             Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
-            HSResult = await Agv.WaitEQReadyOFF(action);
-            if (!HSResult.hs_success)
+
+            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                return (false, HSResult.alarmCode);
+                HSResult = await Agv.WaitEQReadyOFF(action);
+                if (!HSResult.hs_success)
+                {
+                    return (false, HSResult.alarmCode);
+                }
+            }
+
+            if (ForkLifter != null)
+            {
+                await ForkLifter.ForkGoHome();
             }
 
 
@@ -103,6 +183,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await base.AfterMoveDone();
         }
 
+        protected async virtual Task ChangeForkPositionInWorkStation()
+        {
+            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.3);
+
+        }
+        private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)
+        {
+            CancellationTokenSource timeout_check = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            while (ForkLifter.CurrentForkARMLocation != locationExpect)
+            {
+                if (TaskCancelCTS.IsCancellationRequested)
+                    return false;
+                if (Agv.Sub_Status != SUB_STATUS.RUN)
+                    return false;
+                Thread.Sleep(1);
+                if (timeout_check.IsCancellationRequested)
+                    return false;
+
+            }
+            return true;
+        }
         public override async void LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.AllLaserDisable();
@@ -235,6 +336,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.DirectionLighter.Forward();
         }
-
+        internal override void Abort()
+        {
+            base.Abort();
+            Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
+        }
     }
 }

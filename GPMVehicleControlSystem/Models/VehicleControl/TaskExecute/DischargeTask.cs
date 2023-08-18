@@ -16,7 +16,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
-            Agv.DirectionLighter.Backward();
+            Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                Agv.DirectionLighter.Backward();
+            });
         }
 
 
@@ -26,5 +30,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
+        {
+            if (ForkLifter != null)
+                await ForkLifter.ForkGoHome();
+            return await base.AfterMoveDone();
+        }
     }
 }
