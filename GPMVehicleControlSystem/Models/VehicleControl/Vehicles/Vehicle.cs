@@ -850,23 +850,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal virtual RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
         {
-            clsCoordination clsCorrdination = new clsCoordination();
+            clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             if (SimulationMode)
                 emulator.Runstatus.AGV_Status = _Main_Status;
             if (getLastPtPoseOfTrajectory)
             {
                 var lastPt = ExecutingTask.RunningTaskData.ExecutingTrajecory.Last();
-                clsCorrdination.X = lastPt.X;
-                clsCorrdination.Y = lastPt.Y;
-                clsCorrdination.Theta = lastPt.Theta;
+                Corrdination.X = lastPt.X;
+                Corrdination.Y = lastPt.Y;
+                Corrdination.Theta = lastPt.Theta;
                 _Main_Status = MAIN_STATUS.IDLE;
             }
             else
             {
-                clsCorrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
-                clsCorrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                clsCorrdination.Theta = Math.Round(Navigation.Angle, 3);
+                Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+                Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+                Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             }
             //gen alarm codes 
 
@@ -889,8 +889,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
-                    Last_Visited_Node = Navigation.Data.lastVisitedNode.data,
-                    Coordination = clsCorrdination,
+                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint? lastVisitedMapPoint.TagNumber: Navigation.Data.lastVisitedNode.data,
+                    Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,

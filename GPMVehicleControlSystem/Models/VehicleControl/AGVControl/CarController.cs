@@ -419,5 +419,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();
         public abstract Task<(bool request_success, bool action_done)> AbortCSTReader();
 
+        internal void InvokeTaskActionFinishAndSuccess()
+        {
+            OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
+        }
     }
 }

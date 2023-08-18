@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -49,6 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public List<int> TrackingTags { get; private set; } = new List<int>();
         public clsForkLifter ForkLifter { get; internal set; }
         public int destineTag => _RunningTaskData == null ? -1 : _RunningTaskData.Destination;
+        public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
 
         public TaskBase(Vehicle Agv, clsTaskDownloadData taskDownloadData)
         {

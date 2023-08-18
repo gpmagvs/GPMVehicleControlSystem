@@ -13,6 +13,7 @@ using AGVSystemCommonNet6.Alarm;
 using System.Security.Claims;
 using GPMVehicleControlSystem.Models.Buzzer;
 using RosSharp.RosBridgeClient.Actionlib;
+using AGVSystemCommonNet6.MAP;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -135,7 +136,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
-        internal bool AGVSTaskResetReqHandle(RESET_MODE mode)
+        internal bool AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
         {
             if (!AGVC.IsAGVExecutingTask)
                 return true;
@@ -145,8 +146,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVC.AbortTask(mode);
                 if (mode == RESET_MODE.ABORT)
                 {
-                    AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
-                    Sub_Status = SUB_STATUS.DOWN;
+                    if (!normal_state)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
+                        Sub_Status = SUB_STATUS.DOWN;
+                    }
                     await Task.Delay(500);
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     ExecutingTask.Abort();
@@ -229,15 +233,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 
-            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
-            {
-                Name = Navigation.LastVisitedTag.ToString(),
-                TagNumber = Navigation.LastVisitedTag
-            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
+            var _lastVisitedMapPoint = GetLastVisitedMapPoint();
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
             IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
 
 
+        }
+
+        private MapPoint GetLastVisitedMapPoint()
+        {
+            if (NavingMap == null)
+                return new MapPoint
+                {
+                    Name = Navigation.LastVisitedTag.ToString(),
+                    TagNumber = Navigation.LastVisitedTag
+                };
+            return NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == Navigation.LastVisitedTag);//虛擬點
         }
 
         private void CarController_OnSickDataUpdated(object? sender, LocalizationControllerResultMessage0502 sick_loc_data)
