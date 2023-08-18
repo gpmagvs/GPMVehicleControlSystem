@@ -1,7 +1,7 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using gpmvehiclecontrolsystem.models.vehiclecontrol.agvcontrol;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -68,7 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, "");
         }
    
-        protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
+        protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port) //Car control part
         {
             AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;

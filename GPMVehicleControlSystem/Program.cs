@@ -12,7 +12,7 @@ using System.Reflection;
 
 _ = Task.Run(() =>
 {
-    LOG.SetLogFolderName(AppSettingsHelper.LogFolder);
+    LOG.SetLogFolderName(AppSettingsHelper.LogFolder);  //這個程式碼片段是軟體應用程式的初始化或設置程序的一部分，涉及到車輛控制系統和相關配置。它初始化日誌記錄、擷取版本資訊、從 JSON 檔案加載警報清單、初始化數據庫連接、擷取配置值，並根據該值進行配置。
     StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/AlarmList.json"), out string message);
     if (!alarmListLoaded)
@@ -23,7 +23,7 @@ _ = Task.Run(() =>
 
 });
 
-void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
+void VehicheAndWagoIOConfiguraltion(int agvTypeInt)  //車子控制
 {
     if (agvTypeInt == 0)
     {
@@ -41,7 +41,7 @@ void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
     LOG.INFO($"AGV-{StaStored.CurrentVechicle.AgvType} Created！！");
 }
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);  //Web API build in here
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

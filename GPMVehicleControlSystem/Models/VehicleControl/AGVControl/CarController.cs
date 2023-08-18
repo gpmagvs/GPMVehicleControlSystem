@@ -62,33 +62,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             STOP_RIGHTNOW = 101,
             NONE = 090
         }
-        public RosSocket? rosSocket;
+        public RosSocket? rosSocket;//是用於 ROS（Robot Operating System）通訊的類別。
 
         /// <summary>
         /// 地圖比對率
         /// </summary>
-        public double MapRatio => LocalizationControllerResult.map_match_status / 100.0;
-        public LOCALIZE_STATE Localize_State => (LOCALIZE_STATE)LocalizationControllerResult.loc_status;
-        private LocalizationControllerResultMessage0502 LocalizationControllerResult = new LocalizationControllerResultMessage0502();
+        public double MapRatio => LocalizationControllerResult.map_match_status / 100.0;//這是一個計算屬性，返回地圖比對率。它根據 LocalizationControllerResult 物件的 map_match_status 屬性，將其除以 100.0 來計算地圖比對率。
+        public LOCALIZE_STATE Localize_State => (LOCALIZE_STATE)LocalizationControllerResult.loc_status;//是一個計算屬性，返回 LOCALIZE_STATE 列舉型別的值，該值基於 LocalizationControllerResult 物件的 loc_status 屬性。使用顯式轉換將 loc_status 的值轉換為 LOCALIZE_STATE 列舉型別。
+        private LocalizationControllerResultMessage0502 LocalizationControllerResult = new LocalizationControllerResultMessage0502();//代表 LocalizationControllerResultMessage0502 的一個新實例。它用來存儲定位控制器的結果。
 
-        public event EventHandler<ModuleInformation> OnModuleInformationUpdated;
-        public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
-        public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
-        public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
+        public event EventHandler<ModuleInformation> OnModuleInformationUpdated;//這是一個公開的事件，當模組資訊更新時會觸發該事件，並傳遞 ModuleInformation 類型的參數。
+        public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;//這是另一個公開的事件，當 Sick 定位資料更新時會觸發該事件，並傳遞 LocalizationControllerResultMessage0502 類型的參數。
+        public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;//這是一個公開的事件，當 Sick 原始微掃描資料更新時會觸發該事件，並傳遞 RawMicroScanDataMsg 類型的參數。
+        public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;//這是一個公開的事件，當 Sick 輸出路徑資料更新時會觸發該事件，並傳遞 OutputPathsMsg 類型的參數。
         /// <summary>
         /// 機器人任務結束且是成功完成的狀態
         /// </summary>
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishAndSuccess;
+        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishAndSuccess;//這個事件表示當機器人的任務成功完成並結束時，會觸發該事件。它使用 clsTaskDownloadData 類型的參數。
         /// <summary>
         /// 機器人任務結束因為被中斷
         /// </summary>
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishCauseAbort;
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishButNeedToExpandPath;
-        public event EventHandler<clsTaskDownloadData> OnMoveTaskStart;
+        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishCauseAbort;//這個事件表示當機器人的任務因被中斷而結束時，會觸發該事件。同樣也使用 clsTaskDownloadData 類型的參數。
+        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishButNeedToExpandPath;//這個事件表示當機器人的任務結束，但需要擴展路徑時，會觸發該事件。同樣也使用 clsTaskDownloadData 類型的參數。
+        public event EventHandler<clsTaskDownloadData> OnMoveTaskStart;//這個事件表示當機器人開始執行移動任務時，會觸發該事件。同樣也使用 clsTaskDownloadData 類型的參數。
 
-        internal TaskCommandActionClient actionClient;
+        internal TaskCommandActionClient actionClient;//這可能是用於發送任務命令到機器人控制系統的工具
 
-        private ActionStatus _currentTaskCmdActionStatus = ActionStatus.PENDING;
+        private ActionStatus _currentTaskCmdActionStatus = ActionStatus.PENDING;//私有成員，表示當前的任務命令動作狀態。它初始化為 ActionStatus.PENDING，即待處理狀態。
         public ActionStatus currentTaskCmdActionStatus
         {
             get => _currentTaskCmdActionStatus;
@@ -140,7 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
         }
 
-        public override bool Connect()
+        public override bool Connect() //這意味著當你在 CarController 的實例上調用 Connect 方法時，將會執行子類別 CarController 中所定義的 Connect 方法，而不是父類別中的版本。
         {
             while (!IsConnected())
             {
@@ -310,7 +310,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (Status == ActionStatus.SUCCEEDED | Status == ActionStatus.PENDING)
                     OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
                 else if (Status == ActionStatus.ABORTED)
-                    OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
+                    OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData); // 然後在需要觸發事件的地方，使用 _onTaskActionFinishCauseAbort 進行觸發
                 _currentTaskCmdActionStatus = ActionStatus.NO_GOAL;
             }
             else

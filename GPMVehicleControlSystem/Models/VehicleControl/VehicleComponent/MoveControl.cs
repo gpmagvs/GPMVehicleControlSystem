@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public void Stop()
         {
             PublishCmdVel(0, 0);
-            vehicle.DirectionLighter.CloseAll();
+            vehicle?.DirectionLighter.CloseAll();
         }
         public void Backward(double speed = 0.08)
         {

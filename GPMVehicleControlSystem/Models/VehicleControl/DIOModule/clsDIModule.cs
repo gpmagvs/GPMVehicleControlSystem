@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public List<clsIOSignal> VCSInputs = new List<clsIOSignal>();
         public ushort Start { get; set; }
         public ushort Size { get; set; }
-
+        
         public clsDIModule()
         {
         }

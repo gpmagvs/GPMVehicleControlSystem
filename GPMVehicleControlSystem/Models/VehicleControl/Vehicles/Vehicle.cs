@@ -30,25 +30,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public abstract partial class Vehicle
     {
 
-        public enum VMS_PROTOCOL
+        public enum VMS_PROTOCOL//// 列舉型別，代表通訊協定的不同類型：KGS、GPM_VMS
         {
             KGS,
             GPM_VMS
         }
 
-        public abstract clsDirectionLighter DirectionLighter { get; set; }
-        public clsStatusLighter StatusLighter { get; set; }
-        public clsAGVSConnection AGVS;
-        public VMS_PROTOCOL VmsProtocol = VMS_PROTOCOL.GPM_VMS;
-        public clsDOModule WagoDO;
-        public clsDIModule WagoDI;
-        public CarController AGVC;
-        public clsLaser Laser;
-        public string CarName { get; set; }
-        public string SID { get; set; }
+        public abstract clsDirectionLighter DirectionLighter { get; set; }// 屬性：方向燈控制器
+        public clsStatusLighter StatusLighter { get; set; }// 屬性：狀態燈控制器
+        public clsAGVSConnection AGVS;// 屬性：AGVS 連接器
+        public VMS_PROTOCOL VmsProtocol = VMS_PROTOCOL.GPM_VMS;// 屬性：VMS 協定類型，預設為 GPM_VMS
+        public clsDOModule WagoDO;// 屬性：Wago 數位輸出模組
+        public clsDIModule WagoDI;// 屬性：Wago 數位輸出模組
+        public CarController AGVC;// 屬性：CarController 類型，用於控制車輛動作
+        public clsLaser Laser;// 屬性：激光器類型
+        public string CarName { get; set; }// 屬性：車輛名稱
+        public string SID { get; set; }// 屬性：車輛識別號碼
 
         //public AGVPILOT Pilot { get; set; }
-        public clsNavigation Navigation = new clsNavigation();
+        public clsNavigation Navigation = new clsNavigation();// 屬性：導航系統
         public abstract Dictionary<ushort, clsBattery> Batteries { get; set; }
         public clsIMU IMU = new clsIMU();
         public clsGuideSensor GuideSensor = new clsGuideSensor();
@@ -173,12 +173,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (ExecutingTask == null)
+                if (ExecutingTask == null)//如果 ExecutingTask 是 null，則回傳一個新的 MapPoint 物件，該物件的 Name 屬性被設為空字串。
                     return new MapPoint { Name = "" };
                 else
                 {
-                    var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);
-                    return _point == null ? new MapPoint { Name = "Unknown" } : _point;
+                    var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);//如果找到相符的地圖點（表示 _point 不是 null），則回傳該地圖點。
+                    return _point == null ? new MapPoint { Name = "Unknown" } : _point;//如果未找到相符的地圖點（表示 _point 是 null），則回傳一個新的 MapPoint 物件，該物件的 Name 屬性被設為 "Unknown"。
                 }
             }
         }
