@@ -480,13 +480,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
                     return;
 
-                if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
+                if (IsAllLaserNoTrigger())
                 {
                     AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     AGVStatusChangeToRunWhenLaserRecovery();
                 }
             }
         }
+
+        internal bool IsAllLaserNoTrigger()
+        {
+            return WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2);
+        }
+
         /// <summary>
         /// 處理雷射第二段觸發
         /// </summary>
@@ -889,7 +895,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
-                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint? lastVisitedMapPoint.TagNumber: Navigation.Data.lastVisitedNode.data,
+                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,

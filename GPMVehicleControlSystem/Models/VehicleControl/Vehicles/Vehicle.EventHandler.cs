@@ -233,7 +233,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                 WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 
-            var _lastVisitedMapPoint = GetLastVisitedMapPoint();
+            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
+            {
+                Name = Navigation.LastVisitedTag.ToString(),
+                TagNumber = Navigation.LastVisitedTag
+            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
             IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
 

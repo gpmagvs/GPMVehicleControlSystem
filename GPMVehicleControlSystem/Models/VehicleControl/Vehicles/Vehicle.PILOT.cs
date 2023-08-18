@@ -190,8 +190,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (_TrafficState == TRAFFIC_ACTION.PASS)
                     {
-                        DirectionLighter.CloseAll();
-                        DirectionLighter.Forward();
+                        if (IsAllLaserNoTrigger())
+                        {
+                            AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                            DirectionLighter.Forward();
+                        }
+                        else
+                        {
+                            _TrafficState = TRAFFIC_ACTION.WAIT;
+                        }
                         LOG.INFO($"交管訊號以解除 {NextTagPoint?.Point_ID} Release!");
                     }
                     else
