@@ -3,8 +3,6 @@ using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
@@ -14,13 +12,16 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -60,6 +61,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             location = clsDriver.DRIVER_LOCATION.FORK
         };
 
+        /// <summary>
+        /// 工位數據
+        /// </summary>
+        public virtual clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public virtual clsForkLifter ForkLifter { get; set; }
 
         public clsDriver[] WheelDrivers = new clsDriver[] {
@@ -115,13 +120,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Charging:
                         return MAIN_STATUS.Charging;
                     case SUB_STATUS.Initializing:
-                        return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.ALARM:
                         return MAIN_STATUS.DOWN;
+                    case SUB_STATUS.ALARM:
+                        return MAIN_STATUS.IDLE;
                     case SUB_STATUS.WARNING:
                         return MAIN_STATUS.IDLE;
                     case SUB_STATUS.STOP:
-                        return MAIN_STATUS.DOWN;
+                        return MAIN_STATUS.IDLE;
                     default:
                         return MAIN_STATUS.DOWN;
                 }
@@ -156,13 +161,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (value)
                     {
                         BeforeChargingSubStatus = _Sub_Status;
-                        Sub_Status = SUB_STATUS.Charging;
+                        _Sub_Status = SUB_STATUS.Charging;
                         StatusLighter.ActiveGreen();
                     }
                     else
                     {
-                        StatusLighter.InActiveGreen();
-                        Sub_Status = BeforeChargingSubStatus;
+                        if (AGVC.IsAGVExecutingTask)
+                        {
+
+                            Sub_Status = SUB_STATUS.RUN;
+                        }
+                        else
+                        {
+                            StatusLighter.InActiveGreen();
+                            Sub_Status = BeforeChargingSubStatus;
+                        }
                     }
                     _IsCharging = value;
                 }
@@ -241,13 +254,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
                 Navigation.OnTagReach += OnTagReachHandler;
                 BarcodeReader.OnTagLeave += OnTagLeaveHandler;
-
+                LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
                 SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
-
-
                 AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
                 string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
                 int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
@@ -256,9 +267,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
                 int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
                 int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS: LastVisitedTag");
-
                 string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
                 int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
+
+                string EQHSMethod = AppSettingsHelper.GetValue<string>("VCS:EQHandshakeMethod");
+                EQ_HS_Method = Enum.GetValues(typeof(EQ_HS_METHOD)).Cast<EQ_HS_METHOD>().First(v => v.ToString() == EQHSMethod);
+
                 SID = AppSettingsHelper.GetValue<string>("VCS:SID");
                 CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
                 AGVSMessageFactory.Setup(SID, CarName);
@@ -307,7 +321,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 Task WagoDIConnTask = WagoDIInit();
-
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
                 DownloadMapFromServer();
@@ -315,6 +328,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
+                TrafficMonitor();
+                LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
             }
             catch (Exception ex)
             {
@@ -325,7 +340,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+        public string WorkStationSettingsJsonFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/WorkStation.json");
 
+        private void LoadWorkStationConfigs()
+        {
+            try
+            {
+
+                if (File.Exists(WorkStationSettingsJsonFilePath))
+                {
+                    string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
+                    if (json == null)
+                    {
+                        StaSysMessageManager.AddNewMessage("Load Fork Teach Data Fail...Read Json Null", 2);
+                        return;
+                    }
+                    WorkStations = DeserializeWorkStationJson(json);
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                StaSysMessageManager.AddNewMessage($"Load Fork Teach Data Fail...{ex.Message}", 2);
+            }
+            finally
+            {
+                SaveTeachDAtaSettings();
+            }
+        }
+        protected virtual clsWorkStationModel DeserializeWorkStationJson(string json)
+        {
+            return JsonConvert.DeserializeObject<clsWorkStationModel>(json);
+        }
+        internal bool SaveTeachDAtaSettings()
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(WorkStations, Formatting.Indented);
+                File.WriteAllText(WorkStationSettingsJsonFilePath, json);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         private void DownloadMapFromServer()
         {
             Task.Run(async () =>
@@ -347,7 +407,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //AGVS
             AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
             AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
-            AGVS.OnRemoteModeChanged = AGVSRemoteModeChangeReq;
+            AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
@@ -387,6 +447,126 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
             WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
             WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_2, HandleSideLaserSignal);
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_2, HandleSideLaserSignal);
+            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+        }
+
+
+
+        /// <summary>
+        /// 處理雷射第一段觸發
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void HandleLaserArea1SinalChange(object? sender, bool e)
+        {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL)
+                return;
+            if (!AGVC.IsAGVExecutingTask)
+                return;
+            clsIOSignal diState = (clsIOSignal)sender;
+            if (!diState.State && (diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1 ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
+                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
+            else
+            {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
+                if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
+                {
+                    AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                    AGVStatusChangeToRunWhenLaserRecovery();
+                }
+            }
+        }
+        /// <summary>
+        /// 處理雷射第二段觸發
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void HandleLaserArea2SinalChange(object? sender, bool e)
+        {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL)
+                return;
+            if (!AGVC.IsAGVExecutingTask)
+                return;
+            clsIOSignal diState = (clsIOSignal)sender;
+            if (!diState.State && (diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
+            {
+                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.STOP);
+                AlarmManager.AddAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
+                AGVStatusChangeToAlarmWhenLaserRecovery();
+            }
+            else
+            {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
+                if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
+                {
+                    AlarmManager.ClearAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
+                    AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
+                    AGVStatusChangeToRunWhenLaserRecovery();
+                }
+            }
+        }
+        private void HandleSideLaserSignal(object? sender, bool di_state)
+        {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL)
+                return;
+            if (!AGVC.IsAGVExecutingTask)
+                return;
+            clsIOSignal diState = (clsIOSignal)sender;
+            if (!di_state)
+            {
+                if (diState.Input == DI_ITEM.RightProtection_Area_Sensor_2 && !WagoDO.GetState(DO_ITEM.Right_LsrBypass))
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.RightProtection_Area2);
+                    _Sub_Status = SUB_STATUS.ALARM;
+                    BuzzerPlayer.Alarm();
+                }
+
+                if (diState.Input == DI_ITEM.LeftProtection_Area_Sensor_2 && !WagoDO.GetState(DO_ITEM.Left_LsrBypass))
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.LeftProtection_Area2);
+                    _Sub_Status = SUB_STATUS.ALARM;
+                    BuzzerPlayer.Alarm();
+                }
+            }
+            else
+            {
+                if (TrafficState != clsDynamicTrafficState.TRAFFIC_ACTION.PASS)
+                    return;
+
+                if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
+                {
+                    AlarmManager.ClearAlarm(diState.Input == DI_ITEM.RightProtection_Area_Sensor_2 ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2);
+                    AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                    AGVStatusChangeToRunWhenLaserRecovery();
+                }
+            }
+        }
+
+        private void AGVStatusChangeToRunWhenLaserRecovery()
+        {
+            _Sub_Status = SUB_STATUS.RUN;
+            if (ExecutingTask.action == ACTION_TYPE.None)
+                BuzzerPlayer.Move();
+            else
+                BuzzerPlayer.Action();
+        }
+        private void AGVStatusChangeToAlarmWhenLaserRecovery()
+        {
+            _Sub_Status = SUB_STATUS.ALARM;
+            BuzzerPlayer.Alarm();
         }
 
         private void WagoIOIniSetting()
@@ -619,18 +799,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        /// <summary>
-        /// 成功完成移動任務的處理
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="taskData"></param>
 
-
-        private bool AGVSRemoteModeChangeReq(REMOTE_MODE mode)
+        internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
+            string request_user_name = IsAGVSRequest ? "派車" : "車載用戶";
+            LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
             if (mode != Remote_Mode)
             {
-
+                (bool success, RETURN_CODE return_code) result = new(false, RETURN_CODE.NG);
                 Task reqTask = new Task(async () =>
                 {
                     if (OnlineModeChangingFlag)
@@ -638,21 +814,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return;
                     }
                     OnlineModeChangingFlag = true;
-                    (bool success, RETURN_CODE return_code) result = await Online_Mode_Switch(mode);
+                    result = await Online_Mode_Switch(mode);
                     if (result.success)
                     {
                         Remote_Mode = mode;
-                        Console.WriteLine($"[Online Mode Change] 請求 {mode} 成功!");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[Online Mode Change] 請求 {mode} 失敗!(Return Code = {(int)result.return_code}-{result.return_code}) 現在是 {Remote_Mode}");
                     }
                     OnlineModeChangingFlag = false;
                 });
                 reqTask.Start();
+                Task.WaitAll(new Task[] { reqTask });
+
+                bool isChanged = Remote_Mode == mode;
+                if (isChanged)
+                {
+                    LOG.WARN($"{request_user_name} 請求變更Online模式---成功");
+                }
+                else
+                {
+                    LOG.ERROR($"{request_user_name} 請求變更Online模式---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
+                }
+                return Remote_Mode == mode;
             }
-            return true;
+            else
+            {
+
+                LOG.WARN($"已經是{mode}");
+                return true;
+            }
         }
 
         /// <summary>
@@ -678,7 +866,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 clsCorrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                 clsCorrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                clsCorrdination.Theta = Math.Round(BarcodeReader.Data.theta, 3);
+                clsCorrdination.Theta = Math.Round(Navigation.Angle, 3);
             }
             //gen alarm codes 
 
@@ -698,6 +886,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return SimulationMode ? emulator.Runstatus : new RunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
+                    CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
                     Last_Visited_Node = Navigation.Data.lastVisitedNode.data,
@@ -705,7 +894,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag
+                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+
                 };
             }
             catch (Exception ex)
@@ -713,6 +903,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //LOG.ERROR("GenRunningStateReportData ", ex);
                 return new RunningStatus();
             }
+        }
+
+        /// <summary>
+        /// 取得載物的類型
+        /// </summary>
+        /// <returns></returns>
+        protected virtual int GetCargoType()
+        {
+            return 0;
         }
 
 
@@ -736,7 +935,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
-        internal bool HasAnyCargoOnAGV()
+        internal virtual bool HasAnyCargoOnAGV()
         {
             try
             {

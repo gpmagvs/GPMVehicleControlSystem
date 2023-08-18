@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +15,17 @@ namespace GPMVehicleControlSystem.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpPost("DynamicTrafficState")]
-        public async Task<IActionResult> DynamicTrafficState( clsDynamicTrafficState traffic_state)
+        public async Task<IActionResult> DynamicTrafficState(clsDynamicTrafficState traffic_state)
         {
-            StaStored.CurrentVechicle.DynamicTrafficState = traffic_state;
+            try
+            {
+                StaStored.CurrentVechicle.DynamicTrafficState = traffic_state;
+
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
             return Ok();
         }
     }

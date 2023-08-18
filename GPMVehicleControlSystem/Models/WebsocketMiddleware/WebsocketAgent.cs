@@ -24,6 +24,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETFORKTestState,
             GETAGVSMSGIODATA,
             GETSystemMessages,
+            GETRDTestData
         }
   
         public static async Task ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
@@ -87,6 +88,9 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
                     viewmodel = ViewModelFactory.GetSystemMessagesVM();
+                    break;
+                case WEBSOCKET_CLIENT_ACTION.GETRDTestData:
+                    viewmodel = ViewModelFactory.GetRDTestData();
                     break;
                 default:
                     break;

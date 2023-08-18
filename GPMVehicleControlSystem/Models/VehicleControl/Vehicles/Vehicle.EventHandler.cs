@@ -110,7 +110,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             if (LaserType != DI_ITEM.FrontProtection_Area_Sensor_3 && LaserType != DI_ITEM.BackProtection_Area_Sensor_3)
-                Sub_Status = SUB_STATUS.RUN;
+            {
+                _Sub_Status = SUB_STATUS.RUN;
+                if (ExecutingTask.action == ACTION_TYPE.None)
+                    BuzzerPlayer.Move();
+                else
+                    BuzzerPlayer.Action();
+            }
 
         }
 
@@ -136,12 +142,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGV_Reset_Flag = true;
             Task.Factory.StartNew(async () =>
             {
-                AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
-                await Task.Delay(500);
-                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                AGVC.AbortTask(mode);
+                if (mode == RESET_MODE.ABORT)
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
+                    Sub_Status = SUB_STATUS.DOWN;
+                    await Task.Delay(500);
+                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    ExecutingTask.Abort();
+                }
             });
-            Sub_Status = SUB_STATUS.IDLE;
-            ExecutingTask.Abort();
+
             return true;
         }
 
@@ -161,11 +172,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             BuzzerPlayer.Alarm();
             _Sub_Status = SUB_STATUS.DOWN;
+            StatusLighter.DOWN();
             AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
             AGVC.EMOHandler(sender, e);
             IsInitialized = false;
             ExecutingTask?.Abort();
-            AGVSRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+            HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+            DirectionLighter.CloseAll();
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
@@ -223,7 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
             lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
             IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
-            
+
 
         }
 

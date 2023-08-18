@@ -24,7 +24,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public override bool Connect()
         {
             IPAddress iPAddress = IPAddress.Parse("127.0.0.1");
-            int port = 502;
+            int port = 1502;
             TcpListener tcpListener = new TcpListener(iPAddress, port);
             tcpListener.Start();
             try

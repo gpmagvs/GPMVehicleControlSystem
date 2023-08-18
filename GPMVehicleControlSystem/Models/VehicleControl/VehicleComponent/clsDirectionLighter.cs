@@ -85,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
         }
 
-        internal void WaitPassLights(int interval = 200)
+        internal void WaitPassLights(int interval = 1000)
         {
             Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, interval);
         }

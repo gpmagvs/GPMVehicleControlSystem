@@ -40,15 +40,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 向左轉
         /// </summary>
-        public void TurnLeft(double speed = 0.1)
+        public void TurnLeft(double speed = 0.1, bool ligter = true)
         {
-            vehicle?.DirectionLighter.TurnLeft(true);
+            if (ligter)
+                vehicle?.DirectionLighter.TurnLeft(true);
             PublishCmdVel(0, speed);
         }
 
-        public void TurnRight(double speed = 0.1)
+        public void TurnRight(double speed = 0.1, bool ligter = true)
         {
-            vehicle?.DirectionLighter.TurnRight(true);
+            if (ligter)
+                vehicle?.DirectionLighter.TurnRight(true);
             PublishCmdVel(0, -speed);
         }
 

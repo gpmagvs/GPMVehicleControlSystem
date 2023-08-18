@@ -3,6 +3,9 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -21,10 +24,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
         public bool IsForkInitialized => ForkLifter.IsInitialized;
-
+        public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV()
         {
+            ForkLifter = new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
@@ -108,6 +112,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void WagoDIEventRegist()
         {
             base.WagoDIEventRegist();
+        }
+
+        protected override clsWorkStationModel DeserializeWorkStationJson(string json)
+        {
+            clsWorkStationModel? dat = JsonConvert.DeserializeObject<clsWorkStationModel>(json);
+            foreach (KeyValuePair<int, clsWorkStationData> station in dat.Stations)
+            {
+                while (station.Value.LayerDatas.Count != 3)
+                {
+                    station.Value.LayerDatas.Add(station.Value.LayerDatas.Count, new clsStationLayerData
+                    {
+                        Down_Pose = 0,
+                        Up_Pose = 0
+                    });
+                }
+            }
+            return dat;
+        }
+        internal override bool HasAnyCargoOnAGV()
+        {
+            try
+            {
+                return WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        protected override int GetCargoType()
+        {
+            var tray_sensor1 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor);
+            var tray_sensor2 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+            var rack_sensor1 = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+            var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+
+            if (tray_sensor1 | tray_sensor2)
+                return 0;
+            else if (rack_sensor1 | rack_sensor2)
+                return 1;
+            else return -1;
         }
     }
 }

@@ -33,10 +33,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 if (_State != value)
                 {
-                    OnStateChanged?.Invoke(this, value);
                     _State = value;
                     Task.Factory.StartNew(() =>
                     {
+                        OnStateChanged?.Invoke(this, value);
                         if (_State)
                             OnSignalON?.Invoke(this, EventArgs.Empty);
                         else
