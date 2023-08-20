@@ -125,7 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal async void ApplyAGVSLaserSetting()
         {
-            LOG.INFO($"雷射組數切換為AGVS Setting={AgvsLsrSetting}");
+            LOG.INFO($"雷射組數切換為AGVS Setting={AgvsLsrSetting}",false);
             await ModeSwitch(AgvsLsrSetting);
         }
 
@@ -140,7 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
                 await ModeSwitch(AgvsLsrSetting);
-                LOG.INFO($"雷射設定組 = {AgvsLsrSetting}");
+                LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", false);
             }
             else // 左.右轉
                 ModeSwitch(LASER_MODE.Spin);
@@ -177,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(1);
                 }
 
-                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})");
+                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", false);
                 return true;
             }
             catch (Exception)

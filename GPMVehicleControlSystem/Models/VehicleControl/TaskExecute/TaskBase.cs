@@ -112,17 +112,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal async Task AGVSPathExpand(clsTaskDownloadData taskDownloadData)
         {
-            string new_path = string.Join("->", taskDownloadData.TagsOfTrajectory);
-            Agv.AGVC.Replan(taskDownloadData);
-            string ori_path = string.Join("->", RunningTaskData.TagsOfTrajectory);
-            LOG.INFO($"AGV導航路徑變更\r\n-原路徑：{ori_path}\r\n新路徑:{new_path}");
-            RunningTaskData = taskDownloadData;
+            _ = Task.Run(async () =>
+            {
+                string new_path = string.Join("->", taskDownloadData.TagsOfTrajectory);
+                string ori_path = string.Join("->", RunningTaskData.TagsOfTrajectory);
+                LOG.INFO($"AGV導航路徑變更\r\n-原路徑：{ori_path}\r\n新路徑:{new_path}");
+                RunningTaskData = taskDownloadData;
+                if (Agv.BarcodeReader.Data.tagID == 0)
+                {
+
+                    LOG.INFO($"AGV導航路徑變更-當前Tag為0,等待AGV抵達下一個目的地");
+                    while (Agv.BarcodeReader.Data.tagID == 0)
+                    {
+                        await Task.Delay(1);
+                    }
+                }
+                LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控");
+                Agv.AGVC.Replan(taskDownloadData);
+
+            });
         }
 
         private async void AfterMoveFinishHandler(object? sender, clsTaskDownloadData e)
         {
-            LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} ");
-            Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
+            LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} 目的地:{RunningTaskData.Destination} Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler ");
+            if (Agv.Navigation.LastVisitedTag == RunningTaskData.Destination)
+            {
+                Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
+            }
+
 
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
             {

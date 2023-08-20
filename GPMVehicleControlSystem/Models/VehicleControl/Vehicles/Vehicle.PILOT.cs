@@ -46,7 +46,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             WriteTaskNameToFile(taskDownloadData.Task_Name);
             CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
-            LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}");
+            LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+            LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
 
             if (!TaskTrackingTags.TryAdd(taskDownloadData.Task_Simplex, taskDownloadData.TagsOfTrajectory))
@@ -57,10 +58,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             Task.Run(async () =>
             {
-                if (AGVC.IsAGVExecutingTask)
+                if (IsReplanTask(taskDownloadData))
                 {
-                    LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} 收到新的路徑擴充任務");
+                    LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
                     await ExecutingTask.AGVSPathExpand(taskDownloadData);
+                    BuzzerPlayer.Move();
+                    _Sub_Status = SUB_STATUS.RUN;
+                    StatusLighter.RUN();
+                    FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
                 else
                 {
@@ -114,6 +119,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
+        private bool IsReplanTask(clsTaskDownloadData taskDownloadData)
+        {
+            if (ExecutingTask == null)
+                return false;
+
+            var newAction = taskDownloadData.Action_Type;
+            var newTaskName = taskDownloadData.Task_Name;
+            var previousAction = ExecutingTask.RunningTaskData.Action_Type;
+            var previousTaskName = ExecutingTask.RunningTaskData.Task_Name;
+
+            if (newTaskName != ExecutingTask.RunningTaskData.Task_Name)
+                return false;
+            if (newAction != ACTION_TYPE.None)
+                return false;
+            return newAction == previousAction && taskDownloadData.Task_Name == previousTaskName;
+        }
+
         private void WriteTaskNameToFile(string task_Name)
         {
             TaskName = task_Name;
@@ -132,7 +154,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             Task.Factory.StartNew(() =>
             {
-                LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID}");
+                LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID}", false);
             });
 
         }
@@ -225,6 +247,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (true)
                 {
                     Thread.Sleep(1);
+                    if (!ActiveTrafficControl)
+                        continue;
                     try
                     {
                         if (ExecutingTask == null)

@@ -75,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                     Thread.Sleep(TimeSpan.FromMilliseconds(0.05));
                     if (AGV.BarcodeReader.Data.tagID == 0)
                     {
-                        LOG.INFO($"測試過程中脫離Tag");
+                        LOG.INFO($"測試過程中脫離Tag", false);
                         BuzzerPlayer.Alarm();
                         AlarmManager.AddAlarm(AlarmCodes.Motion_control_Missing_Tag_On_End_Point);
                         TestEnd();

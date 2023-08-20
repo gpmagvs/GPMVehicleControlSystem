@@ -305,7 +305,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool isReachFinalTag = CurrentTag == RunningTaskData.Destination;
             if (isReachFinalTag)
             {
-                if (Status == ActionStatus.SUCCEEDED | Status == ActionStatus.PENDING)
+                if (Status == ActionStatus.SUCCEEDED )
                     OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
                 else if (Status == ActionStatus.ABORTED)
                     OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
@@ -405,7 +405,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 await Task.Delay(1);
             }
-            LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}");
+            LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", false);
             return (true, "");
 
         }
