@@ -18,7 +18,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     /// </summary>
     public class LoadTask : TaskBase
     {
-        protected AlarmCodes FrontendSecondarSensorTriggerAlarmCode = AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
         public virtual bool CSTTrigger
         {
             get
@@ -82,7 +81,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, HSResult.alarmCode);
                 }
             }
-            StartFrontendObstcleDetection();
             return await base.BeforeTaskExecuteActions();
         }
 
@@ -245,58 +243,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        /// <summary>
-        /// 車頭二次檢Sensor檢察功能
-        /// </summary>
-        protected virtual void StartFrontendObstcleDetection()
-        {
-            bool Enable = AppSettingsHelper.GetValue<bool>($"VCS:LOAD_OBS_DETECTION:Enable_{action}");
-
-            if (!Enable)
-                return;
-
-            int DetectionTime = AppSettingsHelper.GetValue<int>("VCS:LOAD_OBS_DETECTION:Duration");
-            LOG.WARN($"前方二次檢Sensor 偵側開始 (偵測持續時間={DetectionTime} s)");
-            CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            bool detected = false;
-
-            void FrontendObsSensorDetectAction(object sender, EventArgs e)
-            {
-                detected = true;
-                if (!cancelDetectCTS.IsCancellationRequested)
-                {
-                    cancelDetectCTS.Cancel();
-                    stopwatch.Stop();
-                    LOG.Critical($" 前方二次檢Sensor觸發(第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
-                    try
-                    {
-                        Agv.AGVC.EMOHandler(this, EventArgs.Empty);
-                        Agv.ExecutingTask.Abort();
-                        Agv.Sub_Status = SUB_STATUS.ALARM;
-                        AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
-                }
-            }
-            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
-            Task.Run(() =>
-            {
-                while (!cancelDetectCTS.IsCancellationRequested)
-                {
-                    Thread.Sleep(1);
-                }
-                if (!detected)
-                {
-                    LOG.WARN($"前方二次檢Sensor Pass. ");
-                }
-                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
-            });
-        }
-
+       
 
         /// <summary>
         /// Load作業(放貨)=>車上應該有貨

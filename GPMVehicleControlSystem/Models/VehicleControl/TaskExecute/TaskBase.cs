@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 
@@ -51,6 +52,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public clsForkLifter ForkLifter { get; internal set; }
         public int destineTag => _RunningTaskData == null ? -1 : _RunningTaskData.Destination;
         public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
+        protected AlarmCodes FrontendSecondarSensorTriggerAlarmCode
+        {
+            get
+            {
+                if (Agv.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+                {
+                    if (action == ACTION_TYPE.Load)
+                        return AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
+                    else
+                        return AlarmCodes.EQP_UNLOAD_BUT_EQP_HAS_NO_CARGO;
+                }
+                else
+                {
+                    return AlarmCodes.Fork_Frontend_has_Obstacle;
+                }
+
+            }
+        }
 
         public TaskBase(Vehicle Agv, clsTaskDownloadData taskDownloadData)
         {
@@ -90,7 +109,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     else
                         ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                 }
-
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
@@ -99,6 +117,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
+
+                    if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
+                    {
+                        StartFrontendObstcleDetection();
+                    }
+
                     Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
@@ -208,5 +232,57 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1.0).Result;
         }
+        /// <summary>
+        /// 車頭二次檢Sensor檢察功能
+        /// </summary>
+        protected virtual void StartFrontendObstcleDetection()
+        {
+            bool Enable = AppSettingsHelper.GetValue<bool>($"VCS:LOAD_OBS_DETECTION:Enable_{action}");
+
+            if (!Enable)
+                return;
+
+            int DetectionTime = AppSettingsHelper.GetValue<int>("VCS:LOAD_OBS_DETECTION:Duration");
+            LOG.WARN($"前方二次檢Sensor 偵側開始 (偵測持續時間={DetectionTime} s)");
+            CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            bool detected = false;
+
+            void FrontendObsSensorDetectAction(object sender, EventArgs e)
+            {
+                detected = true;
+                if (!cancelDetectCTS.IsCancellationRequested)
+                {
+                    cancelDetectCTS.Cancel();
+                    stopwatch.Stop();
+                    LOG.Critical($" 前方二次檢Sensor觸發(第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
+                    try
+                    {
+                        Agv.AGVC.EMOHandler(this, EventArgs.Empty);
+                        Agv.ExecutingTask.Abort();
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
+            Task.Run(() =>
+            {
+                while (!cancelDetectCTS.IsCancellationRequested)
+                {
+                    Thread.Sleep(1);
+                }
+                if (!detected)
+                {
+                    LOG.WARN($"前方二次檢Sensor Pass. ");
+                }
+                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
+            });
+        }
+
     }
 }

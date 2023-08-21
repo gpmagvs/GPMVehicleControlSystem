@@ -220,10 +220,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+            {
                 VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            }
+            else if (AgvType == AGV_TYPE.FORK)
+            {
+                VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalON += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            }
         }
 
-      
+
         public virtual async void StartAsync()
         {
             await Task.Run(() =>
