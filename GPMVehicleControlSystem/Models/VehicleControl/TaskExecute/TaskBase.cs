@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private clsTaskDownloadData _RunningTaskData = new clsTaskDownloadData();
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
+        protected Action<ActionStatus>  AGVCActionStatusChaged {get;set;}=Agv.AGVC.OnAGVCActionChanged;
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;
@@ -128,7 +129,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
-                Agv.AGVC.OnAGVCActionChanged += HandleAGVActionChanged;
+                if(AGVCActionStatusChaged!=null)
+                    AGVCActionStatusChaged=null;
+                AGVCActionStatusChaged += HandleAGVActionChanged;
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
