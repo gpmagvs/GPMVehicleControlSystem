@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using static AGVSystemCommonNet6.clsEnums;
 using System.Diagnostics;
@@ -151,7 +151,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.TurnToBackTaskData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-                Agv.AGVC.OnAGVCActionChanged += WaitAGVStatusChangeToSucces;
+
+                if(AGVCActionStatusChaged!=null)
+                    AGVCActionStatusChaged=null;
+                AGVCActionStatusChaged += WaitAGVStatusChangeToSucces;
 
                 await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
             });
