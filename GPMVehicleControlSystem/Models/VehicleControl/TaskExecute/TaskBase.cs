@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     public abstract class TaskBase
     {
         public Vehicle Agv { get; }
-        private clsTaskDownloadData _RunningTaskData;
+        private clsTaskDownloadData _RunningTaskData = new clsTaskDownloadData();
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         public clsTaskDownloadData RunningTaskData
@@ -86,29 +86,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                Agv.StatusLighter.RUN();
                 TaskCancelCTS = new CancellationTokenSource();
-                Agv.Laser.AllLaserActive();
                 Agv.AGVC.IsAGVExecutingTask = true;
-                Agv.AGVC.OnTaskActionFinishAndSuccess += AfterMoveFinishHandler;
                 DirectionLighterSwitchBeforeTaskExecute();
                 LaserSettingBeforeTaskExecute();
+
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
                     AlarmManager.AddAlarm(checkResult.alarm_code, false);
-                    Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
                     Agv.Sub_Status = SUB_STATUS.ALARM;
                     return;
                 }
+                LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}");
                 Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
 
-                if (ForkLifter != null)
+                if (action == ACTION_TYPE.None)
                 {
-                    if (action == ACTION_TYPE.None)
-                        await ForkLifter.ForkGoHome();
-                    else
-                        ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
+                    if (ForkLifter != null)
+                    {
+                        var forkGoHomeResult = await ForkLifter.ForkGoHome();
+                        if (!forkGoHomeResult.confirm)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.Fork_Arm_Pose_Error, false);
+                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                            return;
+                        }
+                    }
                 }
+                else
+                {
+                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
+                    {
+                        var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
+                        if (!forkGoTeachPositionResult.success)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.Fork_Arm_Pose_Error, false);
+                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                            return;
+                        }
+                    }
+                }
+                Agv.AGVC.OnAGVCActionChanged += HandleAGVActionChanged;
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
@@ -117,14 +137,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-
                     if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
                     {
                         StartFrontendObstcleDetection();
                     }
 
-                    Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
             }
             catch (Exception ex)
@@ -132,6 +149,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw ex;
             }
 
+        }
+
+        protected async void HandleAGVActionChanged(ActionStatus status)
+        {
+            LOG.INFO($"AGVC Action Status Changed: {status}.");
+            if (status == ActionStatus.ACTIVE)
+            {
+
+                Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+            }
+            else
+            {
+                if (status == ActionStatus.SUCCEEDED)
+                {
+                    Agv.AGVC.OnAGVCActionChanged -= HandleAGVActionChanged;
+                    LOG.INFO($"AGVC Action Status is success,Do Work defined!");
+                    HandleAGVCActionSucceess();
+
+                }
+                if (status == ActionStatus.ABORTED)
+                {
+                    Agv.AGVC.OnAGVCActionChanged -= HandleAGVActionChanged;
+                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
+                }
+            }
+        }
+
+        protected virtual async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        {
+            Agv.Sub_Status = SUB_STATUS.IDLE;
+            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+            return (true, AlarmCodes.None);
         }
 
         internal async Task AGVSPathExpand(clsTaskDownloadData taskDownloadData)
@@ -157,50 +207,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
-        private async void AfterMoveFinishHandler(object? sender, clsTaskDownloadData e)
-        {
-            LOG.INFO($"[{action}] move task done. Reach  Tag = {Agv.Navigation.LastVisitedTag} 目的地:{RunningTaskData.Destination} Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler ");
-            if (Agv.Navigation.LastVisitedTag == RunningTaskData.Destination)
-            {
-                Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
-            }
-
-
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
-            {
-                LOG.Critical($"AfterMoveFinishHandler BUT AGV STATUS DOWN");
-            }
-            else
-            {
-                (bool confirm, AlarmCodes alarm_code) check_result = await AfterMoveDone();
-                if (!check_result.confirm)
-                {
-                    AlarmManager.AddAlarm(check_result.alarm_code, false);
-                    Agv.Sub_Status = SUB_STATUS.ALARM;
-                }
-                else
-                    Agv.Sub_Status = SUB_STATUS.IDLE;
-            }
-
-            Agv.AGVC.IsAGVExecutingTask = false;
-            OnTaskFinish(RunningTaskData.Task_Simplex);
-            _ = Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(1000);
-                Agv.DirectionLighter.CloseAll();
-            });
-        }
-
-        public virtual async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
-        {
-            Agv.Laser.LeftLaserBypass = false;
-            Agv.Laser.RightLaserBypass = false;
-            Agv.Sub_Status = SUB_STATUS.IDLE;
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-            return (true, AlarmCodes.None);
-
-        }
-
         /// <summary>
         /// 執行任務前的各項設定
         /// </summary>
@@ -223,14 +229,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal virtual void Abort()
         {
             TaskCancelCTS.Cancel();
-            Agv.AGVC.OnTaskActionFinishAndSuccess -= AfterMoveFinishHandler;
         }
 
-
-        public async void ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
+        public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1.0).Result;
+            return result;
         }
         /// <summary>
         /// 車頭二次檢Sensor檢察功能

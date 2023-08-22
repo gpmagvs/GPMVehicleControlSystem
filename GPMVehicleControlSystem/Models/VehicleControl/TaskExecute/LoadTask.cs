@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using GPMVehicleControlSystem.Models.WorkStation;
+using RosSharp.RosBridgeClient.Actionlib;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -45,7 +46,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
-        private bool back_to_secondary_flag = false;
+        internal bool back_to_secondary_flag = false;
+        private WORKSTATION_HS_METHOD _eqHandshakeMode;
+
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
@@ -85,11 +88,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
+        protected override async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
-            var _eqHandshakeMode = eqHandshakeMode;
+            _eqHandshakeMode = eqHandshakeMode;
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 HSResult = await Agv.WaitEQBusyOFF(action);
@@ -108,6 +111,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 bool arm_move_Done = false;
                 bool armMoveing = false;
+
                 var isNeedArmExtend = Agv.WorkStations.Stations[destineTag].ForkArmExtend;
 
                 if (isNeedArmExtend)
@@ -147,38 +151,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.TurnToBackTaskData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
+                Agv.AGVC.OnAGVCActionChanged += WaitAGVStatusChangeToSucces;
+
                 await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
-                Agv.AGVC.OnTaskActionFinishAndSuccess += AGVC_OnBackTOSecondary;
             });
 
-            while (!back_to_secondary_flag)
-            {
-                if (TaskCancelCTS.IsCancellationRequested)
-                    return (false, AlarmCodes.None);
-                Thread.Sleep(1);
-            }
-            Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
 
-            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+            return (true, AlarmCodes.None);
+        }
+
+        private async void WaitAGVStatusChangeToSucces(ActionStatus status)
+        {
+            if (status == ActionStatus.SUCCEEDED)
             {
-                HSResult = await Agv.WaitEQReadyOFF(action);
-                if (!HSResult.hs_success)
+                Agv.AGVC.OnAGVCActionChanged -= WaitAGVStatusChangeToSucces;
+                back_to_secondary_flag = true;
+                if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
                 {
-                    return (false, HSResult.alarmCode);
+                    (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
+                    if (!HSResult.eqready)
+                    {
+                        AlarmManager.AddAlarm(HSResult.alarmCode, false);
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+
+                    }
                 }
+
+                if (ForkLifter != null)
+                {
+                    await ForkLifter.ForkGoHome();
+                }
+
+                (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
+                if (!CstBarcodeCheckResult.confirm)
+                {
+                    AlarmManager.AddAlarm(CstBarcodeCheckResult.alarmCode, false);
+                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                }
+                base.HandleAGVCActionSucceess();
             }
-
-            if (ForkLifter != null)
-            {
-                await ForkLifter.ForkGoHome();
-            }
-
-
-            (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
-            if (!CstBarcodeCheckResult.confirm)
-                return (false, CstBarcodeCheckResult.alarmCode);
-
-            return await base.AfterMoveDone();
         }
 
         protected async virtual Task ChangeForkPositionInWorkStation()
@@ -206,11 +219,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.Laser.AllLaserDisable();
             await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
-        }
-        private void AGVC_OnBackTOSecondary(object? sender, clsTaskDownloadData e)
-        {
-            back_to_secondary_flag = true;
-            LOG.INFO($"AGV Back to Secondary Point Done!. Action Finish");
         }
 
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
@@ -243,7 +251,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-       
+
 
         /// <summary>
         /// Load作業(放貨)=>車上應該有貨
@@ -283,10 +291,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.DirectionLighter.Forward();
         }
-        internal override void Abort()
-        {
-            base.Abort();
-            Agv.AGVC.OnTaskActionFinishAndSuccess -= AGVC_OnBackTOSecondary;
-        }
+
     }
 }

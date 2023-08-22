@@ -425,7 +425,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 //
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
-                    if (forkAGV.Sub_Status != SUB_STATUS.RUN)
+                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
                     {
                         LOG.WARN($"Tag:{tag},{position} AGV Status Not RUN ,Break Try ");
                         return (false, AlarmCodes.None);

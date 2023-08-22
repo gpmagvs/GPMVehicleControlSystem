@@ -76,28 +76,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
-        /// <summary>
-        /// 機器人任務結束且是成功完成的狀態
-        /// </summary>
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishAndSuccess;
-        /// <summary>
-        /// 機器人任務結束因為被中斷
-        /// </summary>
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishCauseAbort;
-        public event EventHandler<clsTaskDownloadData> OnTaskActionFinishButNeedToExpandPath;
-        public event EventHandler<clsTaskDownloadData> OnMoveTaskStart;
+        public Action<ActionStatus> OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
 
-        private ActionStatus _currentTaskCmdActionStatus = ActionStatus.PENDING;
-        public ActionStatus currentTaskCmdActionStatus
+        private ActionStatus _ActionStatus = ActionStatus.PENDING;
+        public ActionStatus ActionStatus
         {
-            get => _currentTaskCmdActionStatus;
+            get => _ActionStatus;
             private set
             {
-                if (value == ActionStatus.ACTIVE)
-                    OnMoveTaskStart?.Invoke(this, RunningTaskData);
-                _currentTaskCmdActionStatus = value;
+                if (_ActionStatus != value)
+                {
+                    _ActionStatus = value;
+                    if (OnAGVCActionChanged != null)
+                    {
+                        OnAGVCActionChanged(_ActionStatus);
+                    }
+                }
             }
         }
 
@@ -165,6 +161,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             LOG.INFO($"ROS Connected ! ws://{IP}:{Port}");
             SubscribeROSTopics();
             AdertiseROSServices();
+            InitTaskCommandActionClient();
             ManualController = new MoveControl(rosSocket);
             return true;
         }
@@ -255,18 +252,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void InitTaskCommandActionClient()
         {
-            currentTaskCmdActionStatus = ActionStatus.NO_GOAL;
+            ActionStatus = ActionStatus.NO_GOAL;
             if (actionClient != null)
             {
-                actionClient.OnTaskCommandActionDone -= this.OnTaskCommandActionDone;
                 actionClient.Terminate();
                 actionClient.Dispose();
             }
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
-            actionClient.OnTaskCommandActionDone += this.OnTaskCommandActionDone;
             actionClient.OnActionStatusChanged += (status) =>
             {
-                currentTaskCmdActionStatus = status;
+                ActionStatus = status;
             };
             actionClient.Initialize();
         }
@@ -289,39 +284,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal void AbortTask()
         {
-            _currentTaskCmdActionStatus = ActionStatus.ABORTED;
             if (actionClient != null)
             {
                 actionClient.goal = new TaskCommandGoal();
                 actionClient.SendGoal();
             }
-            DisposeTaskCommandActionClient();
             IsAGVExecutingTask = false;
         }
 
         internal bool NavPathExpandedFlag { get; private set; } = false;
-        private void OnTaskCommandActionDone(ActionStatus Status)
-        {
-            bool isReachFinalTag = CurrentTag == RunningTaskData.Destination;
-            if (isReachFinalTag)
-            {
-                if (Status == ActionStatus.SUCCEEDED )
-                    OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
-                else if (Status == ActionStatus.ABORTED)
-                    OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
-                _currentTaskCmdActionStatus = ActionStatus.NO_GOAL;
-            }
-            else
-            {
-                if (Status == ActionStatus.SUCCEEDED)
-                {
-                    OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
-                }
-                if (Status == ActionStatus.ABORTED)
-                    OnTaskActionFinishCauseAbort?.Invoke(this, this.RunningTaskData);
-                OnTaskActionFinishButNeedToExpandPath?.Invoke(this, this.RunningTaskData);
-            }
-        }
 
 
         private void DisposeTaskCommandActionClient()
@@ -330,7 +301,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 try
                 {
-                    actionClient.OnTaskCommandActionDone -= OnTaskCommandActionDone;
                     actionClient.Terminate();
                     actionClient.Dispose();
                     actionClient = null;
@@ -375,7 +345,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
-            InitTaskCommandActionClient();
             return await SendGoal(RunningTaskData.RosTaskCommandGoal);
         }
 
@@ -393,9 +362,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
-            //wait goal status change to  ACTIVE
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            while (currentTaskCmdActionStatus != ActionStatus.ACTIVE)
+            while (ActionStatus != ActionStatus.ACTIVE)
             {
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
@@ -419,9 +387,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();
         public abstract Task<(bool request_success, bool action_done)> AbortCSTReader();
 
-        internal void InvokeTaskActionFinishAndSuccess()
-        {
-            OnTaskActionFinishAndSuccess?.Invoke(this, this.RunningTaskData);
-        }
     }
 }

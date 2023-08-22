@@ -58,10 +58,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Fork/SaveTeachDatas")]
         public async Task<IActionResult> SaveTeachDatas(Dictionary<int, Dictionary<int, clsStationLayerData>> data)
         {
-            (forkAgv.WorkStations as clsWorkStationModel).Stations = data.ToDictionary(d => d.Key, d => new clsWorkStationData()
+            var datasetting = data.ToDictionary(d => d.Key, d => new clsWorkStationData()
             {
                 LayerDatas = d.Value
             });
+            foreach (var item in datasetting)
+            {
+                var ff = forkAgv.WorkStations.Stations.FirstOrDefault(kp => kp.Key == item.Key);
+                if (ff.Value != null)
+                {
+                    ff.Value.LayerDatas = item.Value.LayerDatas;
+                }
+            }
             bool confirm = forkAgv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });
         }
@@ -133,13 +141,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Shorten")]
         public async Task<IActionResult> ForkArmShorten()
         {
-            var result =  forkAgv.ForkLifter.ForkShortenInAsync();
+            var result = forkAgv.ForkLifter.ForkShortenInAsync();
             return Ok(new { confirm = result });
         }
         [HttpGet("Fork/Arm/Stop")]
         public async Task<IActionResult> ForkArmStop()
         {
-             forkAgv.ForkLifter.ForkARMStop();
+            forkAgv.ForkLifter.ForkARMStop();
             return Ok();
         }
     }

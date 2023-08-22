@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.TASK;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -34,14 +35,21 @@ namespace GPMVehicleControlSystem.Controllers
                 ReturnCode = RETURN_CODE.OK
             };
 
-            if (Agv.ExecutingTask.RunningTaskData.Task_Name == cancelCmd.Task_Name)
+            try
             {
-                Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
+                if (Agv.ExecutingTask.RunningTaskData.Task_Name == cancelCmd.Task_Name)
+                {
+                    Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
+                }
+                else
+                {
+                    reply.ReturnCode = RETURN_CODE.NG;
+                    reply.Message = "AGVS取消之任務ID與當前任務不符";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                reply.ReturnCode = RETURN_CODE.NG;
-                reply.Message = "AGVS取消之任務ID與當前任務不符";
+                LOG.ERROR(ex);
             }
             return Ok(reply);
         }

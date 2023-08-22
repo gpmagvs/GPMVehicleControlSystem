@@ -21,7 +21,6 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                 testCancelCts.Cancel();
             Task.Run(async () =>
             {
-                AGV._Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN;
                 Console.WriteLine($"旋轉測試即將開始...");
                 await Task.Delay(1000);
                 testCancelCts = new CancellationTokenSource();

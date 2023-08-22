@@ -15,6 +15,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
@@ -164,19 +165,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _Sub_Status = SUB_STATUS.Charging;
                         StatusLighter.ActiveGreen();
                     }
-                    else
-                    {
-                        if (AGVC.IsAGVExecutingTask)
-                        {
-
-                            Sub_Status = SUB_STATUS.RUN;
-                        }
-                        else
-                        {
-                            StatusLighter.InActiveGreen();
-                            Sub_Status = BeforeChargingSubStatus;
-                        }
-                    }
                     _IsCharging = value;
                 }
             }
@@ -252,7 +240,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
-                Navigation.OnTagReach += OnTagReachHandler;
+                Navigation.OnLastVisitedTagUpdate += HandlerLastVisitedTagChanged;
                 BarcodeReader.OnTagLeave += OnTagLeaveHandler;
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
@@ -612,6 +600,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
             try
             {
+
                 (bool, string) result = await PreActionBeforeInitialize();
                 if (!result.Item1)
                     return result;
@@ -632,6 +621,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Laser.ModeSwitch(LASER_MODE.Bypass);
                 Sub_Status = SUB_STATUS.IDLE;
                 IsInitialized = true;
+                EmoFlag = false;
                 return (true, "");
             }
             catch (Exception ex)
@@ -691,9 +681,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             AGVC.OnSickOutputPathsDataUpdated += SickOutputPathsDataHandler;
-            AGVC.OnTaskActionFinishCauseAbort += AGVCTaskAbortedHandle;
-
         }
+
+      
 
         private void SickOutputPathsDataHandler(object? sender, OutputPathsMsg OutputPaths)
         {
@@ -760,19 +750,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                      Sub_Status = SUB_STATUS.STOP;
                  }
-                 else
-                 {
-                     if (AGVC.currentTaskCmdActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
-                     {
-                         Sub_Status = SUB_STATUS.RUN;
-                     }
-                     else
-                     {
-                         if (Sub_Status != SUB_STATUS.IDLE)
-                             Sub_Status = SUB_STATUS.STOP;
-                     }
-                 }
-
              });
             IsResetAlarmWorking = false;
             return;

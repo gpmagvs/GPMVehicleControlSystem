@@ -23,18 +23,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
+        protected override async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        {
 
+            if (ForkLifter != null)
+            {
+                await ForkLifter.ForkGoHome();
+            }
+            return await base.HandleAGVCActionSucceess();
+        }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             return (true, AlarmCodes.None);
         }
 
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
-        {
-            if (ForkLifter != null)
-                await ForkLifter.ForkGoHome();
-            return await base.AfterMoveDone();
-        }
+
     }
 }

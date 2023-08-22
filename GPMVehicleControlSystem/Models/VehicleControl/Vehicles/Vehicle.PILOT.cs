@@ -63,20 +63,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
                     await ExecutingTask.AGVSPathExpand(taskDownloadData);
                     BuzzerPlayer.Move();
-                    _Sub_Status = SUB_STATUS.RUN;
                     StatusLighter.RUN();
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
                 else
                 {
-                    if (ExecutingTask != null)
-                    {
-                        if (ExecutingTask.RunningTaskData.TagsOfTrajectory.Count != taskDownloadData.TagsOfTrajectory.Count)
-                        {
-
-                        }
-                    }
-
                     clsTaskDownloadData _taskDownloadData;
                     _taskDownloadData = taskDownloadData;
 
@@ -103,6 +94,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(500);
                     ExecutingTask.OnTaskFinish = async (task_name) =>
                     {
+                        ExecutingTask = null;
                         await Task.Delay(5000);
                         TaskTrackingTags.Remove(task_name);
                     };
@@ -111,8 +103,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                         BuzzerPlayer.Action();
                     _Sub_Status = SUB_STATUS.RUN;
-                    StatusLighter.RUN();
-
                     await ExecutingTask.Execute();
 
                 }
@@ -133,6 +123,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             if (newAction != ACTION_TYPE.None)
                 return false;
+            if (taskDownloadData.Trajectory.First().Point_ID != ExecutingTask.RunningTaskData.Trajectory.First().Point_ID)
+                return false;
+
             return newAction == previousAction && taskDownloadData.Task_Name == previousTaskName;
         }
 
@@ -160,7 +153,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private clsMapPoint? previousTagPoint;
-        private void OnTagReachHandler(object? sender, int currentTag)
+        private void HandlerLastVisitedTagChanged(object? sender, int currentTag)
         {
             Task.Factory.StartNew(() =>
             {
@@ -324,6 +317,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Remote_Mode == REMOTE_MODE.OFFLINE)
                 return;
             await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag);
+            if (status == TASK_RUN_STATUS.ACTION_FINISH)
+            {
+                ExecutingTask = null;
+            }
         }
 
         internal int GetCurrentTagIndexOfTrajectory()

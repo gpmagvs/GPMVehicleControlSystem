@@ -19,6 +19,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        private bool EmoFlag = false;
+
         private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
         {
             if (Navigation.Current_Warning_Code != AlarmCodes.None)
@@ -34,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             _ = Task.Factory.StartNew(async () =>
             {
+                Sub_Status = SUB_STATUS.DOWN;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
                     await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
             });
@@ -174,6 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
+            EmoFlag = true;
             BuzzerPlayer.Alarm();
             _Sub_Status = SUB_STATUS.DOWN;
             StatusLighter.DOWN();

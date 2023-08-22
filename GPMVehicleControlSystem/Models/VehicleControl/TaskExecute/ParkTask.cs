@@ -13,19 +13,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public ParkTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             return (true, AlarmCodes.None);
         }
 
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
-        {
-            Agv.Sub_Status = SUB_STATUS.IDLE;
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-            return (true, AlarmCodes.None);
-        }
         public override async void LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.LeftLaserBypass = true;

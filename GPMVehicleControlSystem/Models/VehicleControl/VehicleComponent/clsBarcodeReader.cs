@@ -7,8 +7,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public class clsBarcodeReader : CarComponent
     {
         public event EventHandler<int> OnTagLeave;
-
-
         public override COMPOENT_NAME component_name => COMPOENT_NAME.BARCODE_READER;
 
         public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;

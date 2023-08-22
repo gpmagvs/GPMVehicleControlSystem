@@ -16,8 +16,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-
-
         public override void LaserSettingBeforeTaskExecute()
         {
             //Agv.Laser.LeftLaserBypass = true;
@@ -30,13 +28,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
             return base.BeforeTaskExecuteActions();
-        }
-
-        public override async Task<(bool confirm, AlarmCodes alarm_code)> AfterMoveDone()
-        {
-            Agv.Sub_Status = SUB_STATUS.IDLE;
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-            return (true, AlarmCodes.None);
         }
 
         public override void DirectionLighterSwitchBeforeTaskExecute()

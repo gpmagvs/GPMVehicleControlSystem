@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         } : (NavigationState)StateData;
 
         public event EventHandler<AGV_DIRECTION> OnDirectionChanged;
-        public event EventHandler<int> OnTagReach;
+        public event EventHandler<int> OnLastVisitedTagUpdate;
 
         public double LinearSpeed { get; private set; } = 0;
         public double AngularSpeed { get; private set; } = 0;
@@ -51,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (value != _previousTag)
                 {
                     if (value != 0)
-                        OnTagReach?.Invoke(this, value);
+                        OnLastVisitedTagUpdate?.Invoke(this, value);
                     _previousTag = value;
                 }
             }
@@ -85,34 +85,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 var code = Data.errorCode;
                 if (code == 1)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Received_Msg;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Received_Msg;
                 else if (code == 2)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Extend_Path;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Extend_Path;
                 else if (code == 3)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
                 else if (code == 4)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
                 else if (code == 5)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
                 else if (code == 6)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
                 else if (code == 7)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
                 else if (code == 8)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
                 else if (code == 9)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
                 else if (code == 10)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
                 else if (code == 11)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
                 else if (code == 12)
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
                 else if (code == 13)
-                    Current_Warning_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
+                    Current_Alarm_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
                 else
-                    Current_Warning_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
-
+                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
             }
             else
             {

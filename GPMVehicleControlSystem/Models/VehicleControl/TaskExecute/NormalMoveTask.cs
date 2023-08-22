@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Diagnostics;
+using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -59,5 +60,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override void LaserSettingBeforeTaskExecute()
         {
         }
+
     }
 }
