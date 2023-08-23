@@ -164,16 +164,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             else
             {
+                
                 if (status == ActionStatus.SUCCEEDED)
                 {
-                    Agv.AGVC.OnAGVCActionChanged -= HandleAGVActionChanged;
-                    LOG.INFO($"AGVC Action Status is success,Do Work defined!");
+                    
+                    AGVCActionStatusChaged -= HandleAGVActionChanged;
+                    if(Agv.Sub_Status == SUB_STATUS.DOWN){
+return;
+                    }
+LOG.INFO($"AGVC Action Status is success,Do Work defined!");
                     HandleAGVCActionSucceess();
 
                 }
                 if (status == ActionStatus.ABORTED)
                 {
-                    Agv.AGVC.OnAGVCActionChanged -= HandleAGVActionChanged;
+                    AGVCActionStatusChaged -= HandleAGVActionChanged;
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
                 }
