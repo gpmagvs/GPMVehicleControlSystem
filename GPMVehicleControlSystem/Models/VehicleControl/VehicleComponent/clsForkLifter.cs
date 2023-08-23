@@ -91,7 +91,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override COMPOENT_NAME component_name => COMPOENT_NAME.VERTIVAL_DRIVER;
         public clsDriver Driver { get; set; }
         public override string alarm_locate_in_name => "FORK";
-        public bool IsLoading => Driver == null ? false : Driver.Data.outCurrent > 200;
+        public bool IsLoading => Driver == null ? false : Driver.Data.outCurrent > 800;
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
         private double InitForkSpeed = 1.0;
@@ -338,7 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return (true, AlarmCodes.None, isFindHome);
 
                 }
-                async Task<(bool find, AlarmCodes alarm_code)> SearchHomePose()//使用吋動的方式
+                async Task<(bool find, AlarmCodes alarm_code)> SearchHomePoseWithShortenMove()//使用吋動的方式
                 {
                     try
                     {
@@ -390,7 +390,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (!result.success)
                     throw new Exception();
 
-                (bool found, AlarmCodes alarm_code) findHomeResult = await SearchHomePose();
+                (bool found, AlarmCodes alarm_code) findHomeResult = await SearchHomePoseWithShortenMove();
                 if (findHomeResult.found)
                 {
                     result = await fork_ros_controller.ZAxisInit();
