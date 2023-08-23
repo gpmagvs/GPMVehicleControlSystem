@@ -321,6 +321,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                             if (CurrentForkLocation == FORK_LOCATIONS.HOME)
                             {
                                 isFindHome = true;
+                                //Thread.Sleep(TimeSpan.FromSeconds(1 / Driver.Data.speed)); //大約再下降2cm //TODO 確認speed單位
+                                Thread.Sleep(500);
+                                LOG.INFO("Fork reach home, and down 1cm");
                                 break;
                             }
                         }
@@ -331,6 +334,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         return (false, AlarmCodes.Action_Timeout, false);
                     }
+
                     return (true, AlarmCodes.None, isFindHome);
 
                 }
@@ -377,11 +381,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     isHomeReachFirst = true;
 
                 await Task.Delay(500);
-                (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
 
+                (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
                 if (!Initresult.success)
                     throw new Exception();
-
 
                 var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true, speed: InitForkSpeed); //移動到上方五公分
                 if (!result.success)
