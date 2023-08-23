@@ -167,6 +167,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (status == ActionStatus.SUCCEEDED)
             {
+                    if(Agv.Sub_Status == SUB_STATUS.DOWN){
+return;
+                    }
                 Agv.AGVC.OnAGVCActionChanged -= WaitAGVStatusChangeToSucces;
                 back_to_secondary_flag = true;
                 if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
