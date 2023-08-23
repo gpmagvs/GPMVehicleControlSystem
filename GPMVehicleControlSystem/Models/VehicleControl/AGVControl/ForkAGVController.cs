@@ -6,11 +6,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
     public class ForkAGVController : SubmarinAGVControl
     {
         protected override string cst_reader_command { get; set; } = "read";
-       /// <summary>
+        /// <summary>
         /// Z軸完成伺服動作的事件, bool false =>異常;true =>已完成伺服動作
         /// </summary>
         public Action<bool> OnZAxisActionDone;
         public bool IsZAxisActionDone { get; private set; } = false;
+
+        public double InitForkSpeed = 1;
         public ForkAGVController()
         {
         }

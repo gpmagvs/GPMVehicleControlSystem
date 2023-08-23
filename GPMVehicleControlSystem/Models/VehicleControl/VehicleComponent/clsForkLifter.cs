@@ -68,9 +68,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             get
             {
-                if (!DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor))
+                bool IsForkAtHome = !DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor);
+                bool IsForkAtEnd = !DIModule.GetState(DI_ITEM.Fork_Extend_Exist_Sensor);
+                if (IsForkAtHome)
                     return FORK_ARM_LOCATIONS.HOME;
-                else if (!DIModule.GetState(DI_ITEM.Fork_Short_Exist_Sensor))
+                else if (IsForkAtEnd)
                     return FORK_ARM_LOCATIONS.END;
                 else
                     return FORK_ARM_LOCATIONS.UNKNOWN;
@@ -89,10 +91,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override COMPOENT_NAME component_name => COMPOENT_NAME.VERTIVAL_DRIVER;
         public clsDriver Driver { get; set; }
         public override string alarm_locate_in_name => "FORK";
-
+        public bool IsLoading => Driver == null ? false : Driver.Data.outCurrent > 200;
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
+        private double InitForkSpeed = 1.0;
 
+        /// <summary>
+        /// 是否啟用牙叉功能
+        /// </summary>
+        internal bool Enable => AppSettingsHelper.GetValue<bool>("VCS:ForkLifer_Enable");
         public Dictionary<int, clsWorkStationData> StationDatas
         {
             get
@@ -112,6 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.OnEMO += OnEmoButtonPushHandler;
             }
         }
@@ -130,6 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     clsIOSignal? DI = sender as clsIOSignal;
                     if (!state && DI?.Input == DI_ITEM.Fork_Under_Pressing_Sensor)
                         Current_Alarm_Code = AlarmCodes.Fork_Bumper_Error;
+
                     else if (!state && DI?.Input == DI_ITEM.Vertical_Down_Hardware_limit)
                     {
                         fork_ros_controller?.ZAxisStop();
@@ -139,6 +148,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         fork_ros_controller?.ZAxisStop();
                         Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
+                    }
+                    else if (!state && DI?.Input == DI_ITEM.Vertical_Belt_Sensor)
+                    {
+                        fork_ros_controller.ZAxisStop();
+                        Current_Alarm_Code = AlarmCodes.Belt_Sensor_Error;
                     }
                     else if (!state && (DI?.Input == DI_ITEM.Fork_Short_Exist_Sensor | DI?.Input == DI_ITEM.Fork_Extend_Exist_Sensor)) //牙叉伸縮極限Sensor
                     {
@@ -217,21 +231,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> ForkExtendOutAsync()
+        public async Task<(bool confirm, string message)> ForkExtendOutAsync()
         {
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
-                return true;
+                return (true, "");
 
             try
             {
-                await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+                await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
                 //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
-                return true;
+                return (true, ""); ;
             }
             catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message); ;
             }
         }
 
@@ -239,20 +253,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> ForkShortenInAsync()
+        public async Task<(bool confirm, string message)> ForkShortenInAsync()
         {
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
-                return true;
+                return (true, "");
 
             try
             {
-                await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
-                return true;
+                await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+                return (true, "");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message); ;
+
             }
             //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
@@ -275,12 +290,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
-        public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize()
+        public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 1.0)
         {
+
+            this.InitForkSpeed = InitForkSpeed;
             IsInitialized = false;
             try
             {
-
                 if (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     await ForkShortenInAsync();
 
@@ -296,7 +312,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                             return (true, AlarmCodes.None, false);
                         else
                         {
-                            await fork_ros_controller.ZAxisDownSearch(); //向下搜尋
+                            await fork_ros_controller.ZAxisDownSearch(InitForkSpeed); //向下搜尋
                         }
                         bool Upsearching = false;
                         while (CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)//TODO 確認是A/B接 
@@ -326,7 +342,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         {
                             Thread.Sleep(500);
                             var pose = Driver.CurrentPosition - 0.1;
-                            await fork_ros_controller.ZAxisGoTo(pose);
+                            await fork_ros_controller.ZAxisGoTo(pose, InitForkSpeed);
                         }
                         return (true, AlarmCodes.None);
                     }
@@ -367,7 +383,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     throw new Exception();
 
 
-                var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true); //移動到上方五公分
+                var result = await fork_ros_controller.ZAxisGoTo(isHomeReachFirst ? 1 : 7.0, wait_done: true, speed: InitForkSpeed); //移動到上方五公分
                 if (!result.success)
                     throw new Exception();
 
@@ -422,9 +438,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
 
-                //
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
+                    if (!DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
+                        return (false, AlarmCodes.Belt_Sensor_Error);
+
                     if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
                     {
                         LOG.WARN($"Tag:{tag},{position} AGV Status Not RUN ,Break Try ");
@@ -435,12 +453,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
                     forkMoveREsult = await ForkPose(position_to_reach, speed);
 
-                    if (!forkMoveREsult.confirm && tryCnt > 5)
+                    if (!forkMoveREsult.confirm && tryCnt > 2)
                     {
-
                         return (false, AlarmCodes.Action_Timeout);
                     }
-                    else if (positionError > errorTorlence && tryCnt > 5)
+                    else if (positionError > errorTorlence && tryCnt > 2)
                     {
                         return (false, AlarmCodes.Fork_Height_Setting_Error);
                     }
@@ -451,7 +468,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                throw ex;
+                LOG.ERROR(ex);
+                return (false, AlarmCodes.Code_Error_In_System);
             }
 
 

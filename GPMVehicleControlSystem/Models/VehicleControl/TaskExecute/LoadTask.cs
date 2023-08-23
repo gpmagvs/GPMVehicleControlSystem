@@ -88,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        protected override async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
@@ -110,13 +110,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (ForkLifter != null)
             {
                 bool arm_move_Done = false;
-                bool armMoveing = false;
-
+                (bool confirm, string message) armMoveing = (false, "等待DO輸出");
                 var isNeedArmExtend = Agv.WorkStations.Stations[destineTag].ForkArmExtend;
 
                 if (isNeedArmExtend)
                 {
                     armMoveing = await ForkLifter.ForkExtendOutAsync();
+                    if (!armMoveing.confirm)
+                    {
+                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
                     arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
                 }
                 else
@@ -125,10 +128,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (arm_move_Done)
                 {
-                    await ChangeForkPositionInWorkStation();
+                    (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+                    if (!fork_height_change_result.success)
+                        return (false, AlarmCodes.Fork_Height_Setting_Error);
                     if (isNeedArmExtend)
                     {
                         armMoveing = await ForkLifter.ForkShortenInAsync();
+                        if (!armMoveing.confirm)
+                        {
+                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                        }
                         arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
                         if (!arm_move_Done)
                             return (false, AlarmCodes.Fork_Arm_Pose_Error);
@@ -152,9 +161,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 RunningTaskData = RunningTaskData.TurnToBackTaskData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
 
-                if(AGVCActionStatusChaged!=null)
-                    AGVCActionStatusChaged=null;
-                AGVCActionStatusChaged += WaitAGVStatusChangeToSucces;
+                if (AGVCActionStatusChaged != null)
+                    AGVCActionStatusChaged = null;
+
+                AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
 
                 await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
             });
@@ -163,14 +173,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        private async void WaitAGVStatusChangeToSucces(ActionStatus status)
+        private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
         {
+            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
             if (status == ActionStatus.SUCCEEDED)
             {
-                    if(Agv.Sub_Status == SUB_STATUS.DOWN){
-return;
-                    }
-                Agv.AGVC.OnAGVCActionChanged -= WaitAGVStatusChangeToSucces;
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                {
+                    return;
+                }
+                AGVCActionStatusChaged = null;
                 back_to_secondary_flag = true;
                 if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
                 {
@@ -186,7 +198,13 @@ return;
 
                 if (ForkLifter != null)
                 {
-                    await ForkLifter.ForkGoHome();
+                    var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                    if (!ForkGoHomeActionResult.confirm)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodes.Action_Timeout);
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    }
                 }
 
                 (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
@@ -200,9 +218,9 @@ return;
             }
         }
 
-        protected async virtual Task ChangeForkPositionInWorkStation()
+        protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.3);
+            return await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.3);
 
         }
         private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)

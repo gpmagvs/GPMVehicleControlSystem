@@ -178,8 +178,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
             EmoFlag = true;
+            AGVC.OnAGVCActionChanged = null;
             BuzzerPlayer.Alarm();
-            _Sub_Status = SUB_STATUS.DOWN;
+            Sub_Status = SUB_STATUS.DOWN;
             StatusLighter.DOWN();
             AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
             AGVC.EMOHandler(sender, e);

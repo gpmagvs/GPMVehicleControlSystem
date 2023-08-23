@@ -66,7 +66,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     Current_LASER_MODE = AGV.Laser.Mode.ToString(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
-                    IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error
+                    IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
+                    ForkHasLoading = AGV.AgvType == clsEnums.AGV_TYPE.FORK ? AGV.ForkLifter.IsLoading : false
 
                 };
                 return data_view_model;

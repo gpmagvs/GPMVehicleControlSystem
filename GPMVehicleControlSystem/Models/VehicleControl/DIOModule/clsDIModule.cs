@@ -197,35 +197,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
             VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
 
-            //VCSInputs[Indexs[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; 
-            //VCSInputs[Indexs[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle; 
-
-            //VCSInputs[Indexs[DI_ITEM.RightProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            //VCSInputs[Indexs[DI_ITEM.LeftProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle;
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle;
-
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalOFF += FarLsrTriggerHandle;
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalOFF += NearLaserDiTriggerHandle;
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalOFF += NearLaserDiTriggerHandle;
-
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            //VCSInputs[Indexs[DI_ITEM.FrontProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
-
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_1]].OnSignalON += LaserRecoveryHandle;
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_2]].OnSignalON += LaserRecoveryHandle;
-            //VCSInputs[Indexs[DI_ITEM.BackProtection_Area_Sensor_3]].OnSignalON += LaserRecoveryHandle;
-
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {
                 VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
             }
             else if (AgvType == AGV_TYPE.FORK)
             {
-                VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalON += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
             }
         }
 

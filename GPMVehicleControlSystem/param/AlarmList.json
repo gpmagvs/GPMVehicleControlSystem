@@ -1733,5 +1733,20 @@
     "Code": 860005,
     "Description": "ROS Bridge Server Disconnect",
     "CN": "ROS Bridge Server 斷線"
+  },
+  {
+    "Code": 860026,
+    "Description": "Fork Has Cargo But Initialize Action Running",
+    "CN": "牙叉上有貨物但初始化執行中警告"
+  },
+  {
+    "Code": 860027,
+    "Description": "Fork Disabled",
+    "CN": "牙叉功能已被關閉"
+  },
+  {
+    "Code": 860029,
+    "Description": "AGV Cant Go To Workstation When Fork is Disabled",
+    "CN": "AGV無法在牙叉功能關閉時進入工位"
   }
 ]

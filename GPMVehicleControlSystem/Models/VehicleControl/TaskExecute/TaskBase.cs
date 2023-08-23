@@ -1,4 +1,5 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
@@ -19,7 +20,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private clsTaskDownloadData _RunningTaskData = new clsTaskDownloadData();
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
-        protected Action<ActionStatus>  AGVCActionStatusChaged {get;set;}=Agv.AGVC.OnAGVCActionChanged;
+
+        protected Action<ActionStatus>? AGVCActionStatusChaged
+        {
+            get => Agv.AGVC.OnAGVCActionChanged;
+            set => Agv.AGVC.OnAGVCActionChanged = value;
+        }
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;
@@ -83,11 +89,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 執行任務
         /// </summary>
-        public async Task Execute()
+        public async Task<AlarmCodes> Execute()
         {
             try
             {
-                Agv.StatusLighter.RUN();
+             
                 TaskCancelCTS = new CancellationTokenSource();
                 Agv.AGVC.IsAGVExecutingTask = true;
                 DirectionLighterSwitchBeforeTaskExecute();
@@ -96,23 +102,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
-                    AlarmManager.AddAlarm(checkResult.alarm_code, false);
-                    Agv.Sub_Status = SUB_STATUS.ALARM;
-                    return;
+                    return checkResult.alarm_code;
                 }
-                LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}");
+                LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
                 Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
 
                 if (action == ACTION_TYPE.None)
                 {
                     if (ForkLifter != null)
                     {
+
                         var forkGoHomeResult = await ForkLifter.ForkGoHome();
                         if (!forkGoHomeResult.confirm)
                         {
-                            AlarmManager.AddAlarm(AlarmCodes.Fork_Arm_Pose_Error, false);
-                            Agv.Sub_Status = SUB_STATUS.DOWN;
-                            return;
+                            return AlarmCodes.Fork_Arm_Pose_Error;
                         }
                     }
                 }
@@ -123,20 +126,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                         if (!forkGoTeachPositionResult.success)
                         {
-                            AlarmManager.AddAlarm(AlarmCodes.Fork_Arm_Pose_Error, false);
-                            Agv.Sub_Status = SUB_STATUS.DOWN;
-                            return;
+                            return forkGoTeachPositionResult.alarm_code;
                         }
                     }
                 }
-                if(AGVCActionStatusChaged!=null)
-                    AGVCActionStatusChaged=null;
+                if (AGVCActionStatusChaged != null)
+                    AGVCActionStatusChaged = null;
                 AGVCActionStatusChaged += HandleAGVActionChanged;
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
-                    AlarmManager.AddAlarm(AlarmCodes.Cant_TransferTask_TO_AGVC, false);
-                    Agv.Sub_Status = SUB_STATUS.ALARM;
+                    return AlarmCodes.Cant_TransferTask_TO_AGVC;
                 }
                 else
                 {
@@ -146,6 +146,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
 
                 }
+
+                return AlarmCodes.None;
             }
             catch (Exception ex)
             {
@@ -156,7 +158,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
-            LOG.INFO($"AGVC Action Status Changed: {status}.");
+            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
             if (status == ActionStatus.ACTIVE)
             {
 
@@ -164,28 +166,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             else
             {
-                
+
                 if (status == ActionStatus.SUCCEEDED)
                 {
-                    
-                    AGVCActionStatusChaged -= HandleAGVActionChanged;
-                    if(Agv.Sub_Status == SUB_STATUS.DOWN){
-return;
+
+                    AGVCActionStatusChaged = null;
+                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                    {
+                        return;
                     }
-LOG.INFO($"AGVC Action Status is success,Do Work defined!");
-                    HandleAGVCActionSucceess();
+                    LOG.INFO($"AGVC Action Status is success,Do Work defined!");
+                    var result = await HandleAGVCActionSucceess();
+
+                    if (!result.success)
+                    {
+                        AlarmManager.AddAlarm(result.alarmCode, false);
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+
+                    }
 
                 }
                 if (status == ActionStatus.ABORTED)
                 {
-                    AGVCActionStatusChaged -= HandleAGVActionChanged;
+                    AGVCActionStatusChaged = null;
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
                 }
             }
         }
 
-        protected virtual async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.Sub_Status = SUB_STATUS.IDLE;
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);

@@ -55,9 +55,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        protected override async Task ChangeForkPositionInWorkStation()
+
+        protected override async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.UP_, 0.3);
+            var forkHeightChangeReuslt= await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.UP_, 0.3);
+            return forkHeightChangeReuslt;
         }
     }
 }

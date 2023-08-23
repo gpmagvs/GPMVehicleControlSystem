@@ -44,11 +44,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
+
+            Sub_Status = SUB_STATUS.RUN;
+
+
+            Laser.AllLaserActive();
             WriteTaskNameToFile(taskDownloadData.Task_Name);
-            CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
+
+            if (action == ACTION_TYPE.None)
+                BuzzerPlayer.Move();
+            else
+                BuzzerPlayer.Action();
+
+
 
             if (!TaskTrackingTags.TryAdd(taskDownloadData.Task_Simplex, taskDownloadData.TagsOfTrajectory))
             {
@@ -73,37 +84,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (action == ACTION_TYPE.None)
                         ExecutingTask = new NormalMoveTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Charge)
-                        ExecutingTask = new ChargeTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Discharge)
-                        ExecutingTask = new DischargeTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Load)
-                        ExecutingTask = new LoadTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Unload)
-                        ExecutingTask = new UnloadTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Park)
-                        ExecutingTask = new ParkTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Unpark)
-                        ExecutingTask = new UnParkTask(this, _taskDownloadData);
                     else
                     {
-                        throw new NotImplementedException();
+
+                        if (action == ACTION_TYPE.Charge)
+                            ExecutingTask = new ChargeTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Discharge)
+                            ExecutingTask = new DischargeTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Load)
+                            ExecutingTask = new LoadTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Unload)
+                            ExecutingTask = new UnloadTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Park)
+                            ExecutingTask = new ParkTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Unpark)
+                            ExecutingTask = new UnParkTask(this, _taskDownloadData);
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
                     }
-                    previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[0];
+                    previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
                     await Task.Delay(500);
-                    ExecutingTask.OnTaskFinish = async (task_name) =>
+
+                    var result = await ExecutingTask.Execute();
+                    if (result != AlarmCodes.None)
                     {
-                        ExecutingTask = null;
-                        await Task.Delay(5000);
-                        TaskTrackingTags.Remove(task_name);
-                    };
-                    if (action == ACTION_TYPE.None)
-                        BuzzerPlayer.Move();
-                    else
-                        BuzzerPlayer.Action();
-                    _Sub_Status = SUB_STATUS.RUN;
-                    await ExecutingTask.Execute();
+                        Sub_Status = SUB_STATUS.DOWN;
+                        LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        AlarmManager.AddAlarm(result, false);
+                        AGVC.OnAGVCActionChanged = null;
+                    }
 
                 }
             });
@@ -153,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private clsMapPoint? previousTagPoint;
-        private void HandlerLastVisitedTagChanged(object? sender, int currentTag)
+        private void HandlerLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
             Task.Factory.StartNew(() =>
             {
@@ -162,21 +175,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTask == null)
                     return;
 
-                previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == currentTag);
+                previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
                 if (previousTagPoint == null)
                 {
-                    LOG.Critical($"AGV抵達 {currentTag} 但在任務軌跡上找不到該站點。");
-                    return;
-                }
-                PathInfo? pathInfoRos = ExecutingTask.RunningTaskData.RosTaskCommandGoal?.pathInfo.FirstOrDefault(path => path.tagid == previousTagPoint.Point_ID);
-                if (pathInfoRos == null)
-                {
+                    LOG.Critical($"AGV抵達 {newVisitedNodeTag} 但在任務軌跡上找不到該站點。");//脫離路徑
                     AGVC.AbortTask();
-                    AlarmManager.AddAlarm(AlarmCodes.Motion_control_Tracking_Tag_Not_On_Tag_Or_Tap, true);
+                    AlarmManager.AddAlarm(AlarmCodes.Motion_control_Out_Of_Line_While_Moving, false);
                     Sub_Status = SUB_STATUS.DOWN;
                     return;
                 }
-
                 Laser.AgvsLsrSetting = previousTagPoint.Laser;
                 if (ExecutingTask.action == ACTION_TYPE.None)
                 {
@@ -319,6 +326,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag);
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
             {
+                CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
                 ExecutingTask = null;
             }
         }

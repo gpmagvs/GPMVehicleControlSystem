@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -57,12 +58,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
-            return (true, "");
-            if (Sub_Status == SUB_STATUS.Charging)
-                return (false, "無法在充電狀態下進行初始化");
-            bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-            if (forkRackExistAbnormal)
-                return (false, "無法在有Rack的狀態下進行初始化");
             bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
             if (forkFrontendSensorAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 前端障礙物檢出)");
@@ -73,7 +68,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (LeftLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 左方障礙物檢出)");
 
+            if (lastVisitedMapPoint.StationType != AGVSystemCommonNet6.AGVDispatch.Messages.STATION_TYPE.Normal)
+                return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
+
             return (true, "");
+
+            if (Sub_Status == SUB_STATUS.Charging)
+                return (false, "無法在充電狀態下進行初始化");
+            bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+            if (forkRackExistAbnormal)
+                return (false, "無法在有Rack的狀態下進行初始化");
+
         }
         protected override async Task<(bool confirm, string message)> InitializeActions()
         {
@@ -81,8 +86,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool confirm, string message) baseInitize = await base.InitializeActions();
             if (!baseInitize.confirm)
                 return baseInitize;
-            (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize();
-            return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
+            if (ForkLifter.Enable)
+            {
+                if (ForkLifter.IsLoading)
+                {
+                    AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
+                }
+                await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
+                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() | ForkLifter.IsLoading ? 0.2 : 1);
+                await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+
+                return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
+            }
+            else
+            {
+                AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
+                return (true, "Forklift disabled");
+            }
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
@@ -111,6 +131,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override void WagoDIEventRegist()
         {
+
             base.WagoDIEventRegist();
         }
 
@@ -134,7 +155,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                return WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
             }
             catch (Exception)
             {

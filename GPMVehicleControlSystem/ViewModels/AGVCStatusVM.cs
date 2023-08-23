@@ -91,5 +91,6 @@ namespace GPMVehicleControlSystem.ViewModels
         public string Current_LASER_MODE { get; set; } = "";
         public LightsStatesVM LightsStates { get; set; } = new LightsStatesVM();
         public bool IsLaserModeSettingError { get; set; } = false;
+        public bool ForkHasLoading { get; set; }
     }
 }

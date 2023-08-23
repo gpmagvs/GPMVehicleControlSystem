@@ -353,9 +353,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
 
-            LOG.INFO($"====================Send Goal To AGVC===================" +
+            LOG.WARN($"====================Send Goal To AGVC===================" +
                 $"\r\nTaskID        = {rosGoal.taskID}" +
-                $"\r\nFinal Goal ID = {rosGoal.finalGoalID}" +
+                $"\r\nFinal Goal ID = {rosGoal.finalGoalID}:Theta:{rosGoal.planPath.poses.Last().pose.position}" +
                 $"\r\nPlanPath      = {string.Join("->", rosGoal.planPath.poses.Select(pose => pose.header.seq).ToArray())}" +
                 $"\r\nmobilityModes = {rosGoal.mobilityModes}" +
                 $"\r\n==========================================================");

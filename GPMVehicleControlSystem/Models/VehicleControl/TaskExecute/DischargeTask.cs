@@ -23,12 +23,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
-        protected override async Task<(bool, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
 
             if (ForkLifter != null)
             {
-                await ForkLifter.ForkGoHome();
+                var goHomeResult=await ForkLifter.ForkGoHome();
+                if (!goHomeResult.confirm)
+                    return (false, AlarmCodes.Action_Timeout);
             }
             return await base.HandleAGVCActionSucceess();
         }

@@ -199,6 +199,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         BuzzerPlayer.Stop();
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
+                            if(value== SUB_STATUS.DOWN)
+                                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
 
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
@@ -214,16 +216,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
-                            if (ExecutingTask != null)
-                            {
-                                Task.Run(async () =>
-                                {
-                                    if (ExecutingTask.action == ACTION_TYPE.None)
-                                        BuzzerPlayer.Move();
-                                    else
-                                        BuzzerPlayer.Action();
-                                });
-                            }
                         }
 
                     }
@@ -590,11 +582,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (SimulationMode)
             {
-
                 Sub_Status = SUB_STATUS.IDLE;
                 IsInitialized = true;
                 return (true, "");
-
             }
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
@@ -635,6 +625,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
+            AGVC.OnAGVCActionChanged = null;
+            ExecutingTask = null;
             AGVC.IsAGVExecutingTask = false;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
@@ -683,7 +675,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickOutputPathsDataUpdated += SickOutputPathsDataHandler;
         }
 
-      
+
 
         private void SickOutputPathsDataHandler(object? sender, OutputPathsMsg OutputPaths)
         {

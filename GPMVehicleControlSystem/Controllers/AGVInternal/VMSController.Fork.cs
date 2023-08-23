@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using AGVSystemCommonNet6;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.ViewModels.WorkStation;
@@ -98,6 +99,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork")]
         public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 0)
         {
+           
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
             if (action == "home" | action == "orig")
@@ -135,14 +137,20 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Extend")]
         public async Task<IActionResult> ForkArmExtend()
         {
-            var result = forkAgv.ForkLifter.ForkExtendOutAsync();
-            return Ok(new { confirm = result });
+            if (forkAgv.lastVisitedMapPoint.IsChargeAble())
+            {
+                return Ok(new { confirm = false, message = "AGV 位於充電站內禁止牙叉伸出" });
+            }
+
+            var result = await forkAgv.ForkLifter.ForkExtendOutAsync();
+            return Ok(new { confirm = result.confirm, message = result.message });
         }
         [HttpGet("Fork/Arm/Shorten")]
         public async Task<IActionResult> ForkArmShorten()
         {
-            var result = forkAgv.ForkLifter.ForkShortenInAsync();
-            return Ok(new { confirm = result });
+            var result = await forkAgv.ForkLifter.ForkShortenInAsync(); 
+            return Ok(new { confirm = result.confirm, message = result.message });
+
         }
         [HttpGet("Fork/Arm/Stop")]
         public async Task<IActionResult> ForkArmStop()
