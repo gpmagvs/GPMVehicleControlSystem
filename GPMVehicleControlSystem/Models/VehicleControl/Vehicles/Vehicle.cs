@@ -199,7 +199,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         BuzzerPlayer.Stop();
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
-                            if(value== SUB_STATUS.DOWN)
+                            if (value == SUB_STATUS.DOWN)
                                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
 
                             if (value != SUB_STATUS.Initializing)
@@ -498,7 +498,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
                 {
-                    AlarmManager.ClearAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
                     AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
                     AGVStatusChangeToRunWhenLaserRecovery();
                 }
@@ -516,15 +515,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (diState.Input == DI_ITEM.RightProtection_Area_Sensor_2 && !WagoDO.GetState(DO_ITEM.Right_LsrBypass))
                 {
                     AlarmManager.AddAlarm(AlarmCodes.RightProtection_Area2);
-                    _Sub_Status = SUB_STATUS.ALARM;
-                    BuzzerPlayer.Alarm();
+                    AGVStatusChangeToAlarmWhenLaserRecovery();
                 }
 
                 if (diState.Input == DI_ITEM.LeftProtection_Area_Sensor_2 && !WagoDO.GetState(DO_ITEM.Left_LsrBypass))
                 {
                     AlarmManager.AddAlarm(AlarmCodes.LeftProtection_Area2);
-                    _Sub_Status = SUB_STATUS.ALARM;
-                    BuzzerPlayer.Alarm();
+                    AGVStatusChangeToAlarmWhenLaserRecovery();
                 }
             }
             else
@@ -534,7 +531,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2))
                 {
-                    AlarmManager.ClearAlarm(diState.Input == DI_ITEM.RightProtection_Area_Sensor_2 ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2);
                     AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     AGVStatusChangeToRunWhenLaserRecovery();
                 }
@@ -543,7 +539,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void AGVStatusChangeToRunWhenLaserRecovery()
         {
+            AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
+            AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
+            AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area2);
+            AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
+            AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area2);
+            AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area2);
+
+
             _Sub_Status = SUB_STATUS.RUN;
+            StatusLighter.RUN();
             if (ExecutingTask.action == ACTION_TYPE.None)
                 BuzzerPlayer.Move();
             else
@@ -553,6 +558,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             _Sub_Status = SUB_STATUS.ALARM;
             BuzzerPlayer.Alarm();
+            StatusLighter.DOWN();
         }
 
         private void WagoIOIniSetting()
@@ -630,7 +636,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.IsAGVExecutingTask = false;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
-            if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(clsDIModule.DI_ITEM.EQ_BUSY))
+            if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(DI_ITEM.EQ_BUSY))
             {
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
             }
@@ -639,19 +645,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EQAlarmWhenEQBusyFlag = false;
             WagoDO.ResetHandshakeSignals();
 
-            if (!WagoDI.GetState(clsDIModule.DI_ITEM.EMO))
+            if (!WagoDI.GetState(DI_ITEM.EMO))
             {
                 AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
                 BuzzerPlayer.Alarm();
                 return (false, "EMO 按鈕尚未復歸");
             }
 
-            if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Switch))
+            if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
             {
                 AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
                 BuzzerPlayer.Alarm();
                 return (false, "解煞車旋鈕尚未復歸");
             }
+
+            //if (Sub_Status == SUB_STATUS.Charging)
+            //    return (false, "無法在充電狀態下進行初始化");
+            //bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+            //if (forkRackExistAbnormal)
+            //    return (false, "無法在有Rack的狀態下進行初始化");
+
+            //if (lastVisitedMapPoint.StationType !=STATION_TYPE.Normal)
+            //    return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
+
+
+
             return (true, "");
         }
         protected abstract Task<(bool confirm, string message)> InitializeActions();
