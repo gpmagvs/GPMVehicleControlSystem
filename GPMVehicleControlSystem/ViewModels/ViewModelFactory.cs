@@ -26,7 +26,6 @@ namespace GPMVehicleControlSystem.ViewModels
                 List<DriverState> driverStates = new List<DriverState>();
                 driverStates.AddRange(AGV.WheelDrivers.Select(d => d.Data).ToArray());
                 driverStates.Add(AGV.VerticalDriverState.Data);
-
                 AGVCStatusVM data_view_model = new AGVCStatusVM()
                 {
                     APPVersion = StaStored.APPVersion,
@@ -67,7 +66,12 @@ namespace GPMVehicleControlSystem.ViewModels
                     Current_LASER_MODE = AGV.Laser.Mode.ToString(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
-                    ForkHasLoading = AGV.AgvType == clsEnums.AGV_TYPE.FORK ? AGV.ForkLifter.IsLoading : false
+                    ForkHasLoading = AGV.AgvType == clsEnums.AGV_TYPE.FORK ? AGV.ForkLifter.IsLoading : false,
+                    HandShakeSignals =new
+                    {
+                        EQ = AGV.EQHsSignalStates,
+                        AGV= AGV.AGVHsSignalStates
+                    }
 
                 };
                 return data_view_model;
