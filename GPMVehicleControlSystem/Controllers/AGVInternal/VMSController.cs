@@ -185,24 +185,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
 
-        [HttpGet("DIO/DO_State")]
-        [ApiExplorerSettings(IgnoreApi = false)]
-        public async Task<IActionResult> DO_State(string address, bool state)
-        {
-            await Task.Delay(1);
-            agv.WagoDO.SetState(address, state);
-            return Ok(true);
-        }
-
-        [HttpGet("DIO/DI_State")]
-        [ApiExplorerSettings(IgnoreApi = false)]
-        public async Task<IActionResult> DI_State(string address, bool state)
-        {
-            await Task.Delay(1);
-            agv.WagoDI.SetState(address, state);
-            return Ok();
-        }
-
 
         [HttpGet("LaserMode")]
         public async Task<IActionResult> LaserMode(int mode)

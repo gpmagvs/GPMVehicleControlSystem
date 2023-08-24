@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Log;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
@@ -22,6 +23,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             get
             {
                 return Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().First(di => di.ToString() == Name);
+            }
+        }
+
+        /// <summary>
+        /// Input定義
+        /// </summary>
+        internal DO_ITEM Output
+        {
+            get
+            {
+                return Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().First(di => di.ToString() == Name);
             }
         }
 
