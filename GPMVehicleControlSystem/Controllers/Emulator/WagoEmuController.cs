@@ -101,6 +101,64 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             StaEmuManager.wagoEmu.SetState(DI_ITEM.Vertical_Down_Hardware_limit, false);
         }
 
+        [HttpGet("SetSideLaserNormal")]
+        public async Task SetSideLaserNormal()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.RightProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.LeftProtection_Area_Sensor_2, true);
+        }
 
+        [HttpGet("SetFrontLaserNormal")]
+        public async Task SetFrontLaserNormal()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_4, true);
+        }
+
+        [HttpGet("SeBackLaserNormal")]
+        public async Task SeBackLaserNormal()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_1, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
+        }
+
+        [HttpGet("SetFrontLaserWarning")]
+        public async Task SetFrontLaserWarning()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_4, true);
+        }
+        [HttpGet("SetFrontLaserAlarm")]
+        public async Task SetFrontLaserAlarm()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_2, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_4, true);
+        }
+
+
+        [HttpGet("SetBackLaserWarning")]
+        public async Task SetBackLaserWarning()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_1, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
+        }
+        [HttpGet("SetBackLaserAlarm")]
+        public async Task SetBackLaserAlarm()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_1, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_2, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
+        }
     }
 }

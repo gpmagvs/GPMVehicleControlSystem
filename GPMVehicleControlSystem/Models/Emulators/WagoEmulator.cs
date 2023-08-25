@@ -24,7 +24,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public override bool Connect()
         {
             IPAddress iPAddress = IPAddress.Parse("127.0.0.1");
-            int port = 1502;
+            int port = 9999;
             TcpListener tcpListener = new TcpListener(iPAddress, port);
             tcpListener.Start();
             try
@@ -57,7 +57,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.BackProtection_Area_Sensor_2, true);
             SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
             SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
-
         }
         public void SetState(DI_ITEM item, bool state)
         {

@@ -130,7 +130,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
+        public override void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        {
+            VCSOutputs[Indexs[signal]].OnStateChanged += handler;
 
+        }
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
             try

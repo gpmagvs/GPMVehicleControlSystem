@@ -147,6 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
         public bool SimulationMode { get; internal set; } = false;
+        public bool DIOSimulationMode => AppSettingsHelper.GetValue<bool>("VCS:DIOSimulationMode");
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
@@ -437,6 +438,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+
+
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_COMPT, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = state; });
         }
 
 
@@ -586,12 +594,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<(bool confirm, string message)> Initialize()
         {
-            if (SimulationMode)
-            {
-                Sub_Status = SUB_STATUS.IDLE;
-                IsInitialized = true;
-                return (true, "");
-            }
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
             try
@@ -645,20 +647,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EQAlarmWhenEQBusyFlag = false;
             WagoDO.ResetHandshakeSignals();
 
-            if (!WagoDI.GetState(DI_ITEM.EMO))
-            {
-                AlarmManager.AddAlarm(AlarmCodes.EMO_Button, false);
-                BuzzerPlayer.Alarm();
-                return (false, "EMO 按鈕尚未復歸");
-            }
-
-            if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
-                BuzzerPlayer.Alarm();
-                return (false, "解煞車旋鈕尚未復歸");
-            }
-
+            var hardware_status_check_reuslt = CheckHardwareStatus();
+            if (!hardware_status_check_reuslt.confirm)
+                return (false, hardware_status_check_reuslt.message);
             //if (Sub_Status == SUB_STATUS.Charging)
             //    return (false, "無法在充電狀態下進行初始化");
             //bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
@@ -672,6 +663,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             return (true, "");
         }
+
+        public virtual (bool confirm, string message) CheckHardwareStatus()
+        {
+            AlarmCodes alarmo_code = AlarmCodes.None;
+            string error_message = "";
+            if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1))
+            {
+                error_message = "走行軸馬達IO異常";
+                alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
+            }
+
+            if (!WagoDI.GetState(DI_ITEM.EMO))
+            {
+                error_message = "EMO 按鈕尚未復歸";
+                alarmo_code = AlarmCodes.EMO_Button;
+            }
+
+            if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
+            {
+                error_message = "解煞車旋鈕尚未復歸";
+                alarmo_code = AlarmCodes.Switch_Type_Error;
+            }
+            if (alarmo_code == AlarmCodes.None)
+                return (true, "");
+            else
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
+                BuzzerPlayer.Alarm();
+                return (false, error_message);
+            }
+        }
+
         protected abstract Task<(bool confirm, string message)> InitializeActions();
         private (int tag, double locx, double locy, double theta) CurrentPoseReqCallback()
         {

@@ -21,6 +21,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "")
         {
 
+
             if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
             {
                 return Ok(new
@@ -36,6 +37,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     accpet = false,
                     error_message = $"AGV當前狀態無法執行任務({agv.Sub_Status})"
+                });
+            }
+
+            (bool confirm, string message) hardware_status_check;
+            if (!(hardware_status_check = agv.CheckHardwareStatus()).confirm)
+            {
+                return Ok(new
+                {
+                    accpet = false,
+                    error_message = hardware_status_check.message
                 });
             }
 

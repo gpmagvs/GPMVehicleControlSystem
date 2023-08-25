@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using GPMVehicleControlSystem.Models.Emulators;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -24,42 +25,30 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
-        [HttpGet("DIO/SetHsSignalState")]
+        [HttpGet("DIO/SetAGVHsSignalState")]
         [ApiExplorerSettings(IgnoreApi = false)]
-        public async Task<IActionResult> SetHsSignalState(string signal_name, bool state)
+        public async Task<IActionResult> SetAGVHsSignalState(string signal_name, bool state)
         {
             await Task.Delay(1);
             string address = "";
             switch (signal_name)
             {
-                case "EQ_READY":
-                    address = agv.WagoDI.VCSInputs.First(INPUT => INPUT.Input == VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY).Address;
-                    break;
-                case "EQ_BUSY":
-                    address = agv.WagoDI.VCSInputs.First(INPUT => INPUT.Input == VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY).Address;
-                    break;
-                case "EQ_L_REQ":
-                    address = agv.WagoDI.VCSInputs.First(INPUT => INPUT.Input == VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY).Address;
-                    break;
-                case "EQ_U_REQ":
-                    address = agv.WagoDI.VCSInputs.First(INPUT => INPUT.Input == VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY).Address;
-                    break;
 
                 #region agv
                 case "AGV_VALID":
-                    address = agv.WagoDO.VCSOutputs.First(output => output.Output == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_VALID).Address;
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_VALID.ToString()).Address;
                     break;
                 case "AGV_READY":
-                    address = agv.WagoDO.VCSOutputs.First(output => output.Output == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_READY).Address;
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_READY.ToString()).Address;
                     break;
                 case "AGV_TR_REQ":
-                    address = agv.WagoDO.VCSOutputs.First(output => output.Output == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_TR_REQ).Address;
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_TR_REQ.ToString()).Address;
                     break;
                 case "AGV_BUSY":
-                    address = agv.WagoDO.VCSOutputs.First(output => output.Output == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_BUSY).Address;
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_BUSY.ToString()).Address;
                     break;
                 case "AGV_COMPT":
-                    address = agv.WagoDO.VCSOutputs.First(output => output.Output == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_COMPT).Address;
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_COMPT.ToString()).Address;
                     break;
 
                 #endregion
@@ -67,7 +56,40 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 default:
                     break;
             }
-            agv.WagoDI.SetState(address, state);
+            agv.WagoDO.SetState(address, state);
+            return Ok();
+        }
+
+
+        [HttpGet("DIO/SetEQHsSignalState")]
+        [ApiExplorerSettings(IgnoreApi = false)]
+        public async Task<IActionResult> SetEQHsSignalState(string signal_name, bool state)
+        {
+            if (!agv.DIOSimulationMode)
+            {
+                return Ok("不可修改DI訊號");
+            }
+
+            await Task.Delay(1);
+            switch (signal_name)
+            {
+                case "EQ_READY":
+                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY,state);
+                    break;
+                case "EQ_BUSY":
+                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_BUSY, state);
+                    break;
+                case "EQ_L_REQ":
+                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_L_REQ, state);
+                    break;
+                case "EQ_U_REQ":
+                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_U_REQ, state);
+                    break;
+
+                default:
+                    break;
+            }
+            //    agv.WagoDI.SetState(address, state);
             return Ok();
         }
     }

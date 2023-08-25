@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.Log;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
@@ -6,7 +8,13 @@ namespace GPMVehicleControlSystem
 {
     public class AppSettingsHelper
     {
-
+        public enum APPSETTINGS_READ_STATUS
+        {
+            SUCCESS,
+            FILE_LOCK,
+            CONTENT_ERROR
+        }
+        public static APPSETTINGS_READ_STATUS Status { get; private set; } = APPSETTINGS_READ_STATUS.SUCCESS;
         private static IConfiguration configuration
         {
             get
@@ -16,17 +24,25 @@ namespace GPMVehicleControlSystem
                     var baseDir = Debugger.IsAttached ? Environment.CurrentDirectory : AppDomain.CurrentDomain.BaseDirectory;
                     var configBuilder = new ConfigurationBuilder().SetBasePath(baseDir)
                     //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json"); //測試潛盾AGV
-                    //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"); //測試FORK AGV
+                    .AddJsonFile(Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"); //測試FORK AGV
                     //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"); //測試巡檢AGV
                     //.AddJsonFile("appsettings.Development_YMYellowForkAGV.json"); //測試黃光FORK AGV
-                    .AddJsonFile(Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json"); //VMware 模擬器AGV
+                    //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json"); //VMware 模擬器AGV
 
                     var configuration = configBuilder.Build();
                     return configuration;
                 }
+                catch (IOException ex)
+                {
+                    Status = APPSETTINGS_READ_STATUS.FILE_LOCK;
+                    LOG.Critical($"IConfiguration build fail...-{Status}:{ex.Message}", ex);
+                    return null;
+                }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    Status = APPSETTINGS_READ_STATUS.CONTENT_ERROR;
+                    LOG.Critical($"IConfiguration build fail...-{Status}:{ex.Message}", ex);
+                    return null;
                 }
             }
         }
@@ -39,9 +55,40 @@ namespace GPMVehicleControlSystem
             }
         }
 
+        static bool IsRetry = false;
         public static T GetValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key)
         {
-            return configuration.GetValue(key, default(T));
+            bool success = false;
+            int try_cont = 0;
+            while (!success)
+            {
+                Thread.Sleep(1);
+                try
+                {
+                    var vale = configuration.GetValue(key, default(T));
+                    success = true;
+                    if (try_cont > 0)
+                        LOG.ERROR($"取得參數檔 {key} 設定值 Retry Success");
+                    return vale;
+                }
+                catch (Exception)
+                {
+                    IsRetry = true;
+                    LOG.ERROR($"無法取得參數檔 {key} 設定值({Status}),Retry.");
+                }
+                try_cont += 1;
+                if (try_cont > 10)
+                {
+                    break;
+                }
+            }
+            LOG.Critical($"Appsettings.json value fetch fail....{Status}");
+            Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(10);
+                Environment.Exit(4);
+            });
+            return (T)new object();
         }
     }
 }

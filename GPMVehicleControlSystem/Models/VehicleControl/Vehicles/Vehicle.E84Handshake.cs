@@ -40,7 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         };
         public Dictionary<AGV_HSSIGNAL, bool> AGVHsSignalStates = new Dictionary<AGV_HSSIGNAL, bool>()
         {
-            { AGV_HSSIGNAL.AGV_VALID, true },
+            { AGV_HSSIGNAL.AGV_VALID, false },
             { AGV_HSSIGNAL.AGV_READY, false },
             { AGV_HSSIGNAL.AGV_TR_REQ, false },
             { AGV_HSSIGNAL.AGV_BUSY, false },

@@ -187,7 +187,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         //監視某個輸入的變化事件??
 
-        public void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        public virtual void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
             VCSInputs[Indexs[signal]].OnStateChanged += handler;
         }
