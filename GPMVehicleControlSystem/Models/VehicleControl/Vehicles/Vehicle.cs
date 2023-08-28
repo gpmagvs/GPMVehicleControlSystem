@@ -890,7 +890,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 Alarm_ID = alarm.Value.Code,
                 Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.Description,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
                 Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
 
 
