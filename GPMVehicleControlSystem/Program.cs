@@ -54,7 +54,6 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.WriteIndented = true;
 });
 AlarmManager.AddAlarm(AlarmCodes.None, true);
-
 var app = builder.Build();
 
 app.UseSwagger();

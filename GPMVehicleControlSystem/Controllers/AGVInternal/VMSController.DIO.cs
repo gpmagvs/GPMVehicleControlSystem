@@ -1,6 +1,8 @@
 ﻿using GPMVehicleControlSystem.Models.Emulators;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -65,31 +67,35 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [ApiExplorerSettings(IgnoreApi = false)]
         public async Task<IActionResult> SetEQHsSignalState(string signal_name, bool state)
         {
-            if (!agv.DIOSimulationMode)
+            if (agv.EQ_HS_Method != EQ_HS_METHOD.EMULATION)
             {
                 return Ok("不可修改DI訊號");
             }
 
             await Task.Delay(1);
+            string address = "";
             switch (signal_name)
             {
                 case "EQ_READY":
-                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_READY,state);
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_READY.ToString()).Address;
                     break;
                 case "EQ_BUSY":
-                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_BUSY, state);
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
+
                     break;
                 case "EQ_L_REQ":
-                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_L_REQ, state);
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
+
                     break;
                 case "EQ_U_REQ":
-                    StaEmuManager.wagoEmu.SetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.EQ_U_REQ, state);
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
+
                     break;
 
                 default:
                     break;
             }
-            //    agv.WagoDI.SetState(address, state);
+            agv.WagoDO.SetState(address, state);
             return Ok();
         }
     }

@@ -1730,6 +1730,11 @@
     "CN": "雷射組數數值錯誤"
   },
   {
+    "Code": 860015,
+    "Description": "Handshake_Fail_EQ_BUSY_ON",
+    "CN": "Waiting EQ BUSY ON Timeout"
+  },
+  {
     "Code": 860005,
     "Description": "ROS Bridge Server Disconnect",
     "CN": "ROS Bridge Server 斷線"

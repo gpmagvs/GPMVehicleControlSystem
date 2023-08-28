@@ -306,7 +306,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDIConnTask.Start();
                 DownloadMapFromServer();
                 AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-                AGVSMessageFactory.OnVCSRunningDataRequest += GenRunningStateReportData;
+                AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
+                AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
                 TrafficMonitor();
@@ -321,6 +322,107 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
+        /// <summary>
+        /// 生成支援WebAPI的RunningStatus Model
+        /// </summary>
+        /// <returns></returns>
+        public virtual clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
+        {
+            clsCoordination Corrdination = new clsCoordination();
+            MAIN_STATUS _Main_Status = Main_Status;
+            if (SimulationMode)
+                emulator.Runstatus.AGV_Status = _Main_Status;
+
+            Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+            Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+            Corrdination.Theta = Math.Round(Navigation.Angle, 3);
+            //gen alarm codes 
+
+            AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).ToArray();
+
+            try
+            {
+                double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
+                var status = SimulationMode ? emulator.Runstatus : new clsRunningStatus
+                {
+                    Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
+                    CargoType = GetCargoType(),
+                    AGV_Status = _Main_Status,
+                    Electric_Volume = batteryLevels,
+                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
+                    Coordination = Corrdination,
+                    Odometry = Odometry,
+                    AGV_Reset_Flag = AGV_Reset_Flag,
+                    Alarm_Code = alarm_codes,
+                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                };
+                return status;
+            }
+            catch (Exception ex)
+            {
+                //LOG.ERROR("GenRunningStateReportData ", ex);
+                return new clsRunningStatus();
+            }
+        }
+
+        /// <summary>
+        /// 生成支援TCPIP通訊的RunningStatus Model
+        /// </summary>
+        /// <returns></returns>
+        protected virtual RunningStatus HandleTcpIPProtocolGetRunningStatus()
+        {
+            clsCoordination Corrdination = new clsCoordination();
+            MAIN_STATUS _Main_Status = Main_Status;
+            if (SimulationMode)
+                emulator.Runstatus.AGV_Status = _Main_Status;
+
+            Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+            Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+            Corrdination.Theta = Math.Round(Navigation.Angle, 3);
+            //gen alarm codes 
+
+            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).ToArray();
+
+            try
+            {
+                double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
+                var status = SimulationMode ? emulator.Runstatus : new RunningStatus
+                {
+                    Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
+                    CargoType = GetCargoType(),
+                    AGV_Status = _Main_Status,
+                    Electric_Volume = batteryLevels,
+                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
+                    Coordination = Corrdination,
+                    Odometry = Odometry,
+                    AGV_Reset_Flag = AGV_Reset_Flag,
+                    Alarm_Code = alarm_codes,
+                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                };
+                return status;
+            }
+            catch (Exception ex)
+            {
+                //LOG.ERROR("GenRunningStateReportData ", ex);
+                return new RunningStatus();
+            }
+        }
+
         public string WorkStationSettingsJsonFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/WorkStation.json");
 
         private void LoadWorkStationConfigs()
@@ -420,32 +522,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        protected virtual void WagoDIEventRegist()
-        {
-            WagoDI.OnEMO += EMOPushedHandler;
-            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
-            WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-            WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
-            WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
-            WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
-            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_2, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_2, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
-            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
-            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
-            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
-
-
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = state; });
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = state; });
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_COMPT, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = state; });
-        }
 
 
 
@@ -646,7 +722,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVAlarmWhenEQBusyFlag = false;
             EQAlarmWhenEQBusyFlag = false;
             WagoDO.ResetHandshakeSignals();
-
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             var hardware_status_check_reuslt = CheckHardwareStatus();
             if (!hardware_status_check_reuslt.confirm)
                 return (false, hardware_status_check_reuslt.message);
@@ -860,69 +936,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         /// <summary>
-        /// 當要求取得RunningStates Data的callback function
-        /// </summary>
-        /// <param name="getLastPtPoseOfTrajectory"></param>
-        /// <returns></returns>
-        internal virtual RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
-        {
-            clsCoordination Corrdination = new clsCoordination();
-            MAIN_STATUS _Main_Status = Main_Status;
-            if (SimulationMode)
-                emulator.Runstatus.AGV_Status = _Main_Status;
-            if (getLastPtPoseOfTrajectory)
-            {
-                var lastPt = ExecutingTask.RunningTaskData.ExecutingTrajecory.Last();
-                Corrdination.X = lastPt.X;
-                Corrdination.Y = lastPt.Y;
-                Corrdination.Theta = lastPt.Theta;
-                _Main_Status = MAIN_STATUS.IDLE;
-            }
-            else
-            {
-                Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
-                Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                Corrdination.Theta = Math.Round(Navigation.Angle, 3);
-            }
-            //gen alarm codes 
-
-            RunningStatus.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new RunningStatus.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-
-
-            }).ToArray();
-
-            try
-            {
-                double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
-                return SimulationMode ? emulator.Runstatus : new RunningStatus
-                {
-                    Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
-                    CargoType = GetCargoType(),
-                    AGV_Status = _Main_Status,
-                    Electric_Volume = batteryLevels,
-                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
-                    Coordination = Corrdination,
-                    Odometry = Odometry,
-                    AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
-
-                };
-            }
-            catch (Exception ex)
-            {
-                //LOG.ERROR("GenRunningStateReportData ", ex);
-                return new RunningStatus();
-            }
-        }
-
-        /// <summary>
         /// 取得載物的類型
         /// </summary>
         /// <returns></returns>
@@ -930,8 +943,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             return 0;
         }
-
-
 
         /// <summary>
         /// Auto/Manual 模式切換

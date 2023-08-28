@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+using AGVSystemCommonNet6.Log;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
@@ -34,6 +35,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 confirm = true
             };
             IsZAxisActionDone = tin.command == "done";
+            if (!IsZAxisActionDone)
+            {
+                LOG.Critical($"ZAxis action not DONE.. AGVC Reply command =  {tin.command}");
+            }
             Task.Factory.StartNew(() =>
             {
                 if (OnZAxisActionDone != null)
