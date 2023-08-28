@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("RunningState")]
         public async Task<IActionResult> GetRunningStatus()
         {
-            var state = agv.GenRunningStateReportData();
+            var state = agv.HandleWebAPIProtocolGetRunningStatus();
             return Ok(state.ToJson());
         }
 

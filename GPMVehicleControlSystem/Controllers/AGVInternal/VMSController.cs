@@ -222,7 +222,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("RunningStatus")]
         public async Task<IActionResult> GetRunningStatus()
         {
-            return Ok(agv.GenRunningStateReportData());
+            return Ok(agv.HandleWebAPIProtocolGetRunningStatus());
         }
 
         [HttpGet("FindTagCenter")]

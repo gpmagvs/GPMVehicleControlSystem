@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -33,13 +34,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override string WagoIOConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago_Submarine_AGV.ini");
 
-        internal override RunningStatus GenRunningStateReportData(bool getLastPtPoseOfTrajectory = false)
+        protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
         {
-            var baseRunningStatus = base.GenRunningStateReportData(getLastPtPoseOfTrajectory);
-            baseRunningStatus.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
-            return baseRunningStatus;
+            var status = base.HandleTcpIPProtocolGetRunningStatus();
+            status.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
 
+            return status;
         }
+        public override clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
+        {
+            var status = base.HandleWebAPIProtocolGetRunningStatus();
+            status.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
+            return status;
+        }
+        
 
         protected override void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {

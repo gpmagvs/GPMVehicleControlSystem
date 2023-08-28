@@ -14,12 +14,48 @@ using System.Security.Claims;
 using GPMVehicleControlSystem.Models.Buzzer;
 using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.MAP;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
         private bool EmoFlag = false;
+        protected virtual void WagoDIEventRegist()
+        {
+            WagoDI.OnEMO += EMOPushedHandler;
+            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
+            WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
+            WagoDI.OnLaserDIRecovery += LaserRecoveryHandler;
+            WagoDI.OnFarLaserDITrigger += FarLaserTriggerHandler;
+            WagoDI.OnNearLaserDiTrigger += NearLaserTriggerHandler;
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_2, HandleSideLaserSignal);
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_2, HandleSideLaserSignal);
+            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_COMPT, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = state; });
+
+            if (EQ_HS_Method == EQ_HS_METHOD.EMULATION)
+            {
+
+                WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
+                WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
+                WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
+                WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+                LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
+            }
+        }
 
         private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
         {
@@ -188,6 +224,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ExecutingTask?.Abort();
             HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
             DirectionLighter.CloseAll();
+            DOSettingWhenEmoTrigger();
+        }
+
+        protected virtual async Task DOSettingWhenEmoTrigger()
+        {
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
         }
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)

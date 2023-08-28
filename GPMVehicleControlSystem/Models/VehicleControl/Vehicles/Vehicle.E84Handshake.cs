@@ -304,6 +304,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 wait_eq_busy_OFF.Wait(waitEQSignalCST.Token);
                 SetAGVREADY(false); //AGV BUSY 開始退出
                 SetAGVBUSY(true);
+                WatchE84AlarmWhenAGVBUSY();
                 return (true, AlarmCodes.None);
             }
             catch (OperationCanceledException ex)
@@ -333,12 +334,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
                         throw new Exception("AGV Abnormal When AGV BUSY");
                     }
-                    if (!IsEQReadyOn())//異常發生
+                    bool isEQReadyOff = !IsEQReadyOn();
+                    bool isEQBusyOn = IsEQBusyOn();
+                    if (isEQReadyOff | isEQBusyOn)//異常發生
                     {
                         EQAlarmWhenEQBusyFlag = true;
                         AGVC.AbortTask(RESET_MODE.ABORT);
                         Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_READY, false);
+                        AlarmManager.AddAlarm(isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                         throw new Exception("EQ Abnormal When AGV BUSY");
                     }

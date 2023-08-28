@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.MAP;
+using clsAlarmCode = AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -46,7 +47,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public int LocStatus { get; set; }
         public bool ForkCSTExist { get; set; }
         public bool ForkFrontEndSensorTrigger { get; set; }
-        public clsAlarmCode[] AlarmCodes { get; set; } = new clsAlarmCode[0];
+        public  clsAlarmCode[] AlarmCodes { get; set; } = new  clsAlarmCode[0];
         public object AlarmsGroup
         {
             get
@@ -68,7 +69,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     return new Dictionary<int, object>();
             }
         }
-        public clsAlarmCode NewestAlarm
+        public  clsAlarmCode NewestAlarm
         {
             get
             {

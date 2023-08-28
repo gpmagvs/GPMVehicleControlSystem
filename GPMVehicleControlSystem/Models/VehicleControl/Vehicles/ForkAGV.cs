@@ -59,6 +59,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
+            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
+            await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
+            await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+            await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+
             bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2);
             if (RightLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
@@ -72,7 +77,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (true, "");
             }
-          
 
         }
         protected override async Task<(bool confirm, string message)> InitializeActions()
@@ -88,8 +92,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 }
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
-         
-                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() | ForkLifter.IsLoading ? 0.2 :0.4);
+
+                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() | ForkLifter.IsLoading ? 0.2 : 0.4);
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
 
                 return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
@@ -170,6 +174,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else if (rack_sensor1 | rack_sensor2)
                 return 1;
             else return -1;
+        }
+
+        protected override async Task DOSettingWhenEmoTrigger()
+        {
+            await base.DOSettingWhenEmoTrigger();
+            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
         }
     }
 }
