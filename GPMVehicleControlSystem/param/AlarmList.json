@@ -302,7 +302,7 @@
   {
     "Code": 710,
     "Description": "Fork Bumper Error",
-    "CN": "牙叉前障礙Sensor偵測異常"
+    "CN": "牙叉 Bumper Sensor防壓偵測觸發"
   },
   {
     "Code": 711,
@@ -1558,6 +1558,56 @@
     "Code": 4165,
     "Description": "Other error_4",
     "CN": "輪子馬達其他異常_4"
+  },
+  {
+    "Code": 4166,
+    "Description": "Motor Activ Error",
+    "CN": "馬達無法起動"
+  },
+  {
+    "Code": 4167,
+    "Description": "Motor Feedback Signal Error",
+    "CN": "馬達回授訊號錯誤"
+  },
+  {
+    "Code": 4168,
+    "Description": "Motor EEP Error",
+    "CN": "馬達資料錯誤 EEP 內部資料錯誤"
+  },
+  {
+    "Code": 4169,
+    "Description": "Motor Driver Over Heat",
+    "CN": "馬達驅動器的溫度高於可承受的上限"
+  },
+  {
+    "Code": 4170,
+    "Description": "Motor Over Speed Error",
+    "CN": "馬達轉速超過所設定的上限"
+  },
+  {
+    "Code": 4171,
+    "Description": "Motor Encoder Error",
+    "CN": "馬達Encoder訊號錯誤"
+  },
+  {
+    "Code": 4172,
+    "Description": "Motor Run Forbid",
+    "CN": "馬達初期運轉禁止"
+  },
+  {
+    "Code": 4173,
+    "Description": "Motor Extern Stop",
+    "CN": "馬達外部停止"
+  },
+  {
+    "Code": 4174,
+    "Description": "Motor Hall Sequence Error",
+    "CN": "馬達霍爾序列錯誤"
+  },
+  {
+    "Code": 4175,
+    "Description": "Motor Parameters Error",
+    "CN": "馬達參數設定錯誤"
   },
   {
     "Code": 5000,

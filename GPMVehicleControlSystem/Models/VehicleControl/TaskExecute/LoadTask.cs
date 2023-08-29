@@ -55,8 +55,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
-
             (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckBeforeHSStartInFrontOfEQ();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
@@ -103,7 +101,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             Agv.DirectionLighter.CloseAll();
-
             back_to_secondary_flag = false;
             await Task.Delay(1000);
 
@@ -150,7 +147,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
-
             if (TaskCancelCTS.IsCancellationRequested)
                 return (false, AlarmCodes.None);
 
@@ -161,12 +157,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 RunningTaskData = RunningTaskData.TurnToBackTaskData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
 
-                if (AGVCActionStatusChaged != null)
-                    AGVCActionStatusChaged = null;
-
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-
                 await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
+
+
             });
 
 
@@ -175,13 +169,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
         {
+            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            {
+                AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
+                return;
+            }
             LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
+
             if (status == ActionStatus.SUCCEEDED)
             {
-                if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                {
-                    return;
-                }
                 AGVCActionStatusChaged = null;
                 back_to_secondary_flag = true;
                 if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)

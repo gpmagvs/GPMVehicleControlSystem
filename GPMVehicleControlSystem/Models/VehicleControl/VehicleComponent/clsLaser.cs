@@ -177,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(1);
                 }
 
-                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", false);
+                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", true);
                 return true;
             }
             catch (Exception)

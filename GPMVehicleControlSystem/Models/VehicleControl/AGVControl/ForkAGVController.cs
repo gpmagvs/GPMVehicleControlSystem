@@ -30,6 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
         {
+            LOG.Critical($"{current_command} command action ack. AGVC Reply command =  {tin.command}");
             response = new VerticalCommandResponse()
             {
                 confirm = true
@@ -37,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             IsZAxisActionDone = tin.command == "done";
             if (!IsZAxisActionDone)
             {
-                LOG.Critical($"ZAxis action not DONE.. AGVC Reply command =  {tin.command}");
+                LOG.Critical($"{current_command} command   action not done.. AGVC Reply command =  {tin.command}");
             }
             Task.Factory.StartNew(() =>
             {
@@ -191,11 +192,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             };
             return await CallVerticalCommandService(request);
         }
-
+        private string current_command = "";
         private async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request)
         {
             try
             {
+                current_command = request.command;
                 IsZAxisActionDone = false;
                 VerticalCommandResponse? response = rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
                      request

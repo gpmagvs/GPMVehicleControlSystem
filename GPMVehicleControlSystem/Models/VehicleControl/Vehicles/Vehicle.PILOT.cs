@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.TASK;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
+using RosSharp.RosBridgeClient.Actionlib;
 using YamlDotNet.Core;
 using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
 using static AGVSystemCommonNet6.clsEnums;
@@ -59,8 +60,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
                 BuzzerPlayer.Action();
 
-
-
             if (!TaskTrackingTags.TryAdd(taskDownloadData.Task_Simplex, taskDownloadData.TagsOfTrajectory))
             {
                 if (taskDownloadData.TagsOfTrajectory.Count != 1)
@@ -86,7 +85,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTask = new NormalMoveTask(this, _taskDownloadData);
                     else
                     {
-
                         if (action == ACTION_TYPE.Charge)
                             ExecutingTask = new ChargeTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Discharge)
@@ -166,7 +164,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private clsMapPoint? previousTagPoint;
-        private void HandlerLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
+        private void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
             Task.Factory.StartNew(() =>
             {
@@ -184,12 +182,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Sub_Status = SUB_STATUS.DOWN;
                     return;
                 }
-                Laser.AgvsLsrSetting = previousTagPoint.Laser;
+               
                 if (ExecutingTask.action == ACTION_TYPE.None)
                 {
-                    Laser.FrontLaserBypass = true;
-                    Laser.ApplyAGVSLaserSetting();
-                    Laser.FrontLaserBypass = false;
+                    var laser_mode = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
+                    Laser.ModeSwitch(laser_mode);
                 }
 
                 if (ExecutingTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
@@ -326,7 +323,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag);
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
             {
+                AGVC._ActionStatus = ActionStatus.NO_GOAL;
                 CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
+                ExecutingTask.Abort();
+                ExecutingTask.Dispose();
                 ExecutingTask = null;
             }
         }

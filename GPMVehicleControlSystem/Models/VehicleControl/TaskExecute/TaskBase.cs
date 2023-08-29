@@ -14,14 +14,15 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsL
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
-    public abstract class TaskBase
+    public abstract class TaskBase : IDisposable
     {
         public Vehicle Agv { get; }
         private clsTaskDownloadData _RunningTaskData = new clsTaskDownloadData();
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
+        private bool disposedValue;
 
-        protected Action<ActionStatus>? AGVCActionStatusChaged
+        public Action<ActionStatus>? AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
             set => Agv.AGVC.OnAGVCActionChanged = value;
@@ -93,9 +94,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-             
+
                 TaskCancelCTS = new CancellationTokenSource();
-                Agv.AGVC.IsAGVExecutingTask = true;
                 DirectionLighterSwitchBeforeTaskExecute();
                 LaserSettingBeforeTaskExecute();
 
@@ -105,8 +105,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return checkResult.alarm_code;
                 }
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
-                Agv.Laser.AgvsLsrSetting = RunningTaskData.ExecutingTrajecory.First().Laser;
-
                 if (action == ACTION_TYPE.None)
                 {
                     if (ForkLifter != null)
@@ -158,19 +156,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
+            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            {
+                AGVCActionStatusChaged -= HandleAGVActionChanged;
+                return;
+            }
             LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
             if (status == ActionStatus.ACTIVE)
             {
-
-                Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+                //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
             }
             else
             {
-
                 if (status == ActionStatus.SUCCEEDED)
                 {
-
-                    AGVCActionStatusChaged = null;
+                    AGVCActionStatusChaged -= HandleAGVActionChanged;
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
                         return;
@@ -182,13 +182,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         AlarmManager.AddAlarm(result.alarmCode, false);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
-
                     }
 
                 }
                 if (status == ActionStatus.ABORTED)
                 {
-                    AGVCActionStatusChaged = null;
+                    AGVCActionStatusChaged -= HandleAGVActionChanged;
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
                 }
@@ -226,11 +225,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
         /// <summary>
-        /// 執行任務前的各項設定
+        /// 執行任務前動作
         /// </summary>
         /// <returns></returns>
         public virtual async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
             return (true, AlarmCodes.None);
         }
 
@@ -246,7 +246,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal virtual void Abort()
         {
+            AGVCActionStatusChaged = null;
             TaskCancelCTS.Cancel();
+            
         }
 
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
@@ -307,5 +309,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: 處置受控狀態 (受控物件)
+                }
+                AGVCActionStatusChaged = null;
+                TaskCancelCTS.Cancel();
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: 僅有當 'Dispose(bool disposing)' 具有會釋出非受控資源的程式碼時，才覆寫完成項
+        // ~TaskBase()
+        // {
+        //     // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

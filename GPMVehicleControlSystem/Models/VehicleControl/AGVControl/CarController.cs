@@ -76,11 +76,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
-        public Action<ActionStatus> OnAGVCActionChanged;
+        public Action<ActionStatus>? OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
 
-        private ActionStatus _ActionStatus = ActionStatus.PENDING;
+        internal ActionStatus _ActionStatus = ActionStatus.PENDING;
         public ActionStatus ActionStatus
         {
             get => _ActionStatus;
@@ -121,11 +121,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public MoveControl ManualController { get; set; }
         public double CurrentSpeedLimit { get; internal set; }
 
-        /// <summary>
-        /// 車控是否在執行任務
-        /// </summary>
-        /// <value></value>
-        public bool IsAGVExecutingTask { get; set; } = false;
         public CarController()
         {
         }
@@ -175,7 +170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, queue_length: 50);
             rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, queue_length: 50);
             rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 1, queue_length: 1);
-            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 1, queue_length: 1);
+            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 1, queue_length: 10);
         }
         private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
         {
@@ -278,10 +273,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private void CycleStop()
         {
             CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
-            IsAGVExecutingTask = false;
             //AbortTask();
         }
 
+        /// <summary>
+        /// 發送空的任務messag已達緊停的效果
+        /// </summary>
         internal void AbortTask()
         {
             if (actionClient != null)
@@ -289,7 +286,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 actionClient.goal = new TaskCommandGoal();
                 actionClient.SendGoal();
             }
-            IsAGVExecutingTask = false;
         }
 
         internal bool NavPathExpandedFlag { get; private set; } = false;
@@ -337,7 +333,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            //LOG.TRACE($"要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
+            LOG.INFO($"要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
             return res.confirm;
         }
 

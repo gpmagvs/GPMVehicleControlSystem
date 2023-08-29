@@ -64,10 +64,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
             await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
 
-            bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2);
+            bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
             if (RightLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
-            bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
+            bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
             if (LeftLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
             bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
@@ -79,10 +79,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-        protected override async Task<(bool confirm, string message)> InitializeActions()
+        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
 
-            (bool confirm, string message) baseInitize = await base.InitializeActions();
+            (bool confirm, string message) baseInitize = await base.InitializeActions(cancellation);
             if (!baseInitize.confirm)
                 return baseInitize;
             if (ForkLifter.Enable)
@@ -162,16 +162,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
+
+
         protected override int GetCargoType()
         {
-            var tray_sensor1 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor);
-            var tray_sensor2 = WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
             var rack_sensor1 = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
             var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
-
-            if (tray_sensor1 | tray_sensor2)
-                return 0;
-            else if (rack_sensor1 | rack_sensor2)
+            if (rack_sensor2 | rack_sensor1)
                 return 1;
             else return -1;
         }

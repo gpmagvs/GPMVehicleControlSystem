@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {2,new clsBattery{ } },
         };
 
-        protected override async Task<(bool confirm, string message)> InitializeActions()
+        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             //初始化儀器
             //(bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();

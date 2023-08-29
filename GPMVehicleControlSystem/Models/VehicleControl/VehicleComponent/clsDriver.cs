@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -28,40 +29,42 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override void CheckStateDataContent()
         {
             DriverState _driverState = (DriverState)StateData;
-            if (_driverState.errorCode != 0)
+            var code = _driverState.errorCode;
+            if (code != 0)
             {
-                var code = _driverState.errorCode;
                 if (code == 1)
-                    Current_Alarm_Code = AlarmCodes.Under_voltage_protection;
-                if (code == 2)
-                    Current_Alarm_Code = AlarmCodes.Under_current_protection;
-                if (code == 3)
-                    Current_Alarm_Code = AlarmCodes.Over_voltage_protection;
-                if (code == 4)
                     Current_Alarm_Code = AlarmCodes.Over_current_protection;
-                if (code == 5)
-                    Current_Alarm_Code = AlarmCodes.Over_heat_protection;
-                if (code == 6)
+                else if (code == 2)
                     Current_Alarm_Code = AlarmCodes.Over_load_protection;
-                if (code == 7)
-                    Current_Alarm_Code = AlarmCodes.Over_regeneration_load_protection;
-                if (code == 8)
+                else if (code == 3)
+                    Current_Alarm_Code = AlarmCodes.Motor_Feedback_Signal_Error;
+                else if (code == 4)
+                    Current_Alarm_Code = AlarmCodes.Over_voltage_protection;
+                else if (code == 5)
+                    Current_Alarm_Code = AlarmCodes.Under_voltage_protection;
+                else if (code == 6)
+                    Current_Alarm_Code = AlarmCodes.Motor_Driver_Over_Heat_Error;
+                else if (code == 7)
+                    Current_Alarm_Code = AlarmCodes.Motor_Active_Error;
+                else if (code == 8)
                     Current_Alarm_Code = AlarmCodes.Over_speed_protection;
-                if (code == 9)
-                    Current_Alarm_Code = AlarmCodes.Deviation_excess_protection;
-                if (code == 10)
-                    Current_Alarm_Code = AlarmCodes.AConnection_error_protection;
-                if (code == 11)
-                    Current_Alarm_Code = AlarmCodes.Status_Error;
-                if (code == 12)
-                    Current_Alarm_Code = AlarmCodes.Communication_error;
-                if (code == 13)
-                    Current_Alarm_Code = AlarmCodes.Alarm_input_protection;
-                if (code == 14)
+                else if (code == 10)
+                    Current_Alarm_Code = AlarmCodes.Over_heat_protection;
+                else if (code == 12)
+                    Current_Alarm_Code = AlarmCodes.Motor_Over_Speed_Error;
+                else if (code == 13)
+                    Current_Alarm_Code = AlarmCodes.Motor_Encoder_Error;
+                else if (code == 14)
+                    Current_Alarm_Code = AlarmCodes.Motor_Run_Forbid;
+                else if (code == 15)
+                    Current_Alarm_Code = AlarmCodes.Motor_Extern_Stop;
+                else if (code == 20)
+                    Current_Alarm_Code = AlarmCodes.Motor_Hall_Sequence_Error;
+                else if (code == 21)
                     Current_Alarm_Code = AlarmCodes.Command_error;
-                if (code == 15)
-                    Current_Alarm_Code = AlarmCodes.Overtorque;
-                if (code == 16)
+                else if (code == 22)
+                    Current_Alarm_Code = AlarmCodes.Motor_Parameters_Error;
+                else 
                     Current_Alarm_Code = AlarmCodes.Other_error;
             }
             else

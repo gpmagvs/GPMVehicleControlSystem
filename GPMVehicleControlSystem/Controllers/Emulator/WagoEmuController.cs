@@ -104,8 +104,8 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         [HttpGet("SetSideLaserNormal")]
         public async Task SetSideLaserNormal()
         {
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.RightProtection_Area_Sensor_2, true);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.LeftProtection_Area_Sensor_2, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.RightProtection_Area_Sensor_3, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.LeftProtection_Area_Sensor_3, true);
         }
 
         [HttpGet("SetFrontLaserNormal")]

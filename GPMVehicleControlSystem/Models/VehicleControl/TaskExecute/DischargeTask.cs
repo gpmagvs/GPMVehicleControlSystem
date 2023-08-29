@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -28,9 +29,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                var goHomeResult=await ForkLifter.ForkGoHome();
+                var goHomeResult = await ForkLifter.ForkGoHome(wait_done: true);
+                LOG.WARN($"Fork Go Home When AGVC Action Finish , {goHomeResult.confirm}:{goHomeResult.message}");
                 if (!goHomeResult.confirm)
-                    return (false, AlarmCodes.Action_Timeout);
+                {
+                    return (true, AlarmCodes.Fork_Arm_Pose_Error);
+                }
             }
             return await base.HandleAGVCActionSucceess();
         }

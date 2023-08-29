@@ -73,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return retCode;
         }
 
-        protected override async Task<(bool confirm, string message)> InitializeActions()
+        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             return (true, "");
         }

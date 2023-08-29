@@ -38,8 +38,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         bool isBackLaserA3Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_3);
         bool isBackLaserA4Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_4);
 
-        bool isRightLaserTrigger => !GetState(DI_ITEM.RightProtection_Area_Sensor_2);
-        bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
+        bool isRightLaserTrigger => !GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+        bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
 
         public event EventHandler OnDisonnected;
