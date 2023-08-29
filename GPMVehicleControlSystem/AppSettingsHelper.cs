@@ -1,6 +1,9 @@
 ﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
+using GitVersion.Extensions;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
@@ -15,19 +18,38 @@ namespace GPMVehicleControlSystem
             CONTENT_ERROR
         }
         public static APPSETTINGS_READ_STATUS Status { get; private set; } = APPSETTINGS_READ_STATUS.SUCCESS;
-        private static IConfiguration configuration
+        private static string baseDir => Debugger.IsAttached ? Environment.CurrentDirectory : AppDomain.CurrentDomain.BaseDirectory;
+        private static string appsettings_filename
+        {
+            get
+            {
+                return Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json";//VMware 模擬器AGV
+                return Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json"; //測試潛盾AGV
+                return Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"; //測試FORK AGV
+                return Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"; //測試巡檢AGV
+                return Debugger.IsAttached ? "appsettings.Development_YMYellowForkAGV.json" : "appsettings.json";//測試黃光FORK AGV
+            }
+        }
+
+
+        private static IConfigurationBuilder configBuilder
+        {
+            get
+            {
+                var baseDir = Debugger.IsAttached ? Environment.CurrentDirectory : AppDomain.CurrentDomain.BaseDirectory;
+                var configBuilder = new ConfigurationBuilder().SetBasePath(baseDir)
+                .AddJsonFile(appsettings_filename); //測試FORK AGV
+
+                return configBuilder;
+            }
+        }
+
+        private static IConfigurationRoot configuration
         {
             get
             {
                 try
                 {
-                    var baseDir = Debugger.IsAttached ? Environment.CurrentDirectory : AppDomain.CurrentDomain.BaseDirectory;
-                    var configBuilder = new ConfigurationBuilder().SetBasePath(baseDir)
-                    //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json"); //測試潛盾AGV
-                    .AddJsonFile(Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"); //測試FORK AGV
-                    //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"); //測試巡檢AGV
-                    //.AddJsonFile("appsettings.Development_YMYellowForkAGV.json"); //測試黃光FORK AGV
-                    //.AddJsonFile(Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json"); //VMware 模擬器AGV
 
                     var configuration = configBuilder.Build();
                     return configuration;
@@ -47,6 +69,7 @@ namespace GPMVehicleControlSystem
             }
         }
 
+
         public static string LogFolder
         {
             get
@@ -56,6 +79,40 @@ namespace GPMVehicleControlSystem
         }
 
         static bool IsRetry = false;
+        public static void WriteValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key, T value)
+        {
+            configuration[key] = value.ToString();
+            SaveConfiguration();
+        }
+
+        private static void SaveConfiguration()
+        {
+            var jObject = new JObject();
+
+            foreach (var provider in configuration.Providers)
+            {
+                if (provider is FileConfigurationProvider fileProvider)
+                {
+                    var configSrc = new ConfigurationBuilder()
+                        .AddJsonFile(fileProvider.Source.Path, optional: false, reloadOnChange: false)
+                        .Build();
+
+                    var jObjectFromProvider = new JObject();
+                    foreach (var config in configSrc.AsEnumerable())
+                    {
+                        jObjectFromProvider[config.Key] = config.Value;
+                    }
+
+                    jObject.Merge(jObjectFromProvider, new JsonMergeSettings
+                    {
+                        MergeArrayHandling = MergeArrayHandling.Union
+                    });
+                }
+            }
+
+            File.WriteAllText(Path.Combine(baseDir, appsettings_filename), jObject.ToString());
+        }
+
         public static T GetValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key)
         {
             bool success = false;
