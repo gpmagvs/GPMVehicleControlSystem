@@ -37,6 +37,12 @@ namespace GPMVehicleControlSystem.Controllers
 
             try
             {
+                if (Agv.ExecutingTask == null)
+                {
+                    reply.ReturnCode = RETURN_CODE.NG;
+                    reply.Message = "No task executing";
+                    return Ok(reply);
+                }
                 if (Agv.ExecutingTask.RunningTaskData.Task_Name == cancelCmd.Task_Name)
                 {
                     Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);

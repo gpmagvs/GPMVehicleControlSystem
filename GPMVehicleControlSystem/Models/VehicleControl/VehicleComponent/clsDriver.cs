@@ -27,7 +27,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override void CheckStateDataContent()
         {
-
             DriverState _driverState = (DriverState)StateData;
             if (_driverState.errorCode != 0)
             {
