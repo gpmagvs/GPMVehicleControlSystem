@@ -21,7 +21,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class Vehicle
     {
         private bool EmoFlag = false;
-        protected virtual void WagoDIEventRegist()
+
+        /// <summary>
+        /// 註冊DIO狀態變化事件
+        /// </summary>
+        protected virtual void DIOStatusChangedEventRegist()
         {
             WagoDI.OnEMO += EMOPushedHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
@@ -39,6 +43,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleWheelDriverStatusError);
 
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
@@ -48,12 +54,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (EQ_HS_Method == EQ_HS_METHOD.EMULATION)
             {
-
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
                 LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
+            }
+        }
+
+        protected void HandleWheelDriverStatusError(object? sender, bool status)
+        {
+            if (status)
+            {
+                clsIOSignal signal = (clsIOSignal)sender;
+                var input = signal?.Input;
+                if (input == DI_ITEM.Horizon_Motor_Alarm_1)
+                    AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Left, false);
+                if (input == DI_ITEM.Horizon_Motor_Alarm_2)
+                    AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Right, false);
+                if (input == DI_ITEM.Vertical_Motor_Alarm)
+                    AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
             }
         }
 
@@ -72,7 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                Sub_Status = SUB_STATUS.DOWN;
+                SoftwareEMO();
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
                     await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
             });

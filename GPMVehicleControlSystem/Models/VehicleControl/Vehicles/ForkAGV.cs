@@ -129,10 +129,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
 
         }
-        protected override void WagoDIEventRegist()
+        protected override void DIOStatusChangedEventRegist()
         {
-
-            base.WagoDIEventRegist();
+            base.DIOStatusChangedEventRegist();
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleWheelDriverStatusError);
         }
 
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)

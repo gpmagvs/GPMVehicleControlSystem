@@ -503,7 +503,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
-                    WagoDIEventRegist();
+                    DIOStatusChangedEventRegist();
                     while (!WagoDI.Connect())
                     {
                         await Task.Delay(1000);

@@ -33,40 +33,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 var code = _driverState.errorCode;
                 if (code == 1)
-                    Current_Warning_Code = AlarmCodes.Under_voltage_protection;
+                    Current_Alarm_Code = AlarmCodes.Under_voltage_protection;
                 if (code == 2)
-                    Current_Warning_Code = AlarmCodes.Under_current_protection;
+                    Current_Alarm_Code = AlarmCodes.Under_current_protection;
                 if (code == 3)
-                    Current_Warning_Code = AlarmCodes.Over_voltage_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_voltage_protection;
                 if (code == 4)
-                    Current_Warning_Code = AlarmCodes.Over_current_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_current_protection;
                 if (code == 5)
-                    Current_Warning_Code = AlarmCodes.Over_heat_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_heat_protection;
                 if (code == 6)
-                    Current_Warning_Code = AlarmCodes.Over_load_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_load_protection;
                 if (code == 7)
-                    Current_Warning_Code = AlarmCodes.Over_regeneration_load_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_regeneration_load_protection;
                 if (code == 8)
-                    Current_Warning_Code = AlarmCodes.Over_speed_protection;
+                    Current_Alarm_Code = AlarmCodes.Over_speed_protection;
                 if (code == 9)
-                    Current_Warning_Code = AlarmCodes.Deviation_excess_protection;
+                    Current_Alarm_Code = AlarmCodes.Deviation_excess_protection;
                 if (code == 10)
-                    Current_Warning_Code = AlarmCodes.AConnection_error_protection;
+                    Current_Alarm_Code = AlarmCodes.AConnection_error_protection;
                 if (code == 11)
-                    Current_Warning_Code = AlarmCodes.Status_Error;
+                    Current_Alarm_Code = AlarmCodes.Status_Error;
                 if (code == 12)
-                    Current_Warning_Code = AlarmCodes.Communication_error;
+                    Current_Alarm_Code = AlarmCodes.Communication_error;
                 if (code == 13)
-                    Current_Warning_Code = AlarmCodes.Alarm_input_protection;
+                    Current_Alarm_Code = AlarmCodes.Alarm_input_protection;
                 if (code == 14)
-                    Current_Warning_Code = AlarmCodes.Command_error;
+                    Current_Alarm_Code = AlarmCodes.Command_error;
                 if (code == 15)
-                    Current_Warning_Code = AlarmCodes.Overtorque;
+                    Current_Alarm_Code = AlarmCodes.Overtorque;
                 if (code == 16)
-                    Current_Warning_Code = AlarmCodes.Other_error;
+                    Current_Alarm_Code = AlarmCodes.Other_error;
             }
             else
-                Current_Warning_Code = AlarmCodes.None;
+                Current_Alarm_Code = AlarmCodes.None;
 
         }
     }
