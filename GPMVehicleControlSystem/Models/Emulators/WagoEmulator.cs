@@ -57,6 +57,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.BackProtection_Area_Sensor_2, true);
             SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
             SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
+
+            SetState(DI_ITEM.RightProtection_Area_Sensor_3, true);
+            SetState(DI_ITEM.LeftProtection_Area_Sensor_3, true);
+
+            SetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor,true);
         }
         public void SetState(DI_ITEM item, bool state)
         {

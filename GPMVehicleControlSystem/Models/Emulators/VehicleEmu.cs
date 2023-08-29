@@ -14,7 +14,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             Runstatus.Last_Visited_Node = init_tag;
         }
 
-
+        
         public RunningStatus Runstatus;
 
         public void SwitchON()

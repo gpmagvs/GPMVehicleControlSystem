@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
@@ -14,6 +15,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
@@ -151,7 +153,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
-        public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint { Name = "Unkown" };
+        public MapPoint lastVisitedMapPoint { get; private set; }
         public bool _IsCharging = false;
         public bool IsCharging
         {
@@ -231,6 +233,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+
                 Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
                 Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
                 BarcodeReader.OnTagLeave += OnTagLeaveHandler;
@@ -307,6 +310,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
                 AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
                 AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
+
+                lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
+                Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
+                BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
                 //TrafficMonitor();
@@ -350,13 +357,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
-                var status = SimulationMode ? emulator.Runstatus : new clsRunningStatus
+                var status = new clsRunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
-                    Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
+                    Last_Visited_Node = Navigation.Data.lastVisitedNode.data,
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
@@ -551,7 +558,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await Laser.ModeSwitch(0);
         }
-        private CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource(); 
+        private CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
         public async Task<(bool confirm, string message)> Initialize()
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)

@@ -15,10 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.NAVIGATION;
 
-        public new NavigationState Data => StateData == null ? new NavigationState()
-        {
-            lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(17),
-        } : (NavigationState)StateData;
+        public new NavigationState Data => (NavigationState)StateData;
 
         public event EventHandler<AGV_DIRECTION> OnDirectionChanged;
         public event EventHandler<int> OnLastVisitedTagUpdate;
