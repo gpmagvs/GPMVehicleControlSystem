@@ -22,6 +22,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        private void CommonEventsRegist()
+        {
+            AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
+            AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
+            AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
+            Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
+            Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
+            BarcodeReader.OnTagLeave += OnTagLeaveHandler;
+
+        }
 
         /// <summary>
         /// 註冊DIO狀態變化事件

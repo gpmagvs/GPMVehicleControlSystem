@@ -233,10 +233,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-
-                Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
-                Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
-                BarcodeReader.OnTagLeave += OnTagLeaveHandler;
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
@@ -307,15 +303,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
                 DownloadMapFromServer();
-                AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-                AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
-                AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
 
                 lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
                 Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                 BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
+                CommonEventsRegist();
+           
                 //TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
             }
@@ -328,6 +323,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
 
         /// <summary>
         /// 生成支援WebAPI的RunningStatus Model
