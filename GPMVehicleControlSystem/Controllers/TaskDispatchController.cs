@@ -18,14 +18,15 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpPost("Execute")]
         public async Task<IActionResult> Execute([FromBody] object taskDto)
         {
+            TaskDownloadRequestResponse task_download_feedback = new TaskDownloadRequestResponse();
             clsTaskDownloadData? data = JsonConvert.DeserializeObject<clsTaskDownloadData>(taskDto.ToString());
-            Agv.ExecuteAGVSTask(this, data);
-            await Task.Delay(200);
-            SimpleRequestResponse clsTaskDto = new SimpleRequestResponse()
+            TASK_DOWNLOAD_RETURN_CODES return_code = Agv.AGVSTaskDownloadConfirm(data);
+            task_download_feedback.ReturnCode = return_code;
+            if (return_code == TASK_DOWNLOAD_RETURN_CODES.OK)
             {
-                ReturnCode = RETURN_CODE.OK
-            };
-            return Ok(clsTaskDto);
+                Agv.ExecuteAGVSTask(this, data);
+            }
+            return Ok(task_download_feedback);
         }
         [HttpPost("Cancel")]
         public async Task<IActionResult> CancelTask([FromBody] clsCancelTaskCmd cancelCmd)

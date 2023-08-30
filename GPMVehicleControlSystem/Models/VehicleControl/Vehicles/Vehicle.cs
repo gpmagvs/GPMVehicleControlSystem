@@ -719,18 +719,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (IsResetAlarmWorking)
                 return;
 
+            if (!IsTriggerByButton)
+            {
+                await ResetMotor();
+            }
             if (AlarmManager.CurrentAlarms.Values.Count == 0)
             {
                 IsResetAlarmWorking = false;
                 return;
             }
-
             BuzzerPlayer.Stop();
-
-            if (!IsTriggerByButton)
-            {
-                await ResetMotor();
-            }
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
             StaSysMessageManager.Clear();

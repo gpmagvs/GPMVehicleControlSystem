@@ -17,6 +17,7 @@ using AGVSystemCommonNet6.MAP;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.WorkStation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -254,16 +255,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="taskDownloadData"></param>
         /// <returns></returns>
-        internal bool AGVSTaskDownloadConfirm(clsTaskDownloadData taskDownloadData)
+        internal TASK_DOWNLOAD_RETURN_CODES AGVSTaskDownloadConfirm(clsTaskDownloadData taskDownloadData)
         {
+
+            TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
             AGV_Reset_Flag = false;
 
-            if (Main_Status == MAIN_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
-                return false;
-            if (BarcodeReader.CurrentTag == 0)
-                return false;
+            var action_type = taskDownloadData.Action_Type;
 
-            return true;
+            if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
+            if (BarcodeReader.CurrentTag == 0) //不在Tag上
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_NOT_ON_TAG;
+            if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
+            if (taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
+            if (action_type == ACTION_TYPE.Load | action_type == ACTION_TYPE.Unload | action_type == ACTION_TYPE.Park | action_type == ACTION_TYPE.Charge | action_type == ACTION_TYPE.LoadAndPark)
+            {
+                if (!WorkStations.Stations.TryGetValue(taskDownloadData.Destination, out clsWorkStationData workstation_data))
+                {
+                    returnCode = TASK_DOWNLOAD_RETURN_CODES.WORKSTATION_NOT_SETTING_YET;
+                }
+                else
+                {
+
+                }
+            }
+
+            LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
+            return returnCode;
         }
 
         internal bool AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
@@ -345,50 +366,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="_ModuleInformation"></param>
         protected virtual void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
-            //if (_ModuleInformation.AlarmCode.Length > 0)
-            //{
-            //    foreach (var agvc_alarm in _ModuleInformation.AlarmCode)
-            //    {
-            //        var alarm = AlarmManager.ConvertAGVCAlarmCode(agvc_alarm, out var level);
-            //        if (level == AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode.LEVEL.Warning)
-            //            AlarmManager.AddWarning(alarm);
-            //        else
-            //            AlarmManager.AddAlarm(alarm, false);
-            //    }
-            //}
-
-            Odometry = _ModuleInformation.Mileage;
-            Navigation.StateData = _ModuleInformation.nav_state;
-
-            ushort battery_id = _ModuleInformation.Battery.batteryID;
-            if (Batteries.TryGetValue(battery_id, out var battery))
+            Task.Factory.StartNew(() =>
             {
-                battery.StateData = _ModuleInformation.Battery;
-            }
-            else
-            {
-                Batteries.Add(battery_id, new clsBattery()
+                Odometry = _ModuleInformation.Mileage;
+                Navigation.StateData = _ModuleInformation.nav_state;
+               
+                IMU.StateData = _ModuleInformation.IMU;
+                GuideSensor.StateData = _ModuleInformation.GuideSensor;
+                BarcodeReader.StateData = _ModuleInformation.reader;
+                VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
+
+                for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
+                    WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
+
+                var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
                 {
-                    StateData = _ModuleInformation.Battery
-                });
-            }
+                    Name = Navigation.LastVisitedTag.ToString(),
+                    TagNumber = Navigation.LastVisitedTag
+                } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
+                lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
 
-            IMU.StateData = _ModuleInformation.IMU;
-            GuideSensor.StateData = _ModuleInformation.GuideSensor;
-            BarcodeReader.StateData = _ModuleInformation.reader;
-            VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
-
-            for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
-                WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
-
-            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
-            {
-                Name = Navigation.LastVisitedTag.ToString(),
-                TagNumber = Navigation.LastVisitedTag
-            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
-            lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
-            IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
-
+                ushort battery_id = _ModuleInformation.Battery.batteryID;
+                if (Batteries.TryGetValue(battery_id, out var battery))
+                {
+                    battery.StateData = _ModuleInformation.Battery;
+                }
+                else
+                {
+                    Batteries.Add(battery_id, new clsBattery()
+                    {
+                        StateData = _ModuleInformation.Battery
+                    });
+                }
+                IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
+            });
 
         }
 

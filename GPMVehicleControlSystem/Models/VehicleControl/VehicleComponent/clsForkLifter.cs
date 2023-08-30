@@ -313,7 +313,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 LOG.INFO($"Fork {(IsDownSearch ? "Down " : "Up")} Search Start");
 
-                bool reachHome = false;
+                bool reachHome = CurrentForkLocation == FORK_LOCATIONS.HOME;
                 bool leaveHome = false;
                 while (true)
                 {
@@ -322,6 +322,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
                     await Task.Delay(1);
+
                     if (!reachHome)
                     {
                         reachHome = CurrentForkLocation == FORK_LOCATIONS.HOME;
@@ -359,13 +360,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.INFO($"{response.confirm},{response.message}");
                 }
 
-                IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
+                var IsReachHome = CurrentForkLocation == FORK_LOCATIONS.HOME;
                 IsInitialing = false;
-                if (IsInitialized)
+                if (IsReachHome)
                 {
                     (bool confirm, string message) response = (false, "");
                     CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    while (!response.confirm)
+                    while (!response.confirm | Math.Abs(Driver.CurrentPosition - 0) > 0.1)
                     {
                         await Task.Delay(200);
                         if (cancellation.IsCancellationRequested)
@@ -373,6 +374,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         response = await ForkPositionInit();
                         LOG.INFO($"Fork cmd : init response: {response.confirm}<{response.message}>");
                     }
+
+                    IsInitialized = IsReachHome && Math.Abs(Driver.CurrentPosition - 0) < 0.001;
+
                     LOG.INFO($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
                     return (true, AlarmCodes.None);
                 }

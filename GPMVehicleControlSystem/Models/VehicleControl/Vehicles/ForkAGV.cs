@@ -38,9 +38,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await base.ResetMotor();
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
                 await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
                 return true;
             }
             catch (Exception ex)
@@ -181,7 +186,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return 1;
             else return -1;
         }
-
         protected override async Task DOSettingWhenEmoTrigger()
         {
             await base.DOSettingWhenEmoTrigger();
