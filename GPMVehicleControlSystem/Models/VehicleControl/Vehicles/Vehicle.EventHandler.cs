@@ -122,7 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
                 AlarmManager.AddAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
-                AGVStatusChangeToAlarmWhenLaserRecovery();
+                AGVStatusChangeToAlarmWhenLaserTrigger();
             }
             else
             {
@@ -177,13 +177,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (diState.Input == DI_ITEM.RightProtection_Area_Sensor_3 && !WagoDO.GetState(DO_ITEM.Right_LsrBypass))
                 {
                     AlarmManager.AddAlarm(AlarmCodes.RightProtection_Area3);
-                    AGVStatusChangeToAlarmWhenLaserRecovery();
+                    AGVStatusChangeToAlarmWhenLaserTrigger();
                 }
 
                 if (diState.Input == DI_ITEM.LeftProtection_Area_Sensor_3 && !WagoDO.GetState(DO_ITEM.Left_LsrBypass))
                 {
                     AlarmManager.AddAlarm(AlarmCodes.LeftProtection_Area3);
-                    AGVStatusChangeToAlarmWhenLaserRecovery();
+                    AGVStatusChangeToAlarmWhenLaserTrigger();
                 }
             }
             else
@@ -197,6 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+
         private void AGVStatusChangeToRunWhenLaserRecovery()
         {
             AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
@@ -206,7 +207,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
             AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
 
-
             _Sub_Status = SUB_STATUS.RUN;
             StatusLighter.RUN();
             if (ExecutingTask.action == ACTION_TYPE.None)
@@ -214,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
                 BuzzerPlayer.Action();
         }
-        private void AGVStatusChangeToAlarmWhenLaserRecovery()
+        private void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
             _Sub_Status = SUB_STATUS.ALARM;
             BuzzerPlayer.Alarm();
@@ -236,17 +236,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void AGVCTaskAbortedHandle(object? sender, clsTaskDownloadData e)
-        {
-            if (Navigation.Current_Warning_Code != AlarmCodes.None)
-            {
-                AGVC.AbortTask();
-                ExecutingTask.Abort();
-                Sub_Status = SUB_STATUS.DOWN;
-                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-            }
-        }
-
         private DateTime previousSoftEmoTime = DateTime.MinValue;
         private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, EventArgs e)
         {
@@ -260,21 +249,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        private static AlarmCodes GetAlarmCodeByLsrDI(DI_ITEM LaserType)
-        {
-            AlarmCodes alarm_code = AlarmCodes.None;
-            if (LaserType == DI_ITEM.RightProtection_Area_Sensor_3)
-                alarm_code = AlarmCodes.RightProtection_Area3;
-            if (LaserType == DI_ITEM.LeftProtection_Area_Sensor_3)
-                alarm_code = AlarmCodes.LeftProtection_Area3;
-
-            if (LaserType == DI_ITEM.FrontProtection_Area_Sensor_2 | LaserType == DI_ITEM.FrontProtection_Area_Sensor_3)
-                alarm_code = AlarmCodes.FrontProtection_Area3;
-            if (LaserType == DI_ITEM.BackProtection_Area_Sensor_2 | LaserType == DI_ITEM.BackProtection_Area_Sensor_3)
-                alarm_code = AlarmCodes.BackProtection_Area3;
-            return alarm_code;
-        }
-
         /// <summary>
         /// 
         /// </summary>
@@ -285,6 +259,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGV_Reset_Flag = false;
 
             if (Main_Status == MAIN_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
+                return false;
+            if (BarcodeReader.CurrentTag == 0)
                 return false;
 
             return true;

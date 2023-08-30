@@ -23,11 +23,11 @@ namespace GPMVehicleControlSystem
         {
             get
             {
-                return Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json";//VMware 模擬器AGV
                 return Debugger.IsAttached ? "appsettings.Development.json" : "appsettings.json"; //測試潛盾AGV
-                return Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"; //測試FORK AGV
-                return Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"; //測試巡檢AGV
-                return Debugger.IsAttached ? "appsettings.Development_YMYellowForkAGV.json" : "appsettings.json";//測試黃光FORK AGV
+                //return Debugger.IsAttached ? "appsettings.Development_forkAGV.json" : "appsettings.json"; //測試FORK AGV
+                //return Debugger.IsAttached ? "appsettings.Development_VMware.json" : "appsettings.json";//VMware 模擬器AGV
+                //return Debugger.IsAttached ? "appsettings.Development_InspectAGV.json" : "appsettings.json"; //測試巡檢AGV
+                //return Debugger.IsAttached ? "appsettings.Development_YMYellowForkAGV.json" : "appsettings.json";//測試黃光FORK AGV
             }
         }
 

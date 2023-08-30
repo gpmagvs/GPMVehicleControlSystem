@@ -184,7 +184,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                  },
                 Destination = testVM.DestinPointID
             };
-            var confirmed = await agv.AGVC.AGVSTaskDownloadHandler(data);
+            var confirmed = await agv.AGVC.ExecuteTaskDownloaded(data);
             return Ok(new { confirm = confirmed.confirm, message = confirmed.message });
         }
         [HttpGet("MoveTo")]
@@ -229,7 +229,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                  },
                 Destination = point_id
             };
-            agv.AGVC.AGVSTaskDownloadHandler(data);
+            agv.AGVC.ExecuteTaskDownloaded(data);
             return Ok();
         }
 

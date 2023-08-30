@@ -480,6 +480,11 @@
     "CN": "AGV旋鈕異常"
   },
   {
+    "Code": 1001,
+    "Description": "Vertical Switch Type Error",
+    "CN": "Z軸解煞車旋鈕異常"
+  },
+  {
     "Code": 1010,
     "Description": "FrontProtection_Area3",
     "CN": "AGV前方近處障礙物"
@@ -1777,7 +1782,7 @@
   {
     "Code": 10010,
     "Description": "Laser Mode value fail",
-    "CN": "雷射組數數值錯誤"
+    "CN": "雷射組數數值錯誤(雷射IN/CIN Output數值寫入錯誤)"
   },
   {
     "Code": 860015,

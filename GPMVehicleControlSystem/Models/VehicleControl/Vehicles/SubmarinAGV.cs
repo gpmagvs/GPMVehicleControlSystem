@@ -15,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class SubmarinAGV : Vehicle
     {
 
-        public SubmarinAGV()
+        public SubmarinAGV() : base()
         {
         }
         protected override List<CarComponent> CarComponents
@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             status.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
             return status;
         }
-        
+
 
         protected override void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {

@@ -13,6 +13,8 @@ using Newtonsoft.Json;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.WorkStation;
 using System.ComponentModel;
+using Polly.Caching;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -93,7 +95,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override COMPOENT_NAME component_name => COMPOENT_NAME.VERTIVAL_DRIVER;
         public clsDriver Driver { get; set; }
         public override string alarm_locate_in_name => "FORK";
-        public bool IsLoading => Driver == null ? false : Driver.Data.outCurrent > 800;
         public clsDOModule DOModule { get; set; }
         private clsDIModule _DIModule;
         private double InitForkSpeed = 1.0;
@@ -121,7 +122,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Up_Hardware_limit, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
-                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
+
+                if (!AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass"))
+                    _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
             }
         }
 
@@ -168,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             });
         }
 
-        internal ForkAGVController fork_ros_controller;
+        internal ForkAGVController fork_ros_controller => forkAGV.AGVC as ForkAGVController;
         private ForkAGV forkAGV;
 
         public override void CheckStateDataContent()
@@ -294,134 +297,101 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
         {
-
-            this.InitForkSpeed = InitForkSpeed;
-            IsInitialized = false;
-            IsInitialing = true;
-            float homeDestine = 0;
             try
             {
-                if (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
-                    await ForkShortenInAsync();
+                this.InitForkSpeed = InitForkSpeed;
+                IsInitialized = false;
+                IsInitialing = true;
+                bool IsDownSearch = CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
 
-                if (CurrentForkLocation == FORK_LOCATIONS.HOME)
+                if (IsDownSearch)
+                    await ForkDownSearchAsync(InitForkSpeed);
+                else
                 {
-                    fork_ros_controller.ZAxisUp(0.2);
-                    while (CurrentForkLocation == FORK_LOCATIONS.HOME)
-                    {
-                        Thread.Sleep(1);
-                    }
-                    await fork_ros_controller.ZAxisStop();
+                    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
+                    await ForkUpSearchAsync(InitForkSpeed);
                 }
+                LOG.INFO($"Fork {(IsDownSearch ? "Down " : "Up")} Search Start");
 
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT);
-                //尋找下點位位置(在Home點的下方 _ cm)
-                async Task<(bool find, AlarmCodes alarm_code, bool isFindHome, float homPose_distine)> SearchDownLimitPose()
+                bool reachHome = false;
+                bool leaveHome = false;
+                while (true)
                 {
-                    bool isFindHome = false;
-                    try
+                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
                     {
-                        if (CurrentForkLocation == FORK_LOCATIONS.HOME)
-                            return (true, AlarmCodes.None, true, homeDestine);
-                        if (CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
-                            return (true, AlarmCodes.None, false, homeDestine);
-                        else
-                        {
-                            await fork_ros_controller.ZAxisDownSearch(InitForkSpeed); //向下搜尋
-                        }
-                        bool Upsearching = false;
-                        while (CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)//TODO 確認是A/B接 
-                        {
-                            Thread.Sleep(1);
-
-                            if (CurrentForkLocation == FORK_LOCATIONS.HOME)
-                            {
-                                isFindHome = true; //speed = 190 mm/s
-                                var posHome = Driver.Data.position;
-                                while (CurrentForkLocation == FORK_LOCATIONS.HOME)
-                                {
-                                    Thread.Sleep(1);
-                                }
-                                //Thread.Sleep(500);
-                                LOG.INFO($"Fork under home point ,{Driver.Data.position}");
-                                homeDestine = Math.Abs(Driver.Data.position - posHome);
-                                break;
-                            }
-                        }
-                        await fork_ros_controller.ZAxisStop();
-
+                        return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
-                    catch (Exception ex)
+                    await Task.Delay(1);
+                    if (!reachHome)
                     {
-                        return (false, AlarmCodes.Action_Timeout, false, homeDestine);
+                        reachHome = CurrentForkLocation == FORK_LOCATIONS.HOME;
+                        if (reachHome)
+                            LOG.INFO($"Fork reach home first");
                     }
-
-                    return (true, AlarmCodes.None, isFindHome, homeDestine);
-
-                }
-                async Task<(bool find, AlarmCodes alarm_code)> SearchHomePoseWithShortenMove()//使用吋動的方式
-                {
-                    try
+                    if (reachHome && CurrentForkLocation != FORK_LOCATIONS.HOME)
                     {
-                        while (CurrentForkLocation != FORK_LOCATIONS.HOME)
-                        {
-                            await Task.Delay(100);
-                            var pose = Driver.CurrentPosition - 0.05;
-                            await fork_ros_controller.ZAxisGoTo(pose, InitForkSpeed);
-                            await Task.Delay(1000);
-                        }
-                        return (true, AlarmCodes.None);
-                    }
-                    catch (Exception)
-                    {
-                        return (false, AlarmCodes.Action_Timeout);
+                        LOG.INFO($"Fork leave home ");
+                        await ForkStopAsync();
+                        break;
                     }
                 }
-
-                bool isHomeReachFirst = false;
-                if (CurrentForkLocation != FORK_LOCATIONS.HOME)
+                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+                await Task.Delay(2000);
+                if (IsDownSearch)
                 {
+                    LOG.INFO($"Home above , Fork Go To 2.5");
+                    await ForkPositionInit();
+                    await ForkPose(2.5, InitForkSpeed);
+                }
 
-                    (bool find, AlarmCodes alarm_code, bool isFindHome, float home_destine) searchDonwPoseResult = await SearchDownLimitPose();
-                    if (!searchDonwPoseResult.find)
-                        return (searchDonwPoseResult.find, searchDonwPoseResult.alarm_code);
-                    isHomeReachFirst = searchDonwPoseResult.isFindHome;
+                LOG.INFO($"Fork Shorten move to find Home Point Start");
+                await Task.Delay(400);
+                while (CurrentForkLocation != FORK_LOCATIONS.HOME)
+                {
+                    Thread.Sleep(1000);
+                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
+                    {
+                        return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
+                    }
+                    var pose = Driver.CurrentPosition - 0.05;
+                    LOG.INFO($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
+                    var response = await ForkPose(pose, InitForkSpeed);
+                    LOG.INFO($"{response.confirm},{response.message}");
+                }
+
+                IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
+                IsInitialing = false;
+                if (IsInitialized)
+                {
+                    (bool confirm, string message) response = (false, "");
+                    CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    while (!response.confirm)
+                    {
+                        await Task.Delay(200);
+                        if (cancellation.IsCancellationRequested)
+                            return (false, AlarmCodes.Action_Timeout);
+                        response = await ForkPositionInit();
+                        LOG.INFO($"Fork cmd : init response: {response.confirm}<{response.message}>");
+                    }
+                    LOG.INFO($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
+                    return (true, AlarmCodes.None);
                 }
                 else
-                    isHomeReachFirst = true;
-
-                await Task.Delay(200);
-                LOG.INFO($"Fork ZAxisInit_finhomed");
-                await Task.Delay(1000);
-                (bool success, string message) Initresult = await fork_ros_controller.ZAxisInit(); //將當前位置暫時設為原點(0)
-                if (!Initresult.success)
-                    throw new Exception();
-                await Task.Delay(200);
-                //上移直到脫離HOME
-                var uppose = isHomeReachFirst ? 2.3 : 4.5;
-                LOG.INFO($"Fork under home point , up to :{uppose}");
-                var result = await fork_ros_controller.ZAxisGoTo(uppose, wait_done: true, speed: InitForkSpeed); //移動到上方五公分
-                if (!result.success)
-                    throw new Exception();
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
-                (bool found, AlarmCodes alarm_code) findHomeResult = await SearchHomePoseWithShortenMove();
-                if (findHomeResult.found)
                 {
-                    result = await fork_ros_controller.ZAxisInit();
-                    if (!result.success)
-                        throw new Exception();
-
-                    IsInitialized = true;
+                    return (false, AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON);
                 }
-                IsInitialing = false;
-                return findHomeResult;
             }
-            catch (Exception)
+            catch (TimeoutException ex)
             {
                 IsInitialing = false;
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);  //重新啟動垂直軸硬體極限防護
                 return (false, AlarmCodes.Action_Timeout);
             }
+            catch (Exception ex)
+            {
+                IsInitialing = false;
+                return (false, AlarmCodes.Fork_Initialize_Process_Error_Occur);
+            }
+
         }
 
         /// <summary>
@@ -435,7 +405,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
-
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
@@ -455,10 +424,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 double errorTorlence = 0.5;
 
                 LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
+                bool belt_sensor_bypass = AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass");
 
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
-                    if (!DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
+                    if (!belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
                         return (false, AlarmCodes.Belt_Sensor_Error);
 
                     if (forkAGV.Sub_Status == SUB_STATUS.DOWN)

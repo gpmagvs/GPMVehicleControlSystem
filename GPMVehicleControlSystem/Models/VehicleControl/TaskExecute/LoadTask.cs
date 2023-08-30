@@ -52,6 +52,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
+        public override async void LaserSettingBeforeTaskExecute()
+        {
+            //啟用前後雷射偵測 + Loading 組數
+            await Agv.Laser.FrontBackLasersEnable(false);
+            await Agv.Laser.SideLasersEnable(false);
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+        }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
@@ -154,11 +161,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await Task.Factory.StartNew(async () =>
             {
                 Agv.DirectionLighter.Backward(delay: 800);
-                RunningTaskData = RunningTaskData.TurnToBackTaskData();
+                RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-                await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
+                await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
 
 
             });
@@ -235,12 +241,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return true;
         }
-        public override async void LaserSettingBeforeTaskExecute()
-        {
-            Agv.Laser.AllLaserDisable();
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
-        }
-
+       
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
         {
             if (!CSTTrigger)

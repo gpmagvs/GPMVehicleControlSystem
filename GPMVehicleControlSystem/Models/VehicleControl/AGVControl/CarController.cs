@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Abstracts;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
@@ -337,10 +338,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return res.confirm;
         }
 
-        internal async Task<(bool confirm, string message)> AGVSTaskDownloadHandler(clsTaskDownloadData taskDownloadData)
+        internal async Task<(bool confirm, string message)> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData)
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
+
             return await SendGoal(RunningTaskData.RosTaskCommandGoal);
         }
 
@@ -355,7 +357,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 $"\r\nPlanPath      = {string.Join("->", rosGoal.planPath.poses.Select(pose => pose.header.seq).ToArray())}" +
                 $"\r\nmobilityModes = {rosGoal.mobilityModes}" +
                 $"\r\n==========================================================");
-
+            LOG.INFO("Path Info : " + rosGoal.pathInfo.ToJson());
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));

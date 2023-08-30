@@ -16,12 +16,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-        public override void LaserSettingBeforeTaskExecute()
+        public override async void LaserSettingBeforeTaskExecute()
         {
-            //Agv.Laser.LeftLaserBypass = true;
-            //Agv.Laser.RightLaserBypass = true;
-            Agv.Laser.AllLaserDisable();
-            Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+            await Agv.Laser.FrontBackLasersEnable(false);
+            await Agv.Laser.SideLasersEnable(false);
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
 
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
@@ -14,7 +15,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public DischargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-
+        public override async void LaserSettingBeforeTaskExecute()
+        {
+            await Agv.Laser.FrontBackLasersEnable(false);
+            await Agv.Laser.SideLasersEnable(false);
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+        }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
             Task.Factory.StartNew(async () =>

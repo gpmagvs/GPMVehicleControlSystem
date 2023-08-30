@@ -74,30 +74,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public bool FrontLaserBypass
+        /// <summary>
+        /// 前後雷射Bypass關閉
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        internal async Task FrontBackLasersEnable(bool active)
         {
-            get => DOModule.GetState(DO_ITEM.Front_LsrBypass);
-            set => DOModule.SetState(DO_ITEM.Front_LsrBypass, value);
-        }
-
-        public bool BackLaserBypass
+            await DOModule.SetState(DO_ITEM.Front_LsrBypass, !active);
+            await DOModule.SetState(DO_ITEM.Back_LsrBypass, !active);
+        }   /// <summary>
+            /// 前後雷射Bypass關閉
+            /// </summary>
+            /// <exception cref="NotImplementedException"></exception>
+        internal async Task SideLasersEnable(bool active)
         {
-            get => DOModule.GetState(DO_ITEM.Back_LsrBypass);
-            set => DOModule.SetState(DO_ITEM.Back_LsrBypass, value);
+            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !active);
+            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !active);
         }
-
-        public bool RightLaserBypass
-        {
-            get => DOModule.GetState(DO_ITEM.Right_LsrBypass);
-            set => DOModule.SetState(DO_ITEM.Right_LsrBypass, value);
-        }
-
-        public bool LeftLaserBypass
-        {
-            get => DOModule.GetState(DO_ITEM.Left_LsrBypass);
-            set => DOModule.SetState(DO_ITEM.Left_LsrBypass, value);
-        }
-
         /// <summary>
         /// 前後左右雷射Bypass全部關閉
         /// </summary>
@@ -125,7 +118,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal async void ApplyAGVSLaserSetting()
         {
-            LOG.INFO($"雷射組數切換為AGVS Setting={AgvsLsrSetting}",false);
+            LOG.INFO($"雷射組數切換為AGVS Setting={AgvsLsrSetting}", false);
             await ModeSwitch(AgvsLsrSetting);
         }
 
@@ -147,6 +140,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(LASER_MODE mode)
         {
+            int mode_int = (int)mode;
+            if (CurrentLaserMonitoringCase == mode_int | (CurrentLaserMonitoringCase == 16 && mode_int == 0) | (CurrentLaserMonitoringCase == 0 && mode_int == 16))
+                return true;
             return await ModeSwitch((int)mode);
         }
         public async Task<bool> ModeSwitch(int mode_int)

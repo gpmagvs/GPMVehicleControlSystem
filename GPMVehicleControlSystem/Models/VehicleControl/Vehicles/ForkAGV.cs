@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -20,14 +21,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class ForkAGV : SubmarinAGV
     {
         public override string WagoIOConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago_Fork_AGV.ini");
-        /// <summary>
-        /// Fork車控
-        /// </summary>
-        private ForkAGVController ForkAGVC => AGVC as ForkAGVController;
         public bool IsForkInitialized => ForkLifter.IsInitialized;
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
-        public ForkAGV()
+        public ForkAGV() : base()
         {
             ForkLifter = new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
@@ -87,15 +84,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return baseInitize;
             if (ForkLifter.Enable)
             {
-                if (ForkLifter.IsLoading)
+                if (HasAnyCargoOnAGV())
                 {
                     AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 }
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() | ForkLifter.IsLoading ? 0.2 : 0.4);
-                await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
-
+                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
+                bool belt_sensor_bypass = AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass");
+                if (!belt_sensor_bypass)
+                    await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+                AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
             }
             else
@@ -108,7 +107,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new ForkAGVController(RosBridge_IP, RosBridge_Port);
-            ForkLifter.fork_ros_controller = ForkAGVC;
         }
 
 
@@ -118,7 +116,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(() =>
             {
                 ForkLifter.ForkARMStop();
-                ForkAGVC.ZAxisStop();
+                ForkLifter.ForkStopAsync();
             });
         }
         protected override async void DOSignalDefaultSetting()
@@ -151,11 +149,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return dat;
         }
+
+        public override (bool confirm, string message) CheckHardwareStatus()
+        {
+            if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Switch))
+            {
+                AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error_Vertical, false);
+                BuzzerPlayer.Alarm();
+                return (false, "Z軸解煞車旋鈕尚未復歸");
+            }
+            return base.CheckHardwareStatus();
+        }
         internal override bool HasAnyCargoOnAGV()
         {
             try
             {
-                return WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) | WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                return !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
             }
             catch (Exception)
             {

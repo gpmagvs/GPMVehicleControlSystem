@@ -31,20 +31,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
         {
             LOG.Critical($"{current_command} command action ack. AGVC Reply command =  {tin.command}");
+            IsZAxisActionDone = true;
             response = new VerticalCommandResponse()
             {
                 confirm = true
             };
-            IsZAxisActionDone = tin.command == "done";
-            if (!IsZAxisActionDone)
+            bool command_reply_done = tin.command == "done";
+            if (!command_reply_done)
             {
-                LOG.Critical($"{current_command} command   action not done.. AGVC Reply command =  {tin.command}");
+                LOG.WARN($"{current_command} command   action not done.. AGVC Reply command =  {tin.command}");
             }
-            Task.Factory.StartNew(() =>
-            {
-                if (OnZAxisActionDone != null)
-                    OnZAxisActionDone(IsZAxisActionDone);
-            });
             return IsZAxisActionDone;
         }
         public async Task<(bool confirm, string message)> ZAxisInit()
@@ -62,6 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public async Task<(bool success, string message)> ZAxisGoTo(double target, double? speed = 1.0, bool wait_done = true)
         {
+            IsZAxisActionDone = false;
             VerticalCommandRequest request = new VerticalCommandRequest
             {
                 model = "FORK",
@@ -76,7 +73,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     return callSerivceResult;
                 else
                 {
-                    IsZAxisActionDone = false;
+                    if (IsZAxisActionDone)
+                        return (true, "");
                     return await WaitActionDone();
                 }
             }
@@ -91,7 +89,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             CancellationTokenSource wtd = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             while (!IsZAxisActionDone)
             {
-                await Task.Delay(1);
+                await Task.Delay(100);
                 if (wtd.IsCancellationRequested)
                     return (false, "Wait Action Done Timeout");
             }
@@ -152,6 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<(bool confirm, string message)> ZAxisGoHome(double speed = 1.0, bool wait_done = true)
         {
+            IsZAxisActionDone = false;
             VerticalCommandRequest request = new VerticalCommandRequest
             {
                 model = "FORK",
@@ -165,6 +164,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     return callSerivceResult;
                 else
                 {
+                    if (IsZAxisActionDone)
+                        return (true, "");
                     return await WaitActionDone();
                 }
             }
@@ -198,12 +199,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             try
             {
                 current_command = request.command;
-                IsZAxisActionDone = false;
                 VerticalCommandResponse? response = rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
                      request
                 );
                 if (response == null)
-                    return (false, "Timeout");
+                    throw new TimeoutException();
                 return (response.confirm, "");
             }
             catch (Exception ex)

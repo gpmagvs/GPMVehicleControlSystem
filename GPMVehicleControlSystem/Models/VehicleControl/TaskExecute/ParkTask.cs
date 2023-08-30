@@ -19,13 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        public override async void LaserSettingBeforeTaskExecute()
-        {
-            Agv.Laser.LeftLaserBypass = true;
-            Agv.Laser.RightLaserBypass = true;
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
-
-        }
+      
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
             Agv.DirectionLighter.Forward();

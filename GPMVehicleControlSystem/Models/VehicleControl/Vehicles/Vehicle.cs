@@ -310,7 +310,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
                 IsSystemInitialized = true;
                 CommonEventsRegist();
-           
+
                 //TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
             }
@@ -578,11 +578,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.AbortFlash();
                     return result;
                 }
-
-                StatusLighter.AbortFlash();
+                LOG.INFO("Fork Init done. Laser mode chaged to Bypass");
                 await Laser.ModeSwitch(LASER_MODE.Bypass);
                 Sub_Status = SUB_STATUS.IDLE;
                 IsInitialized = true;
+                LOG.INFO("Fork Init done");
                 return (true, "");
             }
             catch (Exception ex)
@@ -655,7 +655,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (true, "");
             else
             {
-                AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error, false);
+                AlarmManager.AddAlarm(alarmo_code, false);
                 BuzzerPlayer.Alarm();
                 return (false, error_message);
             }
@@ -850,8 +850,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-
-                return !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_1) && !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_2);
+                return !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_2);
             }
             catch (Exception)
             {

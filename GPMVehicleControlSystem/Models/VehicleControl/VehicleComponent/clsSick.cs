@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     if (value)
                     {
-                        Current_Warning_Code = AlarmCodes.Laser_Mode_value_fail;
+                        Current_Alarm_Code = AlarmCodes.Laser_Mode_value_fail;
                     }
                     _LaserModeSettingError = value;
 

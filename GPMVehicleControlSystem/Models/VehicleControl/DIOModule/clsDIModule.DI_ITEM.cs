@@ -10,6 +10,7 @@
             Bumper_Sensor,
             Panel_Reset_PB,
             Horizon_Motor_Switch,
+            Vertical_Motor_Switch,
             Monitor_Switch,
             /// <summary>
             /// 牙叉電動缸_伸出到位檢

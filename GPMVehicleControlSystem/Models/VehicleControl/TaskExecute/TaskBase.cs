@@ -131,7 +131,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
                 AGVCActionStatusChaged += HandleAGVActionChanged;
-                (bool agvc_executing, string message) agvc_response = await Agv.AGVC.AGVSTaskDownloadHandler(RunningTaskData);
+                RunningTaskData.HasCargo = Agv.HasAnyCargoOnAGV();
+
+                (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
                     return AlarmCodes.Cant_TransferTask_TO_AGVC;
@@ -142,7 +144,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         StartFrontendObstcleDetection();
                     }
-
                 }
 
                 return AlarmCodes.None;
@@ -248,7 +249,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             AGVCActionStatusChaged = null;
             TaskCancelCTS.Cancel();
-            
+
         }
 
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
