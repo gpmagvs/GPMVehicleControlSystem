@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             try
             {
-                VerticalCommandResponse? response = rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
+                VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
                         new VerticalCommandRequest
                         {
                             command = command.ToString(),

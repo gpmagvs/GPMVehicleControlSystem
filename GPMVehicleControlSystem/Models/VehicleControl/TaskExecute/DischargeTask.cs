@@ -35,11 +35,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (ForkLifter != null)
             {
-                var goHomeResult = await ForkLifter.ForkGoHome(wait_done: true);
-                LOG.WARN($"Fork Go Home When AGVC Action Finish , {goHomeResult.confirm}:{goHomeResult.message}");
+                (bool confirm, AlarmCodes alarm_code) goHomeResult = await ForkLifter.ForkGoHome(wait_done: true);
+                LOG.WARN($"Fork Go Home When AGVC Action Finish , {goHomeResult.confirm}:{goHomeResult.alarm_code}");
                 if (!goHomeResult.confirm)
                 {
-                    return (true, AlarmCodes.Fork_Arm_Pose_Error);
+                    return (true, goHomeResult.alarm_code);
                 }
             }
             return await base.HandleAGVCActionSucceess();

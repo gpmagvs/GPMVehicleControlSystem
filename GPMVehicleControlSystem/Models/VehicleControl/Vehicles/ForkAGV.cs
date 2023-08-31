@@ -38,6 +38,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await base.ResetMotor();
+
+                if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Alarm))
+                    return true;
+
                 await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
                 await Task.Delay(100);
@@ -96,6 +100,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
                 (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
+
+                if (forkInitizeResult.done)
+                {
+                    //self test Home action 
+                    (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
+                    if (!home_action_response.confirm)
+                    {
+                        return (false, home_action_response.alarm_code.ToString());
+                    }
+                }
+
                 bool belt_sensor_bypass = AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass");
                 if (!belt_sensor_bypass)
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);

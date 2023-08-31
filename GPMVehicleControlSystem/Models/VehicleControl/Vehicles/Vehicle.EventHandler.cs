@@ -171,17 +171,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
-
             clsIOSignal diState = (clsIOSignal)sender;
+            bool IsRightLaser = diState.Input == DI_ITEM.RightProtection_Area_Sensor_3;
+            bool IsLeftLaser = diState.Input == DI_ITEM.LeftProtection_Area_Sensor_3;
+            bool IsRightLsrBypass = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+            bool IsLeftLsrBypass = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+
+            if (IsRightLaser && IsRightLsrBypass)
+                return;
+            if (IsLeftLaser && IsLeftLsrBypass)
+                return;
+
             if (!di_state)
             {
-                if (diState.Input == DI_ITEM.RightProtection_Area_Sensor_3 && !WagoDO.GetState(DO_ITEM.Right_LsrBypass))
+                if (IsRightLaser)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.RightProtection_Area3);
                     AGVStatusChangeToAlarmWhenLaserTrigger();
                 }
 
-                if (diState.Input == DI_ITEM.LeftProtection_Area_Sensor_3 && !WagoDO.GetState(DO_ITEM.Left_LsrBypass))
+                if (IsLeftLaser)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.LeftProtection_Area3);
                     AGVStatusChangeToAlarmWhenLaserTrigger();
@@ -339,7 +348,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 }
-                HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                    HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
                 DirectionLighter.CloseAll();
                 DOSettingWhenEmoTrigger();
                 IsInitialized = false;
@@ -370,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 Odometry = _ModuleInformation.Mileage;
                 Navigation.StateData = _ModuleInformation.nav_state;
-               
+
                 IMU.StateData = _ModuleInformation.IMU;
                 GuideSensor.StateData = _ModuleInformation.GuideSensor;
                 BarcodeReader.StateData = _ModuleInformation.reader;

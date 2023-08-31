@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -99,13 +100,21 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork")]
         public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 0)
         {
-           
+            if (forkAgv.ForkLifter.IsInitialing)
+                return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
+
+            bool isForkWorking = (forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag;
+            string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkAction;
+
+            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag)
+                return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
+
             if (action == "home" | action == "orig")
             {
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkGoHome(speed);
-                return Ok(new { confirm = result.success, message = result.message });
+                var result = await forkAgv.ForkLifter.ForkGoHome(speed);
+                return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
             }
             else if (action == "init")
             {
@@ -130,6 +139,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 return Ok(new { confirm = result.success, message = result.message });
             }
+            else if (action == "stop")
+            {
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkStopAsync();
+                return Ok(new { confirm = result.success, message = result.message });
+            }
+            else if (action == "increase")
+            {
+                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + pose;
+                LOG.WARN($"USER adjust fork position from web ui:pose to = {pose_to}");
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                return Ok(new { confirm = result.success, message = result.message });
+            }
             else
                 return Ok(new { confirm = false, message = "invalid action type" });
         }
@@ -148,7 +169,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Shorten")]
         public async Task<IActionResult> ForkArmShorten()
         {
-            var result = await forkAgv.ForkLifter.ForkShortenInAsync(); 
+            var result = await forkAgv.ForkLifter.ForkShortenInAsync();
             return Ok(new { confirm = result.confirm, message = result.message });
 
         }

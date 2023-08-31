@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <exception cref="NotImplementedException"></exception>
         public override async Task<(bool request_success, bool action_done)> AbortCSTReader()
         {
-            CSTReaderCommandResponse? response = rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
+            CSTReaderCommandResponse? response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
               new CSTReaderCommandRequest() { command = "stop", model = "FORK" });
             if (response == null)
             {
@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
-            CSTReaderCommandResponse? response = rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
+            CSTReaderCommandResponse? response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
                 new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
 
             if (response == null)

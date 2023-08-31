@@ -322,14 +322,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             await Task.Delay(1);
             CarSpeedControl(cmd, RunningTaskData.Task_Name);
         }
-        public bool CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
+        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
                 reqsrv = (byte)cmd
             };
-            ComplexRobotControlCmdResponse? res = rosSocket?.CallServiceAndWait<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", req);
+            ComplexRobotControlCmdResponse? res = await rosSocket?.CallServiceAndWait<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", req);
             if (res == null)
             {
                 return false;

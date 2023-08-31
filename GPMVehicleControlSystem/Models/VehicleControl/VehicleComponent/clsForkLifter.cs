@@ -141,15 +141,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                     else if (!state && DI?.Input == DI_ITEM.Vertical_Down_Hardware_limit)
                     {
-                        fork_ros_controller?.ZAxisStop();
                         if (!IsInitialing)
+                        {
+                            fork_ros_controller?.ZAxisStop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
+                        }
                     }
                     else if (!state && DI?.Input == DI_ITEM.Vertical_Up_Hardware_limit)
                     {
-                        fork_ros_controller?.ZAxisStop();
                         if (!IsInitialing)
+                        {
+                            fork_ros_controller?.ZAxisStop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
+                        }
                     }
                     else if (!state && DI?.Input == DI_ITEM.Vertical_Belt_Sensor)
                     {
@@ -183,27 +187,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
-            await HardwareLimitSaftyCheck();
             return await fork_ros_controller.ZAxisInit();
         }
 
-        private async Task<bool> HardwareLimitSaftyCheck()
+        public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
         {
-            if (CurrentForkLocation == FORK_LOCATIONS.UNKNOWN)
-                return await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-            return true;
-        }
+            (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
 
-        public async Task<(bool confirm, string message)> ForkGoHome(double speed = 1, bool wait_done = true)
-        {
-            await HardwareLimitSaftyCheck();
-            return await fork_ros_controller.ZAxisGoHome(speed, wait_done);
+            if (!response.confirm)
+                return (false, AlarmCodes.Action_Timeout);
+            if (!DIModule.GetState(DI_ITEM.Vertical_Home_Pos))
+                return (false, AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+            else
+                return (true, AlarmCodes.None);
         }
         public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
         {
             if (pose < 0)
                 pose = 0;
-            await HardwareLimitSaftyCheck();
             //if (pose > ForkTeachData.Up_Pose_Limit)
             //    pose = ForkTeachData.Up_Pose_Limit;
             //if (pose < ForkTeachData.Down_Pose_Limit)
@@ -213,23 +214,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, string message)> ForkUpAsync(double speed = 0.1)
         {
-            await HardwareLimitSaftyCheck();
             return await fork_ros_controller.ZAxisUp(speed);
         }
         public async Task<(bool confirm, string message)> ForkDownAsync(double speed = 0.1)
         {
-            await HardwareLimitSaftyCheck();
             return await fork_ros_controller.ZAxisDown(speed);
         }
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
         {
-            await HardwareLimitSaftyCheck();
             return await fork_ros_controller.ZAxisUpSearch(speed);
         }
 
         public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
         {
-            await HardwareLimitSaftyCheck();
             return await fork_ros_controller.ZAxisDownSearch(speed);
         }
         /// <summary>
@@ -309,7 +306,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                 {
                     await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-                    await ForkUpSearchAsync(InitForkSpeed);
+                    var rsponse = await ForkUpSearchAsync(InitForkSpeed);
                 }
                 LOG.INFO($"Fork {(IsDownSearch ? "Down " : "Up")} Search Start");
 
@@ -322,7 +319,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
                     await Task.Delay(1);
+                    if (IsDownSearch && CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
+                    {
+                        reachHome = false;
+                        IsDownSearch = false;
+                        await ForkPositionInit();
+                        await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
+                        await ForkUpSearchAsync();
 
+                    }
                     if (!reachHome)
                     {
                         reachHome = CurrentForkLocation == FORK_LOCATIONS.HOME;
@@ -332,21 +337,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (reachHome && CurrentForkLocation != FORK_LOCATIONS.HOME)
                     {
                         LOG.INFO($"Fork leave home ");
-                        await ForkStopAsync();
+                        if (!IsDownSearch)
+                            await Task.Delay(10);
+                        var rsponse = await ForkStopAsync();
                         break;
                     }
+
                 }
                 await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-                await Task.Delay(2000);
+                await Task.Delay(1000);
                 if (IsDownSearch)
                 {
-                    LOG.INFO($"Home above , Fork Go To 2.5");
-                    await ForkPositionInit();
-                    await ForkPose(2.5, InitForkSpeed);
+                    LOG.INFO($"Home above , Fork init and Go To 2.5");
+                    (bool confirm, string message) response = (false, "");
+                    while (!response.confirm)
+                    {
+                        Thread.Sleep(10);
+                        response = await ForkPositionInit();
+                        LOG.INFO($" Fork init and Go To 2.5 ForkPositionInit {response.confirm},{response.message}");
+                        if (!response.confirm)
+                            continue;
+                        Thread.Sleep(1000);
+                        response = await ForkPose(2.5, 1);
+                        LOG.INFO($" Fork init and Go To 2.5 ForkPose {response.confirm},{response.message}");
+                        if (!response.confirm)
+                            continue;
+                    }
                 }
 
                 LOG.INFO($"Fork Shorten move to find Home Point Start");
-                await Task.Delay(400);
+                await Task.Delay(1000);
                 while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
                     Thread.Sleep(1000);
@@ -356,7 +376,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                     var pose = Driver.CurrentPosition - 0.05;
                     LOG.INFO($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
-                    var response = await ForkPose(pose, InitForkSpeed);
+                    var response = await ForkPose(pose, 1);
                     LOG.INFO($"{response.confirm},{response.message}");
                 }
 
@@ -374,8 +394,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         response = await ForkPositionInit();
                         LOG.INFO($"Fork cmd : init response: {response.confirm}<{response.message}>");
                     }
+                    var home_position_error_ = Math.Abs(Driver.CurrentPosition - 0);
+                    IsInitialized = IsReachHome && home_position_error_ < 0.01;
 
-                    IsInitialized = IsReachHome && Math.Abs(Driver.CurrentPosition - 0) < 0.001;
+                    if (!IsInitialized)
+                    {
+                        LOG.Critical(!IsReachHome ? $"Fork Initialize Done but Home DI Not ON" : $"Fork Initialize Done But Driver Position Error to much ({home_position_error_} cm)");
+                        return (false, !IsReachHome ? AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON : AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
+                    }
 
                     LOG.INFO($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
                     return (true, AlarmCodes.None);

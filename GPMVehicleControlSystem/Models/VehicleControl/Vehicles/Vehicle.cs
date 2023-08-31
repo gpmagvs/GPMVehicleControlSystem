@@ -559,39 +559,51 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
-            try
+            InitializeCancelTokenResourece = new CancellationTokenSource();
+            return await Task.Run(async () =>
             {
-                InitializeCancelTokenResourece = new CancellationTokenSource();
-                await ResetMotor();
-                (bool, string) result = await PreActionBeforeInitialize();
-                if (!result.Item1)
-                    return result;
-
-                Sub_Status = SUB_STATUS.Initializing;
-                IsInitialized = false;
-
-                result = await InitializeActions(InitializeCancelTokenResourece);
-                if (!result.Item1)
+                try
                 {
-                    Sub_Status = SUB_STATUS.STOP;
+                    await ResetMotor();
+                    (bool, string) result = await PreActionBeforeInitialize();
+                    if (!result.Item1)
+                        return result;
+
+                    Sub_Status = SUB_STATUS.Initializing;
                     IsInitialized = false;
-                    StatusLighter.AbortFlash();
-                    return result;
+
+                    result = await InitializeActions(InitializeCancelTokenResourece);
+                    if (!result.Item1)
+                    {
+                        Sub_Status = SUB_STATUS.STOP;
+                        IsInitialized = false;
+                        StatusLighter.AbortFlash();
+                        return result;
+                    }
+                    LOG.INFO("Fork Init done. Laser mode chaged to Bypass");
+                    await Laser.ModeSwitch(LASER_MODE.Bypass);
+                    Sub_Status = SUB_STATUS.IDLE;
+                    IsInitialized = true;
+                    LOG.INFO("Fork Init done");
+                    return (true, "");
                 }
-                LOG.INFO("Fork Init done. Laser mode chaged to Bypass");
-                await Laser.ModeSwitch(LASER_MODE.Bypass);
-                Sub_Status = SUB_STATUS.IDLE;
-                IsInitialized = true;
-                LOG.INFO("Fork Init done");
-                return (true, "");
-            }
-            catch (Exception ex)
-            {
-                _Sub_Status = SUB_STATUS.DOWN;
-                BuzzerPlayer.Alarm();
-                IsInitialized = false;
-                return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
-            }
+                catch (TaskCanceledException ex)
+                {
+                    _Sub_Status = SUB_STATUS.DOWN;
+                    IsInitialized = false;
+                    LOG.Critical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
+                    return (false, $"AGV Initizlize Task Canceled! : \r\n{ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    _Sub_Status = SUB_STATUS.DOWN;
+                    BuzzerPlayer.Alarm();
+                    IsInitialized = false;
+                    return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
+                }
+
+
+            }, InitializeCancelTokenResourece.Token);
         }
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
@@ -749,6 +761,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+
+                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2))
+                    return true;
+
                 await WagoDO.ResetSaftyRelay();
                 Console.WriteLine("Reset Motor Process Start");
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);

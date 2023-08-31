@@ -203,7 +203,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
                     if (!ForkGoHomeActionResult.confirm)
                     {
-                        AlarmManager.AddAlarm(AlarmCodes.Action_Timeout);
+                        AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     }
