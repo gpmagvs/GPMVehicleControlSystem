@@ -147,6 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(int mode_int)
         {
+            AgvsLsrSetting = mode_int;
             if (CurrentLaserMonitoringCase == mode_int)
                 return true;
 
