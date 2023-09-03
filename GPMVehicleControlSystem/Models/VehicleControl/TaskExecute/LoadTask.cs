@@ -40,8 +40,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined!");
-                    return WORKSTATION_HS_METHOD.NO_HS;
+                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
+                    return WORKSTATION_HS_METHOD.HS;
                 }
             }
         }
