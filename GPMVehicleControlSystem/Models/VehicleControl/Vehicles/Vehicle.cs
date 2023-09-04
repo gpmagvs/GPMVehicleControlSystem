@@ -241,22 +241,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StatusLighter = new clsStatusLighter(WagoDO);
                 Laser = new clsLaser(WagoDO, WagoDI);
 
-                if (Parameters.SimulationMode)
-                {
-                    try
-                    {
-                        emulator = new VehicleEmu(7);
-                        StaEmuManager.StartWagoEmu(WagoDI);
-                    }
-                    catch (SocketException)
-                    {
-                        StaSysMessageManager.AddNewMessage("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
-                    }
-                    catch (Exception ex)
-                    {
-                        StaSysMessageManager.AddNewMessage("\"模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
-                    }
-                }
+                EmulatorInitialize();
                 Task RosConnTask = new Task(async () =>
                 {
                     await Task.Delay(1).ContinueWith(t =>
@@ -274,7 +259,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Task WagoDIConnTask = WagoDIInit();
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
-
                 lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
                 Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                 BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
@@ -295,6 +279,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        private void EmulatorInitialize()
+        {
+            if (Parameters.SimulationMode)
+            {
+                try
+                {
+                    StaEmuManager.StartAGVROSEmu();
+                }
+                catch (SocketException)
+                {
+                    StaSysMessageManager.AddNewMessage("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
+                }
+                catch (Exception ex)
+                {
+                    StaSysMessageManager.AddNewMessage("\"模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
+                }
+            }
+            if (Parameters.WagoSimulation)
+            {
+                StaEmuManager.StartWagoEmu(WagoDI);
+            }
+        }
+
 
         /// <summary>
         /// 生成支援WebAPI的RunningStatus Model
@@ -304,8 +311,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            if (Parameters.SimulationMode)
-                emulator.Runstatus.AGV_Status = _Main_Status;
+            //if (Parameters.SimulationMode)
+            //    emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
             Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
@@ -323,7 +330,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
+                double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new clsRunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
@@ -373,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
+                double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = Parameters.SimulationMode ? emulator.Runstatus : new RunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
@@ -405,7 +412,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (!File.Exists(WorkStationSettingsJsonFilePath))
                 {
-                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src/WorkStation.json") , WorkStationSettingsJsonFilePath);
+                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src/WorkStation.json"), WorkStationSettingsJsonFilePath);
                 }
                 string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
                 if (json == null)
@@ -543,11 +550,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
-                    LOG.INFO("Fork Init done. Laser mode chaged to Bypass");
+                    LOG.INFO("Init done. Laser mode chaged to Bypass");
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
-                    LOG.INFO("Fork Init done");
+                    LOG.INFO("Init done");
                     return (true, "");
                 }
                 catch (TaskCanceledException ex)
@@ -654,17 +661,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
             AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
-            AGVC.OnSickOutputPathsDataUpdated += SickOutputPathsDataHandler;
+            AGVC.OnSickOutputPathsDataUpdated += (sender, OutputPaths) => Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
         }
-
-
-
-        private void SickOutputPathsDataHandler(object? sender, OutputPathsMsg OutputPaths)
-        {
-            Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
-        }
-
-
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
             Task.Factory.StartNew(() =>

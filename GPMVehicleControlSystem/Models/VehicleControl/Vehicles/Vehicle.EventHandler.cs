@@ -280,17 +280,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
             if (taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
-            if (action_type == ACTION_TYPE.Load | action_type == ACTION_TYPE.Unload | action_type == ACTION_TYPE.Park | action_type == ACTION_TYPE.Charge | action_type == ACTION_TYPE.LoadAndPark)
-            {
-                if (!WorkStations.Stations.TryGetValue(taskDownloadData.Destination, out clsWorkStationData workstation_data))
-                {
-                    returnCode = TASK_DOWNLOAD_RETURN_CODES.WORKSTATION_NOT_SETTING_YET;
-                }
-                else
-                {
+            //if (action_type == ACTION_TYPE.Load | action_type == ACTION_TYPE.Unload | action_type == ACTION_TYPE.Park | action_type == ACTION_TYPE.Charge | action_type == ACTION_TYPE.LoadAndPark)
+            //{
+            //    if (!WorkStations.Stations.TryGetValue(taskDownloadData.Destination, out clsWorkStationData workstation_data))
+            //    {
+            //        returnCode = TASK_DOWNLOAD_RETURN_CODES.WORKSTATION_NOT_SETTING_YET;
+            //    }
+            //    else
+            //    {
 
-                }
-            }
+            //    }
+            //}
 
             LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
             return returnCode;
@@ -408,6 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StateData = _ModuleInformation.Battery
                     });
                 }
+                Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
                 IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
             });
 
