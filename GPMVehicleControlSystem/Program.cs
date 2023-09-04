@@ -6,39 +6,54 @@ using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VCSSystem;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Json;
 using System.Reflection;
+using static AGVSystemCommonNet6.clsEnums;
 
+var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
 {
-    LOG.SetLogFolderName(AppSettingsHelper.LogFolder);
+    LOG.SetLogFolderName(param.LogFolder);
     StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-    bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/AlarmList.json"), out string message);
+    bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
     if (!alarmListLoaded)
         StaSysMessageManager.AddNewMessage(message, 1);
     DBhelper.Initialize();
-    int AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
-    VehicheAndWagoIOConfiguraltion(AgvTypeInt);
-
+    VehicheAndWagoIOConfiguraltion();
 });
 
-void VehicheAndWagoIOConfiguraltion(int agvTypeInt)
+void VehicheAndWagoIOConfiguraltion()
 {
-    if (agvTypeInt == 0)
+
+    var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
+    if (!File.Exists(iniFilePath))
     {
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV();
-    }
-    else if (agvTypeInt == 1)
-    {
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.SubmarinAGV();
-    }
-    else if (agvTypeInt == 2)
-    {
-        StaStored.CurrentVechicle = new GPMVehicleControlSystem.Models.VehicleControl.Vehicles.TsmcMiniAGV();
+        string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
+        if (param.AgvType == AGV_TYPE.FORK)
+            src_ini_file_name = "IO_Wago_Fork_AGV.ini";
+        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+            src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
+        if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+            src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
+        File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
     }
 
-    LOG.INFO($"AGV-{StaStored.CurrentVechicle.AgvType} Created¡I¡I");
+    if (param.AgvType == AGV_TYPE.FORK)
+    {
+        StaStored.CurrentVechicle = new ForkAGV();
+    }
+    else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+    {
+        StaStored.CurrentVechicle = new SubmarinAGV();
+    }
+    else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+    {
+        StaStored.CurrentVechicle = new TsmcMiniAGV();
+    }
+    StaStored.CurrentVechicle.DownloadMapFromServer();
+    LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
 }
 
 var builder = WebApplication.CreateBuilder(args);

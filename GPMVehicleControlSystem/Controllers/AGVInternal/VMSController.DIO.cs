@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [ApiExplorerSettings(IgnoreApi = false)]
         public async Task<IActionResult> SetEQHsSignalState(string signal_name, bool state)
         {
-            if (agv.EQ_HS_Method != EQ_HS_METHOD.EMULATION)
+            if (agv.Parameters.EQHandshakeMethod != EQ_HS_METHOD.EMULATION)
             {
                 return Ok("不可修改DI訊號");
             }

@@ -1,0 +1,29 @@
+{
+  "Last_Editor": "dev",
+  "Version": "template",
+  "Stations": {
+    "2": {
+      "Tag": 2,
+      "Name": "",
+      "HandShakeModeHandShakeMode": 0,
+      "ModbusTcpPort": 6502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 30.0,
+          "Down_Pose": 15.4
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+  }
+}

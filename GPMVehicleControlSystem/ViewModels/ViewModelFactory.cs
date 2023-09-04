@@ -20,7 +20,6 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static AGVCStatusVM GetVMSStatesVM()
         {
-
             try
             {
                 List<DriverState> driverStates = new List<DriverState>();
@@ -29,20 +28,20 @@ namespace GPMVehicleControlSystem.ViewModels
                 AGVCStatusVM data_view_model = new AGVCStatusVM()
                 {
                     APPVersion = StaStored.APPVersion,
-                    Agv_Type = AGV.AgvType,
-                    Simulation = AGV.SimulationMode,
+                    Agv_Type = AGV.Parameters.AgvType,
+                    Simulation = AGV.Parameters.SimulationMode,
                     AutoMode = AGV.Operation_Mode,
                     OnlineMode = AGV.Remote_Mode,
                     IsInitialized = AGV.IsInitialized,
                     IsSystemIniting = !AGV.IsSystemInitialized,
-                    AGVC_ID = AGV.SID,
-                    CarName = AGV.CarName,
+                    AGVC_ID = AGV.Parameters.SID,
+                    CarName = AGV.Parameters.VehicleName,
                     MainState = AGV.Main_Status.ToString(),
                     SubState = AGV.Sub_Status.ToString(),
                     Tag = AGV.BarcodeReader.CurrentTag,
                     Last_Visit_MapPoint = AGV.lastVisitedMapPoint,
                     Last_Visited_Tag = AGV.Navigation.LastVisitedTag,
-                    CST_Data = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
+                    CST_Data = AGV.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
                     BatteryStatus = GetBatteryStatusVM(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
                     Angle = AGV.SickData.HeadingAngle,
@@ -136,7 +135,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     IsError = bat.Value.CurrentAlarmState == CarComponent.STATE.ABNORMAL,
                     CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
                     BatteryID = bat.Key,
-                    SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                    SensorInfo = AGV.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
                     {
                         IsExistSensor1ON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_1 : DI_ITEM.Battery_2_Exist_1),
                         IsExistSensor2ON = AGV.WagoDI.GetState(bat.Key == 1 ? DI_ITEM.Battery_1_Exist_2 : DI_ITEM.Battery_2_Exist_2),
@@ -157,7 +156,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     {
                         BatteryID=1,
                         BatteryLevel = 66,
-                         SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                         SensorInfo = AGV.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
                          {
                              IsExistSensor1ON = true,
                              IsExistSensor2ON = true,
@@ -171,7 +170,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     {
                         BatteryID=2,
                         BatteryLevel = 10,
-                         SensorInfo = AGV.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
+                         SensorInfo = AGV. Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? new BatteryPositionInfoVM()
                          {
                             IsExistSensor1ON = true,
                             IsExistSensor2ON = true,
@@ -185,7 +184,7 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {
-            if (AGV.SimulationMode)
+            if (AGV.Parameters.SimulationMode)
             {
                 return new ConnectionStateVM
                 {
@@ -212,7 +211,7 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 Inputs = AGV.WagoDI.VCSInputs.ToList(),
                 Outputs = AGV.WagoDO.VCSOutputs.ToList(),
-                IsE84HsUseEmulator = AGV.EQ_HS_Method == Vehicle.EQ_HS_METHOD.EMULATION
+                IsE84HsUseEmulator = AGV.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.EMULATION
             };
         }
 

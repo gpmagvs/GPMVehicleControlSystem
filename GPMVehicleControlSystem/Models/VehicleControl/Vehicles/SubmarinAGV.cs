@@ -32,8 +32,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
 
-        public override string WagoIOConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago_Submarine_AGV.ini");
-
         protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
         {
             var status = base.HandleTcpIPProtocolGetRunningStatus();

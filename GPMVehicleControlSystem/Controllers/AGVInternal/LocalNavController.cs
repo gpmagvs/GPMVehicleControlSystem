@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             int totag = int.Parse(to);
             int currentTag = -1;
 
-            if (agv.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV)
+            if (agv.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV)
             {
                 IOrderedEnumerable<MapPoint> ordered = agv.NavingMap.Points.Values.OrderBy(pt => pt.CalculateDistance(agv.Navigation.Data.robotPose.pose.position.x, agv.Navigation.Data.robotPose.pose.position.y));
                 currentTag = ordered.First().TagNumber;
@@ -326,7 +326,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         public class TaskActionResult
         {
-            public string agv_name { get; set; } = StaStored.CurrentVechicle.CarName;
+            public string agv_name { get; set; } = StaStored.CurrentVechicle.Parameters.VehicleName;
             public bool accpet { get; set; }
             public string error_message { get; set; } = "";
             public clsMapPoint[] path { get; set; } = new clsMapPoint[0];

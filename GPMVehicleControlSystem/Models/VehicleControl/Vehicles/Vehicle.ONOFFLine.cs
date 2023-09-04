@@ -15,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             set
             {
                 _Remote_Mode = value;
-                if (SimulationMode)
+                if (Parameters.SimulationMode)
                     return;
                 if (value == REMOTE_MODE.ONLINE)
                 {

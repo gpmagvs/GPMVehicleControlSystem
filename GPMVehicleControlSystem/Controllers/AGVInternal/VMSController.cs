@@ -69,7 +69,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                if (agv.AgvType != AGV_TYPE.INSPECTION_AGV)
+                if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
                 {
                     if (agv.BarcodeReader.CurrentTag == 0 && mode == REMOTE_MODE.ONLINE)
                     {
@@ -176,7 +176,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> RemoveCassette()
         {
             await Task.Delay(1);
-            if (agv.AgvType == AGV_TYPE.INSPECTION_AGV)
+            if (agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
                 return Ok(false);
 
             var retcode = await (agv as SubmarinAGV).RemoveCstData();

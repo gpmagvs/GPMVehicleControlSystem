@@ -102,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 是否啟用牙叉功能
         /// </summary>
-        internal bool Enable => AppSettingsHelper.GetValue<bool>("VCS:ForkLifer_Enable");
+        internal bool Enable => forkAGV.Parameters.ForkLifer_Enable;
         public Dictionary<int, clsWorkStationData> StationDatas
         {
             get
@@ -123,7 +123,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
 
-                if (!AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass"))
+                if (!forkAGV.Parameters.SensorBypass.BeltSensorBypass)
                     _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
             }
         }
@@ -454,7 +454,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 double errorTorlence = 0.5;
 
                 LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
-                bool belt_sensor_bypass = AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass");
+                bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
 
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {

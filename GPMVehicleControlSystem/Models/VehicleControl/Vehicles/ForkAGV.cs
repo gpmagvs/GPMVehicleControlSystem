@@ -20,7 +20,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class ForkAGV : SubmarinAGV
     {
-        public override string WagoIOConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago_Fork_AGV.ini");
         public bool IsForkInitialized => ForkLifter.IsInitialized;
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
@@ -111,8 +110,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 }
 
-                bool belt_sensor_bypass = AppSettingsHelper.GetValue<bool>("VCS:SensorBypass:BeltSensorBypass");
-                if (!belt_sensor_bypass)
+                if (!Parameters.SensorBypass.BeltSensorBypass)
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
                 AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());

@@ -14,7 +14,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         private string TaskName = "";
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
-        private bool ActiveTrafficControl => AppSettingsHelper.GetValue<bool>("VCS:ActiveTrafficControl");
         public enum EQ_HS_METHOD
         {
             E84,
@@ -26,11 +25,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         public TaskBase ExecutingTask;
-
-        /// <summary>
-        /// 與設備交握之交握訊號來源方式
-        /// </summary>
-        public EQ_HS_METHOD EQ_HS_Method = EQ_HS_METHOD.EMULATION;
 
         Dictionary<string, List<int>> TaskTrackingTags = new Dictionary<string, List<int>>();
 
@@ -178,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Sub_Status = SUB_STATUS.DOWN;
                     return;
                 }
-               
+
                 if (ExecutingTask.action == ACTION_TYPE.None)
                 {
                     var laser_mode = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
@@ -240,7 +234,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (true)
                 {
                     Thread.Sleep(1);
-                    if (!ActiveTrafficControl)
+                    if (!Parameters.ActiveTrafficControl)
                         continue;
                     try
                     {
@@ -264,7 +258,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             continue;
                         }
                         NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
-                        TrafficState = DynamicTrafficState.GetTrafficStatusByTag(CarName, NextTagPoint.Point_ID);
+                        TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID);
                     }
                     catch (Exception ex)
                     {
@@ -277,7 +271,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task TrafficStop()
         {
 
-            if (VmsProtocol != VMS_PROTOCOL.GPM_VMS)
+            if (Parameters.VMSParam.Protocol != VMS_PROTOCOL.GPM_VMS)
                 return;
 
             clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
@@ -289,7 +283,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      var NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
                      //取得下一個位置動態
                      bool stopedFlag = false;
-                     while ((TrafficState = DynamicTrafficState.GetTrafficStatusByTag(CarName, NextTagPoint.Point_ID)) != TRAFFIC_ACTION.PASS)
+                     while ((TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID)) != TRAFFIC_ACTION.PASS)
                      {
                          if (!stopedFlag)
                          {

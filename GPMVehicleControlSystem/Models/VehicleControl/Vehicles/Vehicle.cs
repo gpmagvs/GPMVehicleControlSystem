@@ -43,14 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public abstract clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;
-        public VMS_PROTOCOL VmsProtocol = VMS_PROTOCOL.GPM_VMS;
         public clsDOModule WagoDO;
         public clsDIModule WagoDI;
         public CarController AGVC;
         public clsLaser Laser;
-        public string CarName { get; set; }
-        public string SID { get; set; }
-
         //public AGVPILOT Pilot { get; set; }
         public clsNavigation Navigation = new clsNavigation();
         public abstract Dictionary<ushort, clsBattery> Batteries { get; set; }
@@ -139,17 +135,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public MoveControl ManualController => AGVC.ManualController;
 
-        public AGV_TYPE AgvType { get; internal set; } = AGV_TYPE.SUBMERGED_SHIELD;
-        public int AgvTypeInt
-        {
-            get => (int)AgvType;
-            private set
-            {
-                AgvType = Enum.GetValues(typeof(AGV_TYPE)).Cast<AGV_TYPE>().FirstOrDefault(_type => (int)_type == value);
-            }
-        }
-        public bool SimulationMode { get; internal set; } = false;
-        public bool DIOSimulationMode => AppSettingsHelper.GetValue<bool>("VCS:DIOSimulationMode");
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
@@ -228,48 +213,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public abstract string WagoIOConfigFilePath { get; }
         public Vehicle()
         {
             try
             {
+                Parameters = LoadParameters();
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
-                SimulationMode = AppSettingsHelper.GetValue<bool>("VCS:SimulationMode");
-                AgvTypeInt = AppSettingsHelper.GetValue<int>("VCS:AgvType");
-                string AGVS_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:IP");
-                int AGVS_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Port");
-                string AGVS_LocalIP = AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:LocalIP");
-                VmsProtocol = AppSettingsHelper.GetValue<int>("VCS:Connections:AGVS:Protocol") == 0 ? VMS_PROTOCOL.KGS : VMS_PROTOCOL.GPM_VMS;
-                string Wago_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:Wago:IP");
-                int Wago_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:Wago:Port");
-                int LastVisitedTag = AppSettingsHelper.GetValue<int>("VCS: LastVisitedTag");
-                string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
-                int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
-
-                string EQHSMethod = AppSettingsHelper.GetValue<string>("VCS:EQHandshakeMethod");
-                EQ_HS_Method = Enum.GetValues(typeof(EQ_HS_METHOD)).Cast<EQ_HS_METHOD>().First(v => v.ToString() == EQHSMethod);
-
-                SID = AppSettingsHelper.GetValue<string>("VCS:SID");
-                CarName = AppSettingsHelper.GetValue<string>("VCS:EQName");
-                AGVSMessageFactory.Setup(SID, CarName);
-                WagoIOIniSetting();
+                string Wago_IP = Parameters.Connections["Wago"].IP;
+                int Wago_Port = Parameters.Connections["Wago"].Port;
+                int LastVisitedTag = Parameters.LastVisitedTag;
+                string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
+                int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
+                AGVSMessageFactory.Setup(Parameters.SID, Parameters.VehicleName);
                 WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
                 {
-                    AgvType = AgvType
+                    AgvType = Parameters.AgvType
                 };
                 WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO)
                 {
-                    AgvType = AgvType
+                    AgvType = Parameters.AgvType
                 };
                 DirectionLighter.DOModule = WagoDO;
 
                 StatusLighter = new clsStatusLighter(WagoDO);
                 Laser = new clsLaser(WagoDO, WagoDI);
 
-                if (SimulationMode)
+                if (Parameters.SimulationMode)
                 {
                     try
                     {
@@ -302,17 +274,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Task WagoDIConnTask = WagoDIInit();
                 RosConnTask.Start();
                 WagoDIConnTask.Start();
-                DownloadMapFromServer();
 
                 lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
                 Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                 BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
-                AGVSInit(AGVS_IP, AGVS_Port, AGVS_LocalIP);
+                AGVSInit();
                 IsSystemInitialized = true;
                 CommonEventsRegist();
 
                 //TrafficMonitor();
-                LOG.INFO($"設備交握通訊方式:{EQ_HS_Method}");
+                LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
             }
             catch (Exception ex)
             {
@@ -333,7 +304,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            if (SimulationMode)
+            if (Parameters.SimulationMode)
                 emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
@@ -383,7 +354,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            if (SimulationMode)
+            if (Parameters.SimulationMode)
                 emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
@@ -403,7 +374,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 double[] batteryLevels = Batteries.Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
-                var status = SimulationMode ? emulator.Runstatus : new RunningStatus
+                var status = Parameters.SimulationMode ? emulator.Runstatus : new RunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
                     CargoType = GetCargoType(),
@@ -425,25 +396,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public string WorkStationSettingsJsonFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/WorkStation.json");
+        public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
         private void LoadWorkStationConfigs()
         {
             try
             {
 
-                if (File.Exists(WorkStationSettingsJsonFilePath))
+                if (!File.Exists(WorkStationSettingsJsonFilePath))
                 {
-                    string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
-                    if (json == null)
-                    {
-                        StaSysMessageManager.AddNewMessage("Load Fork Teach Data Fail...Read Json Null", 2);
-                        return;
-                    }
-                    WorkStations = DeserializeWorkStationJson(json);
-
-
+                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src/WorkStation.json") , WorkStationSettingsJsonFilePath);
                 }
+                string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
+                if (json == null)
+                {
+                    StaSysMessageManager.AddNewMessage("Load Fork Teach Data Fail...Read Json Null", 2);
+                    return;
+                }
+                WorkStations = DeserializeWorkStationJson(json);
+
+
             }
             catch (Exception ex)
             {
@@ -471,7 +443,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 throw ex;
             }
         }
-        private void DownloadMapFromServer()
+        internal void DownloadMapFromServer()
         {
             Task.Run(async () =>
             {
@@ -487,11 +459,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        private void AGVSInit(string AGVS_IP, int AGVS_Port, string AGVS_LocalIP)
+        private void AGVSInit()
         {
+            string vms_ip = Parameters.Connections["AGVS"].IP;
+            int vms_port = Parameters.Connections["AGVS"].Port;
+
             //AGVS
-            AGVS = new clsAGVSConnection(AGVS_IP, AGVS_Port, AGVS_LocalIP);
-            AGVS.UseWebAPI = VmsProtocol == VMS_PROTOCOL.GPM_VMS;
+            AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
+            AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
@@ -530,18 +505,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool IsAllLaserNoTrigger()
         {
             return WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
-        }
-
-        private void WagoIOIniSetting()
-        {
-            string IO_Wago_ini_Use = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini");
-
-            if (!File.Exists(WagoIOConfigFilePath))
-            {
-                StaSysMessageManager.AddNewMessage($"Specfic DI/O Module ini File Not Exist [{WagoIOConfigFilePath}]", 2);
-                return;
-            }
-            File.Copy(WagoIOConfigFilePath, IO_Wago_ini_Use, true);
         }
 
         protected virtual async void DOSignalDefaultSetting()

@@ -19,7 +19,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="param\IO_Wago.ini" />
+	  <None Remove="src\IO_Wago.ini" />
 	  <None Remove="task_name.txt" />
 	  <None Remove="VMS.db" />
 	</ItemGroup>
@@ -55,14 +55,17 @@
 		<Content Update="appsettings.json">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Update="param\AlarmList.json">
+		<Content Update="src\AlarmList.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-		<Content Update="param\local-Map_UMTC_3F_Yellow.json">
+		<Content Update="src\local-Map_UMTC_3F_Yellow.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-		<Content Update="param\Map_UMTC_3F_Yellow.json">
+		<Content Update="src\Map_UMTC_3F_Yellow.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="src\WorkStation.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Update="wwwroot\agv.png">
 		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
@@ -82,55 +85,55 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="param\IO_Wago_Fork_AGV.ini">
+		<None Update="src\IO_Wago_Fork_AGV.ini">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\IO_Wago_Inspection_AGV.ini">
+		<None Update="src\IO_Wago_Inspection_AGV.ini">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\IO_Wago_Submarine_AGV.ini">
+		<None Update="src\IO_Wago_Submarine_AGV.ini">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\action.mp3">
+		<None Update="src\sounds\action.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\action.wav">
+		<None Update="src\sounds\action.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\alarm-1.wav">
+		<None Update="src\sounds\alarm-1.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\alarm.mp3">
+		<None Update="src\sounds\alarm.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\alarm.wav">
+		<None Update="src\sounds\alarm.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\exchange.mp3">
+		<None Update="src\sounds\exchange.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\measure.wav">
+		<None Update="src\sounds\measure.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\move.mp3">
+		<None Update="src\sounds\move.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\move.wav">
+		<None Update="src\sounds\move.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\move_2.wav">
+		<None Update="src\sounds\move_2.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\obstacle.mp3">
+		<None Update="src\sounds\obstacle.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\obstacle_stop.wav">
+		<None Update="src\sounds\obstacle_stop.wav">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\traverse_left.mp3">
+		<None Update="src\sounds\traverse_left.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="param\sounds\traverse_right.mp3">
+		<None Update="src\sounds\traverse_right.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="wwwroot">

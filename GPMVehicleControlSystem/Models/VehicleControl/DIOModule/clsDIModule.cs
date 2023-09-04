@@ -93,7 +93,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         virtual public void ReadIOSettingsFromIniFile()
         {
             DI_ITEM di_item;
-            IniHelper iniHelper = new IniHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"param/IO_Wago.ini"));
+            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
             var di_names = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().Select(i => i.ToString()).ToList();
             try
             {

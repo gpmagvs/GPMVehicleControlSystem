@@ -8,7 +8,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string LogFolder { get; set; } = "GPM_AGV_LOG";
         public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
         public string SID { get; set; } = "SID";
-        public string EQName { get; set; } = "EQName";
+        public string VehicleName { get; set; } = "EQName";
         public bool SimulationMode { get; set; } = false;
         public bool DIOSimulationMode { get; set; } = false;
         public bool ActiveTrafficControl { get; set; } = false;
@@ -16,8 +16,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
         public int LastVisitedTag { get; set; } = 8;
-        public Dictionary<string, clsConnection> Connections { get; set; } = new Dictionary<string, clsConnection>();
+        public Dictionary<string, clsConnectionParam> Connections { get; set; } = new Dictionary<string, clsConnectionParam>()
+        {
+            { "RosBridge" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 9090
+                }
+            },
+            { "Wago" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 9999
+                }
+            },
+            { "AGVS" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 5036,
+                }
+            }
+        };
 
+        public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.E84;
 
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();

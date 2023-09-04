@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
-                return AppSettingsHelper.GetValue<bool>("VCS:CST_READER_TRIGGER");
+                return StaStored.CurrentVechicle.Parameters.CST_READER_TRIGGER;
             }
         }
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Load;
@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                if (Agv.EQ_HS_Method == Vehicle.EQ_HS_METHOD.MODBUS)
+                if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
                 {
                     var eqModbusConn = await Agv.ModbusTcpConnect();
                     if (!eqModbusConn)
@@ -241,7 +241,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return true;
         }
-       
+
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
         {
             if (!CSTTrigger)
@@ -281,7 +281,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckBeforeHSStartInFrontOfEQ()
         {
-            if (!AppSettingsHelper.GetValue<bool>("VCS:CST_EXIST_DETECTION:Before_In"))
+            if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
             if (!Agv.HasAnyCargoOnAGV())
@@ -297,7 +297,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQBusyOff()
         {
-            if (!AppSettingsHelper.GetValue<bool>("VCS:CST_EXIST_DETECTION:After_EQ_Busy_Off"))
+            if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
             if (Agv.HasAnyCargoOnAGV())

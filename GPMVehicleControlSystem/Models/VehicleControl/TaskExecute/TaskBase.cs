@@ -64,7 +64,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
-                if (Agv.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+                if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
                 {
                     if (action == ACTION_TYPE.Load)
                         return AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
@@ -263,12 +263,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         protected virtual void StartFrontendObstcleDetection()
         {
-            bool Enable = AppSettingsHelper.GetValue<bool>($"VCS:LOAD_OBS_DETECTION:Enable_{action}");
+
+            bool Enable = action == ACTION_TYPE.Load ? StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Enable_Load :
+                                                                                        StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Enable_UnLoad;
 
             if (!Enable)
                 return;
 
-            int DetectionTime = AppSettingsHelper.GetValue<int>("VCS:LOAD_OBS_DETECTION:Duration");
+            int DetectionTime = StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Duration;
             LOG.WARN($"前方二次檢Sensor 偵側開始 (偵測持續時間={DetectionTime} s)");
             CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
             Stopwatch stopwatch = Stopwatch.StartNew();

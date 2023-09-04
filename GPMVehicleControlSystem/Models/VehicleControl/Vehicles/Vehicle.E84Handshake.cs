@@ -30,7 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGV_BUSY,
             AGV_COMPT,
         }
-        private bool IsHandShakeBypass => AppSettingsHelper.GetValue<bool>("VCS:EQHandshakeBypass");
+        private bool IsHandShakeBypass => Parameters.EQHandshakeBypass;
         public Dictionary<EQ_HSSIGNAL, bool> EQHsSignalStates = new Dictionary<EQ_HSSIGNAL, bool>()
         {
             { EQ_HSSIGNAL.EQ_READY, false },
@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsULReqOn(ACTION_TYPE action)
         {
 
-            if (EQ_HS_Method == EQ_HS_METHOD.EMULATION)
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 if (action == ACTION_TYPE.Load)
                     return WagoDO.GetState(DO_ITEM.EMU_EQ_L_REQ);
@@ -85,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool IsEQReadyOn()
         {
-            if (EQ_HS_Method == EQ_HS_METHOD.EMULATION)
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 return WagoDO.GetState(DO_ITEM.EMU_EQ_READY);
             }
@@ -97,7 +97,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool IsEQBusyOn()
         {
-            if (EQ_HS_Method == EQ_HS_METHOD.EMULATION)
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 return WagoDO.GetState(DO_ITEM.EMU_EQ_BUSY);
             }

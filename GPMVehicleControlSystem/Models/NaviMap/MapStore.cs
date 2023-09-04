@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.MAP;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.NaviMap
@@ -9,7 +10,7 @@ namespace GPMVehicleControlSystem.Models.NaviMap
         {
             get
             {
-                return AppSettingsHelper.GetValue<string>("VCS:Connections:AGVS:MapUrl");
+                return StaStored.CurrentVechicle.Parameters.VMSParam.MapUrl;
             }
         }
         public static async Task<Map> GetMapFromServer()

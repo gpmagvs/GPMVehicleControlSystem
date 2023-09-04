@@ -28,8 +28,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override void ReadIOSettingsFromIniFile()
         {
-            IniHelper iniHelper = new IniHelper(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/IO_Wago.ini"));
-
+            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
             try
             {
                 Start = ushort.Parse(iniHelper.GetValue("OUTPUT", "Start"));

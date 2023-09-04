@@ -43,8 +43,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
         public AGVROSEmulator()
         {
-            string RosBridge_IP = AppSettingsHelper.GetValue<string>("VCS:Connections:RosBridge:IP");
-            int RosBridge_Port = AppSettingsHelper.GetValue<int>("VCS:Connections:RosBridge:Port");
+            string RosBridge_IP = StaStored.CurrentVechicle.Parameters.Connections["RosBridge"].IP;
+            int RosBridge_Port = StaStored.CurrentVechicle.Parameters.Connections["RosBridge"].Port;
             rosSocket = new RosSocket(new WebSocketSharpProtocol($"ws://{RosBridge_IP}:{RosBridge_Port}"));
 
             Task.Factory.StartNew(async () =>
