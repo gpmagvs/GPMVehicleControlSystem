@@ -1,0 +1,29 @@
+﻿using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+
+namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
+{
+    public class clsVehicelParam
+    {
+        public string LogFolder { get; set; } = "GPM_AGV_LOG";
+        public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
+        public string SID { get; set; } = "SID";
+        public string EQName { get; set; } = "EQName";
+        public bool SimulationMode { get; set; } = false;
+        public bool DIOSimulationMode { get; set; } = false;
+        public bool ActiveTrafficControl { get; set; } = false;
+        public bool EQHandshakeBypass { get; set; } = false;
+        public bool CST_READER_TRIGGER { get; set; } = false;
+        public bool ForkLifer_Enable { get; set; } = false;
+        public int LastVisitedTag { get; set; } = 8;
+        public Dictionary<string, clsConnection> Connections { get; set; } = new Dictionary<string, clsConnection>();
+
+        public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.E84;
+
+        public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
+        public clsCstExistDetection CST_EXIST_DETECTION { get; set; } = new clsCstExistDetection();
+        public clsSensorBypass SensorBypass { get; set; } = new clsSensorBypass();
+
+    }
+
+}
