@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.RDTEST;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -77,6 +78,7 @@ namespace GPMVehicleControlSystem.ViewModels
             }
             catch (Exception ex)
             {
+                LOG.Critical(ex.Message, ex);
                 return new AGVCStatusVM()
                 {
                     AlarmCodes = new clsAlarmCode[]
@@ -127,7 +129,7 @@ namespace GPMVehicleControlSystem.ViewModels
         {
             BatteryStateVM[] viewmodel = AGV.Batteries.Count == 0 ?
             CreateFakeBatteryViewModelData() :
-                AGV.Batteries.Select(bat => new BatteryStateVM
+                AGV.Batteries.ToList().FindAll(b => b.Value != null).Select(bat => new BatteryStateVM
                 {
                     BatteryLevel = bat.Value.Data.batteryLevel,
                     ChargeCurrent = bat.Value.Data.chargeCurrent,
