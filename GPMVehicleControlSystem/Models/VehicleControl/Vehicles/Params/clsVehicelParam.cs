@@ -10,7 +10,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string SID { get; set; } = "SID";
         public string VehicleName { get; set; } = "EQName";
         public bool SimulationMode { get; set; } = false;
-        public bool DIOSimulationMode { get; set; } = false;
+        public bool WagoSimulation { get; set; } = true;
         public bool ActiveTrafficControl { get; set; } = false;
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;
@@ -44,7 +44,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
         public clsCstExistDetection CST_EXIST_DETECTION { get; set; } = new clsCstExistDetection();
         public clsSensorBypass SensorBypass { get; set; } = new clsSensorBypass();
-
     }
 
 }
