@@ -165,15 +165,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 };
                 DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                while (CurrentLaserMonitoringCase != mode_int)
+                if (CurrentLaserMonitoringCase != -1)
                 {
-                    if (cts.IsCancellationRequested)
+                    while (CurrentLaserMonitoringCase != mode_int)
                     {
-                        return false;
+                        if (cts.IsCancellationRequested)
+                        {
+                            return false;
+                        }
+                        await Task.Delay(1);
                     }
-                    await Task.Delay(1);
                 }
-
                 LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", true);
                 return true;
             }
