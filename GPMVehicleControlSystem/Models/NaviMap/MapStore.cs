@@ -1,4 +1,6 @@
-﻿using AGVSystemCommonNet6.MAP;
+﻿using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.MAP;
+using GitVersion.Logging;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Newtonsoft.Json;
 
@@ -13,6 +15,7 @@ namespace GPMVehicleControlSystem.Models.NaviMap
                 return StaStored.CurrentVechicle.Parameters.VMSParam.MapUrl;
             }
         }
+
         public static async Task<Map> GetMapFromServer()
         {
             Map? map = null;
@@ -27,13 +30,35 @@ namespace GPMVehicleControlSystem.Models.NaviMap
                         map = JsonConvert.DeserializeObject<Map>(jsonStr);
                     }
                 }
-                return (map);
+                return map;
             }
             catch (Exception ex)
             {
-                throw ex;
+                return null;
             }
 
+        }
+
+        internal static Map? GetMapFromFile(string localMapFileFullName)
+        {
+            Map emptyMap = new Map()
+            {
+                Note = "empty"
+            };
+            try
+            {
+                if (!File.Exists(localMapFileFullName))
+                {
+                    return emptyMap;
+                }
+                var json = File.ReadAllText(localMapFileFullName);
+                return JsonConvert.DeserializeObject<Map>(json);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"GetMapFromFile Fail...{ex.Message}", ex);
+                return emptyMap;
+            }
         }
     }
 }

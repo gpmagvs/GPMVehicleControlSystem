@@ -457,7 +457,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     NavingMap = await MapStore.GetMapFromServer();
-                    LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                    if (NavingMap != null)
+                        LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                    else
+                    {
+                        if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
+                        {
+                            LOG.WARN($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
+                            NavingMap = MapStore.GetMapFromFile(Parameters.MapParam.LocalMapFileFullName);
+                            if (NavingMap.Note != "empty")
+                                LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
+                        }
+                        else
+                        {
+                            LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl}) and not any local map file exist");
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {

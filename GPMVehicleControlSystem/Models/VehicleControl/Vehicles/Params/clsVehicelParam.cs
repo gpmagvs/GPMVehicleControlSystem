@@ -39,6 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         };
 
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
+        public clsMapParam MapParam { get; set; } = new clsMapParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.E84;
 
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
