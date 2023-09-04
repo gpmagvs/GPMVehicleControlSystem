@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -16,10 +17,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
         RosSocket? rosSocket;
         private ModuleInformation module_info = new ModuleInformation()
         {
-            IMU = new GpmImuMsg
-            {
-                state = 1
-            },
             Battery = new BatteryState
             {
                 state = 1,
@@ -40,11 +37,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
             }
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
-
+        private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
         public AGVROSEmulator()
         {
-            string RosBridge_IP = StaStored.CurrentVechicle.Parameters.Connections["RosBridge"].IP;
-            int RosBridge_Port = StaStored.CurrentVechicle.Parameters.Connections["RosBridge"].Port;
+            var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
+            string RosBridge_IP = param.Connections["RosBridge"].IP;
+            int RosBridge_Port = param.Connections["RosBridge"].Port;
             rosSocket = new RosSocket(new WebSocketSharpProtocol($"ws://{RosBridge_IP}:{RosBridge_Port}"));
 
             Task.Factory.StartNew(async () =>
@@ -53,6 +51,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 rosSocket.Advertise<ModuleInformation>("AGVC_Emu", "/module_information");
                 rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
                 rosSocket.Advertise<LocalizationControllerResultMessage0502>("SICK_Emu", "localizationcontroller/out/localizationcontroller_result_message_0502");
+                rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
                 InitNewTaskCommandActionServer();
                 _ = PublishModuleInformation(rosSocket);
                 // _ = PublishLocalizeResult(rosSocket);
@@ -72,9 +71,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
             TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
             Console.WriteLine($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
             actionServer.AcceptedInvoke();
-
+            RobotStopMRE = new ManualResetEvent(true);
             //模擬走型
-            Task.Run(() =>
+            Task.Factory.StartNew(async () =>
             {
                 foreach (RosSharp.RosBridgeClient.MessageTypes.Geometry.PoseStamped? item in obj.planPath.poses)
                 {
@@ -82,23 +81,18 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     double tag_pose_x = item.pose.position.x;
                     double tag_pose_y = item.pose.position.y;
                     double tag_theta = item.pose.orientation.ToTheta();
-
                     module_info.nav_state.lastVisitedNode.data = (int)tag;
                     module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
                     module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
                     module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
-
                     module_info.reader.tagID = tag;
-
                     module_info.reader.xValue = tag_pose_x;
                     module_info.reader.yValue = tag_pose_y;
                     module_info.reader.theta = tag_theta;
-                    Thread.Sleep(1500);
+                    await Task.Delay(500);
+                    RobotStopMRE.WaitOne();
                 }
-
-                actionServer.OnNAVGoalReceived -= NavGaolHandle;
                 actionServer.SucceedInvoke();
-
                 Task.Factory.StartNew(async () =>
                 {
                     await Task.Delay(500);
@@ -150,6 +144,25 @@ namespace GPMVehicleControlSystem.Models.Emulators
             });
         }
 
+        private bool ComplexRobotControlCallBack(ComplexRobotControlCmdRequest req, out ComplexRobotControlCmdResponse res)
+        {
+            if (req.reqsrv == 2) //要求停止
+            {
+                EmuLog($"車載要求停止");
+                RobotStopMRE.Reset();
+            }
+            else if (req.reqsrv == 0)
+            {
+                EmuLog($"車載要求速度恢復");
+                RobotStopMRE.Set();
+            }
+            res = new ComplexRobotControlCmdResponse
+            {
+                confirm = true
+            };
+            return true;
+        }
+
         private bool CstReaderServiceCallack(CSTReaderCommandRequest tin, out CSTReaderCommandResponse tout)
         {
             tout = new CSTReaderCommandResponse
@@ -172,5 +185,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
             return true;
         }
+        private void EmuLog(string msg)
+        {
+            LOG.WARN($"[車控模擬] {msg}");
+        }
+
     }
 }
