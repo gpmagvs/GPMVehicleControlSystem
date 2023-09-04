@@ -9,9 +9,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public static AGVROSEmulator agvRosEmu;
         public static void StartWagoEmu(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule wagoDI)
         {
-            wagoEmu.WagoDI =wagoDI;
-            wagoEmu.Connect();
-            LOG.INFO("WAGO EMU Start");
+            wagoEmu.WagoDI = wagoDI;
+            bool emu_actived = wagoEmu.Connect();
+            if (emu_actived)
+            {
+                LOG.INFO("WAGO EMU Start(ModbusTCP Server :  tcp://127.0.0.1:9999)");
+            }
         }
 
         public static void StartAGVROSEmu()
