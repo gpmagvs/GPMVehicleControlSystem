@@ -7,7 +7,7 @@
         {
             get
             {
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", LocalMapFileName);
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/{LocalMapFileName}");
             }
         }
     }

@@ -11,6 +11,7 @@
             EMU_EQ_UP_READY,
             EMU_EQ_LOW_READY,
             EMU_EQ_BUSY,
+            EMU_EQ_GO,
             Recharge_Circuit,
             Motor_Safety_Relay,
             Safety_Relays_Reset,
@@ -97,7 +98,6 @@
             /// 牙叉電動肛縮回
             /// </summary>
             Fork_Shortend,
-
         }
 
     }

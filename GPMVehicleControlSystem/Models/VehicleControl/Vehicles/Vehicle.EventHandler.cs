@@ -56,6 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleWheelDriverStatusError);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleWheelDriverStatusError);
 
@@ -71,6 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
+                WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
                 LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
             }
         }
@@ -376,42 +378,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="_ModuleInformation"></param>
         protected virtual void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
-            Task.Factory.StartNew(() =>
+
+            Odometry = _ModuleInformation.Mileage;
+            Navigation.StateData = _ModuleInformation.nav_state;
+
+            IMU.StateData = _ModuleInformation.IMU;
+            GuideSensor.StateData = _ModuleInformation.GuideSensor;
+            BarcodeReader.StateData = _ModuleInformation.reader;
+            VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
+
+            for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
+                WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
+
+            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
             {
-                Odometry = _ModuleInformation.Mileage;
-                Navigation.StateData = _ModuleInformation.nav_state;
+                Name = Navigation.LastVisitedTag.ToString(),
+                TagNumber = Navigation.LastVisitedTag
+            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
+            lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
 
-                IMU.StateData = _ModuleInformation.IMU;
-                GuideSensor.StateData = _ModuleInformation.GuideSensor;
-                BarcodeReader.StateData = _ModuleInformation.reader;
-                VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
-
-                for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
-                    WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
-
-                var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
+            ushort battery_id = _ModuleInformation.Battery.batteryID;
+            if (Batteries.TryGetValue(battery_id, out var battery))
+            {
+                battery.StateData = _ModuleInformation.Battery;
+            }
+            else
+            {
+                Batteries.Add(battery_id, new clsBattery()
                 {
-                    Name = Navigation.LastVisitedTag.ToString(),
-                    TagNumber = Navigation.LastVisitedTag
-                } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
-                lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
-
-                ushort battery_id = _ModuleInformation.Battery.batteryID;
-                if (Batteries.TryGetValue(battery_id, out var battery))
-                {
-                    battery.StateData = _ModuleInformation.Battery;
-                }
-                else
-                {
-                    Batteries.Add(battery_id, new clsBattery()
-                    {
-                        StateData = _ModuleInformation.Battery
-                    });
-                }
-                Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
-                IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
-            });
-
+                    StateData = _ModuleInformation.Battery
+                });
+            }
+            Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
+            IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
         }
 
         private MapPoint GetLastVisitedMapPoint()

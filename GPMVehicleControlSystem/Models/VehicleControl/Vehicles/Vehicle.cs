@@ -458,7 +458,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     NavingMap = await MapStore.GetMapFromServer();
                     if (NavingMap != null)
+                    {
+                        MapStore.SaveCurrentMap(NavingMap);
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                    }
                     else
                     {
                         if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
@@ -767,30 +770,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
-            string request_user_name = IsAGVSRequest ? "派車" : "車載用戶";
-            LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
             if (mode != Remote_Mode)
             {
-                (bool success, RETURN_CODE return_code) result = new(false, RETURN_CODE.NG);
-                Task reqTask = new Task(async () =>
-                {
-                    if (OnlineModeChangingFlag)
-                    {
-                        return;
-                    }
-                    OnlineModeChangingFlag = true;
-                    result = await Online_Mode_Switch(mode);
-                    if (result.success)
-                    {
-                        Remote_Mode = mode;
-                    }
-                    OnlineModeChangingFlag = false;
-                });
-                reqTask.Start();
-                Task.WaitAll(new Task[] { reqTask });
+                string request_user_name = IsAGVSRequest ? "派車" : "車載用戶";
+                LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
 
-                bool isChanged = Remote_Mode == mode;
-                if (isChanged)
+                (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
+                if (result.success)
                 {
                     LOG.WARN($"{request_user_name} 請求變更Online模式---成功");
                 }
@@ -802,8 +788,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-
-                LOG.WARN($"已經是{mode}");
                 return true;
             }
         }

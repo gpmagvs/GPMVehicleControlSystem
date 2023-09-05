@@ -81,15 +81,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     break;
                 case "EQ_BUSY":
                     address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
-
                     break;
                 case "EQ_L_REQ":
                     address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
-
                     break;
                 case "EQ_U_REQ":
                     address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
-
+                    break;
+                case "EQ_GO":
+                    address = agv.WagoDO.VCSOutputs.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_GO.ToString()).Address;
                     break;
 
                 default:

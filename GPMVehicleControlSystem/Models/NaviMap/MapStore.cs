@@ -16,6 +16,25 @@ namespace GPMVehicleControlSystem.Models.NaviMap
             }
         }
 
+        public static bool SaveCurrentMap(Map map)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(map, Formatting.Indented);
+                var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/temp");
+                Directory.CreateDirectory(folder);
+                var filepath = Path.Combine(folder, $"{map.Name}.json");
+                File.WriteAllText(filepath, json);
+                LOG.INFO($"Save Map  from server to {filepath} success!");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"Save Current Map Fail..{ex.Message}", ex);
+                return false;
+            }
+        }
+
         public static async Task<Map> GetMapFromServer()
         {
             Map? map = null;

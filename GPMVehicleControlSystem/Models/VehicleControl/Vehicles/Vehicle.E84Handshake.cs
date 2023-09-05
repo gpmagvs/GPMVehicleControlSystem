@@ -21,6 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EQ_BUSY,
             EQ_L_REQ,
             EQ_U_REQ,
+            EQ_GO
         }
         public enum AGV_HSSIGNAL
         {
@@ -37,6 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             { EQ_HSSIGNAL.EQ_BUSY, false },
             { EQ_HSSIGNAL.EQ_L_REQ, false },
             { EQ_HSSIGNAL.EQ_U_REQ, false },
+            { EQ_HSSIGNAL.EQ_GO, false },
         };
         public Dictionary<AGV_HSSIGNAL, bool> AGVHsSignalStates = new Dictionary<AGV_HSSIGNAL, bool>()
         {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
@@ -91,9 +92,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            clsTaskDownloadData taskDataDto = null;
-            taskDataDto = CreateMoveActionTaskJob(agv.NavingMap, action, $"AGV_LOCAL_{DateTime.Now.ToString("yyyyMMdd_HHmmssffff")}", fromtag, int.Parse(to), 0);
-
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
 
             if (taskLinkList.Length >= 1)
@@ -107,15 +105,26 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
                           agv.ExecuteAGVSTask(this, _taskDataDto);
                           await Task.Delay(200);
-                          while (agv.CurrentTaskRunStatus != TASK_RUN_STATUS.ACTION_FINISH)
+                          LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
+                          while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                          {
+                              if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
+                                  return;
+                              await Task.Delay(1);
+                          }
+
+                          LOG.WARN($"[Local Task Dispather]  AGVC Active");
+                          await Task.Delay(10);
+                          LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
+                          while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
                               await Task.Delay(200);
                           }
+                          LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
                           LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
                       }
-
                   });
                 return Ok(new TaskActionResult
                 {
