@@ -14,6 +14,7 @@ using GPMVehicleControlSystem.Models.VCSSystem;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -80,6 +81,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                         });
                     }
                 }
+                LOG.WARN($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 return Ok(new
                 {

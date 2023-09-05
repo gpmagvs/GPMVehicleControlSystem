@@ -772,19 +772,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (mode != Remote_Mode)
             {
-                string request_user_name = IsAGVSRequest ? "派車" : "車載用戶";
+                string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
                 LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
-
                 (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
                 if (result.success)
-                {
-                    LOG.WARN($"{request_user_name} 請求變更Online模式---成功");
-                }
+                    LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
                 else
-                {
-                    LOG.ERROR($"{request_user_name} 請求變更Online模式---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
-                }
-                return Remote_Mode == mode;
+                    LOG.ERROR($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
+                return result.success;
             }
             else
             {

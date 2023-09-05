@@ -256,7 +256,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 SoftwareEMO();
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
+                {
+                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
                     await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                }
             });
 
         }
