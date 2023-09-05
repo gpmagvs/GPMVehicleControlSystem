@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -308,9 +309,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)
         {
             CurrentTaskRunStatus = status;
-            if (Remote_Mode == REMOTE_MODE.OFFLINE)
-                return;
-            await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag);
+            if (Remote_Mode == REMOTE_MODE.ONLINE)
+            {
+                double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+                double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+                double Theta = Math.Round(Navigation.Angle, 3);
+                clsCoordination coordination = new clsCoordination(X, Y, Theta);
+                await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
+            }
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
             {
                 AGVC._ActionStatus = ActionStatus.NO_GOAL;
