@@ -9,6 +9,7 @@ using AGVSystemCommonNet6;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
+using GPMVehicleControlSystem.Models.Emulators;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -312,6 +313,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Station_Type = STATION_TYPE.Normal,
                 Trajectory = PathFinder.GetTrajectory(mapData.Name, planPath.stations)
             };
+
+            if (actionType != ACTION_TYPE.None)
+            {
+                normal_move_task.Trajectory.Last().Theta = destineStation.Direction; //移動的終點要與機台同向
+            }
             taskList.Add(normal_move_task);
             seq += 1;
 

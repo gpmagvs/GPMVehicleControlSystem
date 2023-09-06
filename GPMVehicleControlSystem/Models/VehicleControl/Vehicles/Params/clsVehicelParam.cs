@@ -45,6 +45,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
         public clsCstExistDetection CST_EXIST_DETECTION { get; set; } = new clsCstExistDetection();
         public clsSensorBypass SensorBypass { get; set; } = new clsSensorBypass();
+
+        /// <summary>
+        /// TA Timeout : 偵測EQ訊號狀態變化Timeout秒數
+        /// </summary>
+        public Dictionary<HANDSHAKE_EQ_TIMEOUT, int> EQHSTimeouts = new Dictionary<HANDSHAKE_EQ_TIMEOUT, int>()
+        {
+            {   HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON , 5  },
+            {   HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON , 5  },
+            {   HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON , 5  },
+            {   HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF , 90  },
+            {   HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 5  },
+        };
     }
 
 }

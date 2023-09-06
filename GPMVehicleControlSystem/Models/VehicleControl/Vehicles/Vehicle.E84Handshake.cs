@@ -15,6 +15,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        public enum HANDSHAKE_EQ_TIMEOUT
+        {
+            TA1_Wait_L_U_REQ_ON,
+            TA2_Wait_EQ_READY_ON,
+            TA3_Wait_EQ_BUSY_ON,
+            TA4_Wait_EQ_BUSY_OFF,
+            TA5_Wait_L_U_REQ_OFF
+        }
+
         public enum EQ_HSSIGNAL
         {
             EQ_READY,
@@ -32,21 +41,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGV_COMPT,
         }
         private bool IsHandShakeBypass => Parameters.EQHandshakeBypass;
+
         public Dictionary<EQ_HSSIGNAL, bool> EQHsSignalStates = new Dictionary<EQ_HSSIGNAL, bool>()
         {
-            { EQ_HSSIGNAL.EQ_READY, false },
-            { EQ_HSSIGNAL.EQ_BUSY, false },
             { EQ_HSSIGNAL.EQ_L_REQ, false },
             { EQ_HSSIGNAL.EQ_U_REQ, false },
+            { EQ_HSSIGNAL.EQ_READY, false },
+            { EQ_HSSIGNAL.EQ_BUSY, false },
             { EQ_HSSIGNAL.EQ_GO, false },
         };
         public Dictionary<AGV_HSSIGNAL, bool> AGVHsSignalStates = new Dictionary<AGV_HSSIGNAL, bool>()
         {
             { AGV_HSSIGNAL.AGV_VALID, false },
-            { AGV_HSSIGNAL.AGV_READY, false },
             { AGV_HSSIGNAL.AGV_TR_REQ, false },
             { AGV_HSSIGNAL.AGV_BUSY, false },
             { AGV_HSSIGNAL.AGV_COMPT, false },
+            { AGV_HSSIGNAL.AGV_READY, false },
         };
         private int EqModbusTcpPort
         {
@@ -62,7 +72,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-
 
 
         private bool IsULReqOn(ACTION_TYPE action)
@@ -145,7 +154,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             LOG.Critical("[EQ Handshake] 等待EQ Ready ON...");
 
-            CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
+            CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
             Task wait_eq_UL_req_ON = new Task(() =>
             {
                 while (!IsULReqOn(action))
@@ -159,36 +169,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsEQReadyOn())
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (waitEQReadyOnCST.IsCancellationRequested)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
             });
 
             SetAGVVALID(true);
-            waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
+                waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
                 wait_eq_UL_req_ON.Start();
                 wait_eq_UL_req_ON.Wait(waitEQSignalCST.Token);
             }
             catch (OperationCanceledException ex)
             {
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_EQ_L_REQ : AlarmCodes.Handshake_Fail_EQ_U_REQ);
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
             }
-            waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             SetAGV_TR_REQ(true);
             try
             {
+                waitEQReadyOnCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON]));
                 wait_eq_ready.Start();
-                wait_eq_ready.Wait(waitEQSignalCST.Token);
+                wait_eq_ready.Wait(waitEQReadyOnCST.Token);
                 SetAGVBUSY(true);
                 WatchE84AlarmWhenAGVBUSY();
                 return (true, AlarmCodes.None);
             }
             catch (OperationCanceledException ex)
             {
-                return (false, AlarmCodes.Handshake_Fail_EQ_READY);
+                return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
             }
 
         }
@@ -203,22 +213,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool eqready_off, AlarmCodes alarmCode)> WaitEQReadyOFF(ACTION_TYPE action)
         {
 
-            LOG.Critical("[EQ Handshake] 等待EQ READY OFF");
-            CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            CancellationTokenSource wait_eq_l_u_req_off_cts = new CancellationTokenSource();
             Task wait_eq_UL_req_OFF = new Task(() =>
             {
+                LOG.WARN("[EQ Handshake] 等待 EQ_L_U_REQ OFF");
                 while (IsULReqOn(action))
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
                         return;
                     Thread.Sleep(1);
                 }
             });
             Task wait_eq_ready_off = new Task(() =>
             {
+                LOG.WARN("[EQ Handshake] 等待 EQ READY OFF");
                 while (IsEQReadyOn())
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
                         return;
                     Thread.Sleep(1);
                 }
@@ -226,22 +237,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             SetAGVBUSY(false);
             SetAGV_COMPT(true);
-
-
-            waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
+                wait_eq_l_u_req_off_cts.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]));
                 wait_eq_UL_req_OFF.Start();
-                wait_eq_UL_req_OFF.Wait(waitEQSignalCST.Token);
+                wait_eq_UL_req_OFF.Wait(wait_eq_l_u_req_off_cts.Token);
             }
             catch (OperationCanceledException ex)
             {
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_EQ_L_REQ : AlarmCodes.Handshake_Fail_EQ_U_REQ);
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
             }
             try
             {
+                wait_eq_l_u_req_off_cts = new CancellationTokenSource();
+                wait_eq_l_u_req_off_cts.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]));
                 wait_eq_ready_off.Start();
-                wait_eq_ready_off.Wait(waitEQSignalCST.Token);
+                wait_eq_ready_off.Wait(wait_eq_l_u_req_off_cts.Token);
                 SetAGV_COMPT(false);
                 SetAGV_TR_REQ(false);
                 SetAGVVALID(false);
@@ -251,8 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (OperationCanceledException ex)
             {
-                return (false, AlarmCodes.Handshake_Fail_EQ_READY);
-
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
             }
 
         }
@@ -263,47 +273,55 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eq_busy_off, AlarmCodes alarmCode)> WaitEQBusyOFF(ACTION_TYPE action)
         {
-
-            LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
             DirectionLighter.WaitPassLights();
-            CancellationTokenSource waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            CancellationTokenSource waitEQ_BUSY_ON_CTS = new CancellationTokenSource();
+            CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
             SetAGVBUSY(false);
             SetAGVREADY(true);
-
+            AlarmCodes alarm_code = AlarmCodes.None;
             Task wait_eq_busy_ON = new Task(() =>
             {
+                LOG.Critical("[EQ Handshake] 等待EQ BUSY ON ");
                 while (!IsEQBusyOn())
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (waitEQ_BUSY_ON_CTS.IsCancellationRequested)
+                    {
+                        alarm_code = AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_ON;
                         throw new OperationCanceledException();
+                    }
                     Thread.Sleep(1);
                 }
             });
             Task wait_eq_busy_OFF = new Task(() =>
             {
+                LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
                 while (IsEQBusyOn())
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (waitEQ_BUSY_OFF_CTS.IsCancellationRequested)
+                    {
+                        alarm_code = AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_OFF;
                         throw new OperationCanceledException();
+                    }
                     Thread.Sleep(1);
                 }
             });
 
             try
             {
+                waitEQ_BUSY_ON_CTS.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON]));
                 wait_eq_busy_ON.Start();
-                wait_eq_busy_ON.Wait(waitEQSignalCST.Token);
+                wait_eq_busy_ON.Wait(waitEQ_BUSY_ON_CTS.Token);
             }
             catch (OperationCanceledException)
             {
-                return (false, AlarmCodes.Handshake_Fail_EQ_BUSY_ON);
+                return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
             }
-            waitEQSignalCST = new CancellationTokenSource(TimeSpan.FromSeconds(Debugger.IsAttached ? 15 : 90));
-            WatchE84EQAlarmWhenEQBUSY(waitEQSignalCST);
             try
             {
+                waitEQ_BUSY_OFF_CTS.CancelAfter(TimeSpan.FromSeconds(Debugger.IsAttached ? 10 : Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF]));
+                WatchE84EQAlarmWhenEQBUSY(waitEQ_BUSY_OFF_CTS);
                 wait_eq_busy_OFF.Start();
-                wait_eq_busy_OFF.Wait(waitEQSignalCST.Token);
+                wait_eq_busy_OFF.Wait(waitEQ_BUSY_OFF_CTS.Token);
                 SetAGVREADY(false); //AGV BUSY 開始退出
                 SetAGVBUSY(true);
                 WatchE84AlarmWhenAGVBUSY();
@@ -312,9 +330,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (OperationCanceledException ex)
             {
                 if (!EQAlarmWhenEQBusyFlag)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_BUSY_OFF);
+                    return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
                 else
-                    return (false, AlarmCodes.Handshake_Fail);
+                    return (false, alarm_code);
             }
         }
 
@@ -338,6 +356,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     bool isEQReadyOff = !IsEQReadyOn();
                     bool isEQBusyOn = IsEQBusyOn();
+
+                    if (isEQReadyOff)
+                    {
+                        await Task.Delay(500);
+                        isEQReadyOff = !IsEQReadyOn();
+                    }
+
+                    if (isEQBusyOn)
+                    {
+                        await Task.Delay(500);
+                        isEQBusyOn = IsEQBusyOn();
+                    }
+
                     if (isEQReadyOff | isEQBusyOn)//異常發生
                     {
                         EQAlarmWhenEQBusyFlag = true;
@@ -374,7 +405,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         SetAGVVALID(false);
                         break;
                     }
-                    if (!IsEQReadyOn() && Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN)//異常發生
+                    var isEQReadyOFF = !IsEQReadyOn();
+                    if (isEQReadyOFF)
+                    {
+                        await Task.Delay(500);
+                        isEQReadyOFF = !IsEQReadyOn();
+                    }
+
+                    if (isEQReadyOFF && Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN)//異常發生
                     {
                         EQAlarmWhenEQBusyFlag = true;
                         waitEQSignalCST.Cancel();

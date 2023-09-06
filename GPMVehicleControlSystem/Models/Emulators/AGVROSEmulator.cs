@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             });
         }
 
-        private void InitNewTaskCommandActionServer()
+        internal void InitNewTaskCommandActionServer()
         {
             TaskCommandActionServer actionServer = new TaskCommandActionServer("/barcodemovebase", rosSocket);
             actionServer.Initialize();
@@ -70,7 +70,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
             Console.WriteLine($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
-            actionServer.AcceptedInvoke();
             RobotStopMRE = new ManualResetEvent(true);
             //模擬走型
             Task.Factory.StartNew(async () =>
@@ -93,13 +92,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     RobotStopMRE.WaitOne();
                 }
                 actionServer.SucceedInvoke();
-                Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(500);
-                    actionServer.Terminate();
-                    actionServer = null;
-                    InitNewTaskCommandActionServer();
-                });
             });
 
         }
