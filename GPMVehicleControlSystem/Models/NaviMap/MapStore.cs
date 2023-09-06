@@ -46,7 +46,15 @@ namespace GPMVehicleControlSystem.Models.NaviMap
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {
                         var jsonStr = await response.Content.ReadAsStringAsync();
-                        map = JsonConvert.DeserializeObject<Map>(jsonStr);
+                        var objDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonStr);
+                        if (objDict.TryGetValue("Map", out var object_))
+                        {
+                            return JsonConvert.DeserializeObject<Map>(object_.ToString());
+                        }
+                        else
+                        {
+                            return JsonConvert.DeserializeObject<Map>(jsonStr);
+                        }
                     }
                 }
                 return map;
@@ -71,7 +79,17 @@ namespace GPMVehicleControlSystem.Models.NaviMap
                     return emptyMap;
                 }
                 var json = File.ReadAllText(localMapFileFullName);
-                return JsonConvert.DeserializeObject<Map>(json);
+                var objDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+                if (objDict.TryGetValue("Map", out var object_))
+                {
+                    return JsonConvert.DeserializeObject<Map>(object_.ToString());
+
+                }
+                else
+                {
+                    return JsonConvert.DeserializeObject<Map>(json);
+
+                }
             }
             catch (Exception ex)
             {

@@ -93,7 +93,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
 
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
-
+            LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
             if (taskLinkList.Length >= 1)
             {
                 _ = Task.Run(async () =>
@@ -102,7 +102,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                       {
                           if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               return;
-
                           agv.ExecuteAGVSTask(this, _taskDataDto);
                           await Task.Delay(200);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
@@ -116,7 +115,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           LOG.WARN($"[Local Task Dispather]  AGVC Active");
                           await Task.Delay(10);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
-                          while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
+
+                          while (agv.ExecutingTask != null)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
