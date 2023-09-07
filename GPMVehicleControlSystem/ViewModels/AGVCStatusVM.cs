@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public int LocStatus { get; set; }
         public bool ForkCSTExist { get; set; }
         public bool ForkFrontEndSensorTrigger { get; set; }
-        public  clsAlarmCode[] AlarmCodes { get; set; } = new  clsAlarmCode[0];
+        public clsAlarmCode[] AlarmCodes { get; set; } = new clsAlarmCode[0];
         public object AlarmsGroup
         {
             get
@@ -69,7 +69,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     return new Dictionary<int, object>();
             }
         }
-        public  clsAlarmCode NewestAlarm
+        public clsAlarmCode NewestAlarm
         {
             get
             {
@@ -93,6 +93,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public LightsStatesVM LightsStates { get; set; } = new LightsStatesVM();
         public bool IsLaserModeSettingError { get; set; } = false;
         public bool ForkHasLoading { get; set; }
-        public object HandShakeSignals { get; set; } = new object();    
+        public object HandShakeSignals { get; set; } = new object();
+        public object HandShakeTimers { get; set; } = new object();
     }
 }

@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -55,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override async void LaserSettingBeforeTaskExecute()
         {
             //啟用前後雷射偵測 + Loading 組數
-            await Agv.Laser.FrontBackLasersEnable(false);
+            await Agv.Laser.FrontBackLasersEnable(true);
             await Agv.Laser.SideLasersEnable(false);
             await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
         }
@@ -83,6 +84,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
 
+                Agv.ResetHSTimers();
+                await Task.Delay(1000);
+                if (!Agv.IsEQGOOn())
+                    return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
                 if (!HSResult.eqready)
                 {

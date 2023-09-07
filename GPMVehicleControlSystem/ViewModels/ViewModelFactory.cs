@@ -71,7 +71,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     {
                         EQ = AGV.EQHsSignalStates,
                         AGV = AGV.AGVHsSignalStates
-                    }
+                    },
+                    HandShakeTimers = AGV.EQHSTimers
 
                 };
                 return data_view_model;
