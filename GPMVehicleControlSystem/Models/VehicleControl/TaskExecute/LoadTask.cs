@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //啟用前後雷射偵測 + Loading 組數
             await Agv.Laser.FrontBackLasersEnable(!Agv.Parameters.LDULD_FrontBackLaser_Bypass);
             await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(Agv.Parameters.LDULD_Laser_Mode, false);
+            await Agv.Laser.ModeSwitch(Agv.Parameters.LDULD_Laser_Mode);
         }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

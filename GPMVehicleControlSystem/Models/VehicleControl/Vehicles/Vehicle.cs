@@ -572,7 +572,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return result;
                     }
                     LOG.INFO("Init done. Laser mode chaged to Bypass");
-                    await Laser.ModeSwitch(LASER_MODE.Bypass, false);
+                    await Laser.ModeSwitch(LASER_MODE.Bypass);
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
                     LOG.INFO("Init done");

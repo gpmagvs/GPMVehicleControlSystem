@@ -129,18 +129,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
                 LOG.INFO($"雷射設定組 =Bypass , AGVC Direction 11", true);
-                await ModeSwitch(LASER_MODE.Bypass, false);
+                await ModeSwitch(LASER_MODE.Bypass);
                 return;
             }
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
-                await ModeSwitch(AgvsLsrSetting, isSettingByAGVS: false);
+                await ModeSwitch(AgvsLsrSetting);
                 LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", true);
                 LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
             }
             else // 左.右轉
             {
-                await ModeSwitch(Spin_Laser_Mode, isSettingByAGVS: false);
+                await ModeSwitch(Spin_Laser_Mode);
                 LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
         }
