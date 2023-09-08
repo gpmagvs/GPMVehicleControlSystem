@@ -9,8 +9,11 @@ using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Json;
+using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
+
+KillRunningVCSProcesses();
 
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
@@ -81,3 +84,17 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static void KillRunningVCSProcesses()
+{
+    var currentProcess = Process.GetCurrentProcess();
+    var porcess = Process.GetProcessesByName("GPM_VCS");
+    if (porcess.Length != 0)
+    {
+        foreach (var p in porcess)
+        {
+            if (p.Id != currentProcess.Id)
+                p.Kill();
+        }
+    }
+}
