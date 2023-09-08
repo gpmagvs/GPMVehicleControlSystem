@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using GPMVehicleControlSystem.Models.Emulators;
+using GPMVehicleControlSystem.Models.NaviMap;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -22,6 +23,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Action")]
         public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "")
         {
+
+            //重新下載圖資
+            agv.DownloadMapFromServer();
+
             if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
             {
                 return Ok(new
