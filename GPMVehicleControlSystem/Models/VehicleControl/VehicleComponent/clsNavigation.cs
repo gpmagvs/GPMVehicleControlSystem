@@ -12,6 +12,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public enum AGV_DIRECTION : ushort
         {
             FORWARD, LEFT, RIGHT, STOP
+                , BYPASS = 11
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.NAVIGATION;
 
@@ -35,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_previousDirection != value)
                 {
+                    LOG.INFO($"AGVC Direction changed to : {value} ", color: ConsoleColor.DarkBlue);
                     OnDirectionChanged?.Invoke(this, value);
                     _previousDirection = value;
                 }
@@ -66,6 +68,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 return AGV_DIRECTION.LEFT;
             else if (direction == 2)
                 return AGV_DIRECTION.RIGHT;
+            else if (direction == 11)
+                return AGV_DIRECTION.BYPASS;
             else
                 return AGV_DIRECTION.STOP;
         }

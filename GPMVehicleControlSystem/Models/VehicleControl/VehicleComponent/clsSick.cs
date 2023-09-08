@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -49,18 +50,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
+
+        public byte LocalizationStatus { get; private set; } = 0x00;
+
         public override void OnAlarmResetHandle()
         {
             _LaserModeSettingError = _SickConnectionError = false;
         }
         public override void CheckStateDataContent()
         {
-            //  1 byte LocalizationStatus [0...100, 10: OK, 20: Warning, 30: Not localized, 40: System error]
-            if (Data.loc_status != 10)
-                Current_Warning_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
-            else
+            if (LocalizationStatus != Data.loc_status)
             {
-                Current_Warning_Code = AlarmCodes.None;
+                LocalizationStatus = Data.loc_status;
+                if (LocalizationStatus != 10)
+                {
+                    LOG.WARN($"Map Compare Rate Too Low [From Sick Data]");
+                }
             }
         }
     }

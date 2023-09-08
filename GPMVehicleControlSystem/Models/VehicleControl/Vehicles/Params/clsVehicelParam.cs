@@ -1,4 +1,5 @@
 ﻿using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
@@ -16,6 +17,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
         public int LastVisitedTag { get; set; } = 8;
+
+        public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
+        public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Spin;
+
+        /// <summary>
+        /// 侵入設備取放或的前後雷射Bypass
+        /// </summary>
+        public bool LDULD_FrontBackLaser_Bypass { get; set; } = true;
+
         public Dictionary<string, clsConnectionParam> Connections { get; set; } = new Dictionary<string, clsConnectionParam>()
         {
             { "RosBridge" , new clsConnectionParam
@@ -37,7 +47,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
                 }
             }
         };
-
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
         public clsMapParam MapParam { get; set; } = new clsMapParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.E84;

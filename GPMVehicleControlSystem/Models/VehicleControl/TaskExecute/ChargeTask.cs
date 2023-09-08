@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             await Agv.Laser.FrontBackLasersEnable(false);
             await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+            await Agv.Laser.ModeSwitch(LASER_MODE.Loading, false);
         }
 
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

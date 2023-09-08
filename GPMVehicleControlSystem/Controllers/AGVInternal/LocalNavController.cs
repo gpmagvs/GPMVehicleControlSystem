@@ -22,8 +22,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Action")]
         public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "")
         {
-
-
             if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
             {
                 return Ok(new
@@ -95,6 +93,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
             LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
+            if (agv.Operation_Mode != clsEnums.OPERATOR_MODE.AUTO)
+                await agv.Auto_Mode_Siwtch(clsEnums.OPERATOR_MODE.AUTO);
+
             if (taskLinkList.Length >= 1)
             {
                 _ = Task.Run(async () =>

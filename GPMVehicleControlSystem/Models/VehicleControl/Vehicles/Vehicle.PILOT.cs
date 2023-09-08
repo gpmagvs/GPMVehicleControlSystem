@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private clsMapPoint? previousTagPoint;
         private void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
             {
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
                     return;
@@ -177,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTask.action == ACTION_TYPE.None)
                 {
                     var laser_mode = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
-                    Laser.ModeSwitch(laser_mode);
+                    await Laser.ModeSwitch(laser_mode, true);
                 }
 
                 if (ExecutingTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)

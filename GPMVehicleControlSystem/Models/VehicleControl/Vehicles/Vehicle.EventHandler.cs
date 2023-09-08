@@ -101,8 +101,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (IsAllLaserNoTrigger())
                 {
                     LOG.INFO($"第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                    AGVStatusChangeToRunWhenLaserRecovery();
+                    Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(1000);
+                        AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        AGVStatusChangeToRunWhenLaserRecovery();
+                    });
                 }
             }
         }
@@ -167,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
             }
         }
-        private void HandleSideLaserSignal(object? sender, bool di_state)
+        private async void HandleSideLaserSignal(object? sender, bool di_state)
         {
             if (Operation_Mode == OPERATOR_MODE.MANUAL)
                 return;
@@ -210,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        private void AGVStatusChangeToRunWhenLaserRecovery()
+        private async void AGVStatusChangeToRunWhenLaserRecovery()
         {
             AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
             AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
@@ -221,10 +225,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             _Sub_Status = SUB_STATUS.RUN;
             StatusLighter.RUN();
-            if (ExecutingTask.action == ACTION_TYPE.None)
-                BuzzerPlayer.Move();
-            else
-                BuzzerPlayer.Action();
+            if (ExecutingTask != null)
+            {
+                await Task.Delay(200);
+                if (ExecutingTask.action == ACTION_TYPE.None)
+                    BuzzerPlayer.Move();
+                else
+                    BuzzerPlayer.Action();
+            }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
         {

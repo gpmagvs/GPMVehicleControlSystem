@@ -239,7 +239,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 DirectionLighter.DOModule = WagoDO;
 
                 StatusLighter = new clsStatusLighter(WagoDO);
-                Laser = new clsLaser(WagoDO, WagoDI);
+                Laser = new clsLaser(WagoDO, WagoDI)
+                {
+                    Spin_Laser_Mode = Parameters.Spin_Laser_Mode
+                };
 
                 EmulatorInitialize();
                 Task RosConnTask = new Task(async () =>
@@ -569,7 +572,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return result;
                     }
                     LOG.INFO("Init done. Laser mode chaged to Bypass");
-                    await Laser.ModeSwitch(LASER_MODE.Bypass);
+                    await Laser.ModeSwitch(LASER_MODE.Bypass, false);
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
                     LOG.INFO("Init done");
@@ -710,10 +713,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (IsResetAlarmWorking)
                 return;
 
-            if (!IsTriggerByButton)
-            {
-                await ResetMotor();
-            }
+            await ResetMotor();
             if (AlarmManager.CurrentAlarms.Values.Count == 0)
             {
                 IsResetAlarmWorking = false;
@@ -725,7 +725,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StaSysMessageManager.Clear();
             IsResetAlarmWorking = true;
 
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask != null)
             {
                 if (ExecutingTask.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
@@ -741,10 +741,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
 
+                await WagoDO.ResetSaftyRelay();
                 if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2))
                     return true;
 
-                await WagoDO.ResetSaftyRelay();
                 Console.WriteLine("Reset Motor Process Start");
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                 await Task.Delay(200);

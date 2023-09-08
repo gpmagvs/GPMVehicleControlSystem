@@ -12,8 +12,8 @@ namespace GPMVehicleControlSystem.Models.Log
             await Task.Delay(10);
             var result = new clsLogQueryResults()
             {
-                FromTime = option.FromTime,
-                ToTime = option.ToTime,
+                FromTimeStr = option.FromTimeStr,
+                ToTimeStr = option.ToTimeStr,
                 Page = option.Page,
                 NumberPerPage = option.NumberPerPage,
                 SpeficStrings = option.SpeficStrings,
@@ -29,7 +29,9 @@ namespace GPMVehicleControlSystem.Models.Log
                 contents.AddRange(contentLines);
             }
             result.TotalCount = contents.Count;
-            result.LogMessageList = contents.Skip((option.Page - 1) * option.NumberPerPage).Take(option.NumberPerPage).Select(line => GetLogDto(line)).ToList();
+            result.LogMessageList = contents.Skip((option.Page - 1) * option.NumberPerPage).Take(option.NumberPerPage).Select(line => GetLogDto(line))
+                .Where(dto => dto.TimeDT >= option.FromTime && dto.TimeDT <= option.ToTime).ToList();
+
             //2023/9/6 下午 12:50:59  [Trace][<>c__DisplayClass22_0] [IO]-[X000A]-Bumper_Sensor Changed to : 1
             return result;
         }
@@ -50,7 +52,9 @@ namespace GPMVehicleControlSystem.Models.Log
         private static List<string> GetDateMatchFolders(DateTime from, DateTime to)
         {
             string[] subfolders = Directory.GetDirectories(LogBaseFolder);
-            var folders_matched = subfolders.Where(path => GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) >= from && GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) <= to);
+            var _from = new DateTime(from.Year, from.Month, from.Day, 0, 0, 0);
+            var _to = new DateTime(to.Year, to.Month, to.Day, 0, 0, 0);
+            var folders_matched = subfolders.Where(path => GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) >= _from && GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) <= _to);
             return folders_matched.ToList();
 
         }

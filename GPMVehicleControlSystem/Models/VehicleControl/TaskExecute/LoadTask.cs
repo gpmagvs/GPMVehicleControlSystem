@@ -56,9 +56,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override async void LaserSettingBeforeTaskExecute()
         {
             //啟用前後雷射偵測 + Loading 組數
-            await Agv.Laser.FrontBackLasersEnable(true);
+            await Agv.Laser.FrontBackLasersEnable(!Agv.Parameters.LDULD_FrontBackLaser_Bypass);
             await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+            await Agv.Laser.ModeSwitch(Agv.Parameters.LDULD_Laser_Mode, false);
         }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
@@ -199,7 +199,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         AlarmManager.AddAlarm(HSResult.alarmCode, false);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-
+                        return;
                     }
                 }
 

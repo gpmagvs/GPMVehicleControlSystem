@@ -1,9 +1,41 @@
-﻿namespace GPMVehicleControlSystem.Models.Log
+﻿using System.Globalization;
+
+namespace GPMVehicleControlSystem.Models.Log
 {
     public class clsLogQueryOptions
     {
-        public DateTime FromTime { get; set; }
-        public DateTime ToTime { get; set; }
+
+        public string FromTimeStr { get; set; } = "";
+        public string ToTimeStr { get; set; } = "";
+
+        internal DateTime FromTime
+        {
+            get
+            {
+                if (DateTime.TryParseExact(FromTimeStr, "yyyy/MM/dd HH:mm:ss", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime time))
+                {
+                    return time;
+                }
+                else
+                {
+                    return new DateTime(2999, 1, 1);
+                }
+            }
+        }
+        internal DateTime ToTime
+        {
+            get
+            {
+                if (DateTime.TryParseExact(ToTimeStr, "yyyy/MM/dd HH:mm:ss", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime time))
+                {
+                    return time;
+                }
+                else
+                {
+                    return new DateTime(2999, 1, 1);
+                }
+            }
+        }
 
         /// <summary>
         /// 顯示第幾頁

@@ -94,11 +94,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 LaserSettingBeforeTaskExecute();
-
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
@@ -178,8 +176,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return;
                     }
                     LOG.INFO($"AGVC Action Status is success,Do Work defined!");
-                    var result = await HandleAGVCActionSucceess();
 
+                    Agv.DirectionLighter.CloseAll();
+                    var result = await HandleAGVCActionSucceess();
                     if (!result.success)
                     {
                         AlarmManager.AddAlarm(result.alarmCode, false);

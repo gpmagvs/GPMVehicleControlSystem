@@ -36,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         private LASER_MODE _Mode = LASER_MODE.Bypass;
+        public LASER_MODE Spin_Laser_Mode = LASER_MODE.Spin;
         internal int CurrentLaserMonitoringCase = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
@@ -125,29 +126,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            if (AgvsLsrSetting == 0)
+            if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
-                ModeSwitch(LASER_MODE.Bypass);
+                LOG.INFO($"雷射設定組 =Bypass , AGVC Direction 11", true);
+                await ModeSwitch(LASER_MODE.Bypass, false);
                 return;
             }
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
-                await ModeSwitch(AgvsLsrSetting);
-                LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", false);
+                await ModeSwitch(AgvsLsrSetting, isSettingByAGVS: false);
+                LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", true);
+                LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
             }
             else // 左.右轉
-                ModeSwitch(LASER_MODE.Spin_Shor);
+            {
+                await ModeSwitch(Spin_Laser_Mode, isSettingByAGVS: false);
+                LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
+            }
         }
-        public async Task<bool> ModeSwitch(LASER_MODE mode)
+        public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
             int mode_int = (int)mode;
             if (CurrentLaserMonitoringCase == mode_int | (CurrentLaserMonitoringCase == 16 && mode_int == 0) | (CurrentLaserMonitoringCase == 0 && mode_int == 16))
                 return true;
-            return await ModeSwitch((int)mode);
+            return await ModeSwitch((int)mode, isSettingByAGVS);
         }
-        public async Task<bool> ModeSwitch(int mode_int)
+        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
         {
-            AgvsLsrSetting = mode_int;
+            if (isSettingByAGVS)
+                AgvsLsrSetting = mode_int;
             if (CurrentLaserMonitoringCase == mode_int)
                 return true;
 
