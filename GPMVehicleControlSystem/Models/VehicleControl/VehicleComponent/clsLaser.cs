@@ -136,7 +136,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", false);
             }
             else // 左.右轉
-                ModeSwitch(LASER_MODE.Spin);
+                ModeSwitch(LASER_MODE.Spin_Shor);
         }
         public async Task<bool> ModeSwitch(LASER_MODE mode)
         {

@@ -16,7 +16,6 @@ var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
 {
     LOG.SetLogFolderName(param.LogFolder);
-    StaStored.APPVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
     if (!alarmListLoaded)
         StaSysMessageManager.AddNewMessage(message, 1);
