@@ -4,15 +4,20 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsNavigation : CarComponent
     {
+
         public enum AGV_DIRECTION : ushort
         {
-            FORWARD, LEFT, RIGHT, STOP
-                , BYPASS = 11
+            FORWARD,
+            LEFT,
+            RIGHT,
+            STOP,
+            BYPASS = 11
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.NAVIGATION;
 
@@ -60,64 +65,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        private AGV_DIRECTION ConvertToDirection(ushort direction)
-        {
-            if (direction == 0)
-                return AGV_DIRECTION.FORWARD;
-            else if (direction == 1)
-                return AGV_DIRECTION.LEFT;
-            else if (direction == 2)
-                return AGV_DIRECTION.RIGHT;
-            else if (direction == 11)
-                return AGV_DIRECTION.BYPASS;
-            else
-                return AGV_DIRECTION.STOP;
-        }
-
         public override void CheckStateDataContent()
         {
             LastVisitedTag = Data.lastVisitedNode.data;
             LinearSpeed = CalculateLinearSpeed(Data.robotPose.pose.position);
             AngularSpeed = CalculateAngularSpeed(Angle);
-            Direction = ConvertToDirection(Data.robotDirect);
+            Direction = Data.robotDirect.ToAGVDirection();
             last_position = Data.robotPose.pose.position;
             last_theta = Angle;
             if (Data.errorCode != 0)
-            {
-                var code = Data.errorCode;
-                if (code == 1)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Received_Msg;
-                else if (code == 2)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Extend_Path;
-                else if (code == 3)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Forwarding_End;
-                else if (code == 4)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Tracking_End_Point;
-                else if (code == 5)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Moving;
-                else if (code == 6)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Out_Of_Line_While_Secondary;
-                else if (code == 7)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_On_End_Point;
-                else if (code == 8)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_While_Moving;
-                else if (code == 9)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Missing_Tag_While_Secondary;
-                else if (code == 10)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Initial_Position_In_Secondary;
-                else if (code == 11)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Initial_Angle_In_Secondary;
-                else if (code == 12)
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
-                else if (code == 13)
-                    Current_Alarm_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
-                else
-                    Current_Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
-            }
+                Current_Alarm_Code = Data.errorCode.ToMotionAlarmCode();
             else
-            {
-                Current_Warning_Code = AlarmCodes.None;
-            }
+                Current_Alarm_Code = AlarmCodes.None;
         }
         //180d 3.14  
         private double CalculateAngularSpeed(double angle)
@@ -135,4 +94,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             return Math.Round(displacement / time_period, 1);
         }
     }
+
+
 }

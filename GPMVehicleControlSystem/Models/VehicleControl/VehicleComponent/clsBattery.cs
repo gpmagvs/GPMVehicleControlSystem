@@ -24,27 +24,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override void CheckStateDataContent()
         {
             var error_code = Data.errorCode;
-            if (error_code != 0)
-            {
-                if (error_code == 1)
-                    Current_Warning_Code = AlarmCodes.Over_Voltage;
-                else if (error_code == 2)
-                    Current_Warning_Code = AlarmCodes.Under_Voltage;
-                else if (error_code == 4)
-                    Current_Warning_Code = AlarmCodes.Over_Current_Charge;
-                else if (error_code == 8)
-                    Current_Warning_Code = AlarmCodes.Over_Current_Discharge;
-                else if (error_code == 16)
-                    Current_Warning_Code = AlarmCodes.Under_Current_Charge;
-                else if (error_code == 32)
-                    Current_Warning_Code = AlarmCodes.Over_Temperature;
-                else if (error_code == 64)
-                    Current_Warning_Code = AlarmCodes.Under_Temperature;
-            }
-            else
-            {
-                Current_Warning_Code = AlarmCodes.None;
-            }
+            Current_Warning_Code = error_code.ToBatteryAlarmCode();
         }
     }
 
