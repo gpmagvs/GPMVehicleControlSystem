@@ -1,6 +1,7 @@
 ﻿
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -160,17 +161,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             try
             {
-
-                bool[] lsSet = mode_int.To4Booleans();
-                bool IN_1 = lsSet[0];
-                bool IN_2 = lsSet[1];
-                bool IN_3 = lsSet[2];
-                bool IN_4 = lsSet[3];
-                bool[] writeStates = new bool[]
-                {
-                IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
-                };
-                DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeStates);
+                DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 if (CurrentLaserMonitoringCase != -1)
                 {
@@ -178,6 +169,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         if (cts.IsCancellationRequested)
                         {
+                            AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_Timeout);
                             return false;
                         }
                         await Task.Delay(1);
@@ -186,8 +178,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", true);
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                LOG.ERROR(ex.ToString(), ex);
+                AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_Exception);
                 return false;
             }
         }

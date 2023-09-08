@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -6,6 +7,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
     public static class VehicleComponentExtensions
     {
+        /// <summary>
+        /// 將雷測組數整數值轉換成DO 16 bits 之bool型態陣列值
+        /// </summary>
+        /// <param name="laser_mode"></param>
+        /// <returns></returns>
+        public static bool[] ToLaserDOSettingBits(this int laser_mode)
+        {
+            bool[] lsSet = laser_mode.To4Booleans();
+            bool IN_1 = lsSet[0];
+            bool IN_2 = lsSet[1];
+            bool IN_3 = lsSet[2];
+            bool IN_4 = lsSet[3];
+            bool[] bits_bool_state= new bool[]
+            {
+                IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
+            };
+            return bits_bool_state;
+        }
+
         /// <summary>
         /// 將車控發布的Direction轉換成AGV_DIRECTION 列舉
         /// </summary>
