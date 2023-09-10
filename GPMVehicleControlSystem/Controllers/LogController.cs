@@ -12,7 +12,7 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpPost("Query")]
         public async Task<IActionResult> QueryLog([FromBody] clsLogQueryOptions option)
         {
-            clsLogQueryResults result = await LogService.QueryLog(option);
+            clsLogQueryResults result = await LogQueryService.QueryLog(option);
             return Ok(result);
         }
 

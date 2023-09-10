@@ -4,12 +4,12 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace GPMVehicleControlSystem.Models.Log
 {
-    public class LogService
+    public class LogQueryService
     {
         private static string LogBaseFolder => LOG.LogFolder;
         internal static async Task<clsLogQueryResults> QueryLog(clsLogQueryOptions option)
         {
-            await Task.Delay(10);
+            await Task.Delay(10); 
             var result = new clsLogQueryResults()
             {
                 FromTimeStr = option.FromTimeStr,
