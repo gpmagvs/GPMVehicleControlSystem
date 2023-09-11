@@ -88,7 +88,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Task.Delay(1000);
                 if (!Agv.IsEQGOOn())
                     return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
+                BuzzerPlayer.Handshaking();
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
+                await Task.Delay(500);
                 if (!HSResult.eqready)
                 {
                     return (false, HSResult.alarmCode);

@@ -5,6 +5,7 @@
         Alarm,
         Move,
         Action,
-        Stop
+        Stop,
+        Handshaking
     }
 }

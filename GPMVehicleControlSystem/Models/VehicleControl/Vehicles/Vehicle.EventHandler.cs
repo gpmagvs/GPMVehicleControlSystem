@@ -231,7 +231,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTask.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
                 else
-                    BuzzerPlayer.Action();
+                {
+                        BuzzerPlayer.Action();
+                }
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()

@@ -38,18 +38,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
             Sub_Status = SUB_STATUS.RUN;
-
-
             Laser.AllLaserActive();
             WriteTaskNameToFile(taskDownloadData.Task_Name);
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
-
-            if (action == ACTION_TYPE.None)
-                BuzzerPlayer.Move();
-            else
-                BuzzerPlayer.Action();
 
             if (!TaskTrackingTags.TryAdd(taskDownloadData.Task_Simplex, taskDownloadData.TagsOfTrajectory))
             {
@@ -95,8 +88,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
-                    await Task.Delay(500);
 
+                    await Task.Delay(1000);
+                    if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Parameters.LDULD_Task_No_Entry)
+                    {
+                        LOG.WARN($"Load/Unload Task With NO ENTER EQ MODE(Valid By Parameter setting)");
+                        Sub_Status = SUB_STATUS.RUN;
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
+                        await Task.Delay(1000);
+                        Sub_Status = SUB_STATUS.IDLE;
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        return;
+                    }
                     var result = await ExecutingTask.Execute();
                     if (result != AlarmCodes.None)
                     {
@@ -106,7 +109,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AlarmManager.AddAlarm(result, false);
                         AGVC.OnAGVCActionChanged = null;
                     }
-
+                    else
+                    {
+                        if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
+                            BuzzerPlayer.Action();
+                        else
+                            BuzzerPlayer.Move();
+                    }
                 }
             });
         }

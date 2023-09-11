@@ -162,10 +162,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
                 if (CurrentLaserMonitoringCase != -1)
                 {
-                    while (CurrentLaserMonitoringCase != mode_int)
+                    while ((mode_int != 0 & mode_int != 16) ? CurrentLaserMonitoringCase != mode_int : (CurrentLaserMonitoringCase != 0 && CurrentLaserMonitoringCase != 16))
                     {
                         if (cts.IsCancellationRequested)
                         {

@@ -16,6 +16,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool LDULD_Task_No_Entry { get; set; } = false;
         public int LastVisitedTag { get; set; } = 8;
         /// <summary>
         /// 斷充電迴路的充電電流豪安培數閥值設定,低於此閥值斷開充電迴路

@@ -166,8 +166,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return new MapPoint { Name = "" };
                 else
                 {
-                    var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);
-                    return _point == null ? new MapPoint { Name = "Unknown" } : _point;
+                    try
+                    {
+                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);
+                        return _point == null ? new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination } : _point;
+                    }
+                    catch (Exception)
+                    {
+                        return new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination };
+
+                    }
                 }
             }
         }
@@ -730,7 +738,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTask.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
                 else
+                {
                     BuzzerPlayer.Action();
+                }
             }
             IsResetAlarmWorking = false;
             return;

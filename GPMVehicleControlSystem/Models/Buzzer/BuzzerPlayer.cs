@@ -18,6 +18,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         static bool IsAlarmPlaying = false;
         static bool IsActionPlaying = false;
         static bool IsMovingPlaying = false;
+        static bool IsHandshakingPlaying = false;
         public static void Initialize()
         {
         }
@@ -47,10 +48,19 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             await Play(SOUNDS.Move);
             IsMovingPlaying = true;
         }
+
+        public static async void Handshaking()
+        {
+            if (IsHandshakingPlaying)
+                return;
+            await Stop();
+            await Play(SOUNDS.Handshaking);
+            IsHandshakingPlaying = true;
+        }
         internal static async Task Stop()
         {
             await Play(SOUNDS.Stop);
-            IsAlarmPlaying = IsActionPlaying = IsMovingPlaying = false;
+            IsAlarmPlaying = IsActionPlaying = IsMovingPlaying = IsHandshakingPlaying = false;
         }
 
         public static async Task Play(SOUNDS sound)

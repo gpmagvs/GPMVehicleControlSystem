@@ -29,11 +29,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
-            if (Remote_Mode == REMOTE_MODE.SWITCHING)
-            {
-                LOG.ERROR($"車輛{mode}失敗 : 上下線請求作業中");
-                return (false, RETURN_CODE.PROCESSING);
-            }
+            //if (Remote_Mode == REMOTE_MODE.SWITCHING)
+            //{
+            //    LOG.ERROR($"車輛{mode}失敗 : 上下線請求作業中");
+            //    return (false, RETURN_CODE.PROCESSING);
+            //}
             var _oriMode = Remote_Mode;
             Remote_Mode = REMOTE_MODE.SWITCHING;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(Navigation.LastVisitedTag, mode).Result;
