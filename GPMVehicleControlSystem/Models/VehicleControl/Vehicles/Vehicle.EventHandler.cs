@@ -229,12 +229,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(200);
                 _Sub_Status = SUB_STATUS.RUN;
                 StatusLighter.RUN();
-                if (ExecutingTask.action == ACTION_TYPE.None)
-                    BuzzerPlayer.Move();
-                else
+                try
                 {
-                        BuzzerPlayer.Action();
+                    if (ExecutingTask != null)
+                    {
+                        if (ExecutingTask.action == ACTION_TYPE.None)
+                            BuzzerPlayer.Move();
+                        else
+                        {
+                            BuzzerPlayer.Action();
+                        }
+                    }
                 }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex);
+                }
+
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
@@ -352,12 +363,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
             string sender_ = sender.ToString();
-            _Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 BuzzerPlayer.Alarm();
-                StatusLighter.DOWN();
                 AlarmManager.AddAlarm(sender_ == "software_emo" ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
                 ExecutingTask?.Abort();
                 AGVC.AbortTask();
@@ -373,7 +382,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             AGVC._ActionStatus = ActionStatus.NO_GOAL;
             previousSoftEmoTime = DateTime.Now;
-
+            _Sub_Status = SUB_STATUS.DOWN;
+            StatusLighter.DOWN();
         }
 
         protected virtual async Task DOSettingWhenEmoTrigger()
@@ -430,9 +440,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (IsCharging && WagoDO.GetState(DO_ITEM.Recharge_Circuit) && Batteries.Values.Any(bat => bat.Data.chargeCurrent < Parameters.CutOffChargeRelayCurrentThreshodlval))
             {
                 clsBattery? bat = Batteries.Values.FirstOrDefault(bat => bat.Data.chargeCurrent < Parameters.CutOffChargeRelayCurrentThreshodlval);
-                LOG.INFO($"Battery charge current ({bat.Data.chargeCurrent}) lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
-                _Sub_Status = SUB_STATUS.IDLE;
-                StatusLighter.IDLE();
+                LOG.WARN($"Battery charge current ({bat.Data.chargeCurrent}) lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
                 WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             }
         }

@@ -31,6 +31,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         /// <summary>
         /// 執行派車系統任務
+        /// 19:10:07 端點未掃描到QR Code
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="taskDownloadData"></param>

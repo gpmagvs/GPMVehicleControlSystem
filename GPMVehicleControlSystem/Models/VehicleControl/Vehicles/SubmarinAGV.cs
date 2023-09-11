@@ -63,11 +63,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //向AGVS請求移除卡匣
             string currentCSTID = CSTReader.Data.data;
             string toRemoveCSTID = currentCSTID.ToLower() == "error" ? "" : currentCSTID;
-            var retCode = await AGVS.TryRemoveCSTData(toRemoveCSTID, "");
             //清帳
-            if (retCode == RETURN_CODE.OK)
-                CSTReader.ValidCSTID = "";
-
+            CSTReader.ValidCSTID = "";
+            var retCode = await AGVS.TryRemoveCSTData(toRemoveCSTID, "");
+      
             return retCode;
         }
 

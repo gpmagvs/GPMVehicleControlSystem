@@ -360,8 +360,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             LOG.INFO("Path Info : " + rosGoal.pathInfo.ToJson());
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
-            wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            while (ActionStatus != ActionStatus.ACTIVE)
+            wait_agvc_execute_action_cts = new CancellationTokenSource();
+
+            await Task.Delay(100);
+            wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(20));
+            while (_ActionStatus != ActionStatus.ACTIVE)
             {
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {

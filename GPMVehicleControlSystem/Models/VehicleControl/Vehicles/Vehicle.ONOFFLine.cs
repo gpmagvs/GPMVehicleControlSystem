@@ -29,6 +29,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
+            if (Parameters.ForbidToOnlineTags.Contains(BarcodeReader.CurrentTag))
+            {
+                return (false, RETURN_CODE.Current_Tag_Cannot_Online);
+            }
             //if (Remote_Mode == REMOTE_MODE.SWITCHING)
             //{
             //    LOG.ERROR($"車輛{mode}失敗 : 上下線請求作業中");

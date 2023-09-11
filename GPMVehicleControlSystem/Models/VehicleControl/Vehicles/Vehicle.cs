@@ -153,6 +153,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _Sub_Status = SUB_STATUS.Charging;
                         StatusLighter.ActiveGreen();
                     }
+                    else
+                    {
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        {
+                            _Sub_Status = SUB_STATUS.IDLE;
+                            StatusLighter.IDLE();
+                        }
+                    }
                     _IsCharging = value;
                 }
             }

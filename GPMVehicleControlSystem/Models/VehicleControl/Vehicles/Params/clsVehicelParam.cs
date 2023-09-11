@@ -21,6 +21,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public int LastVisitedTag { get; set; } = 8;
+        public List<int> ForbidToOnlineTags { get; set; } = new List<int>();
+
         /// <summary>
         /// 斷充電迴路的充電電流豪安培數閥值設定,低於此閥值斷開充電迴路
         /// </summary>

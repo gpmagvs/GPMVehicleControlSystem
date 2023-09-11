@@ -96,7 +96,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
-                LaserSettingBeforeTaskExecute();
+                if (!await LaserSettingBeforeTaskExecute())
+                {
+                    return AlarmCodes.Laser_Mode_value_fail;
+                }
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
@@ -243,7 +246,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 任務開始前的雷射設定
         /// </summary>
-        public abstract void LaserSettingBeforeTaskExecute();
+        public abstract Task<bool> LaserSettingBeforeTaskExecute();
 
         internal virtual void Abort()
         {

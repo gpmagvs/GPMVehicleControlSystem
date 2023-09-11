@@ -53,12 +53,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-        public override async void LaserSettingBeforeTaskExecute()
+        public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            //啟用前後雷射偵測 + Loading 組數
-            await Agv.Laser.FrontBackLasersEnable(!Agv.Parameters.LDULD_FrontBackLaser_Bypass);
-            await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(Agv.Parameters.LDULD_Laser_Mode);
+            try
+            {
+                //啟用前後雷射偵測 + Loading 組數
+                await Agv.Laser.SideLasersEnable(false);
+                await Agv.Laser.FrontBackLasersEnable(false);
+                await Task.Delay(200);
+                return await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+                return false;
+            }
         }
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
@@ -168,6 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await Task.Factory.StartNew(async () =>
             {
                 Agv.DirectionLighter.Backward(delay: 800);
+                //await Agv.Laser.FrontBackLasersEnable(false, true);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;

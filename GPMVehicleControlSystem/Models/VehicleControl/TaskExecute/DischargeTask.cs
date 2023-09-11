@@ -15,11 +15,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public DischargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
-        public override async void LaserSettingBeforeTaskExecute()
+        public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            await Agv.Laser.FrontBackLasersEnable(false);
-            await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+            try
+            {
+                await Agv.Laser.FrontBackLasersEnable(false);
+                await Agv.Laser.SideLasersEnable(false);
+                await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+                return false;
+            }
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {

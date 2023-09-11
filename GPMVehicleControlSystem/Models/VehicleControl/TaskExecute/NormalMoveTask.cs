@@ -57,9 +57,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
-        public override async void LaserSettingBeforeTaskExecute()
+        public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            await Agv.Laser.ModeSwitch(this.RunningTaskData.ExecutingTrajecory.First().Laser, true);
+            return await Agv.Laser.ModeSwitch(this.RunningTaskData.ExecutingTrajecory.First().Laser, true);
         }
 
     }

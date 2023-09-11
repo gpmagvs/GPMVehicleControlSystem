@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static AGVSystemCommonNet6.clsEnums;
@@ -16,11 +17,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-        public override async void LaserSettingBeforeTaskExecute()
+        public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            await Agv.Laser.FrontBackLasersEnable(false);
-            await Agv.Laser.SideLasersEnable(false);
-            await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+            try
+            {
+
+                await Agv.Laser.FrontBackLasersEnable(false);
+                await Agv.Laser.SideLasersEnable(false);
+                await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+                return false;
+            }
         }
 
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

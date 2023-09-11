@@ -75,7 +75,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-
+        internal async Task FrontBackLasersEnable(bool front_active,bool back_active)
+        {
+            await DOModule.SetState(DO_ITEM.Front_LsrBypass, !front_active);
+            await DOModule.SetState(DO_ITEM.Back_LsrBypass, !back_active);
+        }
         /// <summary>
         /// 前後雷射Bypass關閉
         /// </summary>
@@ -84,7 +88,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, !active);
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, !active);
-        }   /// <summary>
+        } 
+        /// <summary>
             /// 前後雷射Bypass關閉
             /// </summary>
             /// <exception cref="NotImplementedException"></exception>
