@@ -405,7 +405,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     await Task.Delay(1);
                     ////AGV作動中發生AGV異常
-                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.ALARM)
+                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
                     {
                         SetAGV_TR_REQ(false);
                         LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
@@ -449,7 +449,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (IsEQBusyOn())
                 {
                     await Task.Delay(1);
-                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.ALARM)
+                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN )
                     {
                         AGVAlarmWhenEQBusyFlag = true;
                         SetAGV_TR_REQ(false);
