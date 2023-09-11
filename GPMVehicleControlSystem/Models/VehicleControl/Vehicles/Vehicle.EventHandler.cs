@@ -287,8 +287,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
-            if (BarcodeReader.CurrentTag == 0) //不在Tag上
-                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_NOT_ON_TAG;
+
+            //if (BarcodeReader.CurrentTag == 0) //不在Tag上
+            //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_NOT_ON_TAG;
             if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
             if (taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
