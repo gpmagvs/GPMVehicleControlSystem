@@ -21,5 +21,7 @@ namespace GPMVehicleControlSystem.Models.Log
             }
         }
         public string Message { get; set; } = "";
+        public string Level { get; set; } = "";
+        public string Class { get; internal set; }
     }
 }

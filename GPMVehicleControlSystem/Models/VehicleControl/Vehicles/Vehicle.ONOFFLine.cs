@@ -33,11 +33,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (false, RETURN_CODE.Current_Tag_Cannot_Online);
             }
-            //if (Remote_Mode == REMOTE_MODE.SWITCHING)
-            //{
-            //    LOG.ERROR($"車輛{mode}失敗 : 上下線請求作業中");
-            //    return (false, RETURN_CODE.PROCESSING);
-            //}
             var _oriMode = Remote_Mode;
             Remote_Mode = REMOTE_MODE.SWITCHING;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(Navigation.LastVisitedTag, mode).Result;

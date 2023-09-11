@@ -9,7 +9,7 @@ namespace GPMVehicleControlSystem.Models.Log
         private static string LogBaseFolder => LOG.LogFolder;
         internal static async Task<clsLogQueryResults> QueryLog(clsLogQueryOptions option)
         {
-            await Task.Delay(10); 
+            await Task.Delay(10);
             var result = new clsLogQueryResults()
             {
                 FromTimeStr = option.FromTimeStr,
@@ -24,14 +24,18 @@ namespace GPMVehicleControlSystem.Models.Log
             List<string> contents = new List<string>();
             foreach (string folder_ in folders_match)
             {
-                var fileName = Path.Combine(folder_, "Trace.log");
-                var contentLines = File.ReadAllLines(fileName);
-                contents.AddRange(contentLines);
+                var files = Directory.GetFiles(folder_);
+
+                var files_matched = files.ToList().FindAll(file => GetDateTimeFromFileName(Path.GetFileNameWithoutExtension(file)) >= option.FromTime &&
+                                                        GetDateTimeFromFileName(Path.GetFileNameWithoutExtension(file)) <= option.ToTime);
+                foreach (var fileName in files_matched)
+                {
+                    var contentLines = File.ReadAllLines(fileName);
+                    contents.AddRange(contentLines);
+                }
             }
             result.TotalCount = contents.Count;
-            result.LogMessageList = contents.Skip((option.Page - 1) * option.NumberPerPage).Take(option.NumberPerPage).Select(line => GetLogDto(line))
-                .Where(dto => dto.TimeDT >= option.FromTime && dto.TimeDT <= option.ToTime).ToList();
-
+            result.LogMessageList = contents.Skip((option.Page - 1) * option.NumberPerPage).Take(option.NumberPerPage).Select(line => GetLogDto(line)).ToList();
             //2023/9/6 下午 12:50:59  [Trace][<>c__DisplayClass22_0] [IO]-[X000A]-Bumper_Sensor Changed to : 1
             return result;
         }
@@ -42,11 +46,15 @@ namespace GPMVehicleControlSystem.Models.Log
             var msgAry = new string[splited.Length - 3];
             Array.Copy(splited, 3, msgAry, 0, msgAry.Length);
             var msg = string.Join(" ", msgAry);
+            var levelstr = msg.Split('|')[1];
+            var classstr = msg.Split('|')[2];
+
             return new clsLogQuResultDto()
             {
-                Message = msg,
-                Time = timeStr
-
+                Message = msg.Replace($"|{levelstr}|{classstr}|", ""),
+                Time = timeStr,
+                Level = levelstr,
+                Class = classstr
             };
         }
         private static List<string> GetDateMatchFolders(DateTime from, DateTime to)
@@ -61,6 +69,13 @@ namespace GPMVehicleControlSystem.Models.Log
         private static DateTime GetDateTimeFromFolderName(string folder_name)
         {
             if (DateTime.TryParseExact(folder_name, "yyyy-MM-dd", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime result))
+                return result;
+            else
+                return new DateTime(2999, 1, 1);
+        }
+        private static DateTime GetDateTimeFromFileName(string file_name)
+        {
+            if (DateTime.TryParseExact(file_name, "yyyy-MM-dd HH", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime result))
                 return result;
             else
                 return new DateTime(2999, 1, 1);
