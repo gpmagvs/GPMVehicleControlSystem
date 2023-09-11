@@ -422,6 +422,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
             IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
+
+            if (IsCharging && WagoDO.GetState(DO_ITEM.Recharge_Circuit) && Batteries.Values.Any(bat => bat.Data.chargeCurrent < Parameters.CutOffChargeRelayCurrentThreshodlval))
+            {
+                clsBattery? bat = Batteries.Values.FirstOrDefault(bat => bat.Data.chargeCurrent < Parameters.CutOffChargeRelayCurrentThreshodlval);
+                LOG.INFO($"Battery charge current ({bat.Data.chargeCurrent}) lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
+                WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+            }
         }
 
         private MapPoint GetLastVisitedMapPoint()

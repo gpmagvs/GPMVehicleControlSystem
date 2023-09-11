@@ -17,7 +17,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
         public int LastVisitedTag { get; set; } = 8;
-
+        /// <summary>
+        /// 斷充電迴路的充電電流豪安培數閥值設定,低於此閥值斷開充電迴路
+        /// </summary>
+        public int CutOffChargeRelayCurrentThreshodlval { get; set; } = 5000;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Spin;
 
