@@ -155,7 +155,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        LOG.WARN($"Battery charge current  lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
+                        WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+                        if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                         {
                             _Sub_Status = SUB_STATUS.IDLE;
                             StatusLighter.IDLE();
@@ -469,9 +471,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 throw ex;
             }
         }
-        internal void DownloadMapFromServer()
+        internal async Task DownloadMapFromServer()
         {
-            Task.Run(async () =>
+            await Task.Run(async () =>
             {
                 try
                 {

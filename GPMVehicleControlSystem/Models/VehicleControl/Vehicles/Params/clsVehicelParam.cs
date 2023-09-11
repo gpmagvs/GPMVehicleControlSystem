@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// <summary>
         /// 斷充電迴路的充電電流豪安培數閥值設定,低於此閥值斷開充電迴路
         /// </summary>
-        public int CutOffChargeRelayCurrentThreshodlval { get; set; } = 5000;
+        public int CutOffChargeRelayCurrentThreshodlval { get; set; } = 650;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Spin;
 

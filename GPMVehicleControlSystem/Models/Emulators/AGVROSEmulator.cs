@@ -8,6 +8,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Log;
+using System.Linq;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -21,7 +22,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 state = 1,
                 batteryLevel = 90,
-                batteryID = 100
+                batteryID = 0
             },
             CSTReader = new CSTReaderState
             {
@@ -38,6 +39,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
+        public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
+        private bool IsCharge = false;
         public AGVROSEmulator()
         {
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
@@ -74,8 +77,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
             //模擬走型
             Task.Factory.StartNew(async () =>
             {
+
+                var firstTag = obj.planPath.poses.First().header.seq;
+
+                IsCharge = false;
+                module_info.Battery.dischargeCurrent =13200;
+                module_info.Battery.chargeCurrent = 0;
+
                 foreach (RosSharp.RosBridgeClient.MessageTypes.Geometry.PoseStamped? item in obj.planPath.poses)
                 {
+                    module_info.Battery.batteryLevel -= 0x01;
                     uint tag = item.header.seq;
                     double tag_pose_x = item.pose.position.x;
                     double tag_pose_y = item.pose.position.y;
@@ -90,6 +101,27 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     module_info.reader.theta = tag_theta;
                     await Task.Delay(500);
                     RobotStopMRE.WaitOne();
+                }
+                if (ChargeStationTags.Contains(obj.finalGoalID))
+                {
+                    IsCharge = true;
+                    module_info.Battery.chargeCurrent = 23000;
+                    module_info.Battery.dischargeCurrent = 0;
+                    _ = Task.Factory.StartNew(async () =>
+                    {
+                        while (IsCharge)
+                        {
+                            await Task.Delay(1000);
+                            module_info.Battery.batteryLevel += 0x05;
+                            if (module_info.Battery.batteryLevel >= 100)
+                            {
+                                IsCharge = false;
+                                module_info.Battery.batteryLevel = 100;
+                                module_info.Battery.chargeCurrent = 500;
+                                module_info.Battery.dischargeCurrent = 0;
+                            }
+                        }
+                    });
                 }
                 actionServer.SucceedInvoke();
             });
