@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Log;
+using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -29,6 +30,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
+            if (mode == REMOTE_MODE.ONLINE)
+                await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             if (Parameters.ForbidToOnlineTags.Contains(BarcodeReader.CurrentTag))
             {
                 return (false, RETURN_CODE.Current_Tag_Cannot_Online);

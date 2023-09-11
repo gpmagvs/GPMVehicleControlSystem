@@ -82,8 +82,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     }
                 }
                 LOG.WARN($"車載用戶請求AGV {mode}");
-                if (mode == REMOTE_MODE.ONLINE)
-                    agv.Operation_Mode = OPERATOR_MODE.AUTO;
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 return Ok(new
                 {
