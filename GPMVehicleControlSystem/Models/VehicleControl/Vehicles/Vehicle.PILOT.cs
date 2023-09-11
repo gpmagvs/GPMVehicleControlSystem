@@ -111,10 +111,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
-                            BuzzerPlayer.Action();
-                        else
+                        if (action == ACTION_TYPE.None)
                             BuzzerPlayer.Move();
+                        else
+                            BuzzerPlayer.Action();
                     }
                 }
             });

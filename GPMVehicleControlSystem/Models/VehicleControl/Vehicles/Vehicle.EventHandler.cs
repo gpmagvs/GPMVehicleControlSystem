@@ -88,6 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
+
             clsIOSignal diState = (clsIOSignal)sender;
             if (!diState.State && (diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1 ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
             {
@@ -223,11 +224,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
             AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
 
-            _Sub_Status = SUB_STATUS.RUN;
-            StatusLighter.RUN();
             if (ExecutingTask != null)
             {
                 await Task.Delay(200);
+                _Sub_Status = SUB_STATUS.RUN;
+                StatusLighter.RUN();
                 if (ExecutingTask.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
                 else
@@ -430,6 +431,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 clsBattery? bat = Batteries.Values.FirstOrDefault(bat => bat.Data.chargeCurrent < Parameters.CutOffChargeRelayCurrentThreshodlval);
                 LOG.INFO($"Battery charge current ({bat.Data.chargeCurrent}) lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
+                _Sub_Status = SUB_STATUS.IDLE;
+                StatusLighter.IDLE();
                 WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             }
         }
