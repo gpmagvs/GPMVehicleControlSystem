@@ -97,6 +97,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
 
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
+
+            bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 | pt.Y > 100));
+            if (isPointCoordinationNotDefined)
+            {
+                return Ok(new TaskActionResult
+                {
+                    accpet = false,
+                    error_message = "圖資中有尚未踩點的點位，禁止派送任務!"
+                });
+            }
             LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
             if (agv.Operation_Mode != clsEnums.OPERATOR_MODE.AUTO)
                 await agv.Auto_Mode_Siwtch(clsEnums.OPERATOR_MODE.AUTO);
@@ -340,6 +350,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 };
                 taskList.Add(homing_move_task);
             }
+
 
 
             return taskList.ToArray();
