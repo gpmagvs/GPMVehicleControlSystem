@@ -30,15 +30,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
-            if (mode == REMOTE_MODE.ONLINE)
-                await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
-            if (Parameters.ForbidToOnlineTags.Contains(BarcodeReader.CurrentTag))
+            var currentTag = BarcodeReader.CurrentTag;
+
+            if (mode == REMOTE_MODE.ONLINE&& Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
-                return (false, RETURN_CODE.Current_Tag_Cannot_Online);
+                await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
+                if (currentTag == 0)//檢查Tag
+                    return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
+                if (Parameters.ForbidToOnlineTags.Contains(currentTag)) //檢查是否停在禁止上線的TAG位置
+                    return (false, RETURN_CODE.Current_Tag_Cannot_Online);
             }
             var _oriMode = Remote_Mode;
-            Remote_Mode = REMOTE_MODE.SWITCHING;
-            (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(Navigation.LastVisitedTag, mode).Result;
+            (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
             if (!result.success)
             {
                 Remote_Mode = _oriMode;

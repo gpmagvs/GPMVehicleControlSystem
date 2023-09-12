@@ -70,23 +70,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
-                {
-                    if (agv.BarcodeReader.CurrentTag == 0 && mode == REMOTE_MODE.ONLINE)
-                    {
-                        return Ok(new
-                        {
-                            Success = false,
-                            Message = "上線時車子必須停在Tag上."
-                        });
-                    }
-                }
                 LOG.WARN($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
+                string _message = "";
+                if (result.return_code == RETURN_CODE.AGV_Need_Park_Above_Tag)
+                    _message = "AGV必須停在TAG上";
+                else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online)
+                    _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
+                else
+                    _message = result.return_code.ToString();
                 return Ok(new
                 {
                     Success = result.success,
-                    Message = $"Code Error:{result.return_code}"
+                    Message = _message
                 });
             }
             catch (Exception ex)
