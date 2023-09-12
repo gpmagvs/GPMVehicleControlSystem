@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public int CutOffChargeRelayCurrentThreshodlval { get; set; } = 650;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
-        public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Spin;
+        public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Turning;
 
         /// <summary>
         /// 侵入設備取放或的前後雷射Bypass

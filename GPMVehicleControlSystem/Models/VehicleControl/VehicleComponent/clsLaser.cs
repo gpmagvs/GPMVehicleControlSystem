@@ -14,17 +14,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public enum LASER_MODE
         {
-            Unknow = 444,
             Bypass = 0,
-            Move = 1,
+            Normal = 1,
             Secondary = 2,
-            Spin = 5,
+            Move_Short = 3,
+            Turning = 5,
             Loading = 7,
             Special = 10,
-            Move_Short = 11,
-            Spin_Shor = 12,
+            Narrow = 12,
+            Narrow_Long = 13,
             Bypass16 = 16,
-
+            Unknow = 444
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         private LASER_MODE _Mode = LASER_MODE.Bypass;
-        public LASER_MODE Spin_Laser_Mode = LASER_MODE.Spin;
+        public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         internal int CurrentLaserMonitoringCase = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
