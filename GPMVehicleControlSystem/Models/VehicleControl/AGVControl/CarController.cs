@@ -350,14 +350,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal)
         {
             string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-
-            LOG.WARN($"====================Send Goal To AGVC===================" +
-                $"\r\nTaskID        = {rosGoal.taskID}" +
-                $"\r\nFinal Goal ID = {rosGoal.finalGoalID}:Theta:{rosGoal.planPath.poses.Last().pose.position}" +
-                $"\r\nPlanPath      = {string.Join("->", rosGoal.planPath.poses.Select(pose => pose.header.seq).ToArray())}" +
-                $"\r\nmobilityModes = {rosGoal.mobilityModes}" +
-                $"\r\n==========================================================");
-            LOG.INFO("Path Info : " + rosGoal.pathInfo.ToJson());
+            LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), color: ConsoleColor.Green);
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             wait_agvc_execute_action_cts = new CancellationTokenSource();
