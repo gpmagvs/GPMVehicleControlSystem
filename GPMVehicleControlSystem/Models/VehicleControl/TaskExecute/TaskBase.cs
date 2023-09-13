@@ -140,6 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
+                    Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
                     {
                         StartFrontendObstcleDetection();
