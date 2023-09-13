@@ -134,7 +134,7 @@ namespace GPMVehicleControlSystem.ViewModels
                 {
                     BatteryLevel = bat.Value.Data.batteryLevel,
                     ChargeCurrent = bat.Value.Data.chargeCurrent,
-                    IsCharging = bat.Value.IsCharging,
+                    IsCharging = bat.Value.IsCharging(),
                     IsError = bat.Value.CurrentAlarmState == CarComponent.STATE.ABNORMAL,
                     CircuitOpened = AGV.WagoDO.GetState(DO_ITEM.Recharge_Circuit),
                     BatteryID = bat.Key,

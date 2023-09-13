@@ -404,7 +404,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="_ModuleInformation"></param>
-        protected virtual void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
+        protected virtual async void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
 
             Odometry = _ModuleInformation.Mileage;
@@ -439,7 +439,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
             }
             Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
-            IsCharging = Batteries.Values.Any(battery => battery.IsCharging);
+            IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
         }
 
         private MapPoint GetLastVisitedMapPoint()
