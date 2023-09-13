@@ -7,8 +7,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsBattery : CarComponent
     {
-        public bool IsCharging => Data.dischargeCurrent==0&& Data.chargeCurrent >= ChargeAmpThreshold;
-
         public clsStateCheckSpec ChargingCheckSpec = new clsStateCheckSpec { };
 
         public clsStateCheckSpec DischargeCheckSpec = new clsStateCheckSpec
@@ -22,7 +20,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override string alarm_locate_in_name => component_name.ToString();
 
         public int ChargeAmpThreshold { get; internal set; } = 650;
-
+        public bool IsCharging()
+        {
+            bool _charging = Data.dischargeCurrent == 0 && Data.chargeCurrent >= ChargeAmpThreshold;
+            if (!_charging && Data.chargeCurrent > 0)
+            {
+                Thread.Sleep(1000);
+                _charging = Data.dischargeCurrent == 0 && Data.chargeCurrent >= ChargeAmpThreshold;
+            }
+            return _charging;
+        }
         public override void CheckStateDataContent()
         {
             var error_code = Data.errorCode;

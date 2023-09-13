@@ -89,7 +89,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
-
+                    if (action == ACTION_TYPE.None)
+                        BuzzerPlayer.Move();
+                    else
+                        BuzzerPlayer.Action();
                     await Task.Delay(1000);
                     if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Parameters.LDULD_Task_No_Entry)
                     {
@@ -109,13 +112,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                         AlarmManager.AddAlarm(result, false);
                         AGVC.OnAGVCActionChanged = null;
-                    }
-                    else
-                    {
-                        if (action == ACTION_TYPE.None)
-                            BuzzerPlayer.Move();
-                        else
-                            BuzzerPlayer.Action();
                     }
                 }
             });

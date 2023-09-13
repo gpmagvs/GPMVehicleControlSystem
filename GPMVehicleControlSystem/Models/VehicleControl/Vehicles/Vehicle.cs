@@ -286,7 +286,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSInit();
                 IsSystemInitialized = true;
                 CommonEventsRegist();
-
                 //TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
             }

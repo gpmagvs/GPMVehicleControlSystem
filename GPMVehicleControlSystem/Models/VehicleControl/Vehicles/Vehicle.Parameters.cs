@@ -5,7 +5,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
-        public clsVehicelParam Parameters { get; private set; } = new clsVehicelParam();
+        public clsVehicelParam Parameters { get; internal set; } = new clsVehicelParam();
         public const string ParamFileName = "VCS_Params.json";
         public static string ParametersFilePath
         {
@@ -18,12 +18,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public static clsVehicelParam LoadParameters()
         {
-            clsVehicelParam? Parameters=new clsVehicelParam();
+            clsVehicelParam? Parameters = new clsVehicelParam();
             string param_file = ParametersFilePath.ToString();
             if (File.Exists(param_file))
             {
                 string param_json = File.ReadAllText(param_file);
-           Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
+                Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
             }
             SaveParameters(Parameters);
             return Parameters;
