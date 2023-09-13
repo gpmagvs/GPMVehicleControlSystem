@@ -31,7 +31,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnTagLeave += OnTagLeaveHandler;
-
+            DirectionLighter.OnAGVDirectionChangeToForward += () =>
+            {
+                return Parameters.FrontLighterFlashWhenNormalMove;
+            };
         }
 
         /// <summary>

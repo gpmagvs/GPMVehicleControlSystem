@@ -6,7 +6,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsDirectionLighter : Lighter
     {
-        public bool FrontLighterFlashWhenNormlMove = false;
+        internal delegate bool NormalMoveOpenLigherdelegate();
+        internal NormalMoveOpenLigherdelegate OnAGVDirectionChangeToForward;
         public clsDirectionLighter() : base()
         {
         }
@@ -95,8 +96,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             CloseAll();
 
-            if (direction == clsNavigation.AGV_DIRECTION.FORWARD && FrontLighterFlashWhenNormlMove)
-                Forward();
+            if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
+            {
+                if (OnAGVDirectionChangeToForward != null)
+                {
+                    if (OnAGVDirectionChangeToForward())
+                        Forward();
+                }
+            }
             else if (direction == clsNavigation.AGV_DIRECTION.RIGHT)
                 TurnRight();
             else if (direction == clsNavigation.AGV_DIRECTION.LEFT)

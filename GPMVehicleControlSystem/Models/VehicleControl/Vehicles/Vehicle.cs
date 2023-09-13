@@ -288,7 +288,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 CommonEventsRegist();
                 //TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                DirectionLighter.FrontLighterFlashWhenNormlMove = Parameters.FrontLighterFlashWhenNormalMove;
             }
             catch (Exception ex)
             {
