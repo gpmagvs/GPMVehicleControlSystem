@@ -6,6 +6,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsDirectionLighter : Lighter
     {
+        public bool FrontLighterFlashWhenNormlMove = false;
         public clsDirectionLighter() : base()
         {
         }
@@ -76,7 +77,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
         }
-        public async virtual void Backward(bool opened = true,int delay = 500)
+        public async virtual void Backward(bool opened = true, int delay = 500)
         {
             await Task.Delay(delay);
             this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
@@ -90,17 +91,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, interval);
         }
 
-        internal void LightSwitchByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION e)
+        internal void LightSwitchByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             CloseAll();
 
-            if (e == clsNavigation.AGV_DIRECTION.FORWARD)
+            if (direction == clsNavigation.AGV_DIRECTION.FORWARD && FrontLighterFlashWhenNormlMove)
                 Forward();
-            else if (e == clsNavigation.AGV_DIRECTION.RIGHT)
+            else if (direction == clsNavigation.AGV_DIRECTION.RIGHT)
                 TurnRight();
-            else if (e == clsNavigation.AGV_DIRECTION.LEFT)
+            else if (direction == clsNavigation.AGV_DIRECTION.LEFT)
                 TurnLeft();
-            else if (e == clsNavigation.AGV_DIRECTION.STOP)
+            else if (direction == clsNavigation.AGV_DIRECTION.STOP)
                 CloseAll();
 
         }

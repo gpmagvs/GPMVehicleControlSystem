@@ -16,6 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
+        public bool FrontLighterFlashWhenNormalMove { get; set; } = false;
         /// <summary>
         /// 
         /// </summary>
