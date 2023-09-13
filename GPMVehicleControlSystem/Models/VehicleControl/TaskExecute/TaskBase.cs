@@ -133,8 +133,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
                 AGVCActionStatusChaged += HandleAGVActionChanged;
-                RunningTaskData.HasCargo = Agv.HasAnyCargoOnAGV();
-
                 (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
