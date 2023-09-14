@@ -21,6 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
+        public bool WebKeyboardMoveControl { get; set; } = true;
         public int LastVisitedTag { get; set; } = 8;
         public List<int> ForbidToOnlineTags { get; set; } = new List<int>();
 

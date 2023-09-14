@@ -233,7 +233,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, string message)> ForkExtendOutAsync()
+        public async Task<(bool confirm, string message)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
@@ -242,7 +242,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 await DOModule.SetState(DO_ITEM.Fork_Shortend, true);
-                //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
+                if (wait_reach_end)
+                {
+                    CancellationTokenSource cts = new CancellationTokenSource();
+                    cts.CancelAfter(TimeSpan.FromSeconds(30));
+                    while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                    {
+                        await Task.Delay(1);
+                        if (cts.IsCancellationRequested)
+                            return (false, "Timeout");
+                    }
+                }
                 return (true, ""); ;
             }
             catch (Exception ex)
@@ -255,7 +265,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, string message)> ForkShortenInAsync()
+        public async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
@@ -264,6 +274,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 await DOModule.SetState(DO_ITEM.Fork_Extend, true);
+                if (wait_reach_home)
+                {
+                    CancellationTokenSource cts = new CancellationTokenSource();
+                    cts.CancelAfter(TimeSpan.FromSeconds(30));
+                    while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                    {
+                        await Task.Delay(1);
+                        if (cts.IsCancellationRequested)
+                            return (false, "Timeout");
+                    }
+                }
                 return (true, "");
             }
             catch (Exception ex)

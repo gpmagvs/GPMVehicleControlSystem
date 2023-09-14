@@ -105,13 +105,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return checkResult.alarm_code;
                 }
-                await Task.Delay(1000);//等待一秒後進入
+                await Task.Delay(200);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
+
+                if (ForkLifter != null)
+                {
+                    if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
+                    {
+                        await ForkLifter.ForkShortenInAsync();
+                    }
+                }
+
                 if (action == ACTION_TYPE.None)
                 {
                     if (ForkLifter != null)
                     {
-
                         var forkGoHomeResult = await ForkLifter.ForkGoHome();
                         if (!forkGoHomeResult.confirm)
                         {

@@ -135,12 +135,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (isNeedArmExtend)
                 {
-                    armMoveing = await ForkLifter.ForkExtendOutAsync();
-                    if (!armMoveing.confirm)
+                    var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
+                    arm_move_Done = _arm_move_result.confirm;
+                    if (!arm_move_Done)
                     {
-                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                        return (false, AlarmCodes.Action_Timeout);
                     }
-                    arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.END);
+                    await Task.Delay(1000);
                 }
                 else
                 {
@@ -151,16 +152,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                     if (!fork_height_change_result.success)
                         return (false, AlarmCodes.Fork_Height_Setting_Error);
+
+                    await Task.Delay(1000);
                     if (isNeedArmExtend)
                     {
-                        armMoveing = await ForkLifter.ForkShortenInAsync();
-                        if (!armMoveing.confirm)
+                        var arm_move_result = await ForkLifter.ForkShortenInAsync();
+                        if (!arm_move_result.confirm)
                         {
-                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                            return (false, AlarmCodes.Action_Timeout);
                         }
-                        arm_move_Done = WaitForkArmMoveDone(FORK_ARM_LOCATIONS.HOME);
-                        if (!arm_move_Done)
-                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                        await Task.Delay(1000);
                     }
                 }
 

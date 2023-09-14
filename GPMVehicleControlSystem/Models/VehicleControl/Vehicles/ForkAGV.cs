@@ -92,6 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return baseInitize;
             if (ForkLifter.Enable)
             {
+                ForkLifter.ForkShortenInAsync();
                 if (HasAnyCargoOnAGV())
                 {
                     AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
