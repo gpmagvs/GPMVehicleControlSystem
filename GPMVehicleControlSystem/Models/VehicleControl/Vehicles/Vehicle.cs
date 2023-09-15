@@ -236,6 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Parameters = LoadParameters();
+                CIMConnectionInitialize();
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
@@ -838,7 +839,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Cst_Sensor_2);
+                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) | !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
             }
             catch (Exception)
             {

@@ -15,10 +15,10 @@ namespace GPMVehicleControlSystem.Models.Buzzer
     {
         public static RosSocket rossocket;
 
-        static bool IsAlarmPlaying = false;
-        static bool IsActionPlaying = false;
-        static bool IsMovingPlaying = false;
-        static bool IsHandshakingPlaying = false;
+        internal static bool IsAlarmPlaying = false;
+        internal static bool IsActionPlaying = false;
+        internal static bool IsMovingPlaying = false;
+       internal  static bool IsHandshakingPlaying = false;
         public static void Initialize()
         {
         }

@@ -35,14 +35,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
         {
             var status = base.HandleTcpIPProtocolGetRunningStatus();
-            status.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
-
+            status.CSTID = new string[] { CSTReader.ValidCSTID };
             return status;
         }
         public override clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
         {
             var status = base.HandleWebAPIProtocolGetRunningStatus();
-            status.CSTID = CSTReader.ValidCSTID == "" ? new string[0] : new string[] { CSTReader.ValidCSTID };
+            status.CSTID = new string[] { CSTReader.ValidCSTID };
             return status;
         }
 
@@ -61,13 +60,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<RETURN_CODE> RemoveCstData()
         {
             //向AGVS請求移除卡匣
-            string currentCSTID = CSTReader.Data.data;
-            string toRemoveCSTID = currentCSTID.ToLower() == "error" ? "" : currentCSTID;
-            //清帳
             CSTReader.ValidCSTID = "";
-            var retCode = await AGVS.TryRemoveCSTData(toRemoveCSTID, "");
-      
-            return retCode;
+            return RETURN_CODE.OK;
         }
 
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)

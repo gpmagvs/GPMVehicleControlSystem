@@ -72,6 +72,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            if (Agv.Parameters.CheckEQDOStatusWorkStationTags.Contains(RunningTaskData.Destination))
+                CheckEQDIOStates();
+
             (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckBeforeHSStartInFrontOfEQ();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
@@ -112,6 +115,60 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await base.BeforeTaskExecuteActions();
         }
 
+        private void CheckEQDIOStates()
+        {
+            if (Agv.EQDIOStates == null)
+            {
+                LOG.WARN($"無法取得EQ DIO狀態!");
+                return;
+            }
+            if (Agv.EQDIOStates.TryGetValue(RunningTaskData.Destination, out var dio_status))
+            {
+                if (!dio_status.EQ_Status_Run)
+                {
+                    LOG.WARN($"EQ DO : EQ_STATUS_RUN Not ON");
+                    return;
+                }
+
+                if (dio_status.Up_Pose == false && dio_status.Down_Pose == false)
+                {
+                    LOG.WARN($"EQ DO : EQ LD IN UNKNOWN POSITION.");
+                    return;
+                }
+
+                if (action == ACTION_TYPE.Load)//放貨
+                {
+                    if (dio_status.PortExist)
+                    {
+                        LOG.WARN($"EQ DO : EQ PORT HAS CARGO!");
+                        return;
+                    }
+                    if (dio_status.Up_Pose == true && dio_status.Down_Pose == false)
+                    {
+                        LOG.WARN($"EQ DO : EQ LD NOT DOWN_POSE");
+                        return;
+                    }
+                    LOG.INFO($"EQ DO Status Check [Load] => OK", color: ConsoleColor.Green);
+                }
+                else if ((action == ACTION_TYPE.Unload))
+                {
+                    if (!dio_status.PortExist)
+                    {
+                        LOG.WARN($"EQ DO : EQ PORT NO CARGO!!");
+                        return;
+                    }
+                    if (dio_status.Up_Pose == false && dio_status.Down_Pose == true)
+                    {
+                        LOG.WARN($"EQ DO : EQ LD NOT  UP_POSE");
+                        return;
+                    }
+                    LOG.INFO($"EQ DO Status Check [Unload] => OK", color: ConsoleColor.Green);
+                }
+
+            }
+            else
+                LOG.WARN($"無法取得站點 Tag {RunningTaskData.Destination} 的DIO狀態.(Key Not Found..)");
+        }
 
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {

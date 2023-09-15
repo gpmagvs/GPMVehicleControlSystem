@@ -73,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.");
                 CSTActionDone = false;
-                CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
                 Task TK = new Task(async () =>
                 {
@@ -90,7 +90,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     TK.Wait(waitCstActionDoneCts.Token);
                     LOG.INFO($"CST Reader  Action Done ..{CSTActionResult}--");
-
                     _ = Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(100);
