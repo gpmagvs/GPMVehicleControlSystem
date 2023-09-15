@@ -22,6 +22,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public bool WebKeyboardMoveControl { get; set; } = false;
+
+        /// <summary>
+        /// 等待交握訊號時撥放交握音效
+        /// </summary>
+        public bool PlayHandshakingMusic { get; set; } = true;
         public int LastVisitedTag { get; set; } = 8;
         public List<int> ForbidToOnlineTags { get; set; } = new List<int>();
 
@@ -69,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// <summary>
         /// TA Timeout : 偵測EQ訊號狀態變化Timeout秒數
         /// </summary>
-        public Dictionary<HANDSHAKE_EQ_TIMEOUT, int> EQHSTimeouts = new Dictionary<HANDSHAKE_EQ_TIMEOUT, int>()
+        public Dictionary<HANDSHAKE_EQ_TIMEOUT, int> EQHSTimeouts { get; set; } = new Dictionary<HANDSHAKE_EQ_TIMEOUT, int>()
         {
             {   HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON , 5  },
             {   HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON , 5  },

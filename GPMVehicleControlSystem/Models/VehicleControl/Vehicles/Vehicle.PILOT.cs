@@ -56,9 +56,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (IsReplanTask(taskDownloadData))
                 {
                     LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
-                    await ExecutingTask.AGVSPathExpand(taskDownloadData);
+                    await BuzzerPlayer.Stop();
+                    await Task.Delay(100);
                     BuzzerPlayer.Move();
                     StatusLighter.RUN();
+                    await ExecutingTask.AGVSPathExpand(taskDownloadData);
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
                 else
@@ -89,10 +91,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
-                    if (action == ACTION_TYPE.None)
-                        BuzzerPlayer.Move();
-                    else
-                        BuzzerPlayer.Action();
                     await Task.Delay(1000);
                     if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Parameters.LDULD_Task_No_Entry)
                     {

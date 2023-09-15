@@ -118,6 +118,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (action == ACTION_TYPE.None)
                 {
+                    BuzzerPlayer.Move();
                     if (ForkLifter != null)
                     {
                         var forkGoHomeResult = await ForkLifter.ForkGoHome();
@@ -129,6 +130,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
+                    BuzzerPlayer.Action();
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
                     {
                         var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
