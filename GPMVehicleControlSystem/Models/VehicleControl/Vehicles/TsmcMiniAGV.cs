@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT_FORWARD},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_BACKWARD},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT_BACKWARD},
-        };
+             };
         }
 
         private InspectorAGVCarController? InspectorAGVC => AGVC as InspectorAGVCarController;
@@ -82,22 +82,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                if (!WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_2) |
-                    !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(clsDIModule.DI_ITEM.Horizon_Motor_Busy_4))
+                await WagoDO.ResetSaftyRelay();
+                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) |
+                    !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4))
                 {
-                    Console.WriteLine("Reset Motor Process Start");
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                    //安全迴路RELAY
-                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                     await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
                     await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
                     await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                    await Task.Delay(200);
-                    WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                    Console.WriteLine("Reset Motor Process End");
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 }
                 return true;
             }
@@ -116,7 +111,56 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
+            (AGVC as InspectorAGVCarController).OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
         }
+
+        private void HandleAGVCInstrumentMeasureDone(string req_command)
+        {
+            ParseMeasureData(req_command);
+        }
+
+        /// <summary>
+        /// 解析量測數據
+        /// </summary>
+        /// <param name="response_command"></param>
+        private clsMeasureResult ParseMeasureData(string response_command)
+        {
+            string[] command_splited = response_command.Split(',');
+            clsMeasureResult mesResult = new clsMeasureResult
+            {
+                result = command_splited[0],//done/erro,
+                location = command_splited[1],
+                illuminance = ToIntVal(command_splited[2]),//照度(lux,
+                decibel = ToIntVal(command_splited[3]),//分貝(dB,
+                temperature = ToDoubleVal(command_splited[4], 100, 2),
+                humudity = ToDoubleVal(command_splited[5], 100, 2),
+                IPA = ToIntVal(command_splited[6]),
+                TVOC = ToDoubleVal(command_splited[7], 10, 1),
+                time = command_splited[8],
+                partical_03um = ToIntVal(command_splited[9]),
+                partical_05um = ToIntVal(command_splited[10]),
+                partical_10um = ToIntVal(command_splited[11]),
+                partical_30um = ToIntVal(command_splited[12]),
+                partical_50um = ToIntVal(command_splited[13]),
+                partical_100um = ToIntVal(command_splited[14])
+            };
+            return mesResult;
+        }
+
+        private double ToDoubleVal(string valStr, double ratio, int digitals)
+        {
+            if (valStr == "NA")
+                return 0.0;
+            return Math.Round(Convert.ToUInt16(valStr) / ratio, digitals);
+        }
+        public int ToIntVal(string valStr)
+        {
+            if (valStr == "NA")
+                return 0;
+            return Convert.ToInt16(valStr);
+        }
+
+
         public async Task<bool> Battery1Lock()
         {
             return await ChangeBatteryLockState(1, true);
@@ -141,34 +185,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var noLockAlarmCode = battery_no == 1 ? AlarmCodes.Battery1_Not_Lock : AlarmCodes.Battery2_Not_Lock;
             try
             {
-                void OffAllBatLockUnlockDO()
+                async Task OffAllBatLockUnlockDO()
                 {
-
-                    WagoDO.SetState(DO_ITEM.Battery_1_Lock, false);
-                    WagoDO.SetState(DO_ITEM.Battery_2_Lock, false);
-                    WagoDO.SetState(DO_ITEM.Battery_1_Unlock, false);
-                    WagoDO.SetState(DO_ITEM.Battery_2_Unlock, false);
+                    await WagoDO.SetState(DO_ITEM.Battery_1_Lock, false);
+                    await WagoDO.SetState(DO_ITEM.Battery_2_Lock, false);
+                    await WagoDO.SetState(DO_ITEM.Battery_1_Unlock, false);
+                    await WagoDO.SetState(DO_ITEM.Battery_2_Unlock, false);
                 }
                 var isBatLocking = battery_no == 1 ? IsBattery1Locked : IsBattery2Locked;
                 var lockDO = battery_no == 1 ? DO_ITEM.Battery_1_Lock : DO_ITEM.Battery_2_Lock;
                 var unlockDO = battery_no == 1 ? DO_ITEM.Battery_1_Unlock : DO_ITEM.Battery_2_Unlock;
-                OffAllBatLockUnlockDO();
-                WagoDO.SetState(unlockDO, false);
+                await OffAllBatLockUnlockDO();
+                await WagoDO.SetState(unlockDO, false);
                 if (lockBattery)
-                    WagoDO.SetState(lockDO, true);
+                    await WagoDO.SetState(lockDO, true);
                 else
-                    WagoDO.SetState(unlockDO, true);
+                    await WagoDO.SetState(unlockDO, true);
 
                 CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 while (!(battery_no == 1 ? (lockBattery ? IsBattery1Locked : IsBattery1UnLocked) : (lockBattery ? IsBattery2Locked : IsBattery2UnLocked)))
                 {
                     if (cst.IsCancellationRequested)
                     {
-                        OffAllBatLockUnlockDO();
+                        await OffAllBatLockUnlockDO();
                         return false;
                     }
                 }
-                OffAllBatLockUnlockDO();
+                await OffAllBatLockUnlockDO();
                 return true;
             }
             catch (Exception)

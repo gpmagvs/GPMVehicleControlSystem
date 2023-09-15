@@ -189,7 +189,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public virtual void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
-            VCSInputs[Indexs[signal]].OnStateChanged += handler;
+            try
+            {
+                VCSInputs[Indexs[signal]].OnStateChanged += handler;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR("DO-" + signal + "Sbuscribe Error.",ex);
+            }
         }
         protected virtual void RegistSignalEvents()
         {
