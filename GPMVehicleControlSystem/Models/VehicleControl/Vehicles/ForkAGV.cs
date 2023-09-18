@@ -75,6 +75,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
+            if (!Parameters.CheckObstacleWhenForkInit)
+                return (true, "");
+
             await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
             await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
