@@ -192,6 +192,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!di_state)
             {
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+
                 if (IsRightLaser)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.RightProtection_Area3);
@@ -203,6 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddAlarm(AlarmCodes.LeftProtection_Area3);
                     AGVStatusChangeToAlarmWhenLaserTrigger();
                 }
+
             }
             else
             {
