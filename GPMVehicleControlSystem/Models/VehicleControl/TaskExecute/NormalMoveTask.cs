@@ -26,11 +26,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            StartMonitorCargoBias();
+            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+            {
+                LOG.INFO($"Start Cargo Bias Detection.");
+                StartMonitorCargoBias();
+            }
             Task.Run(() => WatchVirtualPtAndStopWorker());
             return base.BeforeTaskExecuteActions();
         }
 
+
+        /// <summary>
+        /// 偵測貨物傾倒
+        /// </summary>
+        /// <returns></returns>
         private async Task StartMonitorCargoBias()
         {
             await Task.Delay(1).ContinueWith(async (Task) =>
@@ -38,11 +47,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
-                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS | Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
                     {
-                        await Task.Delay(500);
-                        if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                        LOG.WARN($"貨物傾倒偵測觸發-Check1");
+                        await Task.Delay(500); //避免訊號瞬閃導致誤偵測
+                        if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
                         {
+                            LOG.ERROR($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             Agv.AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
                             return;
                         }

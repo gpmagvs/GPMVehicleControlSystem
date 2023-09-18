@@ -20,6 +20,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public bool CheckObstacleWhenForkInit { get; set; } = true;
         /// <summary>
+        /// 一搬走行時偵測貨物傾倒
+        /// </summary>
+        public bool CargoBiasDetectionWhenNormalMoving { get; set; } = true;
+        /// <summary>
         /// 
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;

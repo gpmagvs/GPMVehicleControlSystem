@@ -234,7 +234,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
-
+                            DirectionLighter.CloseAll();
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)

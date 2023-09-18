@@ -91,7 +91,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
             if (!existSensor_1 && !existSensor_2)
                 return CARGO_STATUS.NO_CARGO;
-            if ((existSensor_1 && !existSensor_2) || (existSensor_1 && !existSensor_2))
+            if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
             return CARGO_STATUS.NO_CARGO;
         }

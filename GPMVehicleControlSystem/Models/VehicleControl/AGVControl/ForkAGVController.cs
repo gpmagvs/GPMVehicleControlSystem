@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
         {
-            LOG.Critical($"{CurrentForkAction} command action ack. AGVC Reply command =  {tin.command}");
+            LOG.INFO($"{CurrentForkAction} command action ack. AGVC Reply command =  {tin.command}");
             IsZAxisActionDone = true;
             response = new VerticalCommandResponse()
             {
@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool command_reply_done = tin.command == "done";
             if (!command_reply_done)
             {
-                LOG.WARN($"{CurrentForkAction} command   action not done.. AGVC Reply command =  {tin.command}");
+                LOG.INFO($"{CurrentForkAction} command   action not done.. AGVC Reply command =  {tin.command}");
             }
             return IsZAxisActionDone;
         }

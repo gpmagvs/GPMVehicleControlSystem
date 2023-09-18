@@ -30,16 +30,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
         }
-
+        public override CARGO_STATUS CargoStatus
+        {
+            get
+            {
+                return GetCargoStatus();
+            }
+        }
         protected override CARGO_STATUS GetCargoStatus()
         {
-            bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor);
-            bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor);
+            bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+            bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
             if (existSensor_1 && existSensor_2)
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
             if (!existSensor_1 && !existSensor_2)
                 return CARGO_STATUS.NO_CARGO;
-            if ((existSensor_1 && !existSensor_2) || (existSensor_1 && !existSensor_2))
+            if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
             return CARGO_STATUS.NO_CARGO;
         }
