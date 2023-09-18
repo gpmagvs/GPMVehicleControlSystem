@@ -15,6 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class TsmcMiniAGV : Vehicle
     {
+        public override CARGO_STATUS CargoStatus { get; protected set; } = CARGO_STATUS.NO_CARGO_CARRARYING_CAPABILITY;
         public bool IsBattery1Exist => WagoDI.GetState(DI_ITEM.Battery_1_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_4);
         public bool IsBattery2Exist => WagoDI.GetState(DI_ITEM.Battery_2_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_4);
         public bool IsBattery1Locked => WagoDI.GetState(DI_ITEM.Battery_1_Lock_Sensor);

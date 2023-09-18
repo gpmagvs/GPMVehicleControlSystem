@@ -26,9 +26,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-
+            StartMonitorCargoBias();
             Task.Run(() => WatchVirtualPtAndStopWorker());
             return base.BeforeTaskExecuteActions();
+        }
+
+        private async Task StartMonitorCargoBias()
+        {
+            await Task.Delay(1).ContinueWith(async (Task) =>
+            {
+                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
+                {
+                    await Task.Delay(1);
+                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                    {
+                        await Task.Delay(500);
+                        if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                        {
+                            Agv.AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
+                            return;
+                        }
+                    }
+                }
+                LOG.INFO($"");
+            });
         }
 
         private async void WatchVirtualPtAndStopWorker()

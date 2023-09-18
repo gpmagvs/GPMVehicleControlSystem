@@ -6,6 +6,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using Newtonsoft.Json;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -18,6 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public SubmarinAGV() : base()
         {
         }
+     
         protected override List<CarComponent> CarComponents
         {
             get
@@ -27,7 +29,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return baseCompos;
             }
         }
-
+        public override CARGO_STATUS CargoStatus
+        {
+            get
+            {
+                return GetCargoStatus();
+            }
+        }
         public override clsCSTReader CSTReader { get; set; } = new clsCSTReader();
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
@@ -75,6 +83,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
 
         }
-
+        protected virtual CARGO_STATUS GetCargoStatus()
+        {
+            bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
+            bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+            if (existSensor_1 && existSensor_2)
+                return CARGO_STATUS.HAS_CARGO_NORMAL;
+            if (!existSensor_1 && !existSensor_2)
+                return CARGO_STATUS.NO_CARGO;
+            if ((existSensor_1 && !existSensor_2) || (existSensor_1 && !existSensor_2))
+                return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+            return CARGO_STATUS.NO_CARGO;
+        }
     }
 }

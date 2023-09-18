@@ -33,7 +33,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public abstract partial class Vehicle
     {
-
+        public enum CARGO_STATUS
+        {
+            /// <summary>
+            /// 沒有貨物
+            /// </summary>
+            NO_CARGO,
+            /// <summary>
+            /// 有貨物且正常裝載
+            /// </summary>
+            HAS_CARGO_NORMAL,
+            /// <summary>
+            /// 有貨物但傾斜
+            /// </summary>
+            HAS_CARGO_BUT_BIAS,
+            /// <summary>
+            /// 無載物功能
+            /// </summary>
+            NO_CARGO_CARRARYING_CAPABILITY
+        }
         public enum VMS_PROTOCOL
         {
             KGS,
@@ -84,7 +102,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public double Odometry;
         VehicleEmu emulator;
-
+        public virtual CARGO_STATUS CargoStatus
+        {
+            get
+            {
+                return CARGO_STATUS.NO_CARGO_CARRARYING_CAPABILITY;
+            }
+        }
         protected virtual List<CarComponent> CarComponents
         {
             get

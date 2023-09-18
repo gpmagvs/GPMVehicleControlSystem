@@ -185,6 +185,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
+                        if(Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
+                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        }
                         return;
                     }
                     LOG.INFO($"AGVC Action Status is success,Do Work defined!");
