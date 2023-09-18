@@ -166,6 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
+        internal bool IsCargoBiasDetecting = false;
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
@@ -184,8 +185,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
 
-                    if (action == ACTION_TYPE.None && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                    if (IsCargoBiasDetecting &&action == ACTION_TYPE.None && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
                     {
+                        LOG.ERROR($"存在貨物傾倒異常");
+                        IsCargoBiasDetecting = false;
                         AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                         await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);

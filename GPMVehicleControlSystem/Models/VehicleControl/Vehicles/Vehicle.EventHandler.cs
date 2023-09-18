@@ -108,8 +108,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(1000);
-                        AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                        AGVStatusChangeToRunWhenLaserRecovery();
+                        AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     });
                 }
             }
@@ -140,8 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
                 {
                     LOG.INFO($"第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
-                    AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                    AGVStatusChangeToRunWhenLaserRecovery();
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE);
                 }
             }
         }
@@ -211,44 +209,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
                 {
                     LOG.INFO($"側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                    AGVStatusChangeToRunWhenLaserRecovery();
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                 }
             }
         }
 
 
-        private async void AGVStatusChangeToRunWhenLaserRecovery()
+        private async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control)
         {
-            AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
-            AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
-            AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area2);
-            AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
-            AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
-            AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
-
-            if (ExecutingTask != null)
+            await Task.Delay(1000);
+            if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
             {
-                await Task.Delay(200);
-                _Sub_Status = SUB_STATUS.RUN;
-                StatusLighter.RUN();
-                try
+                AGVC.CarSpeedControl(speed_control);
+                AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area2);
+                AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
+                AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
+                if (ExecutingTask != null)
                 {
-                    if (ExecutingTask != null)
+                    await Task.Delay(200);
+                    _Sub_Status = SUB_STATUS.RUN;
+                    StatusLighter.RUN();
+                    try
                     {
-                        if (ExecutingTask.action == ACTION_TYPE.None)
-                            BuzzerPlayer.Move();
-                        else
+                        if (ExecutingTask != null)
                         {
-                            BuzzerPlayer.Action();
+                            if (ExecutingTask.action == ACTION_TYPE.None)
+                                BuzzerPlayer.Move();
+                            else
+                            {
+                                BuzzerPlayer.Action();
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR(ex);
-                }
+                    catch (Exception ex)
+                    {
+                        LOG.ERROR(ex);
+                    }
 
+                }
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()

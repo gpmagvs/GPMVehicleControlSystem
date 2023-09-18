@@ -23,11 +23,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
         }
-
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
             {
+                IsCargoBiasDetecting = true;
                 LOG.INFO($"Start Cargo Bias Detection.");
                 StartMonitorCargoBias();
             }
@@ -47,6 +47,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
+                    if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                    {
+                        return;
+                    }
                     if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS | Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
                     {
                         LOG.WARN($"貨物傾倒偵測觸發-Check1");
@@ -59,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
+
                 LOG.INFO($"");
             });
         }
