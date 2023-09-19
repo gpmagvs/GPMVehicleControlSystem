@@ -79,10 +79,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
-            (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
+            //(bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
 
-            if (!CstBarcodeCheckResult.confirm)
-                return (false, CstBarcodeCheckResult.alarmCode);
+            //if (!CstBarcodeCheckResult.confirm)
+            //    return (false, CstBarcodeCheckResult.alarmCode);
 
 
             if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
