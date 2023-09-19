@@ -18,7 +18,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        protected override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
+        internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
         {
             if (!CSTTrigger)
                 return (true, AlarmCodes.None);

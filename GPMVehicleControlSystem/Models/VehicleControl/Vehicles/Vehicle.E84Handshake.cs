@@ -179,7 +179,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eqready, AlarmCodes alarmCode)> WaitEQReadyON(ACTION_TYPE action)
         {
-
+            if (Parameters.LDULD_Task_No_Entry)
+                return (true, AlarmCodes.None);
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
             CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
             Task wait_eq_UL_req_ON = new Task(() =>
@@ -244,6 +245,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eq_busy_off, AlarmCodes alarmCode)> WaitEQBusyOFF(ACTION_TYPE action)
         {
+            if (Parameters.LDULD_Task_No_Entry)
+                return (true, AlarmCodes.None);
             DirectionLighter.WaitPassLights();
             CancellationTokenSource waitEQ_BUSY_ON_CTS = new CancellationTokenSource();
             CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
@@ -332,6 +335,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool eqready_off, AlarmCodes alarmCode)> WaitEQReadyOFF(ACTION_TYPE action)
         {
 
+            if (Parameters.LDULD_Task_No_Entry)
+                return (true, AlarmCodes.None);
             CancellationTokenSource wait_eq_l_u_req_off_cts = new CancellationTokenSource();
             Task wait_eq_UL_req_OFF = new Task(() =>
             {

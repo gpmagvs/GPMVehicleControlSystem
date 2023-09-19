@@ -95,16 +95,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingTask.ForkLifter = ForkLifter;
                     await Task.Delay(1000);
-                    if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Parameters.LDULD_Task_No_Entry)
-                    {
-                        LOG.WARN($"Load/Unload Task With NO ENTER EQ MODE(Valid By Parameter setting)");
-                        Sub_Status = SUB_STATUS.RUN;
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
-                        await Task.Delay(1000);
-                        Sub_Status = SUB_STATUS.IDLE;
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        return;
-                    }
+                    //if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Parameters.LDULD_Task_No_Entry)
+                    //{
+                    //    LOG.WARN($"Load/Unload Task With NO ENTER EQ MODE(Valid By Parameter setting)");
+                    //    Sub_Status = SUB_STATUS.RUN;
+                    //    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
+                    //    await Task.Delay(1000);
+
+                    //    if (Parameters.CST_READER_TRIGGER && action == ACTION_TYPE.Unload)
+                    //    {
+                    //        (bool confirm, AlarmCodes alarmCode) cstReadResult = await (ExecutingTask as UnloadTask).CSTBarcodeReadAfterAction();
+                    //        if (!cstReadResult.confirm)
+                    //        {
+                    //            Sub_Status = SUB_STATUS.DOWN;
+                    //            AlarmManager.AddAlarm(cstReadResult.alarmCode, false);
+                    //        }
+                    //        else
+                    //            Sub_Status = SUB_STATUS.IDLE;
+
+                    //        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    //    }
+                    //    else
+                    //    {
+                    //        Sub_Status = SUB_STATUS.IDLE;
+                    //        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    //        return;
+                    //    }
+                    //}
                     var result = await ExecutingTask.Execute();
                     if (result != AlarmCodes.None)
                     {

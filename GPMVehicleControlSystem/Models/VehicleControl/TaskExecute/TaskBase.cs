@@ -143,7 +143,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
                 AGVCActionStatusChaged += HandleAGVActionChanged;
-                (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+
+                clsTaskDownloadData NoEntryEQTask = new clsTaskDownloadData()
+                {
+                    Action_Type = ACTION_TYPE.None,
+                    Destination = Agv.Navigation.LastVisitedTag,
+                    Task_Name = RunningTaskData.Task_Name,
+                    Task_Sequence = RunningTaskData.Task_Sequence,
+                    Trajectory = new clsMapPoint[1]
+                       {
+                           new clsMapPoint()
+                           {
+                                Point_ID =Agv.lastVisitedMapPoint.TagNumber,
+                                 X = Agv.lastVisitedMapPoint.X,
+                                 Y=Agv.lastVisitedMapPoint.Y,
+                                  Theta = Agv.Navigation.Angle,
+                           }
+                       }
+                };
+
+                (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry ? NoEntryEQTask : RunningTaskData);
                 if (!agvc_response.agvc_executing)
                 {
                     return AlarmCodes.Cant_TransferTask_TO_AGVC;
@@ -181,7 +200,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 AGVCActionStatusChaged -= HandleAGVActionChanged;
                 LOG.ERROR($"存在貨物傾倒異常");
-                IsCargoBiasTrigger= IsCargoBiasDetecting = false;
+                IsCargoBiasTrigger = IsCargoBiasDetecting = false;
                 AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
                 Agv.Sub_Status = SUB_STATUS.DOWN;
                 await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
@@ -198,7 +217,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
 
-                   
+
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
                         return;

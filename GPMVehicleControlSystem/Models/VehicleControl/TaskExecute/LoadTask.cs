@@ -175,7 +175,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
-            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS )
             {
                 HSResult = await Agv.WaitEQBusyOFF(action);
                 if (!HSResult.hs_success)
@@ -235,16 +235,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (TaskCancelCTS.IsCancellationRequested)
                 return (false, AlarmCodes.None);
 
+
+
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
+                clsTaskDownloadData NoEntryEQTask = new clsTaskDownloadData()
+                {
+                    Action_Type = ACTION_TYPE.None,
+                    Destination = Agv.Navigation.LastVisitedTag,
+                    Task_Name = RunningTaskData.Task_Name,
+                    Task_Sequence = RunningTaskData.Task_Sequence,
+                    Trajectory = new clsMapPoint[1]
+                         {
+                           new clsMapPoint()
+                           {
+                                Point_ID =Agv.lastVisitedMapPoint.TagNumber,
+                                 X = Agv.lastVisitedMapPoint.X,
+                                 Y=Agv.lastVisitedMapPoint.Y,
+                                  Theta = Agv.Navigation.Angle,
+                           }
+                         }
+                };
                 Agv.DirectionLighter.Backward(delay: 800);
                 //await Agv.Laser.FrontBackLasersEnable(false, true);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-                AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-                await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
 
+                AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
+                await Agv.AGVC.ExecuteTaskDownloaded(Agv.Parameters.LDULD_Task_No_Entry ? NoEntryEQTask : RunningTaskData);
 
             });
 
@@ -328,7 +347,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await CSTBarcodeRead();
         }
 
-        protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
+        internal virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
         {
 
             Agv.CSTReader.ValidCSTID = "";
