@@ -606,6 +606,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece = new CancellationTokenSource();
             return await Task.Run(async () =>
             {
+                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 800);
                 try
                 {
                     await ResetMotor();
@@ -626,6 +627,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     LOG.INFO("Init done. Laser mode chaged to Bypass");
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
+
+                    await Task.Delay(2000);
+                    StatusLighter.AbortFlash();
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
                     LOG.INFO("Init done");
@@ -633,6 +637,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (TaskCanceledException ex)
                 {
+                    StatusLighter.AbortFlash();
                     _Sub_Status = SUB_STATUS.DOWN;
                     IsInitialized = false;
                     LOG.Critical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
@@ -640,12 +645,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
+                    StatusLighter.AbortFlash();
                     _Sub_Status = SUB_STATUS.DOWN;
                     BuzzerPlayer.Alarm();
                     IsInitialized = false;
                     return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
                 }
-
 
             }, InitializeCancelTokenResourece.Token);
         }

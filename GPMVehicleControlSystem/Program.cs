@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Json;
 using System.Diagnostics;
@@ -14,7 +15,7 @@ using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 
 KillRunningVCSProcesses();
-
+LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
 {

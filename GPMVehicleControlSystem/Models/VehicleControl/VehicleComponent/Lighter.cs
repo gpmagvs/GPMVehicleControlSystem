@@ -24,18 +24,16 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public void Flash(DO_ITEM light_DO, int flash_period = 400)
         {
-            this.DOModule.SetState(light_DO, true);
-
             flash_cts = new CancellationTokenSource();
             Task.Factory.StartNew(async () =>
             {
+                await DOModule.SetState(light_DO, true);
                 while (true)
                 {
                     if (flash_cts.IsCancellationRequested)
                         break;
-
                     bool previous_state_on = DOModule.GetState(light_DO);
-                    this.DOModule.SetState(light_DO, !previous_state_on);
+                    await DOModule.SetState(light_DO, !previous_state_on);
                     await Task.Delay(flash_period, flash_cts.Token);
                 }
             });
