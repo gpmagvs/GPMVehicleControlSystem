@@ -439,7 +439,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Batteries.Add(battery_id, new clsBattery()
                 {
                     StateData = _ModuleInformation.Battery,
-                    ChargeAmpThreshold = Parameters.CutOffChargeRelayCurrentThreshodlval
                 });
             }
             Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);

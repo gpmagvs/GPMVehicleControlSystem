@@ -22,13 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public int ChargeAmpThreshold { get; internal set; } = 650;
         public bool IsCharging()
         {
-            bool _charging = Data.dischargeCurrent == 0 && Data.chargeCurrent >= ChargeAmpThreshold;
-            if (!_charging && Data.chargeCurrent > 0)
-            {
-                Thread.Sleep(1000);
-                _charging = Data.dischargeCurrent == 0 && Data.chargeCurrent >= ChargeAmpThreshold;
-            }
-            return _charging;
+            return Data.chargeCurrent > 0;
         }
         public override void CheckStateDataContent()
         {

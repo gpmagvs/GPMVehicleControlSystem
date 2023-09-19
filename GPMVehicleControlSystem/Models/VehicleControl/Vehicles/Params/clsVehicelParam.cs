@@ -46,9 +46,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public List<int> CheckEQDOStatusWorkStationTags { get; set; } = new List<int>();
 
         /// <summary>
-        /// 斷充電迴路的充電電流豪安培數閥值設定,低於此閥值斷開充電迴路
+        /// 切斷充電迴路的電壓閥值,當電壓大於此數值，將會切斷充電迴路，避免電池過度充電。
+        /// 單位: mV
         /// </summary>
-        public int CutOffChargeRelayCurrentThreshodlval { get; set; } = 650;
+        public int CutOffChargeRelayVoltageThreshodlval { get; set; } = 28800;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Turning;
 

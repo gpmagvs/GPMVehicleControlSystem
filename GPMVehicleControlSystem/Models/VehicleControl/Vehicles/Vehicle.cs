@@ -169,6 +169,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             get => _IsCharging;
             set
             {
+                bool isRechargeCircuitOpened = WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+                if (isRechargeCircuitOpened && Batteries.Any(bat => bat.Value.Data.Voltage >= Parameters.CutOffChargeRelayVoltageThreshodlval))
+                {
+                    LOG.WARN($"Battery voltage  lower than threshold ({Parameters.CutOffChargeRelayVoltageThreshodlval}) mV, cut off recharge circuit ! ");
+                    WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+                    if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                    {
+                        _Sub_Status = SUB_STATUS.IDLE;
+                        StatusLighter.IDLE();
+                    }
+                    _IsCharging = false;
+                    return;
+                }
                 if (_IsCharging != value)
                 {
                     if (value)
@@ -179,8 +192,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        LOG.WARN($"Battery charge current  lower than threshold ({Parameters.CutOffChargeRelayCurrentThreshodlval}) mA, cut off recharge circuit ! ");
-                        WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
                         if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                         {
                             _Sub_Status = SUB_STATUS.IDLE;
