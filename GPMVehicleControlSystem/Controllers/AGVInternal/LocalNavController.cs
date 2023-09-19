@@ -32,7 +32,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new
                 {
                     accpet = false,
-                    error_message = $"AGV於 OFFLine 模式方可執行任務"
+                    error_message = $"AGV需為 OFFLine 模式才可以執行任務"
                 });
             }
 
@@ -44,6 +44,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     error_message = $"AGV當前狀態無法執行任務({agv.Sub_Status})"
                 });
             }
+
+            if (agv.BarcodeReader.CurrentTag == 0)
+            {
+                return Ok(new
+                {
+                    accpet = false,
+                    error_message = $"AGV需停在Tag上才可以執行任務。"
+                });
+            }
+
 
             (bool confirm, string message) hardware_status_check;
             if (!(hardware_status_check = agv.CheckHardwareStatus()).confirm)
