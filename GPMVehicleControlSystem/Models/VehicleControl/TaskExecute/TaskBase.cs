@@ -167,14 +167,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
         internal bool IsCargoBiasDetecting = false;
+        internal bool IsCargoBiasTrigger = false;
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
+            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
             {
                 AGVCActionStatusChaged -= HandleAGVActionChanged;
                 return;
             }
-            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+
+            if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+            {
+                AGVCActionStatusChaged -= HandleAGVActionChanged;
+                LOG.ERROR($"存在貨物傾倒異常");
+                IsCargoBiasTrigger= IsCargoBiasDetecting = false;
+                AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
+                Agv.Sub_Status = SUB_STATUS.DOWN;
+                await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                return;
+            }
+
             if (status == ActionStatus.ACTIVE)
             {
                 //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
@@ -185,15 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
 
-                    if (IsCargoBiasDetecting &&action == ACTION_TYPE.None && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
-                    {
-                        LOG.ERROR($"存在貨物傾倒異常");
-                        IsCargoBiasDetecting = false;
-                        AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
-                        await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        return;
-                    }
+                   
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
                         return;

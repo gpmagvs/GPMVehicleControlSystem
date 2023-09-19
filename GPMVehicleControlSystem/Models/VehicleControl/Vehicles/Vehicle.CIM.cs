@@ -45,15 +45,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 var CIMSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 CIMSocket.Connect(cimIP, 6100);
-                LOG.INFO($"成功與CIM建立Socket通訊({cimIP}:6100) !!!",color: ConsoleColor.Green);
+                LOG.INFO($"成功與CIM建立Socket通訊({cimIP}:6100) !!!", color: ConsoleColor.Green);
                 return CIMSocket;
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"無法與CIM建立Socket通訊({cimIP}:6100)...Rerty");
                 Task.Factory.StartNew(async () =>
                 {
-                    await Task.Delay(1000);
+                    LOG.ERROR($"無法與CIM建立Socket通訊({cimIP}:6100)...Rerty");
+                    await Task.Delay(10000);
                     CIMSocket = CreateSocketCIM();
 
                 }

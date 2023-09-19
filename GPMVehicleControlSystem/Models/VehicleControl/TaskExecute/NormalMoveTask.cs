@@ -28,7 +28,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
             {
                 IsCargoBiasDetecting = true;
-                LOG.INFO($"Start Cargo Bias Detection.");
                 StartMonitorCargoBias();
             }
             Task.Run(() => WatchVirtualPtAndStopWorker());
@@ -44,11 +43,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             await Task.Delay(1).ContinueWith(async (Task) =>
             {
+                LOG.INFO($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
+                CancellationTokenSource cts = new CancellationTokenSource();
+                cts.CancelAfter(10000);
+                while (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                {
+                    await Task.Delay(1);
+                    if (cts.IsCancellationRequested)
+                    {
+                        LOG.ERROR($"Wait AGV Move(Active) Timeout, cargo Bias Detection not start.");
+                        return;
+                    }
+                }
+                LOG.INFO($"Start Cargo Bias Detection.");
                 while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
                     if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                     {
+                        LOG.WARN($"貨物傾倒偵測結束-AGV Move Finish");
                         return;
                     }
                     if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS | Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
@@ -58,13 +71,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
                         {
                             LOG.ERROR($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
+                            IsCargoBiasTrigger = true;
                             Agv.AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
                             return;
                         }
                     }
                 }
 
-                LOG.INFO($"");
+                LOG.WARN($"貨物傾倒偵測觸發-Check1");
             });
         }
 
