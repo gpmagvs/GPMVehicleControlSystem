@@ -1,4 +1,6 @@
-﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -148,6 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 partical_50um = ToIntVal(command_splited[13]),
                 partical_100um = ToIntVal(command_splited[14])
             };
+            LOG.INFO($"解析儀器量測數值完成:{mesResult.ToJson()}");
             return mesResult;
         }
 

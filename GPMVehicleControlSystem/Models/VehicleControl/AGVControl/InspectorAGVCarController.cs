@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+using AGVSystemCommonNet6.Log;
 using System.Diagnostics.Metrics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
@@ -47,6 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         private bool InstrumentMeasureDone(VerticalCommandRequest request, out VerticalCommandResponse response)
         {
+            LOG.INFO($"儀器量測結束, request.command= {request.command}");
             response = new VerticalCommandResponse()
             {
                 confirm = true,
@@ -55,7 +57,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 OnInstrumentMeasureDone(request.command);
             return true;
         }
-       
+
         public override Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
             throw new NotImplementedException("巡檢AGV不具有CST Reader 功能");
