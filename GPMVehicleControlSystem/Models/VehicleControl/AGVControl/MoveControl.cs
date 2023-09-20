@@ -2,7 +2,7 @@
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
+namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
     public class MoveControl
     {
