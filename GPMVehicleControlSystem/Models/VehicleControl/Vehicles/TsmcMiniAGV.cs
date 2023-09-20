@@ -49,23 +49,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //(bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
             //if (!measurementInitResult.confirm)
             //    return (false, measurementInitResult.message);
-            bool Battery1LockNG = IsBattery1Exist && !IsBattery1Locked;
-            bool Battery2LockNG = IsBattery2Exist && !IsBattery2Locked;
-            if (Battery1LockNG | Battery2LockNG)
+            if (Parameters.InspectionAGV.CheckBatteryLockStateWhenInit)
             {
-                string err_msg = "";
-                if (IsBattery1Exist)
+                bool Battery1LockNG = IsBattery1Exist && !IsBattery1Locked;
+                bool Battery2LockNG = IsBattery2Exist && !IsBattery2Locked;
+                if (Battery1LockNG | Battery2LockNG)
                 {
-                    err_msg += "電池1 ";
-                    AlarmManager.AddWarning(AlarmCodes.Battery1_Not_Lock);
+                    string err_msg = "";
+                    if (IsBattery1Exist)
+                    {
+                        err_msg += "電池1 ";
+                        AlarmManager.AddWarning(AlarmCodes.Battery1_Not_Lock);
+                    }
+                    if (IsBattery2Exist)
+                    {
+                        err_msg += " 電池2";
+                        AlarmManager.AddWarning(AlarmCodes.Battery2_Not_Lock);
+                    }
+                    err_msg += " 尚未Lock";
+                    return (false, $"[{AlarmCodes.Battery_Not_Lock}] {err_msg}");
                 }
-                if (IsBattery2Exist)
-                {
-                    err_msg += " 電池2";
-                    AlarmManager.AddWarning(AlarmCodes.Battery2_Not_Lock);
-                }
-                err_msg += " 尚未Lock";
-                return (false, $"[{AlarmCodes.Battery_Not_Lock}] {err_msg}");
             }
             return (true, "");
         }

@@ -195,14 +195,19 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + signal + "Sbuscribe Error.",ex);
+                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
             }
         }
         protected virtual void RegistSignalEvents()
         {
             VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
-            VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+
             VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
+
+            if (AgvType != AGV_TYPE.INSPECTION_AGV)
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+            else
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {

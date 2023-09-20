@@ -98,6 +98,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             {   HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF , 90  },
             {   HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 5  },
         };
+
+        public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
+
     }
 
+    public class clsInspectionAGVParams
+    {
+        public bool CheckBatteryLockStateWhenInit { get; set; } = false;
+    }
 }

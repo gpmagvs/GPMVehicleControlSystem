@@ -8,7 +8,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
     [Route("api/[controller]")]
     [ApiController]
-    [ApiExplorerSettings(IgnoreApi = true)]
+    //[ApiExplorerSettings(IgnoreApi = true)]
     public class ManualOperatorController : ControllerBase
     {
         private Vehicle agv => StaStored.CurrentVechicle;
@@ -48,6 +48,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
+        [HttpGet("ShiftLeft")]
+        public async Task<IActionResult> ShiftLeft(double speed = 0.1)
+        {
+            agv.ManualController?.ShiftLeft(speed);
+            return Ok();
+        }
+
+        [HttpGet("ShiftRight")]
+        public async Task<IActionResult> ShiftRight(double speed = 0.1)
+        {
+            agv.ManualController?.ShiftRight(speed);
+            return Ok();
+        }
         [HttpGet("FordwardRight")]
         public async Task<IActionResult> FordwardRight(double speed = 0.1)
         {

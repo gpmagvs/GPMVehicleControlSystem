@@ -36,6 +36,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             vehicle?.DirectionLighter.Forward();
             PublishCmdVel(speed, 0);
         }
+        
+        /// <summary>
+        /// 向右橫移
+        /// </summary>
+        /// <param name="speed"></param>
+        public void ShiftRight(double speed = 0.08)
+        {
+            vehicle?.DirectionLighter.Backward();
+            PublishCmdVel_2D(-speed, 0);
+        }
+
+        /// <summary>
+        /// 向左橫移
+        /// </summary>
+        /// <param name="speed"></param>
+        public void ShiftLeft(double speed = 0.08)
+        {
+            vehicle?.DirectionLighter.Forward();
+            PublishCmdVel_2D(speed, 0);
+        }
+
+
 
         /// <summary>
         /// 向左轉
@@ -89,6 +111,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             Twist message = new Twist();
             message.linear.x = linear_speed;
             message.linear.y = 0;
+            message.linear.z = 0;
+            message.angular.x = 0;
+            message.angular.y = 0;
+            message.angular.z = angular_speed;
+            rosSocket.Publish(id, message);
+        }
+
+        private void PublishCmdVel_2D(double linear_speed, double angular_speed)
+        {
+            if (rosSocket == null)
+                return;
+            string id = rosSocket.Advertise<Twist>("/cmd_vel");
+            Twist message = new Twist();
+            message.linear.x = 0;
+            message.linear.y = linear_speed;
             message.linear.z = 0;
             message.angular.x = 0;
             message.angular.y = 0;
