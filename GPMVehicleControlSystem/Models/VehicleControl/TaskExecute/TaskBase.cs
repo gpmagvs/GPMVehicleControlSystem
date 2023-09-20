@@ -144,25 +144,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
                 AGVCActionStatusChaged += HandleAGVActionChanged;
 
-                clsTaskDownloadData NoEntryEQTask = new clsTaskDownloadData()
+                (bool agvc_executing, string message) agvc_response = (false, "");
+                if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
-                    Action_Type = ACTION_TYPE.None,
-                    Destination = Agv.Navigation.LastVisitedTag,
-                    Task_Name = RunningTaskData.Task_Name,
-                    Task_Sequence = RunningTaskData.Task_Sequence,
-                    Trajectory = new clsMapPoint[1]
-                       {
-                           new clsMapPoint()
-                           {
-                                Point_ID =Agv.lastVisitedMapPoint.TagNumber,
-                                 X = Agv.lastVisitedMapPoint.X,
-                                 Y=Agv.lastVisitedMapPoint.Y,
-                                  Theta = Agv.Navigation.Angle,
-                           }
-                       }
-                };
-
-                (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry ? NoEntryEQTask : RunningTaskData);
+                    agvc_response = (true, "空取空放");
+                    HandleAGVActionChanged(ActionStatus.SUCCEEDED);
+                }
+                else
+                {
+                    agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+                }
                 if (!agvc_response.agvc_executing)
                 {
                     return AlarmCodes.Cant_TransferTask_TO_AGVC;

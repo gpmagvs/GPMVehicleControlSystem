@@ -263,7 +263,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
 
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-                await Agv.AGVC.ExecuteTaskDownloaded(Agv.Parameters.LDULD_Task_No_Entry ? NoEntryEQTask : RunningTaskData);
+
+                (bool agvc_executing, string message) agvc_response = (false, "");
+                if (Agv.Parameters.LDULD_Task_No_Entry)
+                {
+                    HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                }
+                else
+                {
+                    await Agv.AGVC.ExecuteTaskDownloaded( RunningTaskData);
+                }
 
             });
 
