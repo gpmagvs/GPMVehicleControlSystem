@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
@@ -22,7 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public int ChargeAmpThreshold { get; internal set; } = 650;
         public bool IsCharging()
         {
-            return Data.chargeCurrent > 0;
+            return Data.chargeCurrent > 650;
         }
         public override void CheckStateDataContent()
         {
