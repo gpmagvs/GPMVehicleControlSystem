@@ -602,7 +602,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await ResetMotor();
                     (bool, string) result = await PreActionBeforeInitialize();
                     if (!result.Item1)
+                    {
+                        StatusLighter.AbortFlash();
                         return result;
+                    }
 
                     Sub_Status = SUB_STATUS.Initializing;
                     IsInitialized = false;
