@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (agv.BarcodeReader.CurrentTag == 0)
+            if (agv.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV && agv.BarcodeReader.CurrentTag == 0)
             {
                 return Ok(new
                 {
@@ -200,7 +200,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           Laser=0,
                           Control_Mode = new clsControlMode
                           {
-                               Spin=testVM.Direction
+                               Spin=testVM.Direction,
+                               Dodge =testVM.LaserMode
                           }
                      },
                      new clsMapPoint
@@ -214,7 +215,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           Laser =testVM.LaserMode,
                           Control_Mode = new clsControlMode
                           {
-                               Spin=testVM.Direction
+                               Spin=testVM.Direction,
+                               Dodge =testVM.LaserMode
                           }
                      }
                  },
