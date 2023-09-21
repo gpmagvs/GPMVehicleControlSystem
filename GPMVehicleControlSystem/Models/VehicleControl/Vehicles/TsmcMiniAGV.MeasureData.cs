@@ -10,7 +10,14 @@
             public int decibel { get; set; }
             public double temperature { get; set; }
             public double humudity { get; set; }
+            /// <summary>
+            /// 異丙醇
+            /// </summary>
             public int IPA { get; set; }
+            /// <summary>
+            /// 丙酮
+            /// </summary>
+            public int Acetone { get; set; }
             public double TVOC { get; set; }
             public string time { get; set; } = "";
             public int partical_03um { get; set; }
@@ -19,6 +26,7 @@
             public int partical_30um { get; set; }
             public int partical_50um { get; set; }
             public int partical_100um { get; set; }
+            public int PID { get; set; }
         }
     }
 }
