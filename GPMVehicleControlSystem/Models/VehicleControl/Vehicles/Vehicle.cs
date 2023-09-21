@@ -174,7 +174,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     LOG.WARN($"Battery voltage  lower than threshold ({Parameters.CutOffChargeRelayVoltageThreshodlval}) mV, cut off recharge circuit ! ");
                     WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
-                    Sub_Status = AGVC.ActionStatus != ActionStatus.ACTIVE && IsInitialized ? SUB_STATUS.IDLE : SUB_STATUS.DOWN;
+                    Sub_Status = IsInitialized ? AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN;
                     _IsCharging = false;
                     return;
                 }
@@ -187,7 +187,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.ActiveGreen();
                     }
                     else
-                        Sub_Status = AGVC.ActionStatus != ActionStatus.ACTIVE && IsInitialized ? SUB_STATUS.IDLE : SUB_STATUS.DOWN;
+                        Sub_Status = IsInitialized ? AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN;
                     _IsCharging = value;
                 }
             }

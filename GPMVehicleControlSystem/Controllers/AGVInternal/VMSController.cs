@@ -57,6 +57,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
+            if (mode == OPERATOR_MODE.MANUAL && agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+            {
+                return Ok(new
+                {
+                    Success = false,
+                    Message = "AGV執行任務中不可切為手動模式"
+                });
+            }
             bool confirm = await agv.Auto_Mode_Siwtch(mode);
             return Ok(new
             {
@@ -77,6 +85,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     _message = "AGV必須停在TAG上";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online)
                     _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
+                else if (result.return_code == RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing)
+                    _message = "AGV執行任務中不可切換Online/Offline Mode";
                 else
                     _message = result.return_code.ToString();
                 return Ok(new

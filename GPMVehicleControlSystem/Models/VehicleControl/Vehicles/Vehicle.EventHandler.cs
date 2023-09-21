@@ -371,18 +371,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             string sender_ = sender.ToString();
             InitializeCancelTokenResourece.Cancel();
+            AGVC.AbortTask();
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 BuzzerPlayer.Alarm();
                 AlarmManager.AddAlarm(sender_ == "software_emo" ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
                 ExecutingTask?.Abort();
-                AGVC.AbortTask();
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                {
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                }
+                ExecutingTask = null;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
+                {
+                    if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+                }
                 DirectionLighter.CloseAll();
                 DOSettingWhenEmoTrigger();
                 IsInitialized = false;

@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Log;
+using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -30,9 +31,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool OnlineModeChangingFlag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
+
+            if (ExecutingTask != null)
+            {
+                return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
+            }
+
             var currentTag = BarcodeReader.CurrentTag;
 
-            if (mode == REMOTE_MODE.ONLINE&& Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+            if (mode == REMOTE_MODE.ONLINE && Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
                 if (currentTag == 0)//檢查Tag
