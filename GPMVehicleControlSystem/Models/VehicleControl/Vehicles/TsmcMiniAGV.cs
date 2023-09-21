@@ -144,13 +144,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 TVOC = ToDoubleVal(command_splited[7], 10, 1),
                 Acetone = ToIntVal(command_splited[8]),
                 time = command_splited[9],
-                partical_03um = ToIntVal(command_splited[9]),
-                partical_05um = ToIntVal(command_splited[10]),
-                partical_10um = ToIntVal(command_splited[11]),
-                partical_30um = ToIntVal(command_splited[12]),
-                partical_50um = ToIntVal(command_splited[13]),
-                partical_100um = ToIntVal(command_splited[14]),
-                PID = ToIntVal(command_splited[15]),
+                partical_03um = ToIntVal(command_splited[10]),
+                partical_05um = ToIntVal(command_splited[11]),
+                partical_10um = ToIntVal(command_splited[12]),
+                partical_30um = ToIntVal(command_splited[13]),
+                partical_50um = ToIntVal(command_splited[14]),
+                partical_100um = ToIntVal(command_splited[15]),
+                PID = ToIntVal(command_splited[16]),
 
             };
             LOG.INFO($"解析儀器量測數值完成:{mesResult.ToJson()}");
@@ -161,13 +161,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (valStr == "NA")
                 return -1.0;
-            return Math.Round(Convert.ToUInt16(valStr) / ratio, digitals);
+            int intVal = -1;
+            if ((intVal = ToIntVal(valStr)) != -1)
+            {
+                return Math.Round(intVal / ratio, digitals);
+            }
+            else
+                return -1.0;
         }
         public int ToIntVal(string valStr)
         {
             if (valStr == "NA")
                 return -1;
-            return Convert.ToInt16(valStr);
+            if (int.TryParse(valStr, out int val))
+                return val;
+            else
+            {
+                LOG.WARN($"int convert fail. convert ${valStr} to int fail");
+                return -1;
+            }
         }
 
 
