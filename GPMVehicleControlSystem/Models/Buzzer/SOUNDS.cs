@@ -6,6 +6,8 @@
         Move,
         Action,
         Stop,
+        Measure,
+        ExchangeBattery,
         Handshaking
     }
 }

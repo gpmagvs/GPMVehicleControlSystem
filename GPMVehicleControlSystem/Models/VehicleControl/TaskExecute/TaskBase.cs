@@ -130,7 +130,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    BuzzerPlayer.Action();
+                    if (action == ACTION_TYPE.Measure)
+                        BuzzerPlayer.Measure();
+                    else if (action == ACTION_TYPE.ExchangeBattery)
+                        BuzzerPlayer.ExchangeBattery();
+                    else
+                        BuzzerPlayer.Action();
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
                     {
                         var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);

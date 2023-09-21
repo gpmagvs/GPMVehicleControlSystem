@@ -18,7 +18,9 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
         internal static bool IsMovingPlaying = false;
-       internal  static bool IsHandshakingPlaying = false;
+        internal static bool IsMeasurePlaying = false;
+        internal static bool IsExchangeBatteryPlaying = false;
+        internal static bool IsHandshakingPlaying = false;
         public static void Initialize()
         {
         }
@@ -57,6 +59,24 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             await Play(SOUNDS.Handshaking);
             IsHandshakingPlaying = true;
         }
+
+        internal static async void Measure()
+        {
+            if (IsMeasurePlaying)
+                return;
+            await Stop();
+            await Play(SOUNDS.Measure);
+            IsMeasurePlaying = true;
+        }
+
+        internal static async void ExchangeBattery()
+        {
+            if (IsExchangeBatteryPlaying)
+                return;
+            await Stop();
+            await Play(SOUNDS.ExchangeBattery);
+            IsExchangeBatteryPlaying = true;
+        }
         internal static async Task Stop()
         {
             await Play(SOUNDS.Stop);
@@ -73,5 +93,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 file_path = sound.ToString().ToLower()
             });
         }
+
     }
 }
