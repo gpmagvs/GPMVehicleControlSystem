@@ -33,6 +33,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 等待交握訊號時撥放交握音效
         /// </summary>
         public bool PlayHandshakingMusic { get; set; } = true;
+
+        /// <summary>
+        /// 量測儀器服務模擬器
+        /// </summary>
+        public bool MeasureServiceSimulator { get; set; } = true;
         public int LastVisitedTag { get; set; } = 8;
 
         /// <summary>

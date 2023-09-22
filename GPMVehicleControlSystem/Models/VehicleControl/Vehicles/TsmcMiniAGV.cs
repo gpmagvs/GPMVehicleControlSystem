@@ -25,6 +25,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsBattery1UnLocked => WagoDI.GetState(DI_ITEM.Battery_1_Unlock_Sensor);
         public bool IsBattery2UnLocked => WagoDI.GetState(DI_ITEM.Battery_2_Unlock_Sensor);
 
+        public event EventHandler<clsMeasureResult> OnMeasureComplete;
+
         public TsmcMiniAGV()
         {
             WheelDrivers = new clsDriver[] {
@@ -35,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
              };
         }
 
-        private InspectorAGVCarController? InspectorAGVC => AGVC as InspectorAGVCarController;
+        private InspectorAGVCarController? OHAAGVC;
 
         public override clsCSTReader CSTReader { get; set; } = null;
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsInspectorAGVDirectionLighter();
@@ -117,12 +119,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
-            (AGVC as InspectorAGVCarController).OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
+            OHAAGVC = AGVC as InspectorAGVCarController;
+            OHAAGVC.OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
         }
 
         private void HandleAGVCInstrumentMeasureDone(string req_command)
         {
-            ParseMeasureData(req_command);
+            clsMeasureResult measure_result = ParseMeasureData(req_command);
+            OnMeasureComplete?.Invoke(this, measure_result);
         }
 
         /// <summary>
@@ -132,9 +136,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private clsMeasureResult ParseMeasureData(string response_command)
         {
             string[] command_splited = response_command.Split(',');
-            clsMeasureResult mesResult = new clsMeasureResult
+            clsMeasureResult mesResult = new clsMeasureResult(Navigation.LastVisitedTag)
             {
-                result = command_splited[0],//done/erro,
+                result = command_splited[0],//done/error,
                 location = command_splited[1],
                 illuminance = ToIntVal(command_splited[2]),//照度(lux,
                 decibel = ToIntVal(command_splited[3]),//分貝(dB,
@@ -241,6 +245,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddWarning(noLockAlarmCode);
                 return false;
             }
+        }
+
+        internal async Task<(bool confirm, string message)> StartMeasure()
+        {
+            (bool confirm, string message) response = await OHAAGVC.StartInstrumentMeasure(Navigation.LastVisitedTag);
+            return response;
         }
     }
 }

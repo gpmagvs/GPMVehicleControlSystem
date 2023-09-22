@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+                    agvc_response = await TransferTaskToAGVC();
                 }
                 if (!agvc_response.agvc_executing)
                 {
@@ -179,6 +179,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw ex;
             }
 
+        }
+
+        protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
+        {
+            return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
         }
 
         internal bool IsCargoBiasDetecting = false;

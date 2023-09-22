@@ -342,6 +342,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StaSysMessageManager.AddNewMessage("\"模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
                 }
             }
+            if (Parameters.MeasureServiceSimulator)
+            {
+                try
+                {
+                    StaEmuManager.StartMeasureROSEmu();
+                }
+                catch (SocketException)
+                {
+                    StaSysMessageManager.AddNewMessage("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
+                }
+                catch (Exception ex)
+                {
+                    StaSysMessageManager.AddNewMessage("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
+                }
+            }
+
             if (Parameters.WagoSimulation)
             {
                 StaEmuManager.StartWagoEmu(WagoDI);

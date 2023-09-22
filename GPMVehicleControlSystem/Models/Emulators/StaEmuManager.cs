@@ -7,6 +7,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         // Add services to the container.
         public static WagoEmulator wagoEmu = new WagoEmulator();
         public static AGVROSEmulator agvRosEmu;
+        public static MeasureServiceEmulator measureEmu;
         public static void StartWagoEmu(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule wagoDI)
         {
             wagoEmu.WagoDI = wagoDI;
@@ -20,6 +21,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public static void StartAGVROSEmu()
         {
             agvRosEmu = new AGVROSEmulator();
+            LOG.INFO("AGVC(ROS) EMU Start");
+        }
+
+        public static void StartMeasureROSEmu()
+        {
+            measureEmu = new  MeasureServiceEmulator();
             LOG.INFO("AGVC(ROS) EMU Start");
         }
 

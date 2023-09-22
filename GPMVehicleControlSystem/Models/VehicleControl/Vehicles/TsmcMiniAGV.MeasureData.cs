@@ -4,6 +4,18 @@
     {
         public class clsMeasureResult
         {
+            public clsMeasureResult(int TagID)
+            {
+                this.TagID = TagID;
+            }
+            public bool result_bol
+            {
+                get
+                {
+                    return result == "done";
+                }
+            }
+            public int TagID { get; private set; }
             public string result { get; set; } = "";
             public string location { get; set; } = "";
             public int illuminance { get; set; }
@@ -27,6 +39,31 @@
             public int partical_50um { get; set; }
             public int partical_100um { get; set; }
             public int PID { get; set; }
+
+            internal string GetCommandStr()
+            {
+                object[] resultObj = new object[]
+                {
+                     result,
+                     location,
+                     illuminance,
+                    decibel,
+                    temperature*100,
+                    humudity*100,
+                    IPA,
+                    TVOC*10,
+                    Acetone,
+                    time,
+                    partical_03um,
+                    partical_05um,
+                    partical_10um,
+                    partical_30um,
+                    partical_50um,
+                    partical_100um,
+                    PID,
+                };
+                return string.Join(",", resultObj.Select(obj => obj.ToString()));
+            }
         }
     }
 }

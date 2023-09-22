@@ -15,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
     public class AGVROSEmulator
     {
-        RosSocket? rosSocket;
+        protected RosSocket? rosSocket;
         private ModuleInformation module_info = new ModuleInformation()
         {
             Battery = new BatteryState
@@ -51,17 +51,41 @@ namespace GPMVehicleControlSystem.Models.Emulators
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                rosSocket.Advertise<ModuleInformation>("AGVC_Emu", "/module_information");
-                rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
-                rosSocket.Advertise<LocalizationControllerResultMessage0502>("SICK_Emu", "localizationcontroller/out/localizationcontroller_result_message_0502");
-                rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
+
+                TopicsAdvertise();
+                AdvertiseServices();
                 InitNewTaskCommandActionServer();
-                _ = PublishModuleInformation(rosSocket);
+                TopicsPublish();
                 // _ = PublishLocalizeResult(rosSocket);
             });
         }
 
-        internal void InitNewTaskCommandActionServer()
+        internal virtual void TopicsPublish()
+        {
+            _ = PublishModuleInformation(rosSocket);
+        }
+
+        /// <summary>
+        /// 建立Topic
+        /// </summary>
+        internal virtual void TopicsAdvertise()
+        {
+            rosSocket.Advertise<ModuleInformation>("AGVC_Emu", "/module_information");
+            rosSocket.Advertise<LocalizationControllerResultMessage0502>("SICK_Emu", "localizationcontroller/out/localizationcontroller_result_message_0502");
+        }
+        /// <summary>
+        /// 建立服務
+        /// </summary>
+        internal virtual void AdvertiseServices()
+        {
+            rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
+            rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
+        }
+
+        /// <summary>
+        /// 建立 barcodemovebase server
+        /// </summary>
+        internal virtual void InitNewTaskCommandActionServer()
         {
             TaskCommandActionServer actionServer = new TaskCommandActionServer("/barcodemovebase", rosSocket);
             actionServer.Initialize();
@@ -77,11 +101,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
             //模擬走型
             Task.Factory.StartNew(async () =>
             {
-
                 var firstTag = obj.planPath.poses.First().header.seq;
-
                 IsCharge = false;
-                module_info.Battery.dischargeCurrent =13200;
+                module_info.Battery.dischargeCurrent = 13200;
                 module_info.Battery.chargeCurrent = 0;
 
                 foreach (RosSharp.RosBridgeClient.MessageTypes.Geometry.PoseStamped? item in obj.planPath.poses)
@@ -127,27 +149,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
             });
 
         }
-
-        private async Task PublishLocalizeResult(RosSocket rosSocket)
-        {
-            await Task.Delay(1);
-            await Task.Factory.StartNew(async () =>
-            {
-                while (true)
-                {
-                    await Task.Delay(10);
-                    try
-                    {
-                        rosSocket.Publish("SICK_Emu", localizeResult);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
-                }
-            });
-        }
-
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);
