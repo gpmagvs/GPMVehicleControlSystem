@@ -132,8 +132,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     if (action == ACTION_TYPE.Measure)
                         BuzzerPlayer.Measure();
-                    else if (action == ACTION_TYPE.ExchangeBattery)
-                        BuzzerPlayer.ExchangeBattery();
                     else
                         BuzzerPlayer.Action();
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)

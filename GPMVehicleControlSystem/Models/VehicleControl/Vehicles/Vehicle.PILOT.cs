@@ -87,6 +87,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             ExecutingTask = new ParkTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Unpark)
                             ExecutingTask = new UnParkTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.Measure)
+                            ExecutingTask = new MeasureTask(this, _taskDownloadData);
+                        else if (action == ACTION_TYPE.ExchangeBattery)
+                            ExecutingTask = new ExchangeBatteryTask(this, _taskDownloadData);
                         else
                         {
                             throw new NotImplementedException();

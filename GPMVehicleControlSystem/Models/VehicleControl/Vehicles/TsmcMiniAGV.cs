@@ -126,9 +126,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void HandleAGVCInstrumentMeasureDone(string req_command)
         {
             clsMeasureResult measure_result = ParseMeasureData(req_command);
+            MeasureCompleteInvoke(measure_result);
+        }
+        internal void MeasureCompleteInvoke(clsMeasureResult measure_result)
+        {
             OnMeasureComplete?.Invoke(this, measure_result);
         }
-
         /// <summary>
         /// 解析量測數據
         /// </summary>
@@ -247,10 +250,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal async Task<(bool confirm, string message)> StartMeasure()
+        internal async Task<(bool confirm, string message)> StartMeasure(int tagID)
         {
-            (bool confirm, string message) response = await OHAAGVC.StartInstrumentMeasure(Navigation.LastVisitedTag);
+            (bool confirm, string message) response = await OHAAGVC.StartInstrumentMeasure(tagID);
             return response;
+        }
+
+        internal async Task<(bool confirm, string message)> MeasurementInit()
+        {
+            (bool confirm, string message) init_result = await OHAAGVC.MeasurementInit();
+            LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
+            return init_result;
         }
     }
 }

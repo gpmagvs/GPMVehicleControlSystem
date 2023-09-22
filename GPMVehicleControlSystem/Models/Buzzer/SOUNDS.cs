@@ -7,7 +7,7 @@
         Action,
         Stop,
         Measure,
-        ExchangeBattery,
+        Exchange,
         Handshaking
     }
 }

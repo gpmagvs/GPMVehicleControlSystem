@@ -313,7 +313,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_NOT_ON_TAG;
             if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
-            if (taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
+            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
             //if (action_type == ACTION_TYPE.Load | action_type == ACTION_TYPE.Unload | action_type == ACTION_TYPE.Park | action_type == ACTION_TYPE.Charge | action_type == ACTION_TYPE.LoadAndPark)
             //{

@@ -8,6 +8,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
     public partial class InspectorAGVCarController : CarController
     {
         public Action<string> OnInstrumentMeasureDone;
+        private COMMANDS action_command;
         public InspectorAGVCarController()
         {
         }
@@ -53,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 confirm = true,
             };
-            if (OnInstrumentMeasureDone != null)
+            if (action_command == COMMANDS.pose && OnInstrumentMeasureDone != null)
                 OnInstrumentMeasureDone(request.command);
             return true;
         }
@@ -92,6 +93,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private async Task<(bool confirm, string message)> CallCommandAction(COMMANDS command, int tagID)
         {
+            action_command = command;
             try
             {
                 VerticalCommandResponse? response = await rosSocket.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action",
