@@ -333,7 +333,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  });
             }
         }
-
+        internal async Task ReportMeasureResult(clsMeasureResult measure_result)
+        {
+            try
+            {
+                await Task.Delay(100);
+                await AGVS.ReportMeasureData(measure_result);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex.Message, ex);
+                AlarmManager.AddWarning( AlarmCodes.Measure_Result_Data_Report_Fail);
+            }
+        }
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)
         {
             try

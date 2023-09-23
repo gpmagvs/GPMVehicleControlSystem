@@ -7,7 +7,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
     public partial class InspectorAGVCarController : CarController
     {
-        public Action<string> OnInstrumentMeasureDone;
+        public class clsMeasureDone
+        {
+            public string result_cmd { get; set; } = "";
+            public DateTime start_time { get; set; } = DateTime.Now;
+        }
+        public Action<clsMeasureDone> OnInstrumentMeasureDone;
         private COMMANDS action_command;
         public InspectorAGVCarController()
         {
@@ -45,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 );
 
-            return (response == null ? false : response.confirm, response == null ?"Call Service Error":"");
+            return (response == null ? false : response.confirm, response == null ? "Call Service Error" : "");
         }
         /// <summary>
         /// 確認儀器狀態
@@ -55,13 +60,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             return await CallCommandAction(COMMANDS.init);
         }
-
+        private DateTime previousStartMeasureTime = DateTime.MinValue;
         /// <summary>
         /// 開始量測
         /// </summary>
         /// <returns></returns>
         public async Task<(bool confirm, string message)> StartInstrumentMeasure(int tagID)
         {
+            previousStartMeasureTime = DateTime.Now;
             return await CallCommandAction(COMMANDS.pose, tagID);
         }
 
@@ -79,7 +85,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 confirm = true,
             };
             if (action_command == COMMANDS.pose && OnInstrumentMeasureDone != null)
-                OnInstrumentMeasureDone(request.command);
+                OnInstrumentMeasureDone(new clsMeasureDone()
+                {
+                    result_cmd = request.command,
+                    start_time = previousStartMeasureTime
+                });
             return true;
         }
 

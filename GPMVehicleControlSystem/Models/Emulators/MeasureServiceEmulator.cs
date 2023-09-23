@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+﻿using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using Polly.Caching;
 using RosSharp.RosBridgeClient;

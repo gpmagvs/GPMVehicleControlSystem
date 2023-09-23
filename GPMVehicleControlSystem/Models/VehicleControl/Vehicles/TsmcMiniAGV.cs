@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -8,6 +9,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Polly.Caching;
 using System.Net.Sockets;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -124,9 +126,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             OHAAGVC.OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
         }
 
-        private void HandleAGVCInstrumentMeasureDone(string req_command)
+        private void HandleAGVCInstrumentMeasureDone(clsMeasureDone result)
         {
-            clsMeasureResult measure_result = ParseMeasureData(req_command);
+            clsMeasureResult measure_result = ParseMeasureData(result.result_cmd);
+            measure_result.StartTime = result.start_time;
+            measure_result.TaskName = ExecutingTask.RunningTaskData.Task_Name;
             MeasureCompleteInvoke(measure_result);
         }
         internal void MeasureCompleteInvoke(clsMeasureResult measure_result)

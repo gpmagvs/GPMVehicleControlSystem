@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
@@ -58,5 +59,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Remote_Mode = mode;
             return result;
         }
+
+        
     }
 }
