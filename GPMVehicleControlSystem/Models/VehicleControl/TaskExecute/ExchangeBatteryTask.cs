@@ -51,9 +51,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 await HandshakeWithExchanger(0, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
                 await HandshakeWithExchanger(0, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                //await HandshakeWithExchanger(1, ACTION_TYPE.Load);
-                //await HandshakeWithExchanger(1, ACTION_TYPE.Unload);
-
+                LOG.INFO($"電池-1 交換完成");
+                await HandshakeWithExchanger(1, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+                await HandshakeWithExchanger(1, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                LOG.INFO($"電池-2 交換完成");
             }
             catch (HandshakeException ex)
             {
@@ -95,14 +96,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
 
+            await WaitEQSignal(DI_ITEM.EQ_VALID, true, 3);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, true);
             await TsmcMiniAGV.WagoDO.SetState(BES, true);
-            await WaitEQSignal(DI_ITEM.EQ_VALID, true, 3);
             await TsmcMiniAGV.WagoDO.SetState(LDUDLREQ, true);
-            await WaitEQSignal(DI_ITEM.EQ_TR_REQ, true, 3);
+            await WaitEQSignal(DI_ITEM.EQ_TR_REQ, true, 60);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, true);
-            await WaitEQSignal(DI_ITEM.EQ_BUSY, true, 3);
-            await WaitEQSignal(DI_ITEM.EQ_BUSY, false, 15);
+            await WaitEQSignal(DI_ITEM.EQ_BUSY, true, 10);
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(30)); //TP3
+            while (TsmcMiniAGV.WagoDI.GetState(DI_ITEM.EQ_BUSY))
+            {
+                await Task.Delay(10);
+                if (cts.IsCancellationRequested)
+                {
+                    throw new HSTimeoutException( AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
+                    return;
+                }
+                bool IsBatteryOutOfAGV()
+                {
+                    if (batNo == 0)
+                    {
+                        bool bat1_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_1);
+                        bool bat1_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_2);
+                        return !bat1_exist1 && !bat1_exist2;
+                    }
+                    else
+                    {
+                        bool bat2_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_1);
+                        bool bat2_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_2);
+                        return !bat2_exist1 && !bat2_exist2;
+                    }
+                }
+                if (IsBatteryOutOfAGV())
+                {
+                    await TsmcMiniAGV.WagoDO.SetState(LDUDLREQ, false);
+                    break;
+                }
+            }
+
+            await WaitEQSignal(DI_ITEM.EQ_BUSY, false, 30);
             await WaitEQSignal(DI_ITEM.EQ_COMPT, true, 3);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await TsmcMiniAGV.WagoDO.SetState(BES, false);

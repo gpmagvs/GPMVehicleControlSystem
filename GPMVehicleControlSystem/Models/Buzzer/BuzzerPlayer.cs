@@ -80,7 +80,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static async Task Stop()
         {
             await Play(SOUNDS.Stop);
-            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying= IsMovingPlaying = IsHandshakingPlaying = false;
+            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying= IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
         }
 
         public static async Task Play(SOUNDS sound)

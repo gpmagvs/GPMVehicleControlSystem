@@ -336,25 +336,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)
         {
-            CurrentTaskRunStatus = status;
-            if (Remote_Mode == REMOTE_MODE.ONLINE)
+            try
             {
-                double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
-                double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                double Theta = Math.Round(Navigation.Angle, 3);
-                clsCoordination coordination = new clsCoordination(X, Y, Theta);
-                await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
-            }
-            if (status == TASK_RUN_STATUS.ACTION_FINISH)
-            {
-                AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
-                if (ExecutingTask != null)
+
+                CurrentTaskRunStatus = status;
+                if (Remote_Mode == REMOTE_MODE.ONLINE)
                 {
-                    ExecutingTask.Abort();
-                    ExecutingTask.Dispose();
-                    ExecutingTask = null;
+                    double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+                    double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+                    double Theta = Math.Round(Navigation.Angle, 3);
+                    clsCoordination coordination = new clsCoordination(X, Y, Theta);
+                    if (ExecutingTask != null)
+                        await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
                 }
+                if (status == TASK_RUN_STATUS.ACTION_FINISH)
+                {
+                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                    CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
+                    if (ExecutingTask != null)
+                    {
+                        ExecutingTask.Abort();
+                        ExecutingTask.Dispose();
+                        ExecutingTask = null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
             }
         }
 

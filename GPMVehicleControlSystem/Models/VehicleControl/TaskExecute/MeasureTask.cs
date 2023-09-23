@@ -60,8 +60,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+
             TsmcMiniAGV.OnMeasureComplete += TsmcMiniAGV_OnMeasureComplete;
             await Task.Delay(1000);
+            BuzzerPlayer.Measure();
             LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
             (bool confirm, string message) response = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
             if (!response.confirm)
@@ -97,6 +99,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 clsTaskDownloadData taskData = RunningTaskData.Splice(completed_point_index_, 2, true);
                 AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
+                BuzzerPlayer.Move();
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(taskData);
             }
@@ -132,6 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 AGVCActionStatusChaged = null;
                 await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                 await Task.Delay(1000);
+                BuzzerPlayer.Measure();
                 LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
                 (bool confirm, string message) result = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
                 if (!result.confirm)

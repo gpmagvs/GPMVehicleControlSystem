@@ -18,6 +18,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.WorkStation;
+using System.Reflection.Metadata;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -357,6 +358,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
+            if (ExecuteAGVSTask == null) 
+                return;
             if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask.action == ACTION_TYPE.None)
             {
                 //方向燈
@@ -443,7 +446,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
             }
             Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
-            IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
+            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
         }
 
         private MapPoint GetLastVisitedMapPoint()
