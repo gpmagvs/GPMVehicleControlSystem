@@ -6,6 +6,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Polly.Caching;
 using System.Net.Sockets;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -261,6 +262,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool confirm, string message) init_result = await OHAAGVC.MeasurementInit();
             LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
             return init_result;
+        }
+
+        /// <summary>
+        /// 進行定位
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<(bool confirm, string message)> Localization(ushort tagID)
+        {
+            double current_loc_x = Navigation.Data.robotPose.pose.position.x;
+            double current_loc_y = Navigation.Data.robotPose.pose.position.y;
+            double theta = Navigation.Angle;
+            (bool confrim, string message) result = await OHAAGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
+            if (!result.confrim)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
+            }
+            return result;
         }
     }
 }
