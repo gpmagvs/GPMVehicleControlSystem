@@ -87,6 +87,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.INFO($"{completed_point_index_} / {totalMeasurePointNum}");
             if (completed_point_index_ == totalMeasurePointNum) //全部的測量點都量測完畢拉
             {
+                TsmcMiniAGV.OnMeasureComplete -= TsmcMiniAGV_OnMeasureComplete;
+
                 BuzzerPlayer.Move();
                 LOG.INFO($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
