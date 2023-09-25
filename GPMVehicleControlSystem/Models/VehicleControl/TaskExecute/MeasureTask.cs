@@ -18,7 +18,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private readonly TsmcMiniAGV TsmcMiniAGV;
         public MeasureTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
-            TsmcMiniAGV = Agv as TsmcMiniAGV;
+            if (Agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                TsmcMiniAGV = Agv as TsmcMiniAGV;
         }
 
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Measure;
@@ -59,8 +60,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            (bool confirm, string message) init_result = await TsmcMiniAGV.MeasurementInit();
-            LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
+            if (Agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+            {
+                (bool confirm, string message) init_result = await TsmcMiniAGV.MeasurementInit();
+                LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
+            }
             return await base.BeforeTaskExecuteActions();
         }
         public override async Task<bool> LaserSettingBeforeTaskExecute()
@@ -85,7 +89,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-
+            if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+            {
+                LOG.INFO($"模擬量測[第一點]");
+                TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                {
+                    TaskName = RunningTaskData.Task_Name,
+                    result = "done",
+                    IPA = DateTime.Now.Second,
+                    StartTime = DateTime.Now,
+                    illuminance = DateTime.Now.Minute,
+                });
+                return (true, AlarmCodes.None);
+            }
             TsmcMiniAGV.OnMeasureComplete += TsmcMiniAGV_OnMeasureComplete;
             await Task.Delay(1000);
             FlashDirectorLighter();
@@ -115,8 +131,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             cancelFlashCts.Cancel();
             if (completed_point_index_ == totalMeasurePointNum) //全部的測量點都量測完畢拉
             {
-                TsmcMiniAGV.OnMeasureComplete -= TsmcMiniAGV_OnMeasureComplete;
-                Agv.DirectionLighter.Backward();
+                if (Agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                {
+                    TsmcMiniAGV.OnMeasureComplete -= TsmcMiniAGV_OnMeasureComplete;
+                    Agv.DirectionLighter.Backward();
+                }
+                else
+                {
+                    Agv.DirectionLighter.Forward();
+                }
                 BuzzerPlayer.Move();
                 LOG.INFO($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
@@ -165,6 +188,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 AGVCActionStatusChaged = null;
                 await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                 await Task.Delay(1000);
+                if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                {
+                    LOG.INFO($"模擬量測完成");
+                    TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                    {
+                        TaskName = RunningTaskData.Task_Name,
+                        result = "done",
+                        IPA = DateTime.Now.Second,
+                        StartTime = DateTime.Now,
+                        Acetone = DateTime.Now.Second,
+                        illuminance = DateTime.Now.Minute,
+                    });
+                    return;
+                }
                 FlashDirectorLighter();
                 BuzzerPlayer.Measure();
                 LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
@@ -172,7 +209,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!result.confirm)
                 {
                     LOG.ERROR($"AGV Measure service callback fail.");
-
                     TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
                     {
                         result = "error",
