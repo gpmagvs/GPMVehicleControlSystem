@@ -145,9 +145,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Initializing:
                         return MAIN_STATUS.DOWN;
                     case SUB_STATUS.ALARM:
-                        return MAIN_STATUS.IDLE;
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            return MAIN_STATUS.RUN;
+                        else
+                            return MAIN_STATUS.IDLE;
                     case SUB_STATUS.WARNING:
-                        return MAIN_STATUS.IDLE;
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            return MAIN_STATUS.RUN;
+                        else
+                            return MAIN_STATUS.IDLE;
                     case SUB_STATUS.STOP:
                         return MAIN_STATUS.IDLE;
                     default:
