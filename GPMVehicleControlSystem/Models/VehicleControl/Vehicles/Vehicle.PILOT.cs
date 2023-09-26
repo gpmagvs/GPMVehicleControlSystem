@@ -75,6 +75,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTask = new NormalMoveTask(this, _taskDownloadData);
                     else
                     {
+
+
+                        if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                            _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+
                         if (action == ACTION_TYPE.Charge)
                             ExecutingTask = new ChargeTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Discharge)
@@ -343,7 +348,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (Exception ex)
             {
                 LOG.ERROR(ex.Message, ex);
-                AlarmManager.AddWarning( AlarmCodes.Measure_Result_Data_Report_Fail);
+                AlarmManager.AddWarning(AlarmCodes.Measure_Result_Data_Report_Fail);
             }
         }
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)

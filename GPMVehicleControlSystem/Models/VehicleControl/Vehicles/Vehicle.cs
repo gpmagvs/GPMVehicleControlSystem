@@ -687,7 +687,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             AGVAlarmWhenEQBusyFlag = false;
             EQAlarmWhenEQBusyFlag = false;
-            WagoDO.ResetHandshakeSignals();
+            ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             var hardware_status_check_reuslt = CheckHardwareStatus();
             if (!hardware_status_check_reuslt.confirm)
@@ -704,6 +704,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
             return (true, "");
+        }
+
+        /// <summary>
+        /// Reset交握訊號
+        /// </summary>
+        protected virtual async void ResetHandshakeSignals()
+        {
+
+            await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
+            await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
+            await WagoDO.SetState(DO_ITEM.AGV_READY, false);
+            await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
         }
 
         public virtual (bool confirm, string message) CheckHardwareStatus()
