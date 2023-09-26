@@ -2,9 +2,11 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsBattery;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -17,6 +19,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private bool IsBat2Unlock => TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Unlock_Sensor);
         private bool IsBat1Lock => TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Lock_Sensor);
         private bool IsBat2Lock => TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Lock_Sensor);
+
+
         public enum EXCHANGE_BAT_ACTION
         {
             REMOVE_BATTERY,
@@ -44,17 +48,62 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             return await Agv.Laser.ModeSwitch(VehicleComponent.clsLaser.LASER_MODE.Bypass);
         }
+        private class clsBatInfo
+        {
+            public clsBatInfo(TsmcMiniAGV agv, int bat_no)
+            {
+                this.agv = agv;
+                this.bat_no = bat_no;
+            }
+            public BATTERY_LOCATION location;
+            public bool IsExist
+            {
+                get
+                {
+                    return location == BATTERY_LOCATION.RIGHT ? agv.IsBattery1Exist : agv.IsBattery2Exist;
+                }
+            }
+            public TsmcMiniAGV agv { get; }
+            public int bat_no { get; }
+            public byte level { get; internal set; }
+        }
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             BuzzerPlayer.ExchangeBattery();
             try
             {
-                await HandshakeWithExchanger(0, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
-                await HandshakeWithExchanger(0, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                LOG.INFO($"電池-1 交換完成");
-                await HandshakeWithExchanger(1, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
-                await HandshakeWithExchanger(1, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                LOG.INFO($"電池-2 交換完成");
+                //先換低電量的
+
+                clsBatInfo[] batInfos = new clsBatInfo[2]
+                {
+                    new clsBatInfo(TsmcMiniAGV,1)
+                    {
+                         location = BATTERY_LOCATION.RIGHT,
+                         level = TsmcMiniAGV.Batteries[1].Data.batteryLevel,
+                    },
+                    new clsBatInfo(TsmcMiniAGV,2){
+                         location = BATTERY_LOCATION.LEFT,
+                         level = TsmcMiniAGV.Batteries[2].Data.batteryLevel,
+                    }
+                };
+
+                batInfos = batInfos.OrderBy(bat => bat.level).ToArray();
+
+                foreach (var bat in batInfos)
+                {
+                    if (bat.IsExist)
+                        await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+                    await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                    LOG.INFO($"電池-{bat.bat_no} 交換完成");
+                }
+                //if (TsmcMiniAGV.IsBattery1Exist)
+                //    await HandshakeWithExchanger(BATTERY_LOCATION.RIGHT, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+                //await HandshakeWithExchanger(BATTERY_LOCATION.RIGHT, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                //LOG.INFO($"電池-1 交換完成");
+                //if (TsmcMiniAGV.IsBattery2Exist)
+                //    await HandshakeWithExchanger(BATTERY_LOCATION.LEFT, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+                //await HandshakeWithExchanger(BATTERY_LOCATION.LEFT, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                //LOG.INFO($"電池-2 交換完成");
             }
             catch (HandshakeException ex)
             {
@@ -73,15 +122,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        private async Task HandshakeWithExchanger(int batNo, EXCHANGE_BAT_ACTION action)
+        private async Task HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action)
         {
-            DO_ITEM BES = batNo == 0 ? DO_ITEM.AGV_CS_0 : DO_ITEM.AGV_CS_1;
+            DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_0 : DO_ITEM.AGV_CS_1;
             DO_ITEM LDUDLREQ = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? DO_ITEM.AGV_L_REQ : DO_ITEM.AGV_U_REQ;
 
 
             if (action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY)
             {
-                if (batNo == 0)
+                if (batNo == BATTERY_LOCATION.RIGHT)
                 {
                     await TsmcMiniAGV.Battery1UnLock();
                     if (!IsBat1Unlock)
@@ -111,12 +160,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Task.Delay(10);
                 if (cts.IsCancellationRequested)
                 {
-                    throw new HSTimeoutException( AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
+                    throw new HSTimeoutException(AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
                     return;
                 }
                 bool IsBatteryOutOfAGV()
                 {
-                    if (batNo == 0)
+                    if (batNo == BATTERY_LOCATION.RIGHT)
                     {
                         bool bat1_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_1);
                         bool bat1_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_2);
@@ -144,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
 
             if (action == EXCHANGE_BAT_ACTION.RELOAD_BATTERY)
-                if (batNo == 0)
+                if (batNo == BATTERY_LOCATION.RIGHT)
                 {
                     await TsmcMiniAGV.Battery1Lock();
                     if (!IsBat1Lock)

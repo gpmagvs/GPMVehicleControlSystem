@@ -372,13 +372,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
-            string sender_ = sender.ToString();
+            bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
             InitializeCancelTokenResourece.Cancel();
             AGVC.AbortTask();
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 BuzzerPlayer.Alarm();
-                AlarmManager.AddAlarm(sender_ == "software_emo" ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
+                AlarmManager.AddAlarm( IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
                 ExecutingTask?.Abort();
                 ExecutingTask = null;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)

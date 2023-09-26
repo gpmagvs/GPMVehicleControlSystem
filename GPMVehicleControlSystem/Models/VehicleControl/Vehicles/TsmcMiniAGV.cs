@@ -49,7 +49,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } },
             {2,new clsBattery{ } },
         };
-
+        protected override void EMOPushedHandler(object? sender, EventArgs e)
+        {
+            base.EMOPushedHandler(sender, e);
+        }
+        protected internal override void SoftwareEMO()
+        {
+            base.SoftwareEMO();
+        }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             //初始化儀器
