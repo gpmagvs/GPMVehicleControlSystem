@@ -1,4 +1,5 @@
 ﻿using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
@@ -28,6 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public bool WebKeyboardMoveControl { get; set; } = false;
+        public bool CIMConn { get; set; } = false;
 
         /// <summary>
         /// 等待交握訊號時撥放交握音效
@@ -105,7 +107,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         };
 
         public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
-
+        public EQ_INTERACTION_FAIL_ACTION CstReadFailAction { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
+        public EQ_INTERACTION_FAIL_ACTION HandshakeFailWhenLoadFinish { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
     }
 
     public class clsInspectionAGVParams

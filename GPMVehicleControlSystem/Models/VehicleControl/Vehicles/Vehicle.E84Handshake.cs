@@ -120,6 +120,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal bool IsEQGOOn()
         {
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS)
+                return true;
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
                 return WagoDO.GetState(DO_ITEM.EMU_EQ_GO);
             return EQHsSignalStates[EQ_HSSIGNAL.EQ_GO];
@@ -454,7 +456,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (IsEQBusyOn())
                 {
                     await Task.Delay(1);
-                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN )
+                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
                     {
                         AGVAlarmWhenEQBusyFlag = true;
                         SetAGV_TR_REQ(false);

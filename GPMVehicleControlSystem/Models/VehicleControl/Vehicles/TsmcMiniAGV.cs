@@ -96,6 +96,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
 
         }
+        protected override async void ResetHandshakeSignals()
+        {
+            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
+            await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);
+            await WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_READY, false);
+        }
         public override async Task<bool> ResetMotor()
         {
             try

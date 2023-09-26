@@ -20,6 +20,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     /// </summary>
     public class LoadTask : TaskBase
     {
+        public enum EQ_INTERACTION_FAIL_ACTION
+        {
+            SET_AGV_NORMAL_STATUS,
+            SET_AGV_DOWN_STATUS
+        }
         public virtual bool CSTTrigger
         {
             get
@@ -175,7 +180,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
-            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS )
+            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 HSResult = await Agv.WaitEQBusyOFF(action);
                 if (!HSResult.hs_success)
@@ -183,6 +188,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.DirectionLighter.CloseAll();
                     return (false, HSResult.alarmCode);
                 }
+                if (action == ACTION_TYPE.Load)
+                    Agv.CSTReader.ValidCSTID = "";
             }
             Agv.DirectionLighter.CloseAll();
             back_to_secondary_flag = false;
@@ -271,7 +278,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    await Agv.AGVC.ExecuteTaskDownloaded( RunningTaskData);
+                    await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
                 }
 
             });
@@ -299,11 +306,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!HSResult.eqready)
                     {
                         AlarmManager.AddAlarm(HSResult.alarmCode, false);
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        if (Agv.Parameters.HandshakeFailWhenLoadFinish == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                        else
+                            Agv.Sub_Status = SUB_STATUS.IDLE;
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                         return;
                     }
                 }
+                (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = (false, AlarmCodes.Read_Cst_ID_Fail);
+
+                Task ReadCSTIDTask = Task.Factory.StartNew(async () =>
+                {
+                    CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
+                });
 
                 if (ForkLifter != null)
                 {
@@ -315,15 +331,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     }
                 }
-
-                (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
+                Task.WaitAll(new Task[] { ReadCSTIDTask });
                 if (!CstBarcodeCheckResult.confirm)
                 {
-                    AlarmManager.AddAlarm(CstBarcodeCheckResult.alarmCode, false);
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    AlarmManager.AddAlarm(CstBarcodeCheckResult.alarmCode, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
+                    if (Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                    else
+                    {
+                        Agv.Sub_Status = SUB_STATUS.IDLE;
+                    }
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 }
-                base.HandleAGVCActionSucceess();
+                else
+                {
+                    base.HandleAGVCActionSucceess();
+                }
             }
         }
 
@@ -371,8 +394,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
-            if (Agv.CSTReader.Data.data != RunningTaskData.CST.First().CST_ID)
+            await Task.Delay(1000);
+            var cst_id_expect = RunningTaskData.CST.First().CST_ID;
+            var reader_read_id = Agv.CSTReader.Data.data;
+            if (reader_read_id == "ERROR")
+                return (false, AlarmCodes.Read_Cst_ID_Fail);
+            if (reader_read_id != cst_id_expect)
             {
+                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {Agv.CSTReader.Data.data}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
             Agv.CSTReader.ValidCSTID = Agv.CSTReader.Data.data;
