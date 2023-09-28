@@ -21,6 +21,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public Dictionary<int, clsDIO_STATUS> EQDIOStates = new Dictionary<int, clsDIO_STATUS>();
         internal async Task<bool> CIMConnectionInitialize()
         {
+            if (!Parameters.CIMConn)
+                return false;
             return await Task.Factory.StartNew(() =>
             {
                 try

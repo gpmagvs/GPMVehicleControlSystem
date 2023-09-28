@@ -150,7 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="di_state"></param>
-        private void HandleLaserArea3SinalChange(object? sender, bool di_state)
+        protected virtual void HandleLaserArea3SinalChange(object? sender, bool di_state)
         {
             if (Operation_Mode == OPERATOR_MODE.MANUAL)
                 return;
@@ -278,7 +278,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private DateTime previousSoftEmoTime = DateTime.MinValue;
+        protected DateTime previousSoftEmoTime = DateTime.MinValue;
         private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, EventArgs e)
         {
 
@@ -372,13 +372,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
-            string sender_ = sender.ToString();
+            bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
             InitializeCancelTokenResourece.Cancel();
             AGVC.AbortTask();
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 BuzzerPlayer.Alarm();
-                AlarmManager.AddAlarm(sender_ == "software_emo" ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
+                AlarmManager.AddAlarm( IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
                 ExecutingTask?.Abort();
                 ExecutingTask = null;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)

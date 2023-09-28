@@ -7,6 +7,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsBattery : CarComponent
     {
+        /// <summary>
+        /// 電池位置(面向電池Port左/右)
+        /// </summary>
+        public enum BATTERY_LOCATION
+        {
+            RIGHT = 0,
+            LEFT = 1,
+        }
         public clsStateCheckSpec ChargingCheckSpec = new clsStateCheckSpec { };
 
         public clsStateCheckSpec DischargeCheckSpec = new clsStateCheckSpec

@@ -231,14 +231,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
-        public void ResetHandshakeSignals()
-        {
-            SetState(DO_ITEM.AGV_COMPT, false);
-            SetState(DO_ITEM.AGV_BUSY, false);
-            SetState(DO_ITEM.AGV_READY, false);
-            SetState(DO_ITEM.AGV_TR_REQ, false);
-            SetState(DO_ITEM.AGV_VALID, false);
-        }
+      
 
         public async Task<bool> ResetSaftyRelay()
         {

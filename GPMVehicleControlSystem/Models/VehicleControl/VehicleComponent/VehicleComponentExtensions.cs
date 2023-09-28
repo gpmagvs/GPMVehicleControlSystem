@@ -74,6 +74,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
             else if (code == 13)
                 Alarm_Code = AlarmCodes.Map_Recognition_Rate_Too_Low;
+            else if (code == 999)
+                Alarm_Code = AlarmCodes.Task_Path_Road_Closed;
             else
                 Alarm_Code = AlarmCodes.Motion_control_Wrong_Unknown_Code;
 

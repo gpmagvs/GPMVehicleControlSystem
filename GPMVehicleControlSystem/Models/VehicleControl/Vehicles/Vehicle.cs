@@ -145,9 +145,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Initializing:
                         return MAIN_STATUS.DOWN;
                     case SUB_STATUS.ALARM:
-                        return MAIN_STATUS.IDLE;
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            return MAIN_STATUS.RUN;
+                        else
+                            return MAIN_STATUS.IDLE;
                     case SUB_STATUS.WARNING:
-                        return MAIN_STATUS.IDLE;
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            return MAIN_STATUS.RUN;
+                        else
+                            return MAIN_STATUS.IDLE;
                     case SUB_STATUS.STOP:
                         return MAIN_STATUS.IDLE;
                     default:
@@ -604,7 +610,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await Laser.ModeSwitch(0);
         }
-        private CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
+        protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
         public async Task<(bool confirm, string message)> Initialize()
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
@@ -681,7 +687,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             AGVAlarmWhenEQBusyFlag = false;
             EQAlarmWhenEQBusyFlag = false;
-            WagoDO.ResetHandshakeSignals();
+            ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             var hardware_status_check_reuslt = CheckHardwareStatus();
             if (!hardware_status_check_reuslt.confirm)
@@ -698,6 +704,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
             return (true, "");
+        }
+
+        /// <summary>
+        /// Reset交握訊號
+        /// </summary>
+        protected virtual async void ResetHandshakeSignals()
+        {
+
+            await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
+            await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
+            await WagoDO.SetState(DO_ITEM.AGV_READY, false);
+            await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
         }
 
         public virtual (bool confirm, string message) CheckHardwareStatus()

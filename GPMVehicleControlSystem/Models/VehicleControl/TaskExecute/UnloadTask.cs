@@ -21,8 +21,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
         {
             if (!CSTTrigger)
+            {
+                var cst_id_expect = RunningTaskData.CST.First().CST_ID;
+                Agv.CSTReader.ValidCSTID = cst_id_expect;
                 return (true, AlarmCodes.None);
-            return await base.CSTBarcodeRead();
+            }
+            return await CSTBarcodeRead();
         }
 
         /// <summary>
@@ -58,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected override async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            var forkHeightChangeReuslt= await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.UP_, 0.3);
+            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.UP_, 0.3);
             return forkHeightChangeReuslt;
         }
     }
