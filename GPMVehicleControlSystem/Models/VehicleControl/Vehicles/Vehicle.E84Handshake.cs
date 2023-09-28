@@ -426,12 +426,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await Task.Delay(500);
                         isEQReadyOff = !IsEQReadyOn();
+                        if(!isEQReadyOff)
+                            LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
 
                     if (isEQBusyOn)
                     {
                         await Task.Delay(500);
                         isEQBusyOn = IsEQBusyOn();
+                        if (!isEQBusyOn)
+                            LOG.WARN($"PID_EQ_BUSY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
 
                     if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
@@ -439,6 +443,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         EQAlarmWhenEQBusyFlag = true;
                         AGVC.AbortTask(RESET_MODE.ABORT);
                         Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
+                        if (!IsEQGOOn())
+                            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                         throw new Exception("EQ Abnormal When AGV BUSY");
@@ -475,6 +481,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await Task.Delay(500);
                         isEQReadyOFF = !IsEQReadyOn();
+                        if (!isEQReadyOFF)
+                            LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!! [When EQ BUSY]");
                     }
 
                     if (isEQReadyOFF && Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN)//異常發生
@@ -483,6 +491,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         waitEQSignalCST.Cancel();
                         AGVC.AbortTask(RESET_MODE.ABORT);
                         Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
+                        if (!IsEQGOOn())
+                            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                         while (IsEQBusyOn())
