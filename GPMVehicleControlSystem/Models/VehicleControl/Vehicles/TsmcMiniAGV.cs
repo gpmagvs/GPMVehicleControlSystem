@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Polly.Caching;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
@@ -54,30 +55,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         };
         protected override async void HandleLaserArea3SinalChange(object? sender, bool di_state)
         {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL)
+                return;
+            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                return;
+
             base.HandleLaserArea3SinalChange(sender, di_state);
             bool isLaserTrigger = !di_state;
+
             if (isLaserTrigger)
             {
                 bool result_success;
-                await Task.Delay(1000);
-                LOG.WARN($"[TSMC Inspection AGV] Laser 第三段觸發,1秒後 Reset Motors");
-                result_success = await ResetMotor();
+                Stopwatch sw = Stopwatch.StartNew();
+                LOG.WARN($"[TSMC Inspection AGV] Laser 第三段觸發,等待障礙物清除後 Reset Motors");
+                while (!WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3))
+                {
+                    await Task.Delay(1);
+                    if (Sub_Status == SUB_STATUS.DOWN)
+                        return;
+                }
+                await Task.Delay(3000);
+                LOG.WARN($"[TSMC Inspection AGV] Reset Motors[After {sw.ElapsedMilliseconds} ms]");
+                result_success = await WagoDO.ResetSaftyRelay();
                 if (result_success)
                 {
-                    await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                    LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
+                    LOG.WARN($"[TSMC Inspection AGV] Safty relay reset done.");
+                    result_success = await ResetMotor();
+                    if (result_success)
+                    {
+                        await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
+                        AlarmManager.ClearAlarm();
+                    }
+                    else
+                    {
+                        LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
+                    }
                 }
                 else
-                {
-                    LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
-                }
+                    LOG.WARN($"[TSMC Inspection AGV] Safty relay reset 失敗");
             }
         }
         protected override void EMOPushedHandler(object? sender, EventArgs e)
         {
             InitializeCancelTokenResourece.Cancel();
             bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
-            bool IsTriggerByLaser3rd = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3) || WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+            bool IsTriggerByLaser3rd = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
             AlarmCodes alarm_code = IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : IsTriggerByLaser3rd ? AlarmCodes.EMS : AlarmCodes.EMO_Button;
 
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
@@ -302,7 +325,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 var lockDO = battery_no == 1 ? DO_ITEM.Battery_1_Lock : DO_ITEM.Battery_2_Lock;
                 var unlockDO = battery_no == 1 ? DO_ITEM.Battery_1_Unlock : DO_ITEM.Battery_2_Unlock;
                 await OffAllBatLockUnlockDO();
-                await WagoDO.SetState(unlockDO, false);
+                await Task.Delay(200);
                 if (lockBattery)
                     await WagoDO.SetState(lockDO, true);
                 else

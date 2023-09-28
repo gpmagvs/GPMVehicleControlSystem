@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 };
 
-                batInfos = batInfos.OrderBy(bat => bat.level).ToArray();
+                batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level < 70).ToArray();
 
                 foreach (var bat in batInfos)
                 {
@@ -96,14 +96,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
                     LOG.INFO($"電池-{bat.bat_no} 交換完成");
                 }
-                //if (TsmcMiniAGV.IsBattery1Exist)
-                //    await HandshakeWithExchanger(BATTERY_LOCATION.RIGHT, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
-                //await HandshakeWithExchanger(BATTERY_LOCATION.RIGHT, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                //LOG.INFO($"電池-1 交換完成");
-                //if (TsmcMiniAGV.IsBattery2Exist)
-                //    await HandshakeWithExchanger(BATTERY_LOCATION.LEFT, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
-                //await HandshakeWithExchanger(BATTERY_LOCATION.LEFT, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                //LOG.INFO($"電池-2 交換完成");
+
             }
             catch (HandshakeException ex)
             {
