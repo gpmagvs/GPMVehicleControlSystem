@@ -46,6 +46,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 while (!cancelFlashCts.IsCancellationRequested)
                 {
+                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        break;
                     foreach (var item in flash_dos)
                     {
                         await Agv.WagoDO.SetState(item, true);
