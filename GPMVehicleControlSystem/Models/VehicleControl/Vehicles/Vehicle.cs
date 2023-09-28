@@ -610,7 +610,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await Laser.ModeSwitch(0);
         }
-        private CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
+        protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
         public async Task<(bool confirm, string message)> Initialize()
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)

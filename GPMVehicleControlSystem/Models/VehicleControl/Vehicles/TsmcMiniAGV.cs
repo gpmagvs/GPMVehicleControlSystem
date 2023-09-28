@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
@@ -8,7 +9,9 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Polly.Caching;
+using RosSharp.RosBridgeClient.Actionlib;
 using System.Net.Sockets;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -49,9 +52,63 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } },
             {2,new clsBattery{ } },
         };
+        protected override async void HandleLaserArea3SinalChange(object? sender, bool di_state)
+        {
+            base.HandleLaserArea3SinalChange(sender, di_state);
+            bool isLaserTrigger = !di_state;
+            if (isLaserTrigger)
+            {
+                bool result_success;
+                await Task.Delay(1000);
+                LOG.WARN($"[TSMC Inspection AGV] Laser 第三段觸發,1秒後 Reset Motors");
+                result_success = await ResetMotor();
+                if (result_success)
+                {
+                    await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                    LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
+                }
+                else
+                {
+                    LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
+                }
+            }
+        }
         protected override void EMOPushedHandler(object? sender, EventArgs e)
         {
-            base.EMOPushedHandler(sender, e);
+            InitializeCancelTokenResourece.Cancel();
+            bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
+            bool IsTriggerByLaser3rd = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3) || WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+            AlarmCodes alarm_code = IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : IsTriggerByLaser3rd ? AlarmCodes.EMS : AlarmCodes.EMO_Button;
+
+            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+            {
+                BuzzerPlayer.Alarm();
+                AlarmManager.AddAlarm(alarm_code);
+                if (!IsTriggerByLaser3rd) //不是因為雷射第三段觸發
+                {
+                    AGVC.AbortTask();
+                    ExecutingTask?.Abort();
+                    ExecutingTask = null;
+                    if (Remote_Mode == REMOTE_MODE.ONLINE)
+                    {
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+                        DirectionLighter.CloseAll();
+                        DOSettingWhenEmoTrigger();
+                        IsInitialized = false;
+                    }
+                }
+            }
+
+            if (IsTriggerBySoftwareEMO)
+                previousSoftEmoTime = DateTime.Now;
+            if (!IsTriggerByLaser3rd)
+            {
+                AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                _Sub_Status = SUB_STATUS.DOWN;
+                StatusLighter.DOWN();
+            }
         }
         protected internal override void SoftwareEMO()
         {
