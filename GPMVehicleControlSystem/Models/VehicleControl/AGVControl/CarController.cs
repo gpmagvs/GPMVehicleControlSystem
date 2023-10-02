@@ -280,7 +280,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private async void CycleStop()
         {
-            await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
+            await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
             //AbortTask();
         }
 
@@ -331,7 +331,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,車控Action = {ActionStatus}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,Task ID={task_id}, 車控Action = {ActionStatus}");
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -342,7 +342,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,Task ID={task_id}, Result: {(res.confirm ? "OK" : "NG")}");
             return res.confirm;
         }
 
