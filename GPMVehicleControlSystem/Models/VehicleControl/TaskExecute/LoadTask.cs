@@ -109,8 +109,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (Agv.Parameters.PlayHandshakingMusic)
                     BuzzerPlayer.Handshaking();
-                else
-                    BuzzerPlayer.Action();
 
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
                 await Task.Delay(1500);

@@ -1,6 +1,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -94,6 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
@@ -118,7 +120,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (action == ACTION_TYPE.None)
                 {
-                    BuzzerPlayer.Move();
                     if (ForkLifter != null)
                     {
                         var forkGoHomeResult = await ForkLifter.ForkGoHome();
@@ -130,7 +131,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    BuzzerPlayer.Action();
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
                     {
                         var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
@@ -174,6 +174,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw ex;
             }
 
+        }
+
+        private void BuzzerPlayMusic(ACTION_TYPE action)
+        {
+            if (action == ACTION_TYPE.None)
+            {
+                BuzzerPlayer.Move();
+            }
+            else
+            {
+                BuzzerPlayer.Action();
+            }
         }
 
         protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
