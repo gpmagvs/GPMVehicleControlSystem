@@ -15,7 +15,6 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
@@ -24,7 +23,6 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -161,8 +159,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+
+        /// <summary>
+        /// 與 AGVS Reset Command 相關，若收到 AGVS 下 AGVS Reset
+        /// Command 給 AGV
+        ///⚫ AGVC 停下後為 true
+        ///⚫ 重新收到 0301 任務後為 fals
+        /// </summary>
         public bool AGV_Reset_Flag { get; internal set; }
 
+        internal bool CycleStopFlag = false;
         public MoveControl ManualController => AGVC.ManualController;
 
         public bool IsInitialized { get; internal set; }
@@ -611,13 +617,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Laser.ModeSwitch(0);
         }
         protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
+
+        /// <summary>
+        /// 初始化AGV
+        /// </summary>
+        /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
+
+
+            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD) && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
+            {
+                CSTReader.ValidCSTID = "";
+                LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+            }
+
             InitializeCancelTokenResourece = new CancellationTokenSource();
             return await Task.Run(async () =>
             {
+
                 StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 800);
                 try
                 {
@@ -769,7 +789,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             AGVC.OnSickOutputPathsDataUpdated += (sender, OutputPaths) => Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
+            AGVC.OnAGVCCycleStopRequesting += (sender,args) => CycleStopFlag = true;
         }
+
+
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
             Task.Factory.StartNew(() =>
@@ -876,7 +899,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         /// <summary>
-        /// 取得載物的類型 0:tray, 1:rack
+        /// 取得載物的類型 0:tray, 1:rack , 200:tray
         /// </summary>
         /// <returns></returns>
         protected virtual int GetCargoType()

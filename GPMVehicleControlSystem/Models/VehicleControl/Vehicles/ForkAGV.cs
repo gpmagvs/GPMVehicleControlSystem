@@ -218,7 +218,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
             if (rack_sensor2 | rack_sensor1)
                 return 1;
-            else return -1;
+            else return 0;
         }
         protected override async Task DOSettingWhenEmoTrigger()
         {

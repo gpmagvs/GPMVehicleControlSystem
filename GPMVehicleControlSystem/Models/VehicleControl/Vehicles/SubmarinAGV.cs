@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public SubmarinAGV() : base()
         {
         }
-     
+
         protected override List<CarComponent> CarComponents
         {
             get
@@ -35,6 +35,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return GetCargoStatus();
             }
+        }
+        protected override int GetCargoType()
+        {
+            return HasAnyCargoOnAGV() ? 200 : 0;
         }
         public override clsCSTReader CSTReader { get; set; } = new clsCSTReader();
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();

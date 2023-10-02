@@ -252,6 +252,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+            if (Agv.CycleStopFlag)
+            {
+                Agv.AGV_Reset_Flag = true;
+            }
             Agv.Sub_Status = SUB_STATUS.IDLE;
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);

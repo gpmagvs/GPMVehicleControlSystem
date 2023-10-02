@@ -303,7 +303,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
             TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
-            AGV_Reset_Flag = false;
+            AGV_Reset_Flag = CycleStopFlag = false;
 
             var action_type = taskDownloadData.Action_Type;
 
@@ -332,31 +332,42 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return returnCode;
         }
 
-        internal bool AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
+        internal async Task<bool> AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
         {
-            Task.Factory.StartNew(async () =>
+            try
             {
-                AGVC.ResetTask(mode);
+                bool result = await AGVC.ResetTask(mode);
                 if (mode == RESET_MODE.ABORT)
                 {
-                    if (!normal_state)
+                    _ = Task.Factory.StartNew(async () =>
                     {
-                        AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
-                        Sub_Status = SUB_STATUS.DOWN;
-                    }
-                    await Task.Delay(500);
-                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                    ExecutingTask.Abort();
+                        if (!normal_state)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
+                            Sub_Status = SUB_STATUS.DOWN;
+                        }
+                        await Task.Delay(500);
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        ExecutingTask.Abort();
+                    });
                 }
-                AGV_Reset_Flag = true;
-            });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+                if (mode == RESET_MODE.CYCLE_STOP)
+                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
+                else
+                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
+                return false;
+            }
 
-            return true;
         }
 
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            if (ExecuteAGVSTask == null) 
+            if (ExecuteAGVSTask == null)
                 return;
             if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask.action == ACTION_TYPE.None)
             {
@@ -376,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 BuzzerPlayer.Alarm();
-                AlarmManager.AddAlarm( IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
+                AlarmManager.AddAlarm(IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
                 ExecutingTask?.Abort();
                 ExecutingTask = null;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)

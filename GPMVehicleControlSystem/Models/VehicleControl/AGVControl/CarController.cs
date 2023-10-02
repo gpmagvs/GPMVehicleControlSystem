@@ -76,6 +76,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
+        public event EventHandler OnAGVCCycleStopRequesting;
         public Action<ActionStatus>? OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
@@ -269,31 +270,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.Initialize();
         }
 
-        internal void ResetTask(RESET_MODE mode)
+        internal async Task<bool> ResetTask(RESET_MODE mode)
         {
             if (mode == RESET_MODE.ABORT)
-                AbortTask();
+                return await AbortTask();
             else
-                CycleStop();
+                return await CycleStop();
 
         }
 
-        private async void CycleStop()
+        private async Task<bool> CycleStop()
         {
-            await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
+            OnAGVCCycleStopRequesting?.Invoke(this, EventArgs.Empty);
+            return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
             //AbortTask();
         }
 
         /// <summary>
         /// 發送空的任務messag已達緊停的效果
         /// </summary>
-        internal void AbortTask()
+        internal async Task<bool> AbortTask()
         {
             if (actionClient != null)
             {
                 actionClient.goal = new TaskCommandGoal();
                 actionClient.SendGoal();
             }
+            return true;
         }
 
         internal bool NavPathExpandedFlag { get; private set; } = false;
