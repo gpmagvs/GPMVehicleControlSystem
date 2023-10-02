@@ -278,9 +278,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         }
 
-        private void CycleStop()
+        private async void CycleStop()
         {
-            CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
+            await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
             //AbortTask();
         }
 
@@ -378,6 +378,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     LOG.Critical($"發送任務請求給車控但車控並未接收成功(重試-{retry})-AGVC Status={_ActionStatus}");
                     wait_agvc_execute_action_cts = new CancellationTokenSource();
                     wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(3));
+                    //嘗試取消當前任務
+                    actionClient.goal = new TaskCommandGoal();
+                    actionClient.SendGoal();
+                    //重啟Action Client
                     InitTaskCommandActionClient();
                     actionClient.goal = rosGoal;
                     actionClient.SendGoal();
