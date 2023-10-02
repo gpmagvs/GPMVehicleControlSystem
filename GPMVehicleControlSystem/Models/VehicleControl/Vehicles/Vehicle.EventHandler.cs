@@ -334,12 +334,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal bool AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
         {
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
-                return true;
             AGV_Reset_Flag = true;
             Task.Factory.StartNew(async () =>
             {
-                AGVC.AbortTask(mode);
+                AGVC.ResetTask(mode);
                 if (mode == RESET_MODE.ABORT)
                 {
                     if (!normal_state)

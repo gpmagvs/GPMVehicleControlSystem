@@ -269,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.Initialize();
         }
 
-        internal void AbortTask(RESET_MODE mode)
+        internal void ResetTask(RESET_MODE mode)
         {
             if (mode == RESET_MODE.ABORT)
                 AbortTask();
@@ -331,6 +331,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,車控Action = {ActionStatus}");
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -341,7 +342,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
             return res.confirm;
         }
 

@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             LOG.ERROR($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             IsCargoBiasTrigger = true;
-                            Agv.AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
+                            Agv.AGVC.ResetTask(RESET_MODE.CYCLE_STOP);
                             return;
                         }
                     }

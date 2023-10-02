@@ -441,7 +441,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
                     {
                         EQAlarmWhenEQBusyFlag = true;
-                        AGVC.AbortTask(RESET_MODE.ABORT);
+                        AGVC.ResetTask(RESET_MODE.ABORT);
                         Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
                         if (!IsEQGOOn())
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
@@ -489,7 +489,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         EQAlarmWhenEQBusyFlag = true;
                         waitEQSignalCST.Cancel();
-                        AGVC.AbortTask(RESET_MODE.ABORT);
+                        AGVC.ResetTask(RESET_MODE.ABORT);
                         Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
                         if (!IsEQGOOn())
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
