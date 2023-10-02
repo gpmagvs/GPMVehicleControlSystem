@@ -250,7 +250,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             ActionStatus = ActionStatus.NO_GOAL;
             if (actionClient != null)
             {
-                actionClient.Terminate();
+                try
+                {
+                    actionClient.CancelGoal();
+                    actionClient.Terminate();
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                }
                 actionClient.Dispose();
             }
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
@@ -353,23 +361,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             wait_agvc_execute_action_cts = new CancellationTokenSource();
-
             await Task.Delay(100);
-            wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(20));
+            wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(3));
+            int retry = 0;
             while (_ActionStatus != ActionStatus.ACTIVE)
             {
+                await Task.Delay(1);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
-                    LOG.Critical($"發送任務請求給車控但車控並未接收成功");
-                    AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
-                    return (false, $"發送任務請求給車控但車控並未接收成功");
+                    if (retry >= 5)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
+                        return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
+                    }
+                    retry++;
+                    LOG.Critical($"發送任務請求給車控但車控並未接收成功(重試-{retry})-AGVC Status={_ActionStatus}");
+                    wait_agvc_execute_action_cts = new CancellationTokenSource();
+                    wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(3));
+                    InitTaskCommandActionClient();
+                    actionClient.goal = rosGoal;
+                    actionClient.SendGoal();
+
                 }
-                await Task.Delay(1);
             }
             LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", false);
             return (true, "");
 
         }
+
 
         internal void Replan(clsTaskDownloadData taskDownloadData)
         {
