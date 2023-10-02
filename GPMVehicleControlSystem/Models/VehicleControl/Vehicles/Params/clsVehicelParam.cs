@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool CargoBiasDetectionWhenNormalMoving { get; set; } = true;
         /// <summary>
-        /// 
+        /// 空取空放
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public bool WebKeyboardMoveControl { get; set; } = false;

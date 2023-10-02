@@ -103,8 +103,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 Agv.ResetHSTimers();
                 await Task.Delay(1000);
-                if (!Agv.IsEQGOOn())
+
+                if (!Agv.IsEQGOOn() && !Agv.Parameters.LDULD_Task_No_Entry)
                     return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
+
                 if (Agv.Parameters.PlayHandshakingMusic)
                     BuzzerPlayer.Handshaking();
                 else
