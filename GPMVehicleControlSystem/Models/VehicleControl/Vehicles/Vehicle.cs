@@ -937,7 +937,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-
+        internal async void QueryVirtualID()
+        {
+            (bool result, string virtual_id, string message) results = await AGVS.TryGetVirtualID();
+            if (results.result)
+            {
+                CSTReader.ValidCSTID = results.virtual_id;
+            }
+            else
+            {
+                AlarmManager.AddAlarm(AlarmCodes.GetVirtualIDFail, true);
+            }
+        }
 
         internal async Task<(bool confirm, string message)> TrackingTagCenter(double finalAngle = 90)
         {

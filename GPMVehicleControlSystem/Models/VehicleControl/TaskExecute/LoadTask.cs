@@ -335,12 +335,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!CstBarcodeCheckResult.confirm)
                 {
                     AlarmManager.AddAlarm(CstBarcodeCheckResult.alarmCode, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
+                    Agv.QueryVirtualID();
                     if (Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                     else
                     {
                         Agv.Sub_Status = SUB_STATUS.IDLE;
                     }
+                    await Task.Delay(1000);
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 }
                 else
