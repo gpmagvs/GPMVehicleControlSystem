@@ -60,6 +60,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             int retry_cnt = 0;
             while (response == null)
             {
+                await Task.Delay(200);
+                await AbortCSTReader();
                 response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
                       new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" }, timeout: 5000);
                 retry_cnt++;
