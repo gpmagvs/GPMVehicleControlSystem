@@ -9,6 +9,7 @@ using Modbus.Device;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net.Sockets;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -183,13 +184,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
+
+            WatchE84EQGOSignalWhenHSStart();
+
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
             CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
             Task wait_eq_UL_req_ON = new Task(() =>
             {
                 while (!IsULReqOn(action))
                 {
-                    if (waitEQSignalCST.IsCancellationRequested)
+                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -198,7 +202,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsEQReadyOn())
                 {
-                    if (waitEQReadyOnCST.IsCancellationRequested)
+                    if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -400,7 +404,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         #endregion
+        private async Task WatchE84EQGOSignalWhenHSStart()
+        {
+            _ = Task.Factory.StartNew(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(1);
+                    if (Sub_Status == SUB_STATUS.DOWN | Sub_Status == SUB_STATUS.IDLE)
+                    {
+                        return;
+                    }
 
+                    bool isEQGoOff = !IsEQGOOn();
+
+                    if (isEQGoOff)
+                    {
+                        await Task.Delay(500);
+                        isEQGoOff = !IsEQGOOn();
+                        if (!isEQGoOff)
+                            LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
+                    }
+                    if (isEQGoOff)//AGV作動中發生EQ異常
+                    {
+                        AGVC.ResetTask(RESET_MODE.ABORT);
+                        Sub_Status = SUB_STATUS.DOWN;
+                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    }
+                }
+            });
+        }
         private async Task WatchE84AlarmWhenAGVBUSY()
         {
             AGVAlarmWhenEQBusyFlag = false;
@@ -426,7 +460,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await Task.Delay(500);
                         isEQReadyOff = !IsEQReadyOn();
-                        if(!isEQReadyOff)
+                        if (!isEQReadyOff)
                             LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
 
@@ -442,7 +476,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         EQAlarmWhenEQBusyFlag = true;
                         AGVC.ResetTask(RESET_MODE.ABORT);
-                        Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
+                        Sub_Status = SUB_STATUS.DOWN;
                         if (!IsEQGOOn())
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY, false);

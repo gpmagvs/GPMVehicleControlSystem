@@ -186,6 +186,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!HSResult.hs_success)
                 {
                     Agv.DirectionLighter.CloseAll();
+                    AlarmManager.AddAlarm(HSResult.alarmCode, false);
                     return (false, HSResult.alarmCode);
                 }
                 if (action == ACTION_TYPE.Load)
@@ -241,8 +242,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, CstExistCheckResult.alarmCode);
             if (TaskCancelCTS.IsCancellationRequested)
                 return (false, AlarmCodes.None);
-
-
 
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
