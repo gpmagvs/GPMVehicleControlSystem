@@ -281,7 +281,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private async Task<bool> CycleStop()
         {
-            OnAGVCCycleStopRequesting?.Invoke(this, EventArgs.Empty);
             return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
             //AbortTask();
         }

@@ -200,6 +200,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
             {
+                if (Agv.AGVSResetCmdFlag)
+                {
+                    Agv.AGV_Reset_Flag = true;
+                }
                 AGVCActionStatusChaged -= HandleAGVActionChanged;
                 return;
             }
@@ -223,6 +227,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 if (status == ActionStatus.SUCCEEDED)
                 {
+                    if (Agv.AGVSResetCmdFlag)
+                    {
+                        Agv.AGV_Reset_Flag = true;
+                    }
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
 
 
@@ -252,10 +260,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            if (Agv.CycleStopFlag)
-            {
-                Agv.AGV_Reset_Flag = true;
-            }
             Agv.Sub_Status = SUB_STATUS.IDLE;
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);

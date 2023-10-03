@@ -303,37 +303,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
             TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
-            AGV_Reset_Flag = CycleStopFlag = false;
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
 
             var action_type = taskDownloadData.Action_Type;
 
             if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
 
-            //if (BarcodeReader.CurrentTag == 0) //不在Tag上
-            //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_NOT_ON_TAG;
             if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
-            //if (action_type == ACTION_TYPE.Load | action_type == ACTION_TYPE.Unload | action_type == ACTION_TYPE.Park | action_type == ACTION_TYPE.Charge | action_type == ACTION_TYPE.LoadAndPark)
-            //{
-            //    if (!WorkStations.Stations.TryGetValue(taskDownloadData.Destination, out clsWorkStationData workstation_data))
-            //    {
-            //        returnCode = TASK_DOWNLOAD_RETURN_CODES.WORKSTATION_NOT_SETTING_YET;
-            //    }
-            //    else
-            //    {
-
-            //    }
-            //}
-
+       
             LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
             return returnCode;
         }
 
         internal async Task<bool> AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
         {
+            AGVSResetCmdFlag = true;
             try
             {
                 bool result = await AGVC.ResetTask(mode);

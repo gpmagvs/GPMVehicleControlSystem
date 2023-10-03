@@ -168,7 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public bool AGV_Reset_Flag { get; internal set; }
 
-        internal bool CycleStopFlag = false;
+        internal bool AGVSResetCmdFlag = false;
         public MoveControl ManualController => AGVC.ManualController;
 
         public bool IsInitialized { get; internal set; }
@@ -789,7 +789,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             AGVC.OnSickOutputPathsDataUpdated += (sender, OutputPaths) => Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
-            AGVC.OnAGVCCycleStopRequesting += (sender,args) => CycleStopFlag = true;
         }
 
 
