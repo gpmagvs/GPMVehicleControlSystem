@@ -427,14 +427,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     if (isEQGoOff)//AGV作動中發生EQ異常
                     {
+                        StopAllHandshakeTimer();
                         AGVC.ResetTask(RESET_MODE.ABORT);
                         Sub_Status = SUB_STATUS.DOWN;
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+
                     }
                 }
             });
         }
+
+        internal void StopAllHandshakeTimer()
+        {
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+        }
+
         private async Task WatchE84AlarmWhenAGVBUSY()
         {
             AGVAlarmWhenEQBusyFlag = false;
@@ -451,7 +463,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         SetAGV_TR_REQ(false);
                         LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-                        throw new Exception("AGV Abnormal When AGV BUSY");
+                        AGVC.ResetTask(RESET_MODE.ABORT);
+                        return;
                     }
                     bool isEQReadyOff = !IsEQReadyOn();
                     bool isEQBusyOn = IsEQBusyOn();
@@ -481,7 +494,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        throw new Exception("EQ Abnormal When AGV BUSY");
                     }
                 }
             });

@@ -191,12 +191,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (action == ACTION_TYPE.Load)
                     Agv.CSTReader.ValidCSTID = "";
+
             }
+
             Agv.DirectionLighter.CloseAll();
             back_to_secondary_flag = false;
             await Task.Delay(1000);
 
-            if (ForkLifter != null)
+            if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
             {
                 bool arm_move_Done = false;
                 (bool confirm, string message) armMoveing = (false, "等待DO輸出");
@@ -243,6 +245,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (TaskCancelCTS.IsCancellationRequested)
                 return (false, AlarmCodes.None);
 
+            if (action == ACTION_TYPE.Unload && Agv.HasAnyCargoOnAGV())
+                Agv.CSTReader.ValidCSTID = "TrayUnknow";
+
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
@@ -257,9 +262,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                            new clsMapPoint()
                            {
                                 Point_ID =Agv.lastVisitedMapPoint.TagNumber,
-                                 X = Agv.lastVisitedMapPoint.X,
-                                 Y=Agv.lastVisitedMapPoint.Y,
-                                  Theta = Agv.Navigation.Angle,
+                                X = Agv.lastVisitedMapPoint.X,
+                                Y=Agv.lastVisitedMapPoint.Y,
+                                Theta = Agv.Navigation.Angle,
                            }
                          }
                 };
@@ -267,7 +272,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 //await Agv.Laser.FrontBackLasersEnable(false, true);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
@@ -313,14 +317,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return;
                     }
                 }
-                (bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = (false, AlarmCodes.Read_Cst_ID_Fail);
 
-                Task ReadCSTIDTask = Task.Factory.StartNew(async () =>
-                {
-                    CstBarcodeCheckResult = await CSTBarcodeReadAfterAction();
-                });
-
-                if (ForkLifter != null)
+                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
                     if (!ForkGoHomeActionResult.confirm)
@@ -330,17 +328,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     }
                 }
-                Task.WaitAll(new Task[] { ReadCSTIDTask });
-                if (!CstBarcodeCheckResult.confirm)
+                (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
+                if (!CstBarcodeCheckResult.success)
                 {
-                    AlarmManager.AddAlarm(CstBarcodeCheckResult.alarmCode, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
-                    Agv.QueryVirtualID();
-                    if (Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
-                    else
-                    {
-                        Agv.Sub_Status = SUB_STATUS.IDLE;
-                    }
+                    AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
+                    AlarmManager.AddAlarm(cst_read_fail_alarm, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
+
+                    //向派車詢問虛擬ID
+                    //cst 類型
+                    CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
+                    //詢問原因
+                    clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE query_cause = cst_read_fail_alarm == AlarmCodes.Cst_ID_Not_Match ? clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH : clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL;
+                    await Agv.QueryVirtualID(query_cause, cst_type);
+                    Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
                     await Task.Delay(1000);
                     Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 }
@@ -390,16 +390,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
         {
-            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader();
+            (bool request_success, bool action_done) result = Agv.AGVC.TriggerCSTReader().Result;
             if (!result.request_success | !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
-            await Task.Delay(1000);
+            CancellationTokenSource cts = new CancellationTokenSource();
+            cts.CancelAfter(3000);
+            while (Agv.CSTReader.Data.data == "")
+            {
+                await Task.Delay(1);
+                if (cts.IsCancellationRequested)
+                {
+                    return (false, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID);
+                }
+            }
             var cst_id_expect = RunningTaskData.CST.First().CST_ID;
             var reader_read_id = Agv.CSTReader.Data.data;
             if (reader_read_id == "ERROR")
+            {
+                LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
+            }
             if (reader_read_id != cst_id_expect)
             {
                 LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {Agv.CSTReader.Data.data}");

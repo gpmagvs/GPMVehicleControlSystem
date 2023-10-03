@@ -45,6 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             else
             {
+                LOG.INFO("Stop CST Reader Success.");
                 return (true, true);
             }
         }
@@ -54,11 +55,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
-            CSTReaderCommandResponse? response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
-                new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
-
+            LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK");
+            CSTReaderCommandResponse? response = null;
+            int retry_cnt = 0;
+            while (response == null)
+            {
+                response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
+                      new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" }, timeout: 5000);
+                retry_cnt++;
+                if (retry_cnt > 5)
+                {
+                    break;
+                }
+            }
             if (response == null)
             {
+                AbortCSTReader();
                 LOG.INFO("Trigger CST Reader fail. CSTReader no reply");
                 OnCSTReaderActionDone?.Invoke(this, "");
                 return (false, false);
@@ -74,7 +86,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.");
                 CSTActionDone = false;
                 CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-
                 Task TK = new Task(async () =>
                 {
                     while (!CSTActionDone)

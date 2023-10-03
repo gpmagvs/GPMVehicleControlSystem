@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = cst_id_expect;
                 return (true, AlarmCodes.None);
             }
-            return await CSTBarcodeRead();
+            return  CSTBarcodeRead().Result;
         }
 
         /// <summary>

@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Net.Sockets;
+using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -393,15 +394,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             //gen alarm codes 
 
-            AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-            }).ToArray();
-
+            AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS_WebAPI();
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
@@ -427,6 +420,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()
+        {
+            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
+        }
+        private AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] GetAlarmCodesUserReportToAGVS_WebAPI()
+        {
+            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
+        }
+
         /// <summary>
         /// 生成支援TCPIP通訊的RunningStatus Model
         /// </summary>
@@ -443,14 +459,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             //gen alarm codes 
 
-            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-            }).ToArray();
+            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS();
 
             try
             {
@@ -476,6 +485,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return new RunningStatus();
             }
         }
+
 
         public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
@@ -637,7 +647,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece = new CancellationTokenSource();
             return await Task.Run(async () =>
             {
-
+                StopAllHandshakeTimer();
                 StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 800);
                 try
                 {
@@ -937,15 +947,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal async void QueryVirtualID()
+        internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
         {
-            (bool result, string virtual_id, string message) results = await AGVS.TryGetVirtualID();
+            LOG.INFO($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");
+            (bool result, string virtual_id, string message) results = await AGVS.TryGetVirtualID(QueryType, CstType);
             if (results.result)
             {
                 CSTReader.ValidCSTID = results.virtual_id;
+                LOG.INFO($"Query Virtual ID From AGVS Success, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Virtual ID={CSTReader.ValidCSTID}");
+
             }
             else
             {
+                LOG.WARN($"Query Virtual ID From AGVS Fail, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Message={results.message}");
                 AlarmManager.AddAlarm(AlarmCodes.GetVirtualIDFail, true);
             }
         }

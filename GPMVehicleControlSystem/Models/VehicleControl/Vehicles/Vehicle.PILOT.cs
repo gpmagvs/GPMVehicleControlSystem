@@ -8,6 +8,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -38,6 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
 
+            AutoClearOldCstReadFailAlarms();
             Sub_Status = SUB_STATUS.RUN;
             Laser.AllLaserActive();
             WriteTaskNameToFile(taskDownloadData.Task_Name);
@@ -115,6 +117,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 }
             });
+        }
+
+        private void AutoClearOldCstReadFailAlarms()
+        {
+            if (AlarmManager.CurrentAlarms.Count == 0)
+                return;
+            var alarm_codes = new AlarmCodes[] { AlarmCodes.Cst_ID_Not_Match, AlarmCodes.Read_Cst_ID_Fail, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID };
+            foreach (var alarm_code in alarm_codes)
+            {
+                var _alarm_key_pair = AlarmManager.CurrentAlarms.FirstOrDefault(a => a.Value.EAlarmCode == alarm_code);
+                if (_alarm_key_pair.Value != null)
+                    AlarmManager.ClearAlarm(alarm_code);
+
+            }
         }
 
         private bool IsReplanTask(clsTaskDownloadData taskDownloadData)
