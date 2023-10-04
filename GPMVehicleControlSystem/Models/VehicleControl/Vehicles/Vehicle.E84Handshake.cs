@@ -430,18 +430,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!isEQGoOff)
                             LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
-                    if (isEQGoOff)//AGV作動中發生EQ異常
+                    if (isEQGoOff)
                     {
                         if (Sub_Status == SUB_STATUS.DOWN)
                             break;
 
-                        AGVC.ResetTask(RESET_MODE.ABORT);
-                        Sub_Status = SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
-                        await Task.Delay(500);
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        StopAllHandshakeTimer();
-                        break;
+                        if (Sub_Status == SUB_STATUS.RUN)
+                        {
+                            AGVC.ResetTask(RESET_MODE.ABORT);
+                            Sub_Status = SUB_STATUS.DOWN;
+                            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
+                            await Task.Delay(500);
+                            await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                            StopAllHandshakeTimer();
+                            break;
+                        }
                     }
 
                 }
@@ -468,7 +471,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     await Task.Delay(1);
                     ////AGV作動中發生AGV異常
-                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+                    if (Sub_Status == SUB_STATUS.DOWN)
                     {
                         SetAGV_TR_REQ(false);
                         LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
@@ -506,6 +509,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     }
                 }
+
             });
         }
         private async Task WatchE84EQAlarmWhenEQBUSY(CancellationTokenSource waitEQSignalCST)

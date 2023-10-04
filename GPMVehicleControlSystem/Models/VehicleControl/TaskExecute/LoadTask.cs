@@ -107,16 +107,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
 
                 Agv.ResetHSTimers();
-                await Task.Delay(1000);
+                await Task.Delay(700);
+                if (!Agv.Parameters.LDULD_Task_No_Entry)
+                {
+                    if (!Agv.IsEQGOOn())
+                        return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
 
-                if (!Agv.IsEQGOOn() && !Agv.Parameters.LDULD_Task_No_Entry)
-                    return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
+                    if (Agv.WagoDI.GetState(DI_ITEM.EQ_BUSY) | Agv.WagoDI.GetState(DI_ITEM.EQ_L_REQ) | Agv.WagoDI.GetState(DI_ITEM.EQ_U_REQ) | Agv.WagoDI.GetState(DI_ITEM.EQ_READY))
+                        return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);
+                }
 
                 if (Agv.Parameters.PlayHandshakingMusic)
                     BuzzerPlayer.Handshaking();
 
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
-                await Task.Delay(1500);
+                await Task.Delay(1000);
                 if (!HSResult.eqready)
                 {
                     return (false, HSResult.alarmCode);
@@ -332,8 +337,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
                         //詢問原因
                         clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE query_cause = cst_read_fail_alarm == AlarmCodes.Cst_ID_Not_Match ? clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH : clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL;
-                        if (query_cause == clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH && Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
-                            await Agv.QueryVirtualID(query_cause, cst_type);
+
+                        switch (query_cause)
+                        {
+                            case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL:
+                                await Agv.QueryVirtualID(query_cause, cst_type);
+                                break;
+                            case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH:
+                                if (Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
+                                    await Agv.QueryVirtualID(query_cause, cst_type);
+                                break;
+                            default:
+                                break;
+                        }
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
                         await Task.Delay(1000);
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
