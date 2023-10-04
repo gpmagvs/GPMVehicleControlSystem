@@ -20,6 +20,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     /// </summary>
     public class LoadTask : TaskBase
     {
+        public enum CST_ID_NO_MATCH_ACTION
+        {
+            REPORT_READER_RESULT,
+            QUERY_VIRTUAL_ID
+        }
         public enum EQ_INTERACTION_FAIL_ACTION
         {
             SET_AGV_NORMAL_STATUS,
@@ -251,25 +256,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //下Homing Trajectory 任務讓AGV退出
             await Task.Factory.StartNew(async () =>
             {
-                clsTaskDownloadData NoEntryEQTask = new clsTaskDownloadData()
-                {
-                    Action_Type = ACTION_TYPE.None,
-                    Destination = Agv.Navigation.LastVisitedTag,
-                    Task_Name = RunningTaskData.Task_Name,
-                    Task_Sequence = RunningTaskData.Task_Sequence,
-                    Trajectory = new clsMapPoint[1]
-                         {
-                           new clsMapPoint()
-                           {
-                                Point_ID =Agv.lastVisitedMapPoint.TagNumber,
-                                X = Agv.lastVisitedMapPoint.X,
-                                Y=Agv.lastVisitedMapPoint.Y,
-                                Theta = Agv.Navigation.Angle,
-                           }
-                         }
-                };
+
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                    return;
+
                 Agv.DirectionLighter.Backward(delay: 800);
-                //await Agv.Laser.FrontBackLasersEnable(false, true);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
@@ -292,63 +283,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
         {
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            _ = Task.Factory.StartNew(async () =>
             {
-                AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
-                return;
-            }
-            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
-
-            if (status == ActionStatus.SUCCEEDED)
-            {
-                AGVCActionStatusChaged = null;
-                back_to_secondary_flag = true;
-                if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
-                    (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
-                    if (!HSResult.eqready)
+                    AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
+                    return;
+                }
+                LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
+
+                if (status == ActionStatus.SUCCEEDED)
+                {
+                    AGVCActionStatusChaged = null;
+                    back_to_secondary_flag = true;
+                    if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
                     {
-                        AlarmManager.AddAlarm(HSResult.alarmCode, false);
-                        if (Agv.Parameters.HandshakeFailWhenLoadFinish == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                        (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
+                        if (!HSResult.eqready)
+                        {
+                            AlarmManager.AddAlarm(HSResult.alarmCode, false);
+                            if (Agv.Parameters.HandshakeFailWhenLoadFinish == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                                Agv.Sub_Status = SUB_STATUS.DOWN;
+                            else
+                                Agv.Sub_Status = SUB_STATUS.IDLE;
+                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                            return;
+                        }
+                    }
+
+                    if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+                    {
+                        var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                        if (!ForkGoHomeActionResult.confirm)
+                        {
+                            AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                             Agv.Sub_Status = SUB_STATUS.DOWN;
-                        else
-                            Agv.Sub_Status = SUB_STATUS.IDLE;
-                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        return;
+                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        }
                     }
-                }
-
-                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
-                {
-                    var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
-                    if (!ForkGoHomeActionResult.confirm)
+                    (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
+                    if (!CstBarcodeCheckResult.success)
                     {
-                        AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
+                        AlarmManager.AddAlarm(cst_read_fail_alarm, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
+
+                        //向派車詢問虛擬ID
+                        //cst 類型
+                        CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
+                        //詢問原因
+                        clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE query_cause = cst_read_fail_alarm == AlarmCodes.Cst_ID_Not_Match ? clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH : clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL;
+                        if (query_cause == clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH && Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
+                            await Agv.QueryVirtualID(query_cause, cst_type);
+                        Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
+                        await Task.Delay(1000);
                         Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     }
+                    else
+                    {
+                        base.HandleAGVCActionSucceess();
+                    }
                 }
-                (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
-                if (!CstBarcodeCheckResult.success)
-                {
-                    AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
-                    AlarmManager.AddAlarm(cst_read_fail_alarm, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
 
-                    //向派車詢問虛擬ID
-                    //cst 類型
-                    CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
-                    //詢問原因
-                    clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE query_cause = cst_read_fail_alarm == AlarmCodes.Cst_ID_Not_Match ? clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH : clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL;
-                    await Agv.QueryVirtualID(query_cause, cst_type);
-                    Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
-                    await Task.Delay(1000);
-                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                }
-                else
-                {
-                    base.HandleAGVCActionSucceess();
-                }
-            }
+            });
         }
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
@@ -390,7 +386,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
         {
-            (bool request_success, bool action_done) result = Agv.AGVC.TriggerCSTReader().Result;
+            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader();
             if (!result.request_success | !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

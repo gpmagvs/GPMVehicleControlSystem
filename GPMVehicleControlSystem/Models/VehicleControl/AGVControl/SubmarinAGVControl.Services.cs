@@ -1,5 +1,7 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
+using RosSharp.RosBridgeClient.MessageTypes.Tf2;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -19,13 +21,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         private bool CSTReaderDoneActionHandle(CSTReaderCommandRequest request, out CSTReaderCommandResponse response)
         {
+            LOG.TRACE($"CST Reader Action done,  {request.ToString()}");
             CSTActionResult = request.command;
-
             response = new CSTReaderCommandResponse
             {
                 confirm = true
             };
             CSTActionDone = true;
+            
             return true;
         }
         protected virtual string cst_reader_command { get; set; } = "read_try";
@@ -36,48 +39,63 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <exception cref="NotImplementedException"></exception>
         public override async Task<(bool request_success, bool action_done)> AbortCSTReader()
         {
-            CSTReaderCommandResponse? response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
+            rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", StopCmdAckHandler,
               new CSTReaderCommandRequest() { command = "stop", model = "FORK" });
-            if (response == null)
-            {
-                LOG.INFO("Stop CST Reader fail. CSTReader no reply");
-                return (false, false);
-            }
-            else
-            {
-                LOG.INFO("Stop CST Reader Success.");
-                return (true, true);
-            }
+            return (true, true);
         }
+
+        private void StopCmdAckHandler(CSTReaderCommandResponse t)
+        {
+            LOG.INFO($"Stop CST Reader Cmd, CST READER ACK = {t.ToJson()}.");
+        }
+
+        CSTReaderCommandResponse? cst_reader_confirm_ack = null;
+        ManualResetEvent wait_cst_ack_MRE = new ManualResetEvent(false);
         /// <summary>
         /// 請求CST拍照
         /// </summary>
         /// <returns></returns>
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
-            LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK");
-            CSTReaderCommandResponse? response = null;
+            Thread.Sleep(1);
+            wait_cst_ack_MRE = new ManualResetEvent(false);
+            cst_reader_confirm_ack = null;
             int retry_cnt = 0;
-            while (response == null)
+            while (cst_reader_confirm_ack == null)
             {
-                await Task.Delay(200);
-                await AbortCSTReader();
-                response = await rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action",
-                      new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" }, timeout: 5000);
-                retry_cnt++;
-                if (retry_cnt > 5)
+                Thread.Sleep(1);
+                await Task.Run(() =>
+                {
+                    LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK");
+                    var id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
+                    LOG.TRACE($"Call Service /CSTReader_action done. id={id} ");
+                });
+
+                LOG.TRACE($"Call Service /CSTReader_action, command ,WaitOne");
+                wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(3));
+                if (cst_reader_confirm_ack != null)
                 {
                     break;
                 }
+                else
+                {
+                    await  AbortCSTReader();
+                    LOG.ERROR($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
+                    wait_cst_ack_MRE.Reset();
+                    retry_cnt++;
+                    if (retry_cnt > 3)
+                    {
+                        break;
+                    }
+                }
             }
-            if (response == null)
+            if (cst_reader_confirm_ack == null)
             {
-                AbortCSTReader();
                 LOG.INFO("Trigger CST Reader fail. CSTReader no reply");
                 OnCSTReaderActionDone?.Invoke(this, "");
                 return (false, false);
             }
-            if (!response.confirm)
+            if (!cst_reader_confirm_ack.confirm)
             {
                 LOG.INFO("Trigger CST Reader fail. Confirm=False");
                 OnCSTReaderActionDone?.Invoke(this, "");
@@ -87,7 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.");
                 CSTActionDone = false;
-                CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
                 Task TK = new Task(async () =>
                 {
                     while (!CSTActionDone)
@@ -119,6 +137,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
 
             }
+        }
+
+        private void CstReaderConfirmedAckHandler(CSTReaderCommandResponse ack)
+        {
+            cst_reader_confirm_ack = ack;
+            LOG.TRACE($"Service /CSTReader_action, ACK = {ack.ToJson()} ");
+            wait_cst_ack_MRE.Set();
         }
     }
 }

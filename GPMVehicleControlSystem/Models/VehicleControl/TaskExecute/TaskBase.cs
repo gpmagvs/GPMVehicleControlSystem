@@ -142,6 +142,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
+
+
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                    return AlarmCodes.AGV_State_Cant_do_this_Action;
+
                 AGVCActionStatusChaged += HandleAGVActionChanged;
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
@@ -197,65 +202,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal bool IsCargoBiasTrigger = false;
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
-            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            _ = Task.Factory.StartNew(async () =>
             {
-                if (Agv.AGVSResetCmdFlag)
-                {
-                    Agv.AGV_Reset_Flag = true;
-                }
-                AGVCActionStatusChaged -= HandleAGVActionChanged;
-                return;
-            }
-
-            if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
-            {
-                AGVCActionStatusChaged -= HandleAGVActionChanged;
-                LOG.ERROR($"存在貨物傾倒異常");
-                IsCargoBiasTrigger = IsCargoBiasDetecting = false;
-                AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
-                Agv.Sub_Status = SUB_STATUS.DOWN;
-                await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                return;
-            }
-
-            if (status == ActionStatus.ACTIVE)
-            {
-                //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
-            }
-            else
-            {
-                if (status == ActionStatus.SUCCEEDED)
+                LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
                     if (Agv.AGVSResetCmdFlag)
                     {
                         Agv.AGV_Reset_Flag = true;
                     }
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
-
-
-                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                    {
-                        return;
-                    }
-                    LOG.INFO($"AGVC Action Status is success,Do Work defined!");
-
-                    Agv.DirectionLighter.CloseAll();
-                    var result = await HandleAGVCActionSucceess();
-                    if (!result.success)
-                    {
-                        AlarmManager.AddAlarm(result.alarmCode, false);
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
-                    }
-
+                    return;
                 }
-                if (status == ActionStatus.ABORTED)
+
+                if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
                 {
                     AGVCActionStatusChaged -= HandleAGVActionChanged;
+                    LOG.ERROR($"存在貨物傾倒異常");
+                    IsCargoBiasTrigger = IsCargoBiasDetecting = false;
+                    AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
                     Agv.Sub_Status = SUB_STATUS.DOWN;
-                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
+                    await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    return;
                 }
-            }
+
+                if (status == ActionStatus.ACTIVE)
+                {
+                    //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+                }
+                else
+                {
+                    if (status == ActionStatus.SUCCEEDED)
+                    {
+                        if (Agv.AGVSResetCmdFlag)
+                        {
+                            Agv.AGV_Reset_Flag = true;
+                        }
+                        AGVCActionStatusChaged -= HandleAGVActionChanged;
+
+
+                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        {
+                            return;
+                        }
+                        LOG.INFO($"AGVC Action Status is success,Do Work defined!");
+
+                        Agv.DirectionLighter.CloseAll();
+                        var result = await HandleAGVCActionSucceess();
+                        if (!result.success)
+                        {
+                            AlarmManager.AddAlarm(result.alarmCode, false);
+                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                        }
+
+                    }
+                    if (status == ActionStatus.ABORTED)
+                    {
+                        AGVCActionStatusChaged -= HandleAGVActionChanged;
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
+                    }
+                }
+            });
         }
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()

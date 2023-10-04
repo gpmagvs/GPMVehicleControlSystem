@@ -16,6 +16,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        public enum HANDSHAKE_AGV_TIMEOUT
+        {
+            Normal,
+            T1_TR_REQ_ON,
+            T2_AGV_BUSY_ON,
+            T3_AGV_BUSY_OFF,
+            T4_AGV_READY_OFF,
+            T5_AGV_BUSY_2,
+            T6_AGV_COMPT_OFF
+        }
         public enum HANDSHAKE_EQ_TIMEOUT
         {
             TA1_Wait_L_U_REQ_ON,
@@ -411,11 +421,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (true)
                 {
                     await Task.Delay(1);
-                    if (Sub_Status == SUB_STATUS.DOWN | Sub_Status == SUB_STATUS.IDLE)
-                    {
-                        return;
-                    }
-
                     bool isEQGoOff = !IsEQGOOn();
 
                     if (isEQGoOff)
@@ -427,13 +432,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     if (isEQGoOff)//AGV作動中發生EQ異常
                     {
-                        StopAllHandshakeTimer();
+                        if (Sub_Status == SUB_STATUS.DOWN)
+                            break;
+
                         AGVC.ResetTask(RESET_MODE.ABORT);
                         Sub_Status = SUB_STATUS.DOWN;
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
+                        await Task.Delay(500);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-
+                        StopAllHandshakeTimer();
+                        break;
                     }
+
                 }
             });
         }
@@ -625,5 +635,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
+
+        public async Task EQTimeoutDetectionTest(HANDSHAKE_AGV_TIMEOUT test_item)
+        {
+            await Task.Delay(1).ContinueWith((t) =>
+            {
+                SetAGVVALID(true);
+
+            });
+        }
+
     }
 }

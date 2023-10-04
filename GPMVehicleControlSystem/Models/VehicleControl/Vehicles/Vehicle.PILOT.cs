@@ -39,7 +39,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
 
-            AutoClearOldCstReadFailAlarms();
+            //AutoClearOldCstReadFailAlarms();
+            AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
             Laser.AllLaserActive();
             WriteTaskNameToFile(taskDownloadData.Task_Name);
@@ -129,7 +130,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 var _alarm_key_pair = AlarmManager.CurrentAlarms.FirstOrDefault(a => a.Value.EAlarmCode == alarm_code);
                 if (_alarm_key_pair.Value != null)
                     AlarmManager.ClearAlarm(alarm_code);
-
             }
         }
 

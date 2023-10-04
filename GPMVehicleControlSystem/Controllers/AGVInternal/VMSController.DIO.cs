@@ -62,6 +62,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
+        [HttpGet("EQTimeoutDetectionTest")]
+        public async Task<IActionResult> EQTimeoutDetectionTest(HANDSHAKE_AGV_TIMEOUT item)
+        {
+            if (!agv.EQHsSignalStates[EQ_HSSIGNAL.EQ_GO])
+                return Ok(new { message = "EQ GO訊號尚未ON" });
+            agv.EQTimeoutDetectionTest(item);
+            return Ok(new { message = "OK" });
+        }
 
         [HttpGet("DIO/SetEQHsSignalState")]
         [ApiExplorerSettings(IgnoreApi = false)]
