@@ -311,7 +311,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 Agv.Sub_Status = SUB_STATUS.DOWN;
                             else
                                 Agv.Sub_Status = SUB_STATUS.IDLE;
-                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                             return;
                         }
                     }
@@ -323,7 +323,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                             Agv.Sub_Status = SUB_STATUS.DOWN;
-                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                         }
                     }
                     (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
@@ -351,8 +351,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 break;
                         }
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
-                        await Task.Delay(1000);
-                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                     }
                     else
                     {

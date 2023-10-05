@@ -244,7 +244,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
-                                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
 
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();

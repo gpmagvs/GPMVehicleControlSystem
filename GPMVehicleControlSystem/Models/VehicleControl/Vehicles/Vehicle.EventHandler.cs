@@ -334,8 +334,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
                             Sub_Status = SUB_STATUS.DOWN;
                         }
-                        await Task.Delay(500);
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                         ExecutingTask.Abort();
                     });
                 }
@@ -381,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
                 {
                     if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                     HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
                 }
                 DirectionLighter.CloseAll();

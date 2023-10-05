@@ -112,7 +112,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         Sub_Status = SUB_STATUS.DOWN;
                         LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                         AlarmManager.AddAlarm(result, false);
                         AGVC.OnAGVCActionChanged = null;
                     }
@@ -340,11 +340,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddWarning(AlarmCodes.Measure_Result_Data_Report_Fail);
             }
         }
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status)
+
+        /// <summary>
+        /// 上報任務狀態
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="delay">延遲毫秒數</param>
+        /// <returns></returns>
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 0)
         {
             try
             {
-
+                await Task.Delay(delay);
                 CurrentTaskRunStatus = status;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
                 {
