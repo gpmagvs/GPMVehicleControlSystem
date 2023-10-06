@@ -57,7 +57,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
-            if (mode == OPERATOR_MODE.MANUAL && agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+            if (mode == OPERATOR_MODE.MANUAL && agv.Sub_Status == SUB_STATUS.RUN)
             {
                 return Ok(new
                 {
@@ -140,7 +140,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                agv.SoftwareEMO();
+                agv.SoftwareEMO(AGVSystemCommonNet6.Alarm.VMS_ALARM.AlarmCodes.SoftwareEMS);
 
                 StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             }

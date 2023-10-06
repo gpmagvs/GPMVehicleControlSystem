@@ -222,7 +222,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     IsCargoBiasTrigger = IsCargoBiasDetecting = false;
                     AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
                     Agv.Sub_Status = SUB_STATUS.DOWN;
-                    await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
+                    await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Cst_Slope_Error);
                     return;
                 }
 

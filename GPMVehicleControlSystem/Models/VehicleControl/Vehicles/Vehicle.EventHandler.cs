@@ -193,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!di_state)
             {
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+               await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
 
                 if (IsRightLaser)
                 {
@@ -224,7 +224,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(1000);
             if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
             {
-                AGVC.CarSpeedControl(speed_control);
+                await AGVC.CarSpeedControl(speed_control);
                 AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area2);
                 AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area2);
@@ -279,12 +279,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
-        private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, EventArgs e)
+        private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
-
             _ = Task.Factory.StartNew(async () =>
             {
-                SoftwareEMO();
+                SoftwareEMO(alarm_code);
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
                 {
                     LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
@@ -314,7 +313,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
-       
+
             LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
             return returnCode;
         }
@@ -334,7 +333,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
                             Sub_Status = SUB_STATUS.DOWN;
                         }
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
                         ExecutingTask.Abort();
                     });
                 }
@@ -368,29 +367,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOPushedHandler(object? sender, EventArgs e)
         {
-            bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
-            InitializeCancelTokenResourece.Cancel();
-            AGVC.AbortTask();
-            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
-            {
-                BuzzerPlayer.Alarm();
-                AlarmManager.AddAlarm(IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : AlarmCodes.EMO_Button);
-                ExecutingTask?.Abort();
-                ExecutingTask = null;
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
-                {
-                    if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
-                    HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
-                }
-                DirectionLighter.CloseAll();
-                DOSettingWhenEmoTrigger();
-                IsInitialized = false;
-            }
-            AGVC._ActionStatus = ActionStatus.NO_GOAL;
-            previousSoftEmoTime = DateTime.Now;
-            _Sub_Status = SUB_STATUS.DOWN;
-            StatusLighter.DOWN();
+            SoftwareEMO(AlarmCodes.EMO_Button);
         }
 
         protected virtual async Task DOSettingWhenEmoTrigger()

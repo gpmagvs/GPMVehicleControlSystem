@@ -520,6 +520,11 @@
     "CN": "無法進行Online, AGV須停在Tag上"
   },
   {
+    "Code": 1071,
+    "Description": "Can't 'Online With Forbid Tag",
+    "CN": "無法進行Online, 目前Tag已設為禁止上線"
+  },
+  {
     "Code": 1110,
     "Description": "FrontProtection_Area2",
     "CN": "AGV前方遠處障礙物"

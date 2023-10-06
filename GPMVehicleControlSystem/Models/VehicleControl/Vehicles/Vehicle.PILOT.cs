@@ -26,10 +26,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EMULATION
         }
 
-        public TaskBase ExecutingTask;
+        private TaskBase _ExecutingTask;
+        public TaskBase ExecutingTask
+        {
+            get => _ExecutingTask;
+            set
+            {
+                if (_ExecutingTask != value)
+                {
+                    _ExecutingTask = value;
+                }
+            }
+        }
 
         Dictionary<string, List<int>> TaskTrackingTags = new Dictionary<string, List<int>>();
 
+        clsTaskDownloadData _RunTaskData = new clsTaskDownloadData();
         /// <summary>
         /// 執行派車系統任務
         /// 19:10:07 端點未掃描到QR Code
@@ -38,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
-
+            _RunTaskData = taskDownloadData;
             //AutoClearOldCstReadFailAlarms();
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
@@ -112,8 +124,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         Sub_Status = SUB_STATUS.DOWN;
                         LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
                         AlarmManager.AddAlarm(result, false);
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
                         AGVC.OnAGVCActionChanged = null;
                     }
                 }
@@ -210,123 +222,123 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         clsMapPoint NextTagPoint;
-        private TRAFFIC_ACTION _TrafficState = TRAFFIC_ACTION.PASS;
-        internal TRAFFIC_ACTION TrafficState
-        {
-            get => _TrafficState;
-            set
-            {
-                if (_TrafficState != value)
-                {
-                    _TrafficState = value;
+        //private TRAFFIC_ACTION _TrafficState = TRAFFIC_ACTION.PASS;
+        //internal TRAFFIC_ACTION TrafficState
+        //{
+        //    get => _TrafficState;
+        //    set
+        //    {
+        //        if (_TrafficState != value)
+        //        {
+        //            _TrafficState = value;
 
-                    if (_TrafficState == TRAFFIC_ACTION.PASS)
-                    {
-                        if (IsAllLaserNoTrigger())
-                        {
-                            AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                            DirectionLighter.Forward();
-                        }
-                        else
-                        {
-                            _TrafficState = TRAFFIC_ACTION.WAIT;
-                        }
-                        LOG.INFO($"交管訊號以解除 {NextTagPoint?.Point_ID} Release!");
-                    }
-                    else
-                    {
-                        LOG.WARN($"交管訊號觸發 等待{NextTagPoint.Point_ID} Release...");
+        //            if (_TrafficState == TRAFFIC_ACTION.PASS)
+        //            {
+        //                if (IsAllLaserNoTrigger())
+        //                {
+        //                    AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+        //                    DirectionLighter.Forward();
+        //                }
+        //                else
+        //                {
+        //                    _TrafficState = TRAFFIC_ACTION.WAIT;
+        //                }
+        //                LOG.INFO($"交管訊號以解除 {NextTagPoint?.Point_ID} Release!");
+        //            }
+        //            else
+        //            {
+        //                LOG.WARN($"交管訊號觸發 等待{NextTagPoint.Point_ID} Release...");
 
-                        Task.Factory.StartNew(async () =>
-                        {
-                            await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                            await Task.Delay(50);
-                            await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                            DirectionLighter.WaitPassLights();
-                        });
-                    }
-                }
-            }
-        }
-        private async Task TrafficMonitor()
-        {
-            await Task.Delay(3000);
-            _ = Task.Run(() =>
-            {
-                LOG.INFO($"Traffic Monitor Start!");
-                while (true)
-                {
-                    Thread.Sleep(1);
-                    if (!Parameters.ActiveTrafficControl)
-                        continue;
-                    try
-                    {
-                        if (ExecutingTask == null)
-                        {
-                            TrafficState = TRAFFIC_ACTION.PASS;
-                            continue;
-                        }
-                        if (Remote_Mode == REMOTE_MODE.OFFLINE)
-                        {
-                            TrafficState = TRAFFIC_ACTION.PASS;
-                            continue;
-                        }
+        //                Task.Factory.StartNew(async () =>
+        //                {
+        //                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+        //                    await Task.Delay(50);
+        //                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+        //                    DirectionLighter.WaitPassLights();
+        //                });
+        //            }
+        //        }
+        //    }
+        //}
+        //private async Task TrafficMonitor()
+        //{
+        //    await Task.Delay(3000);
+        //    _ = Task.Run(() =>
+        //    {
+        //        LOG.INFO($"Traffic Monitor Start!");
+        //        while (true)
+        //        {
+        //            Thread.Sleep(1);
+        //            if (!Parameters.ActiveTrafficControl)
+        //                continue;
+        //            try
+        //            {
+        //                if (ExecutingTask == null)
+        //                {
+        //                    TrafficState = TRAFFIC_ACTION.PASS;
+        //                    continue;
+        //                }
+        //                if (Remote_Mode == REMOTE_MODE.OFFLINE)
+        //                {
+        //                    TrafficState = TRAFFIC_ACTION.PASS;
+        //                    continue;
+        //                }
 
-                        clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
-                        var nextTagIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(TagPoint) + 1;
-                        if (nextTagIndex >= ExecutingTask.RunningTaskData.ExecutingTrajecory.Length)
-                        {
-                            NextTagPoint = null;
-                            TrafficState = TRAFFIC_ACTION.PASS;
-                            continue;
-                        }
-                        NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
-                        TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID);
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.Critical("[TrafficMonitor_Error]", ex);
-                    }
+        //                clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
+        //                var nextTagIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(TagPoint) + 1;
+        //                if (nextTagIndex >= ExecutingTask.RunningTaskData.ExecutingTrajecory.Length)
+        //                {
+        //                    NextTagPoint = null;
+        //                    TrafficState = TRAFFIC_ACTION.PASS;
+        //                    continue;
+        //                }
+        //                NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
+        //                TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                LOG.Critical("[TrafficMonitor_Error]", ex);
+        //            }
 
-                }
-            });
-        }
-        private async Task TrafficStop()
-        {
+        //        }
+        //    });
+        //}
+        //private async Task TrafficStop()
+        //{
 
-            if (Parameters.VMSParam.Protocol != VMS_PROTOCOL.GPM_VMS)
-                return;
+        //    if (Parameters.VMSParam.Protocol != VMS_PROTOCOL.GPM_VMS)
+        //        return;
 
-            clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
-            var nextTagIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(TagPoint) + 1;
-            if (ExecutingTask.RunningTaskData.ExecutingTrajecory.Length > nextTagIndex)
-            {
-                _ = Task.Factory.StartNew(async () =>
-                 {
-                     var NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
-                     //取得下一個位置動態
-                     bool stopedFlag = false;
-                     while ((TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID)) != TRAFFIC_ACTION.PASS)
-                     {
-                         if (!stopedFlag)
-                         {
-                             LOG.WARN($"交管訊號觸發 等待{NextTagPoint.Point_ID} Release...");
-                             await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                             await Task.Delay(50);
-                             await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                             stopedFlag = true;
-                             DirectionLighter.WaitPassLights();
-                         }
-                         await Task.Delay(1000);
-                     }
-                     DirectionLighter.CloseAll();
-                     DirectionLighter.Forward();
-                     LOG.WARN($"交管訊號以解除 {NextTagPoint.Point_ID} Release...");
-                     await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+        //    clsMapPoint? TagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
+        //    var nextTagIndex = ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(TagPoint) + 1;
+        //    if (ExecutingTask.RunningTaskData.ExecutingTrajecory.Length > nextTagIndex)
+        //    {
+        //        _ = Task.Factory.StartNew(async () =>
+        //         {
+        //             var NextTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory[nextTagIndex];
+        //             //取得下一個位置動態
+        //             bool stopedFlag = false;
+        //             while ((TrafficState = DynamicTrafficState.GetTrafficStatusByTag(Parameters.VehicleName, NextTagPoint.Point_ID)) != TRAFFIC_ACTION.PASS)
+        //             {
+        //                 if (!stopedFlag)
+        //                 {
+        //                     LOG.WARN($"交管訊號觸發 等待{NextTagPoint.Point_ID} Release...");
+        //                     await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+        //                     await Task.Delay(50);
+        //                     await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+        //                     stopedFlag = true;
+        //                     DirectionLighter.WaitPassLights();
+        //                 }
+        //                 await Task.Delay(1000);
+        //             }
+        //             DirectionLighter.CloseAll();
+        //             DirectionLighter.Forward();
+        //             LOG.WARN($"交管訊號以解除 {NextTagPoint.Point_ID} Release...");
+        //             await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
 
-                 });
-            }
-        }
+        //         });
+        //    }
+        //}
         internal async Task ReportMeasureResult(clsMeasureResult measure_result)
         {
             try
@@ -347,10 +359,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 0)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 0, AlarmCodes alarm_tracking = AlarmCodes.None)
         {
             try
             {
+                if (status == TASK_RUN_STATUS.ACTION_FINISH)
+                {
+                    if (_RunTaskData.IsActionFinishReported)
+                        return;
+                    else
+                        _RunTaskData.IsActionFinishReported = true;
+                }
                 await Task.Delay(delay);
                 CurrentTaskRunStatus = status;
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
@@ -359,8 +378,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
                     double Theta = Math.Round(Navigation.Angle, 3);
                     clsCoordination coordination = new clsCoordination(X, Y, Theta);
-                    if (ExecutingTask != null)
-                        await AGVS.TryTaskFeedBackAsync(ExecutingTask.RunningTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
+                    if (alarm_tracking != AlarmCodes.None)
+                    {
+                        await WaitAlarmCodeReported(alarm_tracking);
+                    }
+                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
                 }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
@@ -380,11 +402,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private async Task WaitAlarmCodeReported(AlarmCodes alarm_tracking)
+        {
+            LOG.TRACE($"Before TaskFeedback, AlarmCodes({alarm_tracking}) reported tracking ");
+
+            bool alarm_reported()
+            {
+                if (AGVS.UseWebAPI)
+                    return AGVS.previousRunningStatusReport_via_WEBAPI.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
+                else
+                    return AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
+            }
+            CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            while (!alarm_reported())
+            {
+                await Task.Delay(1);
+                if (cancel_wait.IsCancellationRequested)
+                {
+                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(2sec) ");
+                    return;
+                }
+            }
+            LOG.TRACE($"AlarmCodes({alarm_tracking}) reported ! ");
+
+        }
+
         internal int GetCurrentTagIndexOfTrajectory()
         {
             try
             {
-                clsMapPoint? currentPt = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
+                clsMapPoint? currentPt = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
                 if (currentPt == null)
                 {
                     LOG.ERROR("計算目前點位在移動路徑中的INDEX過程發生錯誤 !");
@@ -392,7 +439,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else
                 {
-                    return ExecutingTask.RunningTaskData.ExecutingTrajecory.ToList().IndexOf(currentPt);
+                    return _RunTaskData.ExecutingTrajecory.ToList().IndexOf(currentPt);
                 }
             }
             catch (Exception ex)

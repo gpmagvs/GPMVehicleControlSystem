@@ -648,7 +648,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();
-                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 800);
+                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
                 {
                     await ResetMotor();
@@ -672,8 +672,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     LOG.INFO("Init done. Laser mode chaged to Bypass");
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
-
-                    await Task.Delay(2000);
+                    await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
@@ -821,9 +820,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
+        protected internal virtual void SoftwareEMO(AlarmCodes alarmCode)
+        {
+            InitializeCancelTokenResourece.Cancel();
+            AGVC.AbortTask();
+            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+            {
+                _Sub_Status = SUB_STATUS.DOWN;
+                BuzzerPlayer.Alarm();
+                AlarmManager.AddAlarm(alarmCode);
+                ExecutingTask?.Abort();
+                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                {
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                    HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+                }
+                DirectionLighter.CloseAll();
+                DOSettingWhenEmoTrigger();
+                StatusLighter.DOWN();
+            }
+            IsInitialized = false;
+            ExecutingTask = null;
+            AGVC._ActionStatus = ActionStatus.NO_GOAL;
+            previousSoftEmoTime = DateTime.Now;
+        }
         protected internal virtual void SoftwareEMO()
         {
-            EMOPushedHandler("software_emo", EventArgs.Empty);
+            SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
