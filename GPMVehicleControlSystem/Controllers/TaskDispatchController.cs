@@ -35,24 +35,9 @@ namespace GPMVehicleControlSystem.Controllers
             {
                 ReturnCode = RETURN_CODE.OK
             };
-
             try
             {
-                if (Agv.ExecutingTask == null)
-                {
-                    reply.ReturnCode = RETURN_CODE.NG;
-                    reply.Message = "No task executing";
-                    return Ok(reply);
-                }
-                if (Agv.ExecutingTask.RunningTaskData.Task_Name == cancelCmd.Task_Name)
-                {
-                    Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
-                }
-                else
-                {
-                    reply.ReturnCode = RETURN_CODE.NG;
-                    reply.Message = "AGVS取消之任務ID與當前任務不符";
-                }
+                Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
             }
             catch (Exception ex)
             {
