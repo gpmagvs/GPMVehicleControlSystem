@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 confirm = true
             };
             CSTActionDone = true;
-            
+
             return true;
         }
         protected virtual string cst_reader_command { get; set; } = "read_try";
@@ -79,7 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 else
                 {
-                    await  AbortCSTReader();
+                    await AbortCSTReader();
                     LOG.ERROR($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
                     wait_cst_ack_MRE.Reset();
                     retry_cnt++;
@@ -89,6 +89,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     }
                 }
             }
+
             if (cst_reader_confirm_ack == null)
             {
                 LOG.INFO("Trigger CST Reader fail. CSTReader no reply");
@@ -121,6 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     TK.Wait(waitCstActionDoneCts.Token);
                     LOG.INFO($"CST Reader  Action Done ..{CSTActionResult}--");
+                    AbortCSTReader();
                     _ = Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(100);

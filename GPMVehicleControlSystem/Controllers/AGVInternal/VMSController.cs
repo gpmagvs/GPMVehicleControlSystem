@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
 
         private Vehicle agv => StaStored.CurrentVechicle;
-
+      
         [HttpGet("Where_r_u")]
         public async Task Where_r_u()
         {
@@ -42,8 +42,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             });
             return;
         }
-
-
 
         [HttpPost("ResetAlarm")]
         public async Task<IActionResult> ResetAlarm()

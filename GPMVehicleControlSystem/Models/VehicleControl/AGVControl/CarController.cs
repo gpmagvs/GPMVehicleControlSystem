@@ -372,28 +372,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 await Task.Delay(1);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
-                    if (retry >= 5)
-                    {
-                        AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
-                        return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
-                    }
-                    retry++;
-                    LOG.Critical($"發送任務請求給車控但車控並未接收成功(重試-{retry})-AGVC Status={_ActionStatus}");
-                    wait_agvc_execute_action_cts = new CancellationTokenSource();
-                    wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(3));
-                    //嘗試取消當前任務
-                    actionClient.goal = new TaskCommandGoal();
-                    actionClient.SendGoal();
-                    //重啟Action Client
-                    InitTaskCommandActionClient();
-                    actionClient.goal = rosGoal;
-                    actionClient.SendGoal();
-
+                    AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
+                    return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
                 }
             }
             LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", false);
             return (true, "");
-
         }
 
 

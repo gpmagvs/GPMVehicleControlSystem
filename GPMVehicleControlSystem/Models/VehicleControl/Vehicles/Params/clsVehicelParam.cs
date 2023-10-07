@@ -108,8 +108,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
         public EQ_INTERACTION_FAIL_ACTION CstReadFailAction { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
-        public EQ_INTERACTION_FAIL_ACTION HandshakeFailWhenLoadFinish { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
         public CST_ID_NO_MATCH_ACTION Cst_ID_Not_Match_Action { get; set; } = CST_ID_NO_MATCH_ACTION.REPORT_READER_RESULT;
+        public EQ_INTERACTION_FAIL_ACTION HandshakeFailWhenLoadFinish { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
     }
 
     public class clsInspectionAGVParams

@@ -499,14 +499,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
 
-                    if (isEQBusyOn)
-                    {
-                        await Task.Delay(500);
-                        isEQBusyOn = IsEQBusyOn();
-                        if (!isEQBusyOn)
-                            LOG.WARN($"PID_EQ_BUSY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
-                    }
-
                     if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
                     {
                         EQAlarmWhenEQBusyFlag = true;
