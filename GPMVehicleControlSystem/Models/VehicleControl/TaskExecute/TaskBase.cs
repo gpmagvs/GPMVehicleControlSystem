@@ -161,6 +161,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (!agvc_response.agvc_executing)
                 {
+                    AGVCActionStatusChaged -= HandleAGVActionChanged;
                     return AlarmCodes.Cant_TransferTask_TO_AGVC;
                 }
                 else

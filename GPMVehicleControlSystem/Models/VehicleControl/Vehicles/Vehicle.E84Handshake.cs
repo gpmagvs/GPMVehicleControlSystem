@@ -166,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_VALID, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = value;
         }
-        private async void SetAGV_TR_REQ(bool value)
+        internal async void SetAGV_TR_REQ(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = value;
@@ -266,6 +266,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             DirectionLighter.WaitPassLights();
             CancellationTokenSource waitEQ_BUSY_ON_CTS = new CancellationTokenSource();
             CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
+
             SetAGVBUSY(false);
             SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
@@ -329,10 +330,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WatchE84EQAlarmWhenEQBUSY(waitEQ_BUSY_OFF_CTS);
                 wait_eq_busy_OFF.Start();
                 wait_eq_busy_OFF.Wait(waitEQ_BUSY_OFF_CTS.Token);
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 SetAGVREADY(false); //AGV BUSY 開始退出
                 SetAGVBUSY(true);
                 WatchE84AlarmWhenAGVBUSY();
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 return (true, AlarmCodes.None);
             }
             catch (OperationCanceledException ex)
@@ -446,7 +447,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 AGVC.ResetTask(RESET_MODE.ABORT);
                                 Sub_Status = SUB_STATUS.DOWN;
                                 AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
-                                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH,  alarm_tracking: AlarmCodes.Handshake_Fail_EQ_GO);
+                                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_EQ_GO);
                                 StopAllHandshakeTimer();
                                 break;
                             }

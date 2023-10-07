@@ -192,6 +192,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _eqHandshakeMode = eqHandshakeMode;
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
+                if (Agv.Navigation.LastVisitedTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN)
+                {
+                    Agv.SetAGV_TR_REQ(false);
+                    return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                }
                 HSResult = await Agv.WaitEQBusyOFF(action);
                 if (!HSResult.hs_success)
                 {
@@ -199,8 +204,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AlarmManager.AddAlarm(HSResult.alarmCode, false);
                     return (false, HSResult.alarmCode);
                 }
-                if (action == ACTION_TYPE.Load)
-                    Agv.CSTReader.ValidCSTID = "";
+                else
+                {
+
+                    //放貨完成->清除CST帳籍
+                    if (action == ACTION_TYPE.Load)
+                        Agv.CSTReader.ValidCSTID = "";
+                }
 
             }
 
@@ -259,31 +269,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
 
             //下Homing Trajectory 任務讓AGV退出
-            await Task.Factory.StartNew(async () =>
-            {
+            (bool, AlarmCodes) resutl = await Task.Run(async () =>
+             {
+                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                 {
+                     return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                 }
+                 Agv.DirectionLighter.Backward(delay: 800);
+                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
+                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
+                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
+                 if (Agv.Parameters.LDULD_Task_No_Entry)
+                 {
+                     HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                     return (false, AlarmCodes.None);
+                 }
+                 else
+                 {
+                     (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+                     if (!agvc_response.agvc_executing)
+                     {
+                         AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
+                         return (false, AlarmCodes.Cant_TransferTask_TO_AGVC);
+                     }
+                     else
+                         return (false, AlarmCodes.None);
+                 }
 
-                if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                    return;
+             });
 
-                Agv.DirectionLighter.Backward(delay: 800);
-                RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-                AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-
-                (bool agvc_executing, string message) agvc_response = (false, "");
-                if (Agv.Parameters.LDULD_Task_No_Entry)
-                {
-                    HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
-                }
-                else
-                {
-                    await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
-                }
-
-            });
-
-
-            return (true, AlarmCodes.None);
+            return resutl;
         }
 
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
