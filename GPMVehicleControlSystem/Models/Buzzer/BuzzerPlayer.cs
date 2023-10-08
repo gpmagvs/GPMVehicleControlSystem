@@ -21,12 +21,11 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsMeasurePlaying = false;
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
-        public static void Initialize()
-        {
-        }
 
         public static async void Alarm()
         {
+            if (IsAlarmPlaying)
+                return;
             _ = Task.Run(async () =>
             {
                 await Stop();
@@ -38,17 +37,23 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsActionPlaying)
                 return;
-            await Stop();
-            await Play(SOUNDS.Action);
-            IsActionPlaying = true;
+            _ = Task.Run(async () =>
+            {
+                await Stop();
+                await Play(SOUNDS.Action);
+                IsActionPlaying = true;
+            });
         }
         public static async void Move()
         {
             if (IsMovingPlaying)
                 return;
-            await Stop();
-            await Play(SOUNDS.Move);
-            IsMovingPlaying = true;
+            _ = Task.Run(async () =>
+            {
+                await Stop();
+                await Play(SOUNDS.Move);
+                IsMovingPlaying = true;
+            });
         }
 
         public static async void Handshaking()
@@ -64,23 +69,29 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsMeasurePlaying)
                 return;
-            await Stop();
-            await Play(SOUNDS.Measure);
-            IsMeasurePlaying = true;
+            _ = Task.Run(async () =>
+            {
+                await Stop();
+                await Play(SOUNDS.Measure);
+                IsMeasurePlaying = true;
+            });
         }
 
         internal static async void ExchangeBattery()
         {
             if (IsExchangeBatteryPlaying)
                 return;
-            await Stop();
-            await Play(SOUNDS.Exchange);
-            IsExchangeBatteryPlaying = true;
+            _ = Task.Run(async () =>
+            {
+                await Stop();
+                await Play(SOUNDS.Exchange);
+                IsExchangeBatteryPlaying = true;
+            });
         }
         internal static async Task Stop()
         {
             await Play(SOUNDS.Stop);
-            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying= IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
         }
 
         public static async Task Play(SOUNDS sound)

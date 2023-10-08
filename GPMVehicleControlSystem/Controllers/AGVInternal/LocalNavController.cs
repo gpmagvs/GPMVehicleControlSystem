@@ -164,8 +164,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 return Ok(new TaskActionResult
                 {
-                    accpet = false,
-                    error_message = "Oppppps!",
+                    accpet = true,
+                    error_message = "",
                 });
             }
 
@@ -346,7 +346,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 normal_move_task.Trajectory.Last().Theta = destineStation.Direction; //移動的終點要與機台同向
             }
-            taskList.Add(normal_move_task);
+            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag | CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
+                taskList.Add(normal_move_task);
             seq += 1;
 
             if (actionType != ACTION_TYPE.None)
@@ -366,6 +367,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
             return taskList.ToArray();
+        }
+        private double CalculateThetaError(double _destinTheta)
+        {
+            var _agvTheta = agv.Navigation.Angle;
+            var theta_error = Math.Abs(_agvTheta - _destinTheta);
+            theta_error = theta_error > 180 ? 360 - theta_error : theta_error;
+            return Math.Abs(theta_error);
         }
 
         public class TaskActionResult

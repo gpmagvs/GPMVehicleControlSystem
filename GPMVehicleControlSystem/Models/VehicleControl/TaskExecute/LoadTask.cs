@@ -113,7 +113,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!Agv.IsEQGOOn())
                         return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
 
-                    if (Agv.WagoDI.GetState(DI_ITEM.EQ_BUSY) | Agv.WagoDI.GetState(DI_ITEM.EQ_L_REQ) | Agv.WagoDI.GetState(DI_ITEM.EQ_U_REQ) | Agv.WagoDI.GetState(DI_ITEM.EQ_READY))
+                    if (!Agv.IsEQHsSignalInitialState())
                         return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);
                 }
 
@@ -269,45 +269,62 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
 
             //下Homing Trajectory 任務讓AGV退出
-            (bool, AlarmCodes) resutl = await Task.Run(async () =>
-             {
-                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                 {
-                     return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
-                 }
-                 Agv.DirectionLighter.Backward(delay: 800);
-                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                 Agv.ExecutingTask.RunningTaskData = RunningTaskData;
-                 AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-                 if (Agv.Parameters.LDULD_Task_No_Entry)
-                 {
-                     HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
-                     return (false, AlarmCodes.None);
-                 }
-                 else
-                 {
-                     (bool agvc_executing, string message) agvc_response = await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
-                     if (!agvc_response.agvc_executing)
-                     {
-                         AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
-                         return (false, AlarmCodes.Cant_TransferTask_TO_AGVC);
-                     }
-                     else
-                         return (false, AlarmCodes.None);
-                 }
 
-             });
+            try
+            {
 
-            return resutl;
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                {
+                    return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                }
+                if (Agv.Parameters.LDULD_Task_No_Entry)
+                {
+                    HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                    return (true, AlarmCodes.None);
+                }
+                else
+                {
+                    Agv.DirectionLighter.Backward(delay: 800);
+                    RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
+
+                    (bool agvc_executing, string message) agvc_response = await TransferTaskToAGVC();
+                    if (!agvc_response.agvc_executing)
+                    {
+                        LOG.ERROR(agvc_response.message);
+                        return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
+                    }
+                    else
+                    {
+                        await Task.Delay(100);
+                        if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
+                            HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        {
+                            AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
+                        }
+                        return (true, AlarmCodes.None);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message + ex.StackTrace);
+                throw;
+            }
+
         }
 
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
         {
             _ = Task.Factory.StartNew(async () =>
             {
+                if (IsAGVCActionNoOperate(status, HandleBackToHomeActionStatusChanged))
+                    return;
+
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
-                    AGVCActionStatusChaged -= HandleBackToHomeActionStatusChanged;
+                    AGVCActionStatusChaged = null;
                     return;
                 }
                 LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
@@ -326,7 +343,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 Agv.Sub_Status = SUB_STATUS.DOWN;
                             else
                                 Agv.Sub_Status = SUB_STATUS.IDLE;
-                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: HSResult.alarmCode);
+                            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: HSResult.alarmCode);
                             return;
                         }
                     }
@@ -338,7 +355,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                             Agv.Sub_Status = SUB_STATUS.DOWN;
-                            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: ForkGoHomeActionResult.alarm_code);
+                            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: ForkGoHomeActionResult.alarm_code);
                         }
                     }
                     (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
@@ -346,7 +363,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
                         AlarmManager.AddAlarm(cst_read_fail_alarm, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
-
                         //向派車詢問虛擬ID
                         //cst 類型
                         CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
@@ -366,11 +382,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 break;
                         }
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
-                        Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
+                        await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                     }
                     else
                     {
-                        base.HandleAGVCActionSucceess();
+                        await base.HandleAGVCActionSucceess();
                     }
                 }
 

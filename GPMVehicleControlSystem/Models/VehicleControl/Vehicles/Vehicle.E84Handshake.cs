@@ -176,6 +176,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = value;
         }
+        internal bool IsEQHsSignalInitialState()
+        {
+            return !IsEQBusyOn() && !IsEQReadyOn() && !IsULReqOn(ACTION_TYPE.Unload) && !IsULReqOn(ACTION_TYPE.Load);
+        }
         public clsDynamicTrafficState DynamicTrafficState { get; internal set; } = new clsDynamicTrafficState();
 
         internal void ResetHSTimers()

@@ -90,6 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (_ActionStatus != value)
                 {
                     _ActionStatus = value;
+                    LOG.TRACE($"Action Status Changed To : {_ActionStatus}");
                     if (OnAGVCActionChanged != null)
                     {
                         OnAGVCActionChanged(_ActionStatus);
@@ -352,32 +353,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
-
             return await SendGoal(RunningTaskData.RosTaskCommandGoal);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
         internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal)
         {
-            string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-            LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-            actionClient.goal = rosGoal;
-            actionClient.SendGoal();
-            wait_agvc_execute_action_cts = new CancellationTokenSource();
-            await Task.Delay(100);
-            wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(3));
-            int retry = 0;
-            while (_ActionStatus != ActionStatus.ACTIVE)
+            return await Task.Run(async () =>
             {
-                await Task.Delay(1);
-                if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
+                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: true, color: ConsoleColor.Green);
+                actionClient.goal = rosGoal;
+                actionClient.SendGoal();
+                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                while (_ActionStatus != ActionStatus.ACTIVE)
                 {
-                    AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
-                    return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
+                    await Task.Delay(1);
+                    if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                    {
+                        return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
+                    }
                 }
-            }
-            LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", false);
-            return (true, "");
+                LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", true);
+                return (true, "");
+            });
         }
 
 

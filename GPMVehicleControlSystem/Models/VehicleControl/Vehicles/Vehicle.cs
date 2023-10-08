@@ -240,15 +240,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _Sub_Status = value;
                     try
                     {
-                        BuzzerPlayer.Stop();
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
-                            {
-                                WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
-                                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1000);
-                            }
-
+                                SetAGV_TR_REQ(false);
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
                             DirectionLighter.CloseAll();
@@ -256,6 +251,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else if (value == SUB_STATUS.IDLE)
                         {
+                            BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
                             DirectionLighter.CloseAll();
                         }
@@ -826,6 +822,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal virtual void SoftwareEMO(AlarmCodes alarmCode)
         {
             InitializeCancelTokenResourece.Cancel();
+            SetAGV_TR_REQ(false);
             AGVC.AbortTask();
             Sub_Status = SUB_STATUS.DOWN;
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
