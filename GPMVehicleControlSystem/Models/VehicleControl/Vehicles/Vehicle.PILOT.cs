@@ -371,7 +371,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
-                    if (_RunTaskData.IsActionFinishReported)
+                    if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
                         return;
                     else
                         _RunTaskData.IsActionFinishReported = true;

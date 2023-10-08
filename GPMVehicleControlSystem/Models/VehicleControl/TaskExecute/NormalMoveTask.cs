@@ -104,7 +104,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             LOG.WARN("抵達虛擬點終點站 Stop Monitor .");
             AlarmManager.AddAlarm(AlarmCodes.Destine_Point_Is_Virtual_Point);
-            Agv.AGVSTaskResetReqHandle(RESET_MODE.ABORT);
+            Agv.HandleAGVSTaskCancelRequest(RESET_MODE.ABORT);
 
         }
 

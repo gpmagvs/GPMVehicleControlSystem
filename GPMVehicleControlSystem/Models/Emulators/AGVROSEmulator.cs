@@ -9,6 +9,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Log;
 using System.Linq;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -39,6 +40,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
+        private ROBOT_CONTROL_CMD complex_cmd;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
         private bool IsCharge = false;
         public AGVROSEmulator()
@@ -122,6 +124,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     module_info.reader.yValue = tag_pose_y;
                     module_info.reader.theta = tag_theta;
                     await Task.Delay(500);
+                    if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
+                        break;
                     RobotStopMRE.WaitOne();
                 }
                 if (ChargeStationTags.Contains(obj.finalGoalID))
@@ -173,13 +177,26 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             if (req.reqsrv == 2) //要求停止
             {
+                complex_cmd = ROBOT_CONTROL_CMD.STOP;
                 EmuLog($"車載要求停止");
                 RobotStopMRE.Reset();
             }
             else if (req.reqsrv == 0)
             {
+                complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
                 EmuLog($"車載要求速度恢復");
                 RobotStopMRE.Set();
+            }
+            else if (req.reqsrv == 1)
+            {
+                complex_cmd = ROBOT_CONTROL_CMD.DECELERATE;
+                EmuLog($"車載要求減速");
+                RobotStopMRE.Set();
+            }
+            else if (req.reqsrv == 100)
+            {
+                complex_cmd = ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL;
+                EmuLog($"車載要求車控在下一點或當前(若目前在TAG上)停止:完成任務");
             }
             res = new ComplexRobotControlCmdResponse
             {

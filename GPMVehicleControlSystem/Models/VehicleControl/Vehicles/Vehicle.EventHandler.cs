@@ -193,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!di_state)
             {
-               await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
 
                 if (IsRightLaser)
                 {
@@ -318,11 +318,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return returnCode;
         }
 
-        internal async Task<bool> AGVSTaskResetReqHandle(RESET_MODE mode, bool normal_state = false)
+        /// <summary>
+        /// 處理任務取消請求
+        /// </summary>
+        /// <param name="mode">取消模式</param>
+        /// <param name="normal_state"></param>
+        /// <returns></returns>
+        internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
+            if (AGVSResetCmdFlag)
+                return true;
             AGVSResetCmdFlag = true;
             try
             {
+                if (AGVC.ActionStatus == ActionStatus.NO_GOAL)
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 bool result = await AGVC.ResetTask(mode);
                 if (mode == RESET_MODE.ABORT)
                 {

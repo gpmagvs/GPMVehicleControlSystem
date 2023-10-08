@@ -577,7 +577,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
-            AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
+            AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
             AGVS.Start();
         }

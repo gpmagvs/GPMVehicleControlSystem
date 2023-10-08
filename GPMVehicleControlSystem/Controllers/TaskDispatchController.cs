@@ -37,7 +37,7 @@ namespace GPMVehicleControlSystem.Controllers
             };
             try
             {
-                Agv.AGVSTaskResetReqHandle(cancelCmd.ResetMode);
+                Agv.HandleAGVSTaskCancelRequest(cancelCmd.ResetMode);
             }
             catch (Exception ex)
             {
