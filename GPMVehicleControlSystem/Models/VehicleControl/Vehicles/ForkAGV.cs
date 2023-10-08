@@ -55,7 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await base.ResetMotor();
 
-                if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Alarm))
+                if (WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy))
                     return true;
 
                 await Task.Delay(100);

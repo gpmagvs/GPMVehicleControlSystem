@@ -34,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
 
-            if (ExecutingTask != null)
+            if (ExecutingTask != null && Sub_Status == SUB_STATUS.RUN)
             {
                 return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
             }
@@ -48,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
                 if (Parameters.ForbidToOnlineTags.Contains(currentTag))
                 {
-                    AlarmManager.AddWarning( AlarmCodes.Cant_Online_With_Forbid_Tag);
+                    AlarmManager.AddWarning(AlarmCodes.Cant_Online_With_Forbid_Tag);
                     //檢查是否停在禁止上線的TAG位置
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online);
                 }

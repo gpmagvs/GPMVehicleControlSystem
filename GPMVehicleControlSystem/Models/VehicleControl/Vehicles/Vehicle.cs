@@ -821,13 +821,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual void SoftwareEMO(AlarmCodes alarmCode)
         {
+            Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
             AGVC.AbortTask();
             Sub_Status = SUB_STATUS.DOWN;
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
-                BuzzerPlayer.Alarm();
                 AlarmManager.AddAlarm(alarmCode);
                 ExecutingTask?.Abort();
                 if (Remote_Mode == REMOTE_MODE.ONLINE)
@@ -885,17 +885,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
 
                 await WagoDO.ResetSaftyRelay();
-                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2))
+                if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                     return true;
 
                 Console.WriteLine("Reset Motor Process Start");
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                await Task.Delay(200);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                await Task.Delay(200);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
                 Console.WriteLine("Reset Motor Process End");
                 return true;
             }

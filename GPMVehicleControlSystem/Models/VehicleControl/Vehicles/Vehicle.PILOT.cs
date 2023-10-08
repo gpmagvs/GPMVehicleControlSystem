@@ -9,6 +9,7 @@ using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -93,11 +94,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _taskDownloadData = taskDownloadData;
 
                     if (action == ACTION_TYPE.None)
+                    {
                         ExecutingTask = new NormalMoveTask(this, _taskDownloadData);
+                        if (Parameters.SimulationMode)
+                            WagoDO.SetState(DO_ITEM.EMU_EQ_GO,false);//模擬離開二次定位點EQ GO訊號會消失
+                    }
                     else
                     {
-
-
                         if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
                             _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
 

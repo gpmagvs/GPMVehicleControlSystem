@@ -266,7 +266,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
             actionClient.OnActionStatusChanged += (status) =>
             {
-                ActionStatus = status;
+                Task.Factory.StartNew(() => ActionStatus = status);
+
             };
             actionClient.Initialize();
         }
@@ -291,11 +292,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         internal async Task<bool> AbortTask()
         {
-            if (actionClient != null)
-            {
-                actionClient.goal = new TaskCommandGoal();
-                actionClient.SendGoal();
-            }
+            if (_ActionStatus != ActionStatus.ABORTED)
+                SendGoal(new TaskCommandGoal());
             return true;
         }
 
