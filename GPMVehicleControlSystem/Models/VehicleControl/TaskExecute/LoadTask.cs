@@ -192,8 +192,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _eqHandshakeMode = eqHandshakeMode;
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                if (Agv.Navigation.LastVisitedTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN)
+                if (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN)
                 {
+                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},終點Tag={RunningTaskData.Destination}");
                     Agv.SetAGV_TR_REQ(false);
                     return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
                 }
@@ -275,6 +276,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
+                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
                     return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
                 }
                 if (Agv.Parameters.LDULD_Task_No_Entry)

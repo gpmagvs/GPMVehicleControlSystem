@@ -41,11 +41,12 @@ namespace GPMVehicleControlSystem.Controllers
             //{
             //    return Ok(new { ReturnCode = 4231, Message = $"當前狀態不可上線({agv.Sub_Status})" });
             //}
-            agv.HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, IsAGVSRequest: true);
+            bool success = agv.HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, IsAGVSRequest: true);
             return Ok(new
             {
-                ReturnCode = 0,
-                Message = ""
+                ReturnCode = success ? 0 : RETURN_CODE.NG,
+                Message = "",
+                Success = success
             });
         }
 
@@ -53,8 +54,12 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("agv_offline")]
         public async Task<IActionResult> agv_offline()
         {
-            agv.HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE, IsAGVSRequest: true);
-            return Ok(new { Success = true, Message = "" });
+            bool success = agv.HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE, IsAGVSRequest: true);
+            return Ok(new
+            {
+                ReturnCode = success ? 0 : RETURN_CODE.NG,
+                Success = success,
+                Message = "" });
         }
 
 

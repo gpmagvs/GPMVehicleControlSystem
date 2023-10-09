@@ -15,6 +15,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -52,6 +53,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok("OK");
         }
 
+        [HttpPost("ClearAlarm")]
+        public async Task<IActionResult> ClearAlarm(int alarm_code)
+        {
+            AlarmManager.ClearAlarm(alarm_code);
+            return Ok("OK");
+        }
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {

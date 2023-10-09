@@ -111,9 +111,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             Task.Factory.StartNew(() =>
             {
+                TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
 
                 emergency_stop = false;
-                TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
                 if (obj.planPath.poses.Length == 0) //急停效果
                 {
                     actionServer.AcceptedInvoke();
@@ -124,6 +124,18 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     actionServer.SucceedInvoke();
                     return;
                 }
+                CancellationTokenSource cts = new CancellationTokenSource();
+                Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        if (actionServer.GetStatus() != ActionStatus.ACTIVE)
+                        {
+                            cts.Cancel();
+                            break;
+                        }
+                    }
+                });
                 Console.WriteLine($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
                 RobotStopMRE = new ManualResetEvent(true);
                 //是否為分段任務
@@ -140,11 +152,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         while (StaStored.CurrentVechicle.WagoDO.GetState(DO_ITEM.Horizon_Motor_Stop))
                         {
                             Console.WriteLine($"[Move simulation] Motro Stop. wait...");
-                            if (actionServer.GetStatus() == ActionStatus.ABORTED)
+                            if (cts.IsCancellationRequested)
                                 break;
                             await Task.Delay(1000);
                         }
-                        if (actionServer.GetStatus() == ActionStatus.ABORTED)
+                        if (cts.IsCancellationRequested)
                         {
                             isPreviousMoveActionNotFinish = false;
                             previousTaskAction = null;
@@ -153,7 +165,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         }
                         try
                         {
-
                             var pose = obj.planPath.poses[i];
                             uint tag = pose.header.seq;
                             if (isPreviousMoveActionNotFinish && previousTaskAction.planPath.poses.Length > i)
@@ -176,7 +187,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             else
                             {
                                 var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
-                                await Task.Delay(TimeSpan.FromSeconds(distance / 0.8));
+                                await Task.Delay(TimeSpan.FromSeconds(distance / 0.8), cts.Token);
                             }
                             module_info.Battery.batteryLevel -= 0x01;
 
@@ -230,6 +241,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         isPreviousMoveActionNotFinish = false;
                         previousTaskAction = null;
                     }
+                    await Task.Delay(1000);
                     actionServer.SucceedInvoke();
                 });
 

@@ -147,7 +147,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
 
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                {
+                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
                     return AlarmCodes.AGV_State_Cant_do_this_Action;
+                }
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
                 await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
@@ -217,6 +220,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (isNoOperate)
             {
                 AGVCActionStatusChaged -= actionStatusChangedCallback;
+                LOG.WARN($"Task Action狀態錯誤:{status}");
                 Agv.SoftwareEMO(AlarmCodes.AGV_State_Cant_do_this_Action);
             }
             return isNoOperate;

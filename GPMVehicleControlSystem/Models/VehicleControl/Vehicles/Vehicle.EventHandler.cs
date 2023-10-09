@@ -94,21 +94,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
-            if (!diState.State && (diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1 ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
+            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1;
+         
+            if (!diState.State && (isFrontLaser ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
             {
-
                 LOG.INFO($"第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
+                AlarmManager.AddWarning(isFrontLaser ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
                 AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
             }
             else
             {
-
                 if (IsAllLaserNoTrigger())
                 {
                     LOG.INFO($"第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    Task.Factory.StartNew(async () =>
+                    Task.Factory.StartNew(() =>
                     {
-                        await Task.Delay(1000);
                         AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                     });
                 }
@@ -132,7 +132,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 LOG.INFO($"第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                AlarmManager.AddAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2);
+                AlarmManager.AddAlarm(diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area3 : AlarmCodes.BackProtection_Area3);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
             }
             else
@@ -387,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
         {
-            AlarmManager.AddAlarm(AlarmCodes.Bumper, true);
+            AlarmManager.AddAlarm(AlarmCodes.Bumper, false);
         }
 
         /// <summary>
