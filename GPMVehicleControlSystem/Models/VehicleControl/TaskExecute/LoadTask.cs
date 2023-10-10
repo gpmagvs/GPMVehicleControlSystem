@@ -192,7 +192,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _eqHandshakeMode = eqHandshakeMode;
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                if (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN)
+                if (!Agv.Parameters.LDULD_Task_No_Entry && (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN))
                 {
                     LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},終點Tag={RunningTaskData.Destination}");
                     Agv.SetAGV_TR_REQ(false);

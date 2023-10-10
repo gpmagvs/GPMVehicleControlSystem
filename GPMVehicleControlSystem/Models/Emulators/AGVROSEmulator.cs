@@ -11,6 +11,7 @@ using AGVSystemCommonNet6.Log;
 using System.Linq;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -44,6 +45,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private ROBOT_CONTROL_CMD complex_cmd;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
         private bool IsCharge = false;
+        public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
         public AGVROSEmulator()
         {
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
@@ -118,7 +120,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 {
                     actionServer.AcceptedInvoke();
                     emergency_stop = true;
-                    Console.WriteLine($"[ROS 車控模擬器] 空任務-緊急停止!!");
+                    EmuLog($"[ROS 車控模擬器] 空任務-緊急停止!!");
                     isPreviousMoveActionNotFinish = false;
                     previousTaskAction = null;
                     actionServer.SucceedInvoke();
@@ -136,7 +138,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         }
                     }
                 });
-                Console.WriteLine($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
+                EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
                 RobotStopMRE = new ManualResetEvent(true);
                 //是否為分段任務
                 //模擬走型
@@ -182,12 +184,17 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             //計算距離
                             if (current_position.x == 0 && current_position.y == 0)
                             {
-                                await Task.Delay(TimeSpan.FromSeconds(1));
+                                await Task.Delay(TimeSpan.FromSeconds(0.5));
                             }
                             else
                             {
-                                var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
-                                await Task.Delay(TimeSpan.FromSeconds(distance / 0.8), cts.Token);
+                                if (EmuParam.Move_Time_Mode == clsEmulatorParams.MOVE_TIME_EMULATION.DISTANCE)
+                                {
+                                    var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
+                                    await Task.Delay(TimeSpan.FromSeconds(distance / 0.8), cts.Token);
+                                }
+                                else
+                                    await Task.Delay(TimeSpan.FromSeconds(EmuParam.Move_Fixed_Time), cts.Token);
                             }
                             module_info.Battery.batteryLevel -= 0x01;
 
@@ -206,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         }
                         catch (Exception ex)
                         {
-                            LOG.Critical(ex);
+                            EmuLog(ex.Message + $"\r\n{ex.StackTrace}");
                         }
                     }
                     if (ChargeStationTags.Contains(obj.finalGoalID))
@@ -231,7 +238,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         });
                     }
                     previousTaskAction = obj;
-                    LOG.TRACE($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
+                    EmuLog($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
                     if (complex_cmd != ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                     {
                         isPreviousMoveActionNotFinish = obj.finalGoalID != obj.planPath.poses.Last().header.seq;
@@ -273,26 +280,22 @@ namespace GPMVehicleControlSystem.Models.Emulators
             if (req.reqsrv == 2) //要求停止
             {
                 complex_cmd = ROBOT_CONTROL_CMD.STOP;
-                EmuLog($"車載要求停止");
                 RobotStopMRE.Reset();
             }
             else if (req.reqsrv == 0)
             {
                 complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
-                EmuLog($"車載要求速度恢復");
                 RobotStopMRE.Set();
             }
             else if (req.reqsrv == 1)
             {
                 complex_cmd = ROBOT_CONTROL_CMD.DECELERATE;
-                EmuLog($"車載要求減速");
                 RobotStopMRE.Set();
             }
             else if (req.reqsrv == 100)
             {
                 isPreviousMoveActionNotFinish = false;
                 complex_cmd = ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL;
-                EmuLog($"車載要求車控在下一點或當前(若目前在TAG上)停止:完成任務");
             }
             res = new ComplexRobotControlCmdResponse
             {
@@ -311,8 +314,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
             Task.Factory.StartNew(async () =>
             {
                 //模擬拍照
-                await Task.Delay(1000);
-                module_info.CSTReader.data = $"Try_ID_{DateTime.Now.ToString("yyyyMMddHHmmssffff")}";
+                await Task.Delay(500);
+                module_info.CSTReader.data = $"TA030{DateTime.Now.ToString("HHmsf")}";
                 rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", new CSTReaderCommandRequest
                 {
                     model = tin.model,
@@ -325,7 +328,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         }
         private void EmuLog(string msg)
         {
-            LOG.WARN($"[車控模擬] {msg}");
+            LOG.TRACE($"[車控模擬] {msg}");
         }
 
     }

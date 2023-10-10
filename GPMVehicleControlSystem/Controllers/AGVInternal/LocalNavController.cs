@@ -143,7 +143,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           await Task.Delay(10);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
-                          while (agv.ExecutingTask != null)
+                          while (agv.ExecutingActionTask != null)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
@@ -309,12 +309,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 //Discharge
                 clsTaskDownloadData homing_move_task = new clsTaskDownloadData
                 {
+                    IsLocalTask = true,
                     Task_Name = Task_Name,
                     Task_Sequence = seq,
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
                     Station_Type = secondaryLocStation_of_chargeStateion.StationType,
-                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion })
+                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion }),
                 };
                 taskList.Add(homing_move_task);
                 seq += 1;
@@ -334,6 +335,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             PathFinder.clsPathInfo? planPath = pathFinder.FindShortestPath(mapData.Points, isInChargeOrEqPortStation ? secondaryLocStation_of_chargeStateion : currentStation, actionType == ACTION_TYPE.None ? destineStation : secondaryLocStation);
             clsTaskDownloadData normal_move_task = new clsTaskDownloadData
             {
+                IsLocalTask = true,
                 Task_Name = Task_Name,
                 Task_Sequence = seq,
                 Action_Type = ACTION_TYPE.None,
@@ -354,6 +356,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 clsTaskDownloadData homing_move_task = new clsTaskDownloadData
                 {
+                    IsLocalTask = true,
                     Task_Name = Task_Name,
                     Task_Sequence = seq,
                     Action_Type = actionType,

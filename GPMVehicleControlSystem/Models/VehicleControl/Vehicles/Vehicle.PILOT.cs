@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private TaskBase _ExecutingTask;
-        public TaskBase ExecutingTask
+        public TaskBase ExecutingActionTask
         {
             get => _ExecutingTask;
             set
@@ -53,6 +53,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             _RunTaskData = new clsTaskDownloadData
             {
+                IsLocalTask= taskDownloadData.IsLocalTask,
+                IsActionFinishReported=false,
                 Task_Name = taskDownloadData.Task_Name,
                 Task_Sequence = taskDownloadData.Task_Sequence,
                 Trajectory = taskDownloadData.Trajectory,
@@ -85,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         BuzzerPlayer.Move();
                     }
                     StatusLighter.RUN();
-                    await ExecutingTask.AGVSPathExpand(taskDownloadData);
+                    await ExecutingActionTask.AGVSPathExpand(taskDownloadData);
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
                 else
@@ -95,9 +97,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (action == ACTION_TYPE.None)
                     {
-                        ExecutingTask = new NormalMoveTask(this, _taskDownloadData);
+                        ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
                         if (Parameters.SimulationMode)
-                            WagoDO.SetState(DO_ITEM.EMU_EQ_GO,false);//模擬離開二次定位點EQ GO訊號會消失
+                            WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
                     }
                     else
                     {
@@ -105,30 +107,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
 
                         if (action == ACTION_TYPE.Charge)
-                            ExecutingTask = new ChargeTask(this, _taskDownloadData);
+                            ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Discharge)
-                            ExecutingTask = new DischargeTask(this, _taskDownloadData);
+                            ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Load)
-                            ExecutingTask = new LoadTask(this, _taskDownloadData);
+                            ExecutingActionTask = new LoadTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Unload)
-                            ExecutingTask = new UnloadTask(this, _taskDownloadData);
+                            ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Park)
-                            ExecutingTask = new ParkTask(this, _taskDownloadData);
+                            ExecutingActionTask = new ParkTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Unpark)
-                            ExecutingTask = new UnParkTask(this, _taskDownloadData);
+                            ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.Measure)
-                            ExecutingTask = new MeasureTask(this, _taskDownloadData);
+                            ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
                         else if (action == ACTION_TYPE.ExchangeBattery)
-                            ExecutingTask = new ExchangeBatteryTask(this, _taskDownloadData);
+                            ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
                         else
                         {
                             throw new NotImplementedException();
                         }
                     }
-                    previousTagPoint = ExecutingTask?.RunningTaskData.ExecutingTrajecory[0];
-                    ExecutingTask.ForkLifter = ForkLifter;
+                    previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
+                    ExecutingActionTask.ForkLifter = ForkLifter;
                     await Task.Delay(1000);
-                    var result = await ExecutingTask.Execute();
+                    var result = await ExecutingActionTask.Execute();
                     if (result != AlarmCodes.None)
                     {
                         Sub_Status = SUB_STATUS.DOWN;
@@ -156,19 +158,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool IsReplanTask(clsTaskDownloadData taskDownloadData)
         {
-            if (ExecutingTask == null)
+            if (ExecutingActionTask == null)
                 return false;
 
             var newAction = taskDownloadData.Action_Type;
             var newTaskName = taskDownloadData.Task_Name;
-            var previousAction = ExecutingTask.RunningTaskData.Action_Type;
-            var previousTaskName = ExecutingTask.RunningTaskData.Task_Name;
+            var previousAction = ExecutingActionTask.RunningTaskData.Action_Type;
+            var previousTaskName = ExecutingActionTask.RunningTaskData.Task_Name;
 
-            if (newTaskName != ExecutingTask.RunningTaskData.Task_Name)
+            if (newTaskName != ExecutingActionTask.RunningTaskData.Task_Name)
                 return false;
             if (newAction != ACTION_TYPE.None)
                 return false;
-            if (taskDownloadData.Trajectory.First().Point_ID != ExecutingTask.RunningTaskData.Trajectory.First().Point_ID)
+            if (taskDownloadData.Trajectory.First().Point_ID != ExecutingActionTask.RunningTaskData.Trajectory.First().Point_ID)
                 return false;
 
             return newAction == previousAction && taskDownloadData.Task_Name == previousTaskName;
@@ -204,10 +206,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
                     return;
-                if (ExecutingTask == null)
+                if (ExecutingActionTask == null)
                     return;
 
-                previousTagPoint = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+                previousTagPoint = ExecutingActionTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
                 if (previousTagPoint == null)
                 {
                     LOG.Critical($"AGV抵達 {newVisitedNodeTag} 但在任務軌跡上找不到該站點。");//脫離路徑
@@ -217,13 +219,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
 
-                if (ExecutingTask.action == ACTION_TYPE.None)
+                if (ExecutingActionTask.action == ACTION_TYPE.None)
                 {
-                    var laser_mode = ExecutingTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
+                    var laser_mode = ExecutingActionTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
                     await Laser.ModeSwitch(laser_mode, true);
                 }
 
-                if (ExecutingTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
+                if (ExecutingActionTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
                 {
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
@@ -381,7 +383,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 await Task.Delay(delay);
                 CurrentTaskRunStatus = status;
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                if (!_RunTaskData.IsLocalTask)
                 {
                     double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                     double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
@@ -397,11 +399,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
-                    if (ExecutingTask != null)
+                    if (ExecutingActionTask != null)
                     {
-                        ExecutingTask.Abort();
-                        ExecutingTask.Dispose();
-                        ExecutingTask = null;
+                        ExecutingActionTask.Abort();
+                        ExecutingActionTask.Dispose();
+                        ExecutingActionTask = null;
                     }
                 }
             }

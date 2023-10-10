@@ -332,7 +332,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,Task ID={task_id}, 車控Action = {ActionStatus}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} (Task ID={task_id},車控Action當前狀態= {ActionStatus})");
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -343,7 +343,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} ,Task ID={task_id}, Result: {(res.confirm ? "OK" : "NG")}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd} 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id},)");
             return res.confirm;
         }
 
@@ -360,10 +360,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await Task.Run(async () =>
             {
                 string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: true, color: ConsoleColor.Green);
+                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green );
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
-                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 while (_ActionStatus != ActionStatus.ACTIVE)
                 {
                     await Task.Delay(1);

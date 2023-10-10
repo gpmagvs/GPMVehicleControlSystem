@@ -145,7 +145,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 BuzzerPlayer.Move();
                 LOG.INFO($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                Agv.ExecutingTask.RunningTaskData = RunningTaskData;
+                Agv.ExecutingActionTask.RunningTaskData = RunningTaskData;
                 AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);

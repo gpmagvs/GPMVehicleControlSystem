@@ -56,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 LOG.INFO($"Start Cargo Bias Detection.");
-                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
+                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingActionTask.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
                     if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)

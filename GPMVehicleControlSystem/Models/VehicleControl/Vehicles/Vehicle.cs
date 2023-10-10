@@ -210,18 +210,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (ExecutingTask == null)
+                if (ExecutingActionTask == null)
                     return new MapPoint { Name = "" };
                 else
                 {
                     try
                     {
-                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);
-                        return _point == null ? new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination } : _point;
+                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingActionTask.RunningTaskData.Destination);
+                        return _point == null ? new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination } : _point;
                     }
                     catch (Exception)
                     {
-                        return new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination };
+                        return new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination };
 
                     }
                 }
@@ -408,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -474,7 +474,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -700,12 +700,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            if (ExecutingTask != null)
+            if (ExecutingActionTask != null)
             {
-                ExecutingTask.AGVCActionStatusChaged = null;
+                ExecutingActionTask.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
-            ExecutingTask = null;
+            ExecutingActionTask = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
             if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(DI_ITEM.EQ_BUSY))
@@ -819,8 +819,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
-        protected internal virtual void SoftwareEMO(AlarmCodes alarmCode)
+        protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            AGVSResetCmdFlag = true;
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
@@ -829,18 +830,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);
-                ExecutingTask?.Abort();
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                ExecutingActionTask?.Abort();
+                if (!_RunTaskData.IsLocalTask)
                 {
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
-                    HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
+                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                    if (Remote_Mode == REMOTE_MODE.ONLINE)
+                    {
+                        LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                        await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                    }
                 }
                 DirectionLighter.CloseAll();
                 DOSettingWhenEmoTrigger();
                 StatusLighter.DOWN();
             }
             IsInitialized = false;
-            ExecutingTask = null;
+            ExecutingActionTask = null;
             AGVC._ActionStatus = ActionStatus.NO_GOAL;
             previousSoftEmoTime = DateTime.Now;
         }
@@ -866,9 +871,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StaSysMessageManager.Clear();
             IsResetAlarmWorking = true;
 
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask != null)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingActionTask != null)
             {
-                if (ExecutingTask.action == ACTION_TYPE.None)
+                if (ExecutingActionTask.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
                 else
                 {

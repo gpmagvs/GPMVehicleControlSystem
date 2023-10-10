@@ -95,7 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             clsIOSignal diState = (clsIOSignal)sender;
             bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1;
-         
+
             if (!diState.State && (isFrontLaser ? !WagoDO.GetState(DO_ITEM.Front_LsrBypass) : !WagoDO.GetState(DO_ITEM.Back_LsrBypass)))
             {
                 LOG.INFO($"第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
@@ -231,16 +231,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
-                if (ExecutingTask != null)
+                if (ExecutingActionTask != null)
                 {
                     await Task.Delay(200);
                     _Sub_Status = SUB_STATUS.RUN;
                     StatusLighter.RUN();
                     try
                     {
-                        if (ExecutingTask != null)
+                        if (ExecutingActionTask != null)
                         {
-                            if (ExecutingTask.action == ACTION_TYPE.None)
+                            if (ExecutingActionTask.action == ACTION_TYPE.None)
                                 BuzzerPlayer.Move();
                             else
                             {
@@ -284,11 +284,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _ = Task.Factory.StartNew(async () =>
             {
                 SoftwareEMO(alarm_code);
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
-                {
-                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
-                    await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
-                }
+              
             });
 
         }
@@ -344,7 +340,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             Sub_Status = SUB_STATUS.DOWN;
                         }
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
-                        ExecutingTask.Abort();
+                        ExecutingActionTask.Abort();
                     });
                 }
                 return result;
@@ -365,12 +361,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (ExecuteAGVSTask == null)
                 return;
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask.action == ACTION_TYPE.None)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingActionTask.action == ACTION_TYPE.None)
             {
                 //方向燈
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
                 //雷射
-                if (ExecutingTask.action == ACTION_TYPE.None && direction != clsNavigation.AGV_DIRECTION.STOP)
+                if (ExecutingActionTask.action == ACTION_TYPE.None && direction != clsNavigation.AGV_DIRECTION.STOP)
                     Laser.LaserChangeByAGVDirection(sender, direction);
             }
         }

@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (WorkStations.Stations.TryGetValue(ExecutingTask.destineTag, out var data))
+                if (WorkStations.Stations.TryGetValue(ExecutingActionTask.destineTag, out var data))
                 {
                     return data.ModbusTcpPort;
                 }
@@ -207,7 +207,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsULReqOn(action))
                 {
-                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status ==SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -216,7 +216,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsEQReadyOn())
                 {
-                    if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+                    if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -428,9 +428,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     try
                     {
                         await Task.Delay(1);
-                        if (ExecutingTask == null)
+                        if (ExecutingActionTask == null)
                             break;
-                        if (ExecutingTask != null && ExecutingTask.action != ACTION_TYPE.Load && ExecutingTask.action != ACTION_TYPE.Unload)
+                        if (ExecutingActionTask != null && ExecutingActionTask.action != ACTION_TYPE.Load && ExecutingActionTask.action != ACTION_TYPE.Unload)
                             break;
 
                         bool isEQGoOff = !IsEQGOOn();
@@ -444,6 +444,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         if (isEQGoOff)
                         {
+                            SetAGV_TR_REQ(false);
                             if (Sub_Status == SUB_STATUS.DOWN)
                                 break;
                             if (Sub_Status == SUB_STATUS.RUN)
@@ -488,9 +489,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (Sub_Status == SUB_STATUS.DOWN)
                     {
                         AGVC.AbortTask();
-                        SetAGV_TR_REQ(false);
                         LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
+                        SetAGV_TR_REQ(false);
                         return;
                     }
                     bool isEQReadyOff = !IsEQReadyOn();
@@ -528,7 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (IsEQBusyOn())
                 {
                     await Task.Delay(1);
-                    if (Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+                    if (Sub_Status == SUB_STATUS.DOWN)
                     {
                         AGVAlarmWhenEQBusyFlag = true;
                         SetAGV_TR_REQ(false);
@@ -556,7 +557,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         EQAlarmWhenEQBusyFlag = true;
                         waitEQSignalCST.Cancel();
                         AGVC.AbortTask();
-                        Sub_Status =SUB_STATUS.DOWN;
+                        Sub_Status = SUB_STATUS.DOWN;
                         if (!IsEQGOOn())
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
