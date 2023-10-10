@@ -450,8 +450,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            if (Parameters.SimulationMode)
-                emulator.Runstatus.AGV_Status = _Main_Status;
+            //if (Parameters.SimulationMode)
+            //    emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
             Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
@@ -463,7 +463,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
-                var status = Parameters.SimulationMode ? emulator.Runstatus : new RunningStatus
+                var status = new RunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
                     CargoType = GetCargoType(),
@@ -571,9 +571,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             string vms_ip = Parameters.Connections["AGVS"].IP;
             int vms_port = Parameters.Connections["AGVS"].Port;
-
             //AGVS
             AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
+            AGVS.SetLogFolder(Path.Combine(Parameters.LogFolder, "AGVS_Message_Log"));
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
