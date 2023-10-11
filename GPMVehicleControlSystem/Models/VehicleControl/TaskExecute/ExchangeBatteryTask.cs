@@ -70,6 +70,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             BuzzerPlayer.ExchangeBattery();
+            await TsmcMiniAGV.Battery1UnLock();
+            if (!IsBat1Unlock)
+                return (false, AlarmCodes.Battery1_Not_UnLock);
+            await TsmcMiniAGV.Battery2UnLock();
+            if (!IsBat2Unlock)
+                return (false, AlarmCodes.Battery2_Not_UnLock);
+
             try
             {
                 //先換低電量的
@@ -87,7 +94,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 };
 
-                batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level < 70).ToArray();
+                batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level <= Agv.Parameters.InspectionAGV.ExchangeBatLevelThresholdVal).ToArray();
 
                 foreach (var bat in batInfos)
                 {
@@ -107,6 +114,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 return (false, ex.alarm_code);
             }
+
+            await TsmcMiniAGV.Battery1Lock();
+            if (!IsBat1Lock)
+                return (false, AlarmCodes.Battery1_Not_Lock);
+            await TsmcMiniAGV.Battery2Lock();
+            if (!IsBat2Lock)
+                return (false, AlarmCodes.Battery2_Not_Lock);
+
             //退至二次定位點
             BuzzerPlayer.Action();
             AGVCActionStatusChaged += OnAGVCBackToEntryPoint;
@@ -119,24 +134,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_0 : DO_ITEM.AGV_CS_1;
             DO_ITEM LDUDLREQ = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? DO_ITEM.AGV_L_REQ : DO_ITEM.AGV_U_REQ;
-
-
-            if (action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY)
-            {
-                if (batNo == BATTERY_LOCATION.RIGHT)
-                {
-                    await TsmcMiniAGV.Battery1UnLock();
-                    if (!IsBat1Unlock)
-                        throw new HandshakeException(AlarmCodes.Battery1_Not_UnLock);
-                }
-
-                else
-                {
-                    await TsmcMiniAGV.Battery2UnLock();
-                    if (!IsBat2Unlock)
-                        throw new HandshakeException(AlarmCodes.Battery2_Not_UnLock);
-                }
-            }
 
             await WaitEQSignal(DI_ITEM.EQ_VALID, true, 3);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, true);
@@ -184,22 +181,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await TsmcMiniAGV.WagoDO.SetState(BES, false);
             await WaitEQSignal(DI_ITEM.EQ_COMPT, false, 3);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
-
-            if (action == EXCHANGE_BAT_ACTION.RELOAD_BATTERY)
-                if (batNo == BATTERY_LOCATION.RIGHT)
-                {
-                    await TsmcMiniAGV.Battery1Lock();
-                    if (!IsBat1Lock)
-                        throw new HandshakeException(AlarmCodes.Battery1_Not_Lock);
-                }
-                else
-                {
-                    await TsmcMiniAGV.Battery2Lock();
-                    if (!IsBat2Lock)
-                        throw new HandshakeException(AlarmCodes.Battery2_Not_Lock);
-
-                }
-
 
         }
         private async Task<bool> WaitEQSignal(DI_ITEM input, bool expect_state, int timeout_sec)
