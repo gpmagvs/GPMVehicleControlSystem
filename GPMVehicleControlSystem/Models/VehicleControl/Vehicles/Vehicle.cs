@@ -674,6 +674,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
                     await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
+                    DirectionLighter.CloseAll();
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
                     LOG.INFO("Init done");
