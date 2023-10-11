@@ -109,7 +109,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return checkResult.alarm_code;
                 }
-                await Task.Delay(100);
+                await Task.Delay(10);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
                 if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
@@ -154,7 +154,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
                 await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
-                await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                 if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     agvc_response = (true, "空取空放");
@@ -170,7 +169,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         await Task.Delay(10);
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
                         await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
-                        await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);

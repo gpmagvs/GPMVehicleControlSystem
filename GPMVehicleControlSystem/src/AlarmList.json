@@ -1055,6 +1055,11 @@
     "CN": "交握事前檢查訊號錯誤(EQ_GO)"
   },
   {
+    "Code": 3227,
+    "Description": "Precheck IO Fail(STATE IO NOT RESET)",
+    "CN": "設備PIO狀態尚未復歸"
+  },
+  {
     "Code": 3230,
     "Description": "Handshake_Fail_EQ_BUSY_ON",
     "CN": "Handshake_Fail_EQ_BUSY_ON"

@@ -12,6 +12,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;
         public int CurrentTag => Data == null ? 0 : (int)Data.tagID;
 
+        /// <summary>
+        /// 距離Tag中心的距離
+        /// </summary>
+        public double DistanceToTagCenter
+        {
+            get
+            {
+                if (CurrentTag == 0)
+                    return 99999.0;
+                return Math.Sqrt(Math.Pow(CurrentX, 2) + Math.Pow(CurrentX, 2));
+            }
+        }
+
         public double CurrentAngle => Data == null ? 0 : (int)Data.theta;
         public double CurrentX => Data == null ? 0 : (int)Data.xValue;
         public double CurrentY => Data == null ? 0 : (int)Data.yValue;

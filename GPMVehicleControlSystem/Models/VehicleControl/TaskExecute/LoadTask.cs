@@ -12,6 +12,8 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsF
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -192,9 +194,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _eqHandshakeMode = eqHandshakeMode;
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                if (!Agv.Parameters.LDULD_Task_No_Entry && (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN))
+                if (!Agv.Parameters.LDULD_Task_No_Entry && (Agv.BarcodeReader.DistanceToTagCenter > 5 | Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN))
                 {
-                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},終點Tag={RunningTaskData.Destination}");
+                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter}mm | 終點Tag={RunningTaskData.Destination}");
                     Agv.SetAGV_TR_REQ(false);
                     return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
                 }
@@ -289,6 +291,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.DirectionLighter.Backward(delay: 800);
                     RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
 
+                    await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                     (bool agvc_executing, string message) agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.agvc_executing)
                     {
@@ -297,12 +300,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     else
                     {
-                        await Task.Delay(100);
+                        await Task.Delay(10);
+                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+                        await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
                         {
                             AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                         }
                         return (true, AlarmCodes.None);
                     }

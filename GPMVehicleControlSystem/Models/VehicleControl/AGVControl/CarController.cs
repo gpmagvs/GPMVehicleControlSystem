@@ -327,8 +327,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
         {
-            await Task.Delay(1);
-            CarSpeedControl(cmd, RunningTaskData.Task_Name);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name);
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
@@ -360,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await Task.Run(async () =>
             {
                 string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green );
+                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
