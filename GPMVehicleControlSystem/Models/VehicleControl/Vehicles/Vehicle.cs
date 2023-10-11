@@ -15,16 +15,15 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Net.Sockets;
+using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -161,8 +160,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+
+        /// <summary>
+        /// 與 AGVS Reset Command 相關，若收到 AGVS 下 AGVS Reset
+        /// Command 給 AGV
+        ///⚫ AGVC 停下後為 true
+        ///⚫ 重新收到 0301 任務後為 fals
+        /// </summary>
         public bool AGV_Reset_Flag { get; internal set; }
 
+        internal bool AGVSResetCmdFlag = false;
         public MoveControl ManualController => AGVC.ManualController;
 
         public bool IsInitialized { get; internal set; }
@@ -203,18 +210,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (ExecutingTask == null)
+                if (ExecutingActionTask == null)
                     return new MapPoint { Name = "" };
                 else
                 {
                     try
                     {
-                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTask.RunningTaskData.Destination);
-                        return _point == null ? new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination } : _point;
+                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingActionTask.RunningTaskData.Destination);
+                        return _point == null ? new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination } : _point;
                     }
                     catch (Exception)
                     {
-                        return new MapPoint { Name = ExecutingTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTask.RunningTaskData.Destination };
+                        return new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination };
 
                     }
                 }
@@ -233,12 +240,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _Sub_Status = value;
                     try
                     {
-                        BuzzerPlayer.Stop();
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
-                                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-
+                                SetAGV_TR_REQ(false);
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
                             DirectionLighter.CloseAll();
@@ -246,6 +251,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else if (value == SUB_STATUS.IDLE)
                         {
+                            BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
                             DirectionLighter.CloseAll();
                         }
@@ -387,15 +393,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             //gen alarm codes 
 
-            AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-            }).ToArray();
-
+            AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS_WebAPI();
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
@@ -410,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -421,6 +419,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()
+        {
+            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
+        }
+        private AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] GetAlarmCodesUserReportToAGVS_WebAPI()
+        {
+            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
+        }
+
         /// <summary>
         /// 生成支援TCPIP通訊的RunningStatus Model
         /// </summary>
@@ -429,27 +450,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            if (Parameters.SimulationMode)
-                emulator.Runstatus.AGV_Status = _Main_Status;
+            //if (Parameters.SimulationMode)
+            //    emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
             Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             //gen alarm codes 
 
-            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-            }).ToArray();
+            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS();
 
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
-                var status = Parameters.SimulationMode ? emulator.Runstatus : new RunningStatus
+                var status = new RunningStatus
                 {
                     Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
                     CargoType = GetCargoType(),
@@ -460,7 +474,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTask == null ? false : ExecutingTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -470,6 +484,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return new RunningStatus();
             }
         }
+
 
         public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
@@ -556,13 +571,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             string vms_ip = Parameters.Connections["AGVS"].IP;
             int vms_port = Parameters.Connections["AGVS"].Port;
-
             //AGVS
             AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
+            AGVS.SetLogFolder(Path.Combine(Parameters.LogFolder, "AGVS_Message_Log"));
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
-            AGVS.OnTaskResetReq = AGVSTaskResetReqHandle;
+            AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
             AGVS.Start();
         }
@@ -611,14 +626,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Laser.ModeSwitch(0);
         }
         protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
+
+        /// <summary>
+        /// 初始化AGV
+        /// </summary>
+        /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
             if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
                 return (false, $"當前狀態不可進行初始化({Sub_Status})");
+
+
+            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD) && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
+            {
+                CSTReader.ValidCSTID = "";
+                LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+            }
+
             InitializeCancelTokenResourece = new CancellationTokenSource();
             return await Task.Run(async () =>
             {
-                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 800);
+                StopAllHandshakeTimer();
+                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
                 {
                     await ResetMotor();
@@ -642,8 +671,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     LOG.INFO("Init done. Laser mode chaged to Bypass");
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
-
-                    await Task.Delay(2000);
+                    await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
                     Sub_Status = SUB_STATUS.IDLE;
                     IsInitialized = true;
@@ -672,12 +700,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            if (ExecutingTask != null)
+            if (ExecutingActionTask != null)
             {
-                ExecutingTask.AGVCActionStatusChaged = null;
+                ExecutingActionTask.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
-            ExecutingTask = null;
+            ExecutingActionTask = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
             if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(DI_ITEM.EQ_BUSY))
@@ -770,6 +798,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             AGVC.OnSickOutputPathsDataUpdated += (sender, OutputPaths) => Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
         }
+
+
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
             Task.Factory.StartNew(() =>
@@ -789,9 +819,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
+        protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
+        {
+            AGVSResetCmdFlag = true;
+            Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
+            Sub_Status = SUB_STATUS.DOWN;
+            InitializeCancelTokenResourece.Cancel();
+            SetAGV_TR_REQ(false);
+            AGVC.AbortTask();
+            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+            {
+                AlarmManager.AddAlarm(alarmCode);
+                ExecutingActionTask?.Abort();
+                if (!_RunTaskData.IsLocalTask)
+                {
+                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                    if (Remote_Mode == REMOTE_MODE.ONLINE)
+                    {
+                        LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                        await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                    }
+                }
+                DirectionLighter.CloseAll();
+                DOSettingWhenEmoTrigger();
+                StatusLighter.DOWN();
+            }
+            IsInitialized = false;
+            ExecutingActionTask = null;
+            AGVC._ActionStatus = ActionStatus.NO_GOAL;
+            previousSoftEmoTime = DateTime.Now;
+        }
         protected internal virtual void SoftwareEMO()
         {
-            EMOPushedHandler("software_emo", EventArgs.Empty);
+            SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
@@ -811,12 +871,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StaSysMessageManager.Clear();
             IsResetAlarmWorking = true;
 
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingTask != null)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
             {
-                if (ExecutingTask.action == ACTION_TYPE.None)
+                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                {
+                    BuzzerPlayer.Stop();
                     BuzzerPlayer.Move();
+                }
                 else
                 {
+                    BuzzerPlayer.Stop();
                     BuzzerPlayer.Action();
                 }
             }
@@ -830,17 +894,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
 
                 await WagoDO.ResetSaftyRelay();
-                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2))
+                if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                     return true;
 
                 Console.WriteLine("Reset Motor Process Start");
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                await Task.Delay(200);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                await Task.Delay(200);
+                await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
                 Console.WriteLine("Reset Motor Process End");
                 return true;
             }
@@ -876,7 +942,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         /// <summary>
-        /// 取得載物的類型 0:tray, 1:rack
+        /// 取得載物的類型 0:tray, 1:rack , 200:tray
         /// </summary>
         /// <returns></returns>
         protected virtual int GetCargoType()
@@ -915,7 +981,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
+        {
+            LOG.INFO($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");
+            (bool result, string virtual_id, string message) results = await AGVS.TryGetVirtualID(QueryType, CstType);
+            if (results.result)
+            {
+                CSTReader.ValidCSTID = results.virtual_id;
+                LOG.INFO($"Query Virtual ID From AGVS Success, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Virtual ID={CSTReader.ValidCSTID}");
 
+            }
+            else
+            {
+                LOG.WARN($"Query Virtual ID From AGVS Fail, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Message={results.message}");
+                AlarmManager.AddAlarm(AlarmCodes.GetVirtualIDFail, true);
+            }
+        }
 
         internal async Task<(bool confirm, string message)> TrackingTagCenter(double finalAngle = 90)
         {

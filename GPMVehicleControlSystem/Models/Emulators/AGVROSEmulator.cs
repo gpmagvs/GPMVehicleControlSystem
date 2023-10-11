@@ -9,6 +9,9 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Log;
 using System.Linq;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -39,8 +42,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
+        private ROBOT_CONTROL_CMD complex_cmd;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
         private bool IsCharge = false;
+        public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
         public AGVROSEmulator()
         {
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
@@ -92,63 +97,164 @@ namespace GPMVehicleControlSystem.Models.Emulators
             actionServer.OnNAVGoalReceived += NavGaolHandle;
             Console.WriteLine("ROS Enum Action Server Created!");
         }
-
+        TaskCommandGoal previousTaskAction;
+        bool _isPreviousMoveActionNotFinish = false;
+        bool emergency_stop = false;
+        bool isPreviousMoveActionNotFinish
+        {
+            get => _isPreviousMoveActionNotFinish;
+            set
+            {
+                _isPreviousMoveActionNotFinish = value;
+                LOG.TRACE($"isPreviousMoveActionNotFinish={value}");
+            }
+        }
         private void NavGaolHandle(object sender, TaskCommandGoal obj)
         {
-            TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
-            Console.WriteLine($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
-            RobotStopMRE = new ManualResetEvent(true);
-            //模擬走型
-            Task.Factory.StartNew(async () =>
+            Task.Factory.StartNew(() =>
             {
-                var firstTag = obj.planPath.poses.First().header.seq;
-                IsCharge = false;
-                module_info.Battery.dischargeCurrent = 13200;
-                module_info.Battery.chargeCurrent = 0;
+                TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
 
-                foreach (RosSharp.RosBridgeClient.MessageTypes.Geometry.PoseStamped? item in obj.planPath.poses)
+                emergency_stop = false;
+                if (obj.planPath.poses.Length == 0) //急停效果
                 {
-                    module_info.Battery.batteryLevel -= 0x01;
-                    uint tag = item.header.seq;
-                    double tag_pose_x = item.pose.position.x;
-                    double tag_pose_y = item.pose.position.y;
-                    double tag_theta = item.pose.orientation.ToTheta();
-                    module_info.nav_state.lastVisitedNode.data = (int)tag;
-                    module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
-                    module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
-                    module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
-                    module_info.reader.tagID = tag;
-                    module_info.reader.xValue = tag_pose_x;
-                    module_info.reader.yValue = tag_pose_y;
-                    module_info.reader.theta = tag_theta;
-                    await Task.Delay(500);
-                    RobotStopMRE.WaitOne();
+                    actionServer.AcceptedInvoke();
+                    emergency_stop = true;
+                    EmuLog($"[ROS 車控模擬器] 空任務-緊急停止!!");
+                    isPreviousMoveActionNotFinish = false;
+                    previousTaskAction = null;
+                    actionServer.SucceedInvoke();
+                    return;
                 }
-                if (ChargeStationTags.Contains(obj.finalGoalID))
+                CancellationTokenSource cts = new CancellationTokenSource();
+                Task.Run(() =>
                 {
-                    IsCharge = true;
-                    module_info.Battery.chargeCurrent = 23000;
-                    module_info.Battery.dischargeCurrent = 0;
-                    _ = Task.Factory.StartNew(async () =>
+                    while (true)
                     {
-                        while (IsCharge)
+                        if (actionServer.GetStatus() != ActionStatus.ACTIVE)
                         {
-                            await Task.Delay(1000);
-                            module_info.Battery.batteryLevel += 0x05;
-                            if (module_info.Battery.batteryLevel >= 100)
-                            {
-                                IsCharge = false;
-                                module_info.Battery.batteryLevel = 100;
-                                module_info.Battery.chargeCurrent = 500;
-                                module_info.Battery.dischargeCurrent = 0;
-                            }
+                            cts.Cancel();
+                            break;
                         }
-                    });
-                }
-                actionServer.SucceedInvoke();
-            });
+                    }
+                });
+                EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
+                RobotStopMRE = new ManualResetEvent(true);
+                //是否為分段任務
+                //模擬走型
+                Task.Run(async () =>
+                {
+                    var firstTag = obj.planPath.poses.First().header.seq;
+                    IsCharge = false;
+                    module_info.Battery.dischargeCurrent = 13200;
+                    module_info.Battery.chargeCurrent = 0;
 
+                    for (int i = 0; i < obj.planPath.poses.Length; i++)
+                    {
+                        while (StaStored.CurrentVechicle.WagoDO.GetState(DO_ITEM.Horizon_Motor_Stop))
+                        {
+                            Console.WriteLine($"[Move simulation] Motro Stop. wait...");
+                            if (cts.IsCancellationRequested)
+                                break;
+                            await Task.Delay(1000);
+                        }
+                        if (cts.IsCancellationRequested)
+                        {
+                            isPreviousMoveActionNotFinish = false;
+                            previousTaskAction = null;
+                            actionServer.SucceedInvoke();
+                            return;
+                        }
+                        try
+                        {
+                            var pose = obj.planPath.poses[i];
+                            uint tag = pose.header.seq;
+                            if (isPreviousMoveActionNotFinish && previousTaskAction.planPath.poses.Length > i)
+                            {
+                                if (tag == previousTaskAction.planPath.poses[i].header.seq)
+                                {
+                                    LOG.TRACE($"Tag {tag} already pass.");
+                                    continue;
+                                }
+                            }
+                            double tag_pose_x = pose.pose.position.x;
+                            double tag_pose_y = pose.pose.position.y;
+                            double tag_theta = pose.pose.orientation.ToTheta();
+                            var current_position = module_info.nav_state.robotPose.pose.position;
+                            //計算距離
+                            if (current_position.x == 0 && current_position.y == 0)
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(0.5));
+                            }
+                            else
+                            {
+                                if (EmuParam.Move_Time_Mode == clsEmulatorParams.MOVE_TIME_EMULATION.DISTANCE)
+                                {
+                                    var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
+                                    await Task.Delay(TimeSpan.FromSeconds(distance / 0.8), cts.Token);
+                                }
+                                else
+                                    await Task.Delay(TimeSpan.FromSeconds(EmuParam.Move_Fixed_Time), cts.Token);
+                            }
+                            module_info.Battery.batteryLevel -= 0x01;
+
+                            module_info.nav_state.lastVisitedNode.data = (int)tag;
+
+                            module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
+                            module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
+                            module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
+                            module_info.reader.tagID = tag;
+                            module_info.reader.xValue = tag_pose_x;
+                            module_info.reader.yValue = tag_pose_y;
+                            module_info.reader.theta = tag_theta;
+                            if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
+                                break;
+                            RobotStopMRE.WaitOne();
+                        }
+                        catch (Exception ex)
+                        {
+                            EmuLog(ex.Message + $"\r\n{ex.StackTrace}");
+                        }
+                    }
+                    if (ChargeStationTags.Contains(obj.finalGoalID))
+                    {
+                        IsCharge = true;
+                        module_info.Battery.chargeCurrent = 23000;
+                        module_info.Battery.dischargeCurrent = 0;
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            while (IsCharge)
+                            {
+                                await Task.Delay(1000);
+                                module_info.Battery.batteryLevel += 0x05;
+                                if (module_info.Battery.batteryLevel >= 100)
+                                {
+                                    IsCharge = false;
+                                    module_info.Battery.batteryLevel = 100;
+                                    module_info.Battery.chargeCurrent = 500;
+                                    module_info.Battery.dischargeCurrent = 0;
+                                }
+                            }
+                        });
+                    }
+                    previousTaskAction = obj;
+                    EmuLog($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
+                    if (complex_cmd != ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
+                    {
+                        isPreviousMoveActionNotFinish = obj.finalGoalID != obj.planPath.poses.Last().header.seq;
+                    }
+                    else
+                    {
+                        isPreviousMoveActionNotFinish = false;
+                        previousTaskAction = null;
+                    }
+                    await Task.Delay(1000);
+                    actionServer.SucceedInvoke();
+                });
+
+            });
         }
+
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);
@@ -173,13 +279,23 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             if (req.reqsrv == 2) //要求停止
             {
-                EmuLog($"車載要求停止");
+                complex_cmd = ROBOT_CONTROL_CMD.STOP;
                 RobotStopMRE.Reset();
             }
             else if (req.reqsrv == 0)
             {
-                EmuLog($"車載要求速度恢復");
+                complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
                 RobotStopMRE.Set();
+            }
+            else if (req.reqsrv == 1)
+            {
+                complex_cmd = ROBOT_CONTROL_CMD.DECELERATE;
+                RobotStopMRE.Set();
+            }
+            else if (req.reqsrv == 100)
+            {
+                isPreviousMoveActionNotFinish = false;
+                complex_cmd = ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL;
             }
             res = new ComplexRobotControlCmdResponse
             {
@@ -198,8 +314,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
             Task.Factory.StartNew(async () =>
             {
                 //模擬拍照
-                await Task.Delay(1000);
-                module_info.CSTReader.data = $"Try_ID_{DateTime.Now.ToString("yyyyMMddHHmmssffff")}";
+                await Task.Delay(500);
+                module_info.CSTReader.data = $"TA030{DateTime.Now.ToString("HHmsf")}";
                 rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", new CSTReaderCommandRequest
                 {
                     model = tin.model,
@@ -212,7 +328,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         }
         private void EmuLog(string msg)
         {
-            LOG.WARN($"[車控模擬] {msg}");
+            LOG.TRACE($"[車控模擬] {msg}");
         }
 
     }

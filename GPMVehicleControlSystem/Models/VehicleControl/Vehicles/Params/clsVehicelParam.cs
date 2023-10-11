@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool CargoBiasDetectionWhenNormalMoving { get; set; } = true;
         /// <summary>
-        /// 
+        /// 空取空放
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public bool WebKeyboardMoveControl { get; set; } = false;
@@ -106,9 +106,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             {   HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 5  },
         };
 
-        public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
         public EQ_INTERACTION_FAIL_ACTION CstReadFailAction { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
+        public CST_ID_NO_MATCH_ACTION Cst_ID_Not_Match_Action { get; set; } = CST_ID_NO_MATCH_ACTION.REPORT_READER_RESULT;
         public EQ_INTERACTION_FAIL_ACTION HandshakeFailWhenLoadFinish { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
+        public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
+        /// <summary>
+        /// 模擬器參數
+        /// </summary>
+        public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
     }
 
     public class clsInspectionAGVParams
@@ -118,5 +123,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 低於此電量不換電池
         /// </summary>
         public byte ExchangeBatLevelThresholdVal { get; set; } = 100;
+    }
+
+    public class clsEmulatorParams
+    {
+        public enum MOVE_TIME_EMULATION
+        {
+            DISTANCE,
+            FIXED_TIME
+        }
+        public MOVE_TIME_EMULATION Move_Time_Mode { get; set; } = MOVE_TIME_EMULATION.FIXED_TIME;
+        public double Move_Fixed_Time { get; set; } = 0.5;
     }
 }

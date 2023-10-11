@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
@@ -33,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
 
-            if (ExecutingTask != null)
+            if (ExecutingActionTask != null && Sub_Status == SUB_STATUS.RUN)
             {
                 return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
             }
@@ -45,8 +46,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
-                if (Parameters.ForbidToOnlineTags.Contains(currentTag)) //檢查是否停在禁止上線的TAG位置
+                if (Parameters.ForbidToOnlineTags.Contains(currentTag))
+                {
+                    AlarmManager.AddWarning(AlarmCodes.Cant_Online_With_Forbid_Tag);
+                    //檢查是否停在禁止上線的TAG位置
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online);
+                }
             }
             var _oriMode = Remote_Mode;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
@@ -60,6 +65,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return result;
         }
 
-        
+
     }
 }

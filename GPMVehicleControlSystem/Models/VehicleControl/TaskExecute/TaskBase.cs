@@ -1,6 +1,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -10,7 +11,9 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -94,6 +97,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
@@ -105,10 +109,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return checkResult.alarm_code;
                 }
-                await Task.Delay(200);
+                await Task.Delay(10);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
-                if (ForkLifter != null)
+                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
                     {
@@ -118,8 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (action == ACTION_TYPE.None)
                 {
-                    BuzzerPlayer.Move();
-                    if (ForkLifter != null)
+                    if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
                         var forkGoHomeResult = await ForkLifter.ForkGoHome();
                         if (!forkGoHomeResult.confirm)
@@ -130,8 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    BuzzerPlayer.Action();
-                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
+                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
                         var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                         if (!forkGoTeachPositionResult.success)
@@ -142,9 +144,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
-                AGVCActionStatusChaged += HandleAGVActionChanged;
+
+
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                {
+                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
+                    return AlarmCodes.AGV_State_Cant_do_this_Action;
+                }
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
+                await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                 if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     agvc_response = (true, "空取空放");
@@ -153,19 +162,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                 {
                     agvc_response = await TransferTaskToAGVC();
-                }
-                if (!agvc_response.agvc_executing)
-                {
-                    return AlarmCodes.Cant_TransferTask_TO_AGVC;
-                }
-                else
-                {
-                    Agv.AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                    if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
+                    if (!agvc_response.agvc_executing)
+                        return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
+                    else
                     {
-                        StartFrontendObstcleDetection();
+                        await Task.Delay(10);
+                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+
+                        await Task.Delay(100);
+                        await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+
+                        if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
+                            HandleAGVActionChanged(ActionStatus.SUCCEEDED);
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        {
+                            if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
+                                StartFrontendObstcleDetection();
+                            AGVCActionStatusChaged += HandleAGVActionChanged;
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        }
                     }
                 }
+
 
                 return AlarmCodes.None;
             }
@@ -176,6 +194,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
+        private void BuzzerPlayMusic(ACTION_TYPE action)
+        {
+            if (action == ACTION_TYPE.None)
+            {
+                BuzzerPlayer.Move();
+            }
+            else
+            {
+                BuzzerPlayer.Action();
+            }
+        }
+
         protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
         {
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
@@ -183,35 +213,57 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal bool IsCargoBiasDetecting = false;
         internal bool IsCargoBiasTrigger = false;
+
+        protected bool IsAGVCActionNoOperate(ActionStatus status, Action<ActionStatus> actionStatusChangedCallback)
+        {
+            bool isNoOperate = status == ActionStatus.RECALLING | status == ActionStatus.REJECTED | status == ActionStatus.PREEMPTING | status == ActionStatus.PREEMPTED | status == ActionStatus.ABORTED;
+            if (isNoOperate)
+            {
+                AGVCActionStatusChaged -= actionStatusChangedCallback;
+                LOG.WARN($"Task Action狀態錯誤:{status}");
+                Agv.SoftwareEMO(AlarmCodes.AGV_State_Cant_do_this_Action);
+            }
+            return isNoOperate;
+        }
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
-            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            _ = Task.Factory.StartNew(async () =>
             {
-                AGVCActionStatusChaged -= HandleAGVActionChanged;
-                return;
-            }
-
-            if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
-            {
-                AGVCActionStatusChaged -= HandleAGVActionChanged;
-                LOG.ERROR($"存在貨物傾倒異常");
-                IsCargoBiasTrigger = IsCargoBiasDetecting = false;
-                AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
-                Agv.Sub_Status = SUB_STATUS.DOWN;
-                await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                return;
-            }
-
-            if (status == ActionStatus.ACTIVE)
-            {
-                //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
-            }
-            else
-            {
-                if (status == ActionStatus.SUCCEEDED)
+                LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+                if (IsAGVCActionNoOperate(status, HandleAGVActionChanged))
+                    return;
+                if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
-                    AGVCActionStatusChaged -= HandleAGVActionChanged;
+                    if (Agv.AGVSResetCmdFlag)
+                    {
+                        Agv.AGV_Reset_Flag = true;
+                    }
+                    AGVCActionStatusChaged = null;
+                    return;
+                }
+
+                if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                {
+                    AGVCActionStatusChaged = null;
+                    LOG.ERROR($"存在貨物傾倒異常");
+                    IsCargoBiasTrigger = IsCargoBiasDetecting = false;
+                    AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
+                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Cst_Slope_Error);
+                    return;
+                }
+
+                if (status == ActionStatus.ACTIVE)
+                {
+                    //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+                }
+                else if (status == ActionStatus.SUCCEEDED)
+                {
+                    if (Agv.AGVSResetCmdFlag)
+                    {
+                        Agv.AGV_Reset_Flag = true;
+                    }
+                    AGVCActionStatusChaged = null;
 
 
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
@@ -227,21 +279,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         AlarmManager.AddAlarm(result.alarmCode, false);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                     }
-
                 }
-                if (status == ActionStatus.ABORTED)
-                {
-                    AGVCActionStatusChaged -= HandleAGVActionChanged;
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
-                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.FAILURE);
-                }
-            }
+            });
         }
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.Sub_Status = SUB_STATUS.IDLE;
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }
 
@@ -330,7 +375,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     try
                     {
                         Agv.AGVC.EMOHandler(this, EventArgs.Empty);
-                        Agv.ExecutingTask.Abort();
+                        Agv.ExecutingActionTask.Abort();
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                         AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
                     }

@@ -76,6 +76,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
+        public event EventHandler OnAGVCCycleStopRequesting;
         public Action<ActionStatus>? OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
@@ -89,6 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (_ActionStatus != value)
                 {
                     _ActionStatus = value;
+                    LOG.TRACE($"Action Status Changed To : {_ActionStatus}");
                     if (OnAGVCActionChanged != null)
                     {
                         OnAGVCActionChanged(_ActionStatus);
@@ -250,42 +252,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             ActionStatus = ActionStatus.NO_GOAL;
             if (actionClient != null)
             {
-                actionClient.Terminate();
+                try
+                {
+                    actionClient.CancelGoal();
+                    actionClient.Terminate();
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                }
                 actionClient.Dispose();
             }
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
             actionClient.OnActionStatusChanged += (status) =>
             {
-                ActionStatus = status;
+                Task.Factory.StartNew(() => ActionStatus = status);
+
             };
             actionClient.Initialize();
         }
 
-        internal void AbortTask(RESET_MODE mode)
+        internal async Task<bool> ResetTask(RESET_MODE mode)
         {
             if (mode == RESET_MODE.ABORT)
-                AbortTask();
+                return await AbortTask();
             else
-                CycleStop();
+                return await CycleStop();
 
         }
 
-        private void CycleStop()
+        private async Task<bool> CycleStop()
         {
-            CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL);
+            return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
             //AbortTask();
         }
 
         /// <summary>
         /// 發送空的任務messag已達緊停的效果
         /// </summary>
-        internal void AbortTask()
+        internal async Task<bool> AbortTask()
         {
-            if (actionClient != null)
-            {
-                actionClient.goal = new TaskCommandGoal();
-                actionClient.SendGoal();
-            }
+            if (_ActionStatus != ActionStatus.ABORTED)
+                SendGoal(new TaskCommandGoal());
+            return true;
         }
 
         internal bool NavPathExpandedFlag { get; private set; } = false;
@@ -318,11 +327,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
         {
-            await Task.Delay(1);
-            CarSpeedControl(cmd, RunningTaskData.Task_Name);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name);
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} (Task ID={task_id},車控Action當前狀態= {ActionStatus})");
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -333,7 +342,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"要求車控 {cmd},Result: {(res.confirm ? "OK" : "NG")}");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd} 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id},)");
             return res.confirm;
         }
 
@@ -341,35 +350,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
-
             return await SendGoal(RunningTaskData.RosTaskCommandGoal);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
         internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal)
         {
-            string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-            LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-            actionClient.goal = rosGoal;
-            actionClient.SendGoal();
-            wait_agvc_execute_action_cts = new CancellationTokenSource();
-
-            await Task.Delay(100);
-            wait_agvc_execute_action_cts.CancelAfter(TimeSpan.FromSeconds(20));
-            while (_ActionStatus != ActionStatus.ACTIVE)
+            return await Task.Run(async () =>
             {
-                if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
+                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+                actionClient.goal = rosGoal;
+                actionClient.SendGoal();
+                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                while (_ActionStatus != ActionStatus.ACTIVE)
                 {
-                    LOG.Critical($"發送任務請求給車控但車控並未接收成功");
-                    AlarmManager.AddAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control, false);
-                    return (false, $"發送任務請求給車控但車控並未接收成功");
+                    await Task.Delay(1);
+                    if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                    {
+                        return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
+                    }
                 }
-                await Task.Delay(1);
-            }
-            LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", false);
-            return (true, "");
-
+                LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", true);
+                return (true, "");
+            });
         }
+
 
         internal void Replan(clsTaskDownloadData taskDownloadData)
         {

@@ -56,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 LOG.INFO($"Start Cargo Bias Detection.");
-                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTask.action == ACTION_TYPE.None)
+                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingActionTask.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
                     if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             LOG.ERROR($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             IsCargoBiasTrigger = true;
-                            Agv.AGVC.AbortTask(RESET_MODE.CYCLE_STOP);
+                            Agv.AGVC.ResetTask(RESET_MODE.CYCLE_STOP);
                             return;
                         }
                     }
@@ -104,7 +104,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             LOG.WARN("抵達虛擬點終點站 Stop Monitor .");
             AlarmManager.AddAlarm(AlarmCodes.Destine_Point_Is_Virtual_Point);
-            Agv.AGVSTaskResetReqHandle(RESET_MODE.ABORT);
+            Agv.HandleAGVSTaskCancelRequest(RESET_MODE.ABORT);
 
         }
 

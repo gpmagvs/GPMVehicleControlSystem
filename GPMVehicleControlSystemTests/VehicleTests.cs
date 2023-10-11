@@ -15,12 +15,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Tests
         [TestMethod()]
         public void ModbusTcpConnectTest()
         {
-            Vehicle vehicle = new  ForkAGV();
+            Vehicle vehicle = new ForkAGV();
             bool result = vehicle.ModbusTcpConnect(6502).Result;
             while (result)
             {
                 Thread.Sleep(1);
             }
+        }
+        [TestMethod()]
+        public void AlarmCodesDistinctByTest()
+        {
+            AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarms = new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[]
+            {
+                 new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+                 {
+                      Alarm_ID = 1,
+                 },new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+                 {
+                      Alarm_ID = 4,
+                 },new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+                 {
+                      Alarm_ID = 1,
+                 },new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+                 {
+                      Alarm_ID = 4,
+                 },new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+                 {
+                      Alarm_ID = 3,
+                 }
+            };
+            var _alarms = alarms.DistinctBy(alarm => alarm.Alarm_ID);
+            Assert.AreEqual(3, _alarms.ToArray().Length);
         }
     }
 }

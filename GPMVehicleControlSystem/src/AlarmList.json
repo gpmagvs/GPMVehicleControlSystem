@@ -520,6 +520,11 @@
     "CN": "無法進行Online, AGV須停在Tag上"
   },
   {
+    "Code": 1071,
+    "Description": "Can't 'Online With Forbid Tag",
+    "CN": "無法進行Online, 目前Tag已設為禁止上線"
+  },
+  {
     "Code": 1110,
     "Description": "FrontProtection_Area2",
     "CN": "AGV前方遠處障礙物"
@@ -1050,24 +1055,109 @@
     "CN": "交握事前檢查訊號錯誤(EQ_GO)"
   },
   {
+    "Code": 3227,
+    "Description": "Precheck IO Fail(STATE IO NOT RESET)",
+    "CN": "設備PIO狀態尚未復歸"
+  },
+  {
     "Code": 3230,
-    "Description": "Handshake T1 Timeout",
-    "CN": "交握T1逾時"
+    "Description": "Handshake_Fail_EQ_BUSY_ON",
+    "CN": "Handshake_Fail_EQ_BUSY_ON"
+  },
+  {
+    "Code": 3231,
+    "Description": "Handshake_Fail_EQ_BUSY_OFF",
+    "CN": "Handshake_Fail_EQ_BUSY_OFF"
+  },
+  {
+    "Code": 3232,
+    "Description": "Handshake_Fail_AGV_DOWN",
+    "CN": "Handshake_Fail_AGV_DOWN"
+  },
+  {
+    "Code": 3233,
+    "Description": "Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY",
+    "CN": "Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY"
+  },
+  {
+    "Code": 3234,
+    "Description": "Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY",
+    "CN": "Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY"
+  },
+  {
+    "Code": 3235,
+    "Description": "Handshake_Fail_EQ_BUSY_NOT_ON",
+    "CN": "Handshake_Fail_EQ_BUSY_NOT_ON"
+  },
+  {
+    "Code": 3236,
+    "Description": "Handshake_Fail_EQ_BUSY_NOT_OFF",
+    "CN": "Handshake_Fail_EQ_BUSY_NOT_OFF"
+  },
+  {
+    "Code": 3237,
+    "Description": "Handshake_Fail_TA1_EQ_L_REQ",
+    "CN": "交握T1(EQ_L_REQ)逾時"
+  },
+  {
+    "Code": 3238,
+    "Description": "Handshake_Fail_TA1_EQ_U_REQ",
+    "CN": "交握T1(EQ_U_REQ)逾時"
+  },
+  {
+    "Code": 3239,
+    "Description": "Handshake_Fail_TA2_EQ_READY",
+    "CN": "交握T2(EQ_READY)逾時"
   },
   {
     "Code": 3240,
-    "Description": "Handshake Information Fail",
-    "CN": "交握資訊錯誤"
+    "Description": "Handshake_Fail_TA3_EQ_BUSY_ON",
+    "CN": "交握T3(EQ_BUSY)逾時"
   },
   {
     "Code": 3241,
-    "Description": "Handshake Information Fail(EQ_L_REQ)",
-    "CN": "交握資訊錯誤(EQ_L_REQ)"
+    "Description": "Handshake_Fail_TA4_EQ_BUSY_OFF",
+    "CN": "交握T4(EQ_BUSY)逾時"
   },
   {
     "Code": 3242,
-    "Description": "Handshake Information Fail(EQ_U_REQ)",
-    "CN": "交握資訊錯誤(EQ_U_REQ)"
+    "Description": "Handshake_Fail_TA5_EQ_L_REQ",
+    "CN": "交握T5(EQ_L_REQ)逾時"
+  },
+  {
+    "Code": 3243,
+    "Description": "Handshake_Fail_TA5_EQ_U_REQ",
+    "CN": "交握T5(EQ_U_REQ)逾時"
+  },
+  {
+    "Code": 3245,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON"
+  },
+  {
+    "Code": 3246,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF"
+  },
+  {
+    "Code": 3247,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON"
+  },
+  {
+    "Code": 3248,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF"
+  },
+  {
+    "Code": 3249,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON"
+  },
+  {
+    "Code": 3250,
+    "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF",
+    "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF"
   },
   {
     "Code": 3300,

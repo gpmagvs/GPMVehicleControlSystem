@@ -143,7 +143,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           await Task.Delay(10);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
-                          while (agv.ExecutingTask != null)
+                          while (agv.ExecutingActionTask != null)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
@@ -164,8 +164,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 return Ok(new TaskActionResult
                 {
-                    accpet = false,
-                    error_message = "Oppppps!",
+                    accpet = true,
+                    error_message = "",
                 });
             }
 
@@ -309,12 +309,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 //Discharge
                 clsTaskDownloadData homing_move_task = new clsTaskDownloadData
                 {
+                    IsLocalTask = true,
                     Task_Name = Task_Name,
                     Task_Sequence = seq,
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
                     Station_Type = secondaryLocStation_of_chargeStateion.StationType,
-                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion })
+                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion }),
                 };
                 taskList.Add(homing_move_task);
                 seq += 1;
@@ -334,6 +335,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             PathFinder.clsPathInfo? planPath = pathFinder.FindShortestPath(mapData.Points, isInChargeOrEqPortStation ? secondaryLocStation_of_chargeStateion : currentStation, actionType == ACTION_TYPE.None ? destineStation : secondaryLocStation);
             clsTaskDownloadData normal_move_task = new clsTaskDownloadData
             {
+                IsLocalTask = true,
                 Task_Name = Task_Name,
                 Task_Sequence = seq,
                 Action_Type = ACTION_TYPE.None,
@@ -346,13 +348,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 normal_move_task.Trajectory.Last().Theta = destineStation.Direction; //移動的終點要與機台同向
             }
-            taskList.Add(normal_move_task);
+            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag | CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
+                taskList.Add(normal_move_task);
             seq += 1;
 
             if (actionType != ACTION_TYPE.None)
             {
                 clsTaskDownloadData homing_move_task = new clsTaskDownloadData
                 {
+                    IsLocalTask = true,
                     Task_Name = Task_Name,
                     Task_Sequence = seq,
                     Action_Type = actionType,
@@ -366,6 +370,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
             return taskList.ToArray();
+        }
+        private double CalculateThetaError(double _destinTheta)
+        {
+            var _agvTheta = agv.Navigation.Angle;
+            var theta_error = Math.Abs(_agvTheta - _destinTheta);
+            theta_error = theta_error > 180 ? 360 - theta_error : theta_error;
+            return Math.Abs(theta_error);
         }
 
         public class TaskActionResult

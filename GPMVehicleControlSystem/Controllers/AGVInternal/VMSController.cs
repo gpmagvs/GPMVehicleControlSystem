@@ -15,6 +15,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -25,7 +26,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
 
         private Vehicle agv => StaStored.CurrentVechicle;
-
+      
         [HttpGet("Where_r_u")]
         public async Task Where_r_u()
         {
@@ -43,8 +44,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return;
         }
 
-
-
         [HttpPost("ResetAlarm")]
         public async Task<IActionResult> ResetAlarm()
         {
@@ -54,10 +53,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok("OK");
         }
 
+        [HttpPost("ClearAlarm")]
+        public async Task<IActionResult> ClearAlarm(int alarm_code)
+        {
+            AlarmManager.ClearAlarm(alarm_code);
+            return Ok("OK");
+        }
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
-            if (mode == OPERATOR_MODE.MANUAL && agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+            if (mode == OPERATOR_MODE.MANUAL && agv.Sub_Status == SUB_STATUS.RUN)
             {
                 return Ok(new
                 {
@@ -140,7 +145,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                agv.SoftwareEMO();
+                agv.SoftwareEMO(AGVSystemCommonNet6.Alarm.VMS_ALARM.AlarmCodes.SoftwareEMS);
 
                 StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             }
