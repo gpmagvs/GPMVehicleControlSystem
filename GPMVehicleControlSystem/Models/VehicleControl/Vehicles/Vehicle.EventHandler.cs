@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         protected virtual void DIOStatusChangedEventRegist()
         {
-            WagoDI.OnEMO += EMOPushedHandler;
+            WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
             WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal);
@@ -284,7 +284,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
-        private async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
+        protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
             _ = Task.Factory.StartNew(async () =>
             {
@@ -376,10 +376,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        protected virtual void EMOPushedHandler(object? sender, EventArgs e)
+        protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
         {
-            SoftwareEMO(AlarmCodes.EMO_Button);
+            SoftwareEMO(AlarmCodes.EMS);
         }
+
 
         protected virtual async Task DOSettingWhenEmoTrigger()
         {

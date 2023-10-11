@@ -50,9 +50,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnNearLaserDiTrigger;
 
         /// <summary>
-        /// EMO按壓
+        /// EMO觸發
         /// </summary>
         public event EventHandler OnEMO;
+
+        /// <summary>
+        /// EMO按鈕按壓觸發
+        /// </summary>
+        public event EventHandler OnEMOButtonPressed;
+
         /// <summary>
         /// Bump Sensor觸發
         /// </summary>
@@ -207,7 +213,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             if (AgvType != AGV_TYPE.INSPECTION_AGV)
                 VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
             else
+            {
                 VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+                VCSInputs[Indexs[DI_ITEM.EMO_Button]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
+            }
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {
@@ -218,7 +227,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
             }
         }
-
 
         public virtual async void StartAsync()
         {

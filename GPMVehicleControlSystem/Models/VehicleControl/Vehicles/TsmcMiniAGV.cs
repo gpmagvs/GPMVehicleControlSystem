@@ -53,6 +53,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } },
             {2,new clsBattery{ } },
         };
+        protected override void DIOStatusChangedEventRegist()
+        {
+            base.DIOStatusChangedEventRegist();
+            WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
+        }
+        protected virtual void EMOButtonPressedHandler(object? sender, EventArgs e)
+        {
+            SoftwareEMO(AlarmCodes.EMO_Button);
+        }
+        bool Laser3rdTriggerHandlerFlag = false;
         protected override async void HandleLaserArea3SinalChange(object? sender, bool di_state)
         {
             if (Operation_Mode == OPERATOR_MODE.MANUAL)
@@ -63,8 +73,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             base.HandleLaserArea3SinalChange(sender, di_state);
             bool isLaserTrigger = !di_state;
 
-            if (isLaserTrigger)
+            if (isLaserTrigger && !Laser3rdTriggerHandlerFlag)
             {
+                Laser3rdTriggerHandlerFlag = true;
                 bool result_success;
                 Stopwatch sw = Stopwatch.StartNew();
                 LOG.WARN($"[TSMC Inspection AGV] Laser 第三段觸發,等待障礙物清除後 Reset Motors");
@@ -94,44 +105,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else
                     LOG.WARN($"[TSMC Inspection AGV] Safty relay reset 失敗");
+                Laser3rdTriggerHandlerFlag = false;
             }
         }
-        protected override void EMOPushedHandler(object? sender, EventArgs e)
+        protected override void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
-            InitializeCancelTokenResourece.Cancel();
-            bool IsTriggerBySoftwareEMO = sender.ToString() == "software_emo";
-            bool IsTriggerByLaser3rd = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
-            AlarmCodes alarm_code = IsTriggerBySoftwareEMO ? AlarmCodes.SoftwareEMS : IsTriggerByLaser3rd ? AlarmCodes.EMS : AlarmCodes.EMO_Button;
-
-            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+            if (Laser3rdTriggerHandlerFlag)
+                return;
+            base.AlarmManager_OnUnRecoverableAlarmOccur(sender, alarm_code);
+        }
+        protected internal async override void SoftwareEMO(AlarmCodes alarmCode)
+        {
+            Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
+            if (Laser3rdTriggerHandlerFlag)
             {
-                BuzzerPlayer.Alarm();
-                AlarmManager.AddAlarm(alarm_code);
-                if (!IsTriggerByLaser3rd) //不是因為雷射第三段觸發
-                {
-                    AGVC.AbortTask();
-                    ExecutingActionTask?.Abort();
-                    ExecutingActionTask = null;
-                    if (Remote_Mode == REMOTE_MODE.ONLINE)
-                    {
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                        HandleRemoteModeChangeReq(REMOTE_MODE.OFFLINE);
-                        DirectionLighter.CloseAll();
-                        DOSettingWhenEmoTrigger();
-                        IsInitialized = false;
-                    }
-                }
+                LOG.WARN($"EMS Trigger by Laser 3rd and Reset process is running, No Abort Task and AGV is not Down Status");
+                return;
             }
-
-            if (IsTriggerBySoftwareEMO)
-                previousSoftEmoTime = DateTime.Now;
-            if (!IsTriggerByLaser3rd)
-            {
-                AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                _Sub_Status = SUB_STATUS.DOWN;
-                StatusLighter.DOWN();
-            }
+            base.SoftwareEMO(alarmCode);
         }
         protected internal override void SoftwareEMO()
         {

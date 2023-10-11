@@ -303,12 +303,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EmulatorInitialize();
                 Task RosConnTask = new Task(async () =>
                 {
-                    await Task.Delay(1).ContinueWith(t =>
+                    await Task.Delay(1).ContinueWith(async t =>
                     {
                         InitAGVControl(RosBridge_IP, RosBridge_Port);
                         if (AGVC?.rosSocket != null)
                         {
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
+                            await Task.Delay(1000);
                             BuzzerPlayer.Alarm();
                         }
                     }
@@ -322,10 +323,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                 BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
                 AGVSInit();
-                IsSystemInitialized = true;
                 CommonEventsRegist();
                 //TrafficMonitor();
                 LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
+                IsSystemInitialized = true;
             }
             catch (Exception ex)
             {
@@ -821,12 +822,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            LOG.TRACE($"IsSystemInitialized {IsSystemInitialized}");
             AGVSResetCmdFlag = true;
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
-            AGVC.AbortTask();
+            if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
+                AGVC.AbortTask();
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);

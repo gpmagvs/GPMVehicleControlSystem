@@ -42,7 +42,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         Dictionary<string, List<int>> TaskTrackingTags = new Dictionary<string, List<int>>();
 
-        clsTaskDownloadData _RunTaskData = new clsTaskDownloadData();
+        protected clsTaskDownloadData _RunTaskData = new clsTaskDownloadData()
+        {
+            IsLocalTask = true,
+            IsActionFinishReported = true
+        };
         /// <summary>
         /// 執行派車系統任務
         /// 19:10:07 端點未掃描到QR Code
@@ -53,8 +57,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             _RunTaskData = new clsTaskDownloadData
             {
-                IsLocalTask= taskDownloadData.IsLocalTask,
-                IsActionFinishReported=false,
+                IsLocalTask = taskDownloadData.IsLocalTask,
+                IsActionFinishReported = false,
                 Task_Name = taskDownloadData.Task_Name,
                 Task_Sequence = taskDownloadData.Task_Sequence,
                 Trajectory = taskDownloadData.Trajectory,
@@ -129,7 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingActionTask.ForkLifter = ForkLifter;
-                    await Task.Delay(300); 
+                    await Task.Delay(300);
                     IsLaserRecoveryHandled = false;
 
                     var result = await ExecutingActionTask.Execute();

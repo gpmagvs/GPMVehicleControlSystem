@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 return;
             _ = Task.Run(async () =>
             {
-                //await Stop();
+                await Stop();
                 await Play(SOUNDS.Alarm);
                 IsAlarmPlaying = true;
             });

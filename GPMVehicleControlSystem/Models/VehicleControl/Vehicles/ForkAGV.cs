@@ -149,9 +149,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        protected override void EMOPushedHandler(object? sender, EventArgs e)
+        protected override void EMOTriggerHandler(object? sender, EventArgs e)
         {
-            base.EMOPushedHandler(sender, e);
+            base.EMOTriggerHandler(sender, e);
             Task.Factory.StartNew(() =>
             {
                 ForkLifter.ForkARMStop();
