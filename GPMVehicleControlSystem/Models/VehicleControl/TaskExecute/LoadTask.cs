@@ -335,7 +335,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
                     return;
                 }
-                LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
+                LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
 
                 if (status == ActionStatus.SUCCEEDED)
                 {

@@ -823,10 +823,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AGVSResetCmdFlag = true;
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
+            Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
             AGVC.AbortTask();
-            Sub_Status = SUB_STATUS.DOWN;
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);

@@ -168,6 +168,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         await Task.Delay(10);
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+
+                        await Task.Delay(100);
                         await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
@@ -227,7 +229,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+                LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
                 if (IsAGVCActionNoOperate(status, HandleAGVActionChanged))
                     return;
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
