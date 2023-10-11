@@ -871,12 +871,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StaSysMessageManager.Clear();
             IsResetAlarmWorking = true;
 
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingActionTask != null)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
             {
-                if (ExecutingActionTask.action == ACTION_TYPE.None)
+                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                {
+                    BuzzerPlayer.Stop();
                     BuzzerPlayer.Move();
+                }
                 else
                 {
+                    BuzzerPlayer.Stop();
                     BuzzerPlayer.Action();
                 }
             }

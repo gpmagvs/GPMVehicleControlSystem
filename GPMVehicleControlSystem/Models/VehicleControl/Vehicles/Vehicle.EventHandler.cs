@@ -218,10 +218,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-
+        private bool IsLaserRecoveryHandled = false;
         private async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control)
         {
             await Task.Delay(1000);
+
             if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
             {
                 await AGVC.CarSpeedControl(speed_control);
@@ -231,21 +232,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.RightProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.LeftProtection_Area3);
-                if (ExecutingActionTask != null)
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                 {
-                    await Task.Delay(200);
+                    IsLaserRecoveryHandled = true;
+                    LOG.WARN($"No obstacle. Running");
                     _Sub_Status = SUB_STATUS.RUN;
                     StatusLighter.RUN();
                     try
                     {
-                        if (ExecutingActionTask != null)
+                        await BuzzerPlayer.Stop();
+                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
                         {
-                            if (ExecutingActionTask.action == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
-                            else
-                            {
-                                BuzzerPlayer.Action();
-                            }
+                            LOG.WARN($"No obstacle.  buzzer Move");
+                            BuzzerPlayer.Move();
+                        }
+                        else
+                        {
+                            LOG.WARN($"No obstacle.  buzzer Action");
+                            BuzzerPlayer.Action();
                         }
                     }
                     catch (Exception ex)
@@ -258,6 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
+            IsLaserRecoveryHandled = false;
             _Sub_Status = SUB_STATUS.ALARM;
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
@@ -284,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _ = Task.Factory.StartNew(async () =>
             {
                 SoftwareEMO(alarm_code);
-              
+
             });
 
         }

@@ -129,7 +129,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
                     ExecutingActionTask.ForkLifter = ForkLifter;
-                    await Task.Delay(300);
+                    await Task.Delay(300); 
+                    IsLaserRecoveryHandled = false;
+
                     var result = await ExecutingActionTask.Execute();
                     if (result != AlarmCodes.None)
                     {
