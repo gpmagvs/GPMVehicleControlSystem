@@ -126,7 +126,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             BuzzerPlayer.Action();
             AGVCActionStatusChaged += OnAGVCBackToEntryPoint;
             var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
-            Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask);
+            Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout);
             return (true, AlarmCodes.None);
         }
 

@@ -635,7 +635,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
-            if (Sub_Status == SUB_STATUS.RUN | AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing)
+            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing))
             {
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
@@ -833,7 +833,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
             if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
-                AGVC.AbortTask();
+            {
+                _ = Task.Run(async () =>
+                {
+                    await AGVC.AbortTask();
+                    await Task.Delay(200);
+                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                });
+            }
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);

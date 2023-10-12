@@ -12,6 +12,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Threading;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -93,7 +94,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     LOG.TRACE($"Action Status Changed To : {_ActionStatus}");
                     if (OnAGVCActionChanged != null)
                     {
-                        OnAGVCActionChanged(_ActionStatus);
+                        Task.Factory.StartNew(() =>
+                        {
+                            OnAGVCActionChanged(_ActionStatus);
+                        });
                     }
                 }
             }
@@ -346,15 +350,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return res.confirm;
         }
 
-        internal async Task<(bool confirm, string message)> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData)
+        internal async Task<(bool confirm, string message)> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
             NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
-            return await SendGoal(RunningTaskData.RosTaskCommandGoal);
+            return await SendGoal(RunningTaskData.RosTaskCommandGoal, action_timeout);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
-        internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal)
+        internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
             return await Task.Run(async () =>
             {
@@ -362,12 +366,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
-                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                await Task.Delay(500);
                 while (_ActionStatus != ActionStatus.ACTIVE)
                 {
                     await Task.Delay(1);
                     if (wait_agvc_execute_action_cts.IsCancellationRequested)
                     {
+                        AbortTask();
                         return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
                     }
                 }

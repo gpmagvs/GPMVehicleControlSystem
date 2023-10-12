@@ -43,6 +43,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public int LastVisitedTag { get; set; } = 8;
 
         /// <summary>
+        /// 停車的精度誤差值(mm)
+        /// </summary>
+        public double TagParkingTolerance { get; set; } = 5;
+        /// <summary>
+        /// 送Action任務給車控時等待Action狀態變為Active的Timeout時間(秒)
+        /// </summary>
+        public double ActionTimeout { get; set; } = 5;
+        /// <summary>
         /// 禁止上線的TAG
         /// </summary>
         public List<int> ForbidToOnlineTags { get; set; } = new List<int>();
@@ -114,10 +122,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 模擬器參數
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
-        /// <summary>
-        /// 停車的精度誤差值(mm)
-        /// </summary>
-        public double TagParkingTolerance { get; set; } = 5;
         public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
     }
 

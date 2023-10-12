@@ -200,7 +200,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
         {
-            return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+            return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData,Agv.Parameters.ActionTimeout);
         }
 
         internal bool IsCargoBiasDetecting = false;
