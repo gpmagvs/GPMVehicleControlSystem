@@ -114,6 +114,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 模擬器參數
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
+        /// <summary>
+        /// 停車的精度誤差值(mm)
+        /// </summary>
+        public double TagParkingTolerance { get; set; } = 5;
     }
 
     public class clsInspectionAGVParams
