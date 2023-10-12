@@ -119,7 +119,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                (bool done, AlarmCodes alarm_code) forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
+                bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+                (bool done, AlarmCodes alarm_code) forkInitizeResult = isForkAllowNoDoInitializeAction ? (true, AlarmCodes.None) : await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
 
                 if (forkInitizeResult.done)
                 {

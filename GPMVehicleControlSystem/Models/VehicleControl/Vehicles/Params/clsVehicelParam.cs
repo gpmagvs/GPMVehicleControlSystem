@@ -118,6 +118,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 停車的精度誤差值(mm)
         /// </summary>
         public double TagParkingTolerance { get; set; } = 5;
+        public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
     }
 
     public class clsInspectionAGVParams

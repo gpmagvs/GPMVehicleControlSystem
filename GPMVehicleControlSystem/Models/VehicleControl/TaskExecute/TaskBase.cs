@@ -88,6 +88,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                await Task.Delay(10);
+                BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
@@ -100,8 +102,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return checkResult.alarm_code;
                 }
                 await Task.Delay(10);
-
-                BuzzerPlayMusic(action);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
                 if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
@@ -188,6 +188,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void BuzzerPlayMusic(ACTION_TYPE action)
         {
+            BuzzerPlayer.Stop();
             if (action == ACTION_TYPE.None)
             {
                 BuzzerPlayer.Move();
