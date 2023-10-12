@@ -337,9 +337,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 LOG.INFO($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
 
-                if (AGVC.ActionStatus != ActionStatus.ACTIVE && mode == RESET_MODE.CYCLE_STOP)
+                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING&& mode == RESET_MODE.CYCLE_STOP)
                 {
                     Sub_Status = SUB_STATUS.IDLE;
+                    AGVC.OnAGVCActionChanged = null;
+                    AGVC.AbortTask();
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                     return true;
                 }
