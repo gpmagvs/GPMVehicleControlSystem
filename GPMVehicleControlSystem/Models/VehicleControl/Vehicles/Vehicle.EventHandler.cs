@@ -19,6 +19,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.WorkStation;
 using System.Reflection.Metadata;
+using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -334,23 +335,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSResetCmdFlag = true;
             try
             {
-                if (AGVC.ActionStatus == ActionStatus.NO_GOAL)
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
-                bool result = await AGVC.ResetTask(mode);
-                if (mode == RESET_MODE.ABORT)
+                LOG.INFO($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
+
+                if (AGVC.ActionStatus != ActionStatus.ACTIVE && mode == RESET_MODE.CYCLE_STOP)
                 {
-                    _ = Task.Factory.StartNew(async () =>
-                    {
-                        if (!normal_state)
-                        {
-                            AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
-                            Sub_Status = SUB_STATUS.DOWN;
-                        }
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
-                        ExecutingActionTask.Abort();
-                    });
+                    Sub_Status = SUB_STATUS.IDLE;
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    return true;
                 }
-                return result;
+                else
+                {
+                    bool result = await AGVC.ResetTask(mode);
+                    if (mode == RESET_MODE.ABORT)
+                    {
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            if (!normal_state)
+                            {
+                                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
+                                Sub_Status = SUB_STATUS.DOWN;
+                            }
+                            await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
+                            ExecutingActionTask.Abort();
+                        });
+                    }
+                    return result;
+                }
             }
             catch (Exception ex)
             {

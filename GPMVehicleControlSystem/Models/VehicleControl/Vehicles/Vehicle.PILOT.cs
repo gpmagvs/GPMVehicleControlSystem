@@ -376,7 +376,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 10, AlarmCodes alarm_tracking = AlarmCodes.None)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 2000, AlarmCodes alarm_tracking = AlarmCodes.None)
         {
             try
             {
@@ -387,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                         _RunTaskData.IsActionFinishReported = true;
                 }
-                await Task.Delay(delay);
+                await Task.Delay(alarm_tracking == AlarmCodes.None ? delay : 10);
                 CurrentTaskRunStatus = status;
                 if (!_RunTaskData.IsLocalTask)
                 {

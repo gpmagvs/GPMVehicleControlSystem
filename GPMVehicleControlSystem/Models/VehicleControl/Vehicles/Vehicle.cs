@@ -862,6 +862,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ExecutingActionTask = null;
             AGVC._ActionStatus = ActionStatus.NO_GOAL;
             previousSoftEmoTime = DateTime.Now;
+            _RunTaskData.IsActionFinishReported = true;
+            _RunTaskData.IsLocalTask = true;
         }
         protected internal virtual void SoftwareEMO()
         {
