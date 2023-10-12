@@ -870,14 +870,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            BuzzerPlayer.Stop();
             if (IsResetAlarmWorking)
                 return;
-
             IsResetAlarmWorking = true;
             await ResetMotor();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
             StaSysMessageManager.Clear();
+
             _ = Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
@@ -888,10 +889,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
 
-                if (_Sub_Status == SUB_STATUS.IDLE | _Sub_Status == SUB_STATUS.RUN | _Sub_Status == SUB_STATUS.Charging)
-                {
-                    BuzzerPlayer.Stop();
-                }
             });
             IsResetAlarmWorking = false;
             return;
