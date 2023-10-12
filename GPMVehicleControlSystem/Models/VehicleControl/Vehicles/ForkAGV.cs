@@ -152,20 +152,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void EMOTriggerHandler(object? sender, EventArgs e)
         {
             base.EMOTriggerHandler(sender, e);
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
             {
+                await Task.Delay(1);
                 ForkLifter.ForkARMStop();
                 ForkLifter.ForkStopAsync();
             });
         }
+
         protected override async void DOSignalDefaultSetting()
         {
             base.DOSignalDefaultSetting();
             await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
             await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
-
         }
+
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();

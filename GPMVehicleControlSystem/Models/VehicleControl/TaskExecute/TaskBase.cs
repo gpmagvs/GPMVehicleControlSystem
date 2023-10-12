@@ -43,17 +43,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                 {
                     List<int> newTrackingTags = value.TagsOfTrajectory;
-
-                    if (TrackingTags.First() != newTrackingTags.First())
-                    {
-                        //1 2 3 
-                        //5
-                    }
-                    else
-                    {
+                    if (TrackingTags.First() == newTrackingTags.First())
                         TrackingTags = newTrackingTags;
-
-                    }
                 }
                 _RunningTaskData = value;
             }
@@ -97,7 +88,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-                BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
@@ -110,6 +100,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return checkResult.alarm_code;
                 }
                 await Task.Delay(10);
+
+                BuzzerPlayMusic(action);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
                 if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
