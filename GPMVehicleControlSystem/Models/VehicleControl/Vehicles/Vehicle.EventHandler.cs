@@ -104,6 +104,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                IsLaserRecoveryHandled = false;
                 if (IsAllLaserNoTrigger())
                 {
                     LOG.INFO($"第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
@@ -137,6 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                IsLaserRecoveryHandled = false;
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
                 {
                     LOG.INFO($"第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
@@ -170,6 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                IsLaserRecoveryHandled = false;
                 AlarmManager.ClearAlarm(AlarmCodes.FrontProtection_Area3);
                 AlarmManager.ClearAlarm(AlarmCodes.BackProtection_Area3);
             }
@@ -210,6 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
+                IsLaserRecoveryHandled = false;
                 if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
                 {
                     LOG.INFO($"側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
@@ -240,7 +244,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        await BuzzerPlayer.Stop();
                         if (_RunTaskData.Action_Type == ACTION_TYPE.None)
                         {
                             LOG.WARN($"No obstacle.  buzzer Move");
@@ -262,7 +265,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
-            IsLaserRecoveryHandled = false;
             _Sub_Status = SUB_STATUS.ALARM;
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
@@ -366,12 +368,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (ExecuteAGVSTask == null)
                 return;
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && ExecutingActionTask.action == ACTION_TYPE.None)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && _RunTaskData.Action_Type == ACTION_TYPE.None)
             {
                 //方向燈
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
                 //雷射
-                if (ExecutingActionTask.action == ACTION_TYPE.None && direction != clsNavigation.AGV_DIRECTION.STOP)
+                if (direction != clsNavigation.AGV_DIRECTION.STOP)
                     Laser.LaserChangeByAGVDirection(sender, direction);
             }
         }

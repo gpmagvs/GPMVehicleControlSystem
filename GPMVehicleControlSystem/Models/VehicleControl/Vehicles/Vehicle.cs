@@ -581,6 +581,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
             AGVS.Start();
+            AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
 
         private Task WagoDIInit()
@@ -634,9 +635,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
-            if (Sub_Status == SUB_STATUS.RUN | Sub_Status == SUB_STATUS.Initializing)
-                return (false, $"當前狀態不可進行初始化({Sub_Status})");
-
+            if (Sub_Status == SUB_STATUS.RUN | AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing)
+            {
+                string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
+                return (false, $"當前狀態不可進行初始化({reason_string})");
+            }
 
             if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD) && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
             {
@@ -863,31 +866,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (IsResetAlarmWorking)
                 return;
 
+            IsResetAlarmWorking = true;
             await ResetMotor();
-            if (AlarmManager.CurrentAlarms.Values.Count == 0)
-            {
-                IsResetAlarmWorking = false;
-                return;
-            }
-            BuzzerPlayer.Stop();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
             StaSysMessageManager.Clear();
-            IsResetAlarmWorking = true;
-
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+            _ = Task.Factory.StartNew(async () =>
             {
-                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                await Task.Delay(1000);
+                bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                if (isObstacle && AGVC.ActionStatus == ActionStatus.ACTIVE)
+                {
+                    BuzzerPlayer.Alarm();
+                    return;
+                }
+
+                if (_Sub_Status == SUB_STATUS.IDLE | _Sub_Status == SUB_STATUS.RUN | _Sub_Status == SUB_STATUS.Charging)
                 {
                     BuzzerPlayer.Stop();
-                    BuzzerPlayer.Move();
                 }
-                else
-                {
-                    BuzzerPlayer.Stop();
-                    BuzzerPlayer.Action();
-                }
-            }
+            });
             IsResetAlarmWorking = false;
             return;
         }

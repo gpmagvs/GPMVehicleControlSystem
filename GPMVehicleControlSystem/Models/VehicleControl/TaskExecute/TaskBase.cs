@@ -188,7 +188,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            BuzzerPlayer.Stop();
             if (action == ACTION_TYPE.None)
             {
                 BuzzerPlayer.Move();
