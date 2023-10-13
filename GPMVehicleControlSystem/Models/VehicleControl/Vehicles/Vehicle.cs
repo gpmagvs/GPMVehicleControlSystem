@@ -635,6 +635,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
+
+            if (Sub_Status == SUB_STATUS.RUN)
+            {
+                return (false, $"當前狀態不可進行初始化(任務執行中)");
+            }
+
             if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing))
             {
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
