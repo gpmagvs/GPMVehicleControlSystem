@@ -369,7 +369,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 }
                 await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-                await Task.Delay(1000);
+                bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+                if (hasCargo)
+                    LOG.WARN($"Has Cargo On Fork, 緩衝時間2s");
+                await Task.Delay(hasCargo ? 2000 : 1000);
+
                 if (IsDownSearch)
                 {
                     LOG.INFO($"Home above , Fork init and Go To 2.5");
