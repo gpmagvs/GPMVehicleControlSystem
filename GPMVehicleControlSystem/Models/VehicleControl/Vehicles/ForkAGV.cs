@@ -156,7 +156,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC = new ForkAGVController(RosBridge_IP, RosBridge_Port);
         }
 
-
+        protected internal override void SoftwareEMO(AlarmCodes alarmCode)
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                LOG.Critical($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
+                await Task.Delay(1);
+                ForkLifter.ForkARMStop();
+                ForkLifter.ForkStopAsync();
+            });
+            base.SoftwareEMO(alarmCode);
+        }
         protected override void EMOTriggerHandler(object? sender, EventArgs e)
         {
             base.EMOTriggerHandler(sender, e);

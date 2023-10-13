@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
@@ -99,17 +100,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 throw ex;
             }
         }
-
+        internal CancellationTokenSource wait_action_down_cts = new CancellationTokenSource();
         private async Task<(bool success, string message)> WaitActionDone(int timeout = 60)
         {
             return await Task.Run(() =>
             {
-                CancellationTokenSource wtd = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                wait_action_down_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                Stopwatch sw = Stopwatch.StartNew();
                 while (!IsZAxisActionDone)
                 {
                     Thread.Sleep(1);
-                    if (wtd.IsCancellationRequested)
-                        return (false, "Wait Action Done Timeout");
+                    if (wait_action_down_cts.IsCancellationRequested)
+                    {
+                        sw.Stop();
+                        string reason = sw.ElapsedMilliseconds >= timeout * 1000 ? "Timeout" : "Abort By Cancel Process";
+                        string log_ = $"Fork Lifter Wait Action Done Fail- {reason}";
+                        LOG.Critical(log_);
+                        return (false, log_);
+                    }
                 }
                 WaitActionDoneFlag = false;
                 return (true, "");

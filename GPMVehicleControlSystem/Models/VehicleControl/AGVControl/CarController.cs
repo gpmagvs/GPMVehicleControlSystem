@@ -366,6 +366,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
+                if (rosGoal.planPath.poses.Length == 0)//取消任務
+                {
+                    return (true, "");
+                }
+                LOG.TRACE($"Acation Timeout setting = {timeout} sec");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 await Task.Delay(500);
                 while (_ActionStatus != ActionStatus.ACTIVE)

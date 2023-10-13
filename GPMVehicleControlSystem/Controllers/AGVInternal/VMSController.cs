@@ -145,8 +145,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                agv.SoftwareEMO(AGVSystemCommonNet6.Alarm.VMS_ALARM.AlarmCodes.SoftwareEMS);
-
+                agv.SoftwareEMO(AlarmCodes.SoftwareEMS);
                 StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             }
             catch (Exception ex)

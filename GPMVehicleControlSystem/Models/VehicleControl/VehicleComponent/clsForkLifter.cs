@@ -183,6 +183,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<(bool confirm, string message)> ForkStopAsync()
         {
+            (forkAGV.AGVC as ForkAGVController).wait_action_down_cts.Cancel();
+            LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             return await fork_ros_controller.ZAxisStop();
         }
         public async Task<(bool confirm, string message)> ForkPositionInit()
@@ -479,16 +481,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
+                    await Task.Delay(1, fork_ros_controller.wait_action_down_cts.Token);
                     if (!belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
                         return (false, AlarmCodes.Belt_Sensor_Error);
 
-                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
+                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN | forkAGV.Sub_Status == SUB_STATUS.Initializing)
                     {
-                        LOG.WARN($"Tag:{tag},{position} AGV Status Not RUN ,Break Try ");
+                        LOG.ERROR($"Tag:{tag},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
                         return (false, AlarmCodes.None);
                     }
-                    Thread.Sleep(1);
                     tryCnt++;
+
+                    if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
+                        return (false, AlarmCodes.Fork_Action_Aborted);
+
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
                     forkMoveREsult = await ForkPose(position_to_reach, speed);
 
@@ -505,9 +511,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 return (true, AlarmCodes.None);
 
             }
-            catch (Exception ex)
+            catch (TaskCanceledException ex)
             {
                 LOG.ERROR(ex);
+                return (false, AlarmCodes.Fork_Action_Aborted);
+            }
+            catch (OperationCanceledException ex)
+            {
+                LOG.ERROR(ex);
+                return (false, AlarmCodes.Fork_Action_Aborted);
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
                 return (false, AlarmCodes.Code_Error_In_System);
             }
 

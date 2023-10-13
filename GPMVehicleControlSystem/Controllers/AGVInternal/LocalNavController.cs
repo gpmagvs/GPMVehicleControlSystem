@@ -45,14 +45,31 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (agv.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV && agv.BarcodeReader.CurrentTag == 0)
+            if (agv.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV)
             {
-                return Ok(new
-                {
-                    accpet = false,
-                    error_message = $"AGV需停在Tag上才可以執行任務。"
-                });
+                if (agv.BarcodeReader.CurrentTag == 0)
+                    return Ok(new
+                    {
+                        accpet = false,
+                        error_message = $"AGV需停在Tag上才可以執行任務。"
+                    });
+
+
+                if (agv.HasAnyCargoOnAGV() && action == ACTION_TYPE.Unload)
+                    return Ok(new
+                    {
+                        accpet = false,
+                        error_message = $"AGV車上有貨物不可進行取貨任務"
+                    });
+
+                if (!agv.HasAnyCargoOnAGV() && action == ACTION_TYPE.Load)
+                    return Ok(new
+                    {
+                        accpet = false,
+                        error_message = $"AGV車上無貨物不可進行放貨任務"
+                    });
             }
+
 
 
             (bool confirm, string message) hardware_status_check;
