@@ -244,7 +244,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     {
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
+                        {
+                            LOG.Critical($"DI Read inputs but null return, disconnect connection.");
+                            Disconnect();
                             continue;
+                        }
 
                         for (int i = 0; i < input.Length; i++)
                         {
@@ -253,9 +257,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                     catch (Exception ex)
                     {
+                        LOG.Critical(ex.Message, ex);
                         AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
                         Disconnect();
-                        Console.WriteLine(ex.Message);
                     }
                 }
             });
