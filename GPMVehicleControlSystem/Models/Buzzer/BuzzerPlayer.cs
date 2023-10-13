@@ -97,7 +97,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
         public static async Task Play(SOUNDS sound)
         {
-            if (OnBuzzerPlay != null)
+            if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
             {
                 bool confirm = OnBuzzerPlay.Invoke();
                 if (!confirm)
