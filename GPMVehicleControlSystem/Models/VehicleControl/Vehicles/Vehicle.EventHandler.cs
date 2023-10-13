@@ -27,6 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         private void CommonEventsRegist()
         {
+            BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
             AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
@@ -337,7 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 LOG.INFO($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
 
-                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING&& mode == RESET_MODE.CYCLE_STOP)
+                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
                 {
                     Sub_Status = SUB_STATUS.IDLE;
                     AGVC.OnAGVCActionChanged = null;

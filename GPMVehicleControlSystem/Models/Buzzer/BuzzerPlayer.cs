@@ -21,7 +21,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsMeasurePlaying = false;
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
-
+        public delegate bool OnBuzzerPlayDelate();
+        public static OnBuzzerPlayDelate OnBuzzerPlay;
         public static async void Alarm()
         {
             if (IsAlarmPlaying)
@@ -96,6 +97,12 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
         public static async Task Play(SOUNDS sound)
         {
+            if (OnBuzzerPlay != null)
+            {
+                bool confirm = OnBuzzerPlay.Invoke();
+                if (!confirm)
+                    return;
+            }
             if (rossocket == null)
                 return;
             await Task.Delay(10);

@@ -125,6 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
         public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
+        public bool BuzzerOn { get; set; } = true;
     }
 
     public class clsInspectionAGVParams
