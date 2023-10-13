@@ -236,6 +236,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         return (false, AlarmCodes.Action_Timeout);
                     }
+                    if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                    {
+                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
+
                     await Task.Delay(1000);
                 }
                 else
@@ -244,6 +249,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (arm_move_Done)
                 {
+                    //check arm position 
+
                     (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                     if (!fork_height_change_result.success)
                         return (false, AlarmCodes.Fork_Height_Setting_Error);
@@ -255,6 +262,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (!arm_move_result.confirm)
                         {
                             return (false, AlarmCodes.Action_Timeout);
+                        }
+                        if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                        {
+                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
                         }
                         await Task.Delay(1000);
                     }
@@ -424,7 +435,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            return await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.3);
+            return await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 1);
 
         }
         private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)

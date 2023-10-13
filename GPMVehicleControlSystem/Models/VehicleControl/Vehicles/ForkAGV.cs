@@ -130,7 +130,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
                 if (forkInitizeResult.done)
                 {
-
                     //self test Home action 
                     (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
                     if (!home_action_response.confirm)

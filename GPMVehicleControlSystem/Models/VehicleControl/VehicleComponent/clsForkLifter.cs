@@ -317,6 +317,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
         {
+            fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
             try
             {
                 this.InitForkSpeed = InitForkSpeed;
@@ -458,6 +459,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
+                fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
