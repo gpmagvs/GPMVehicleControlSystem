@@ -166,12 +166,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 client?.Close();
                 master?.Dispose();
-                client = null;
-                master = null;
             }
             catch (Exception)
             {
             }
+            client = null;
+            master = null;
         }
 
         public override bool IsConnected()
@@ -234,15 +234,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 while (true)
                 {
-
                     Thread.Sleep(1);
-
                     if (!IsConnected())
                     {
                         Connect();
                         continue;
                     }
-
                     try
                     {
                         bool[]? input = master?.ReadInputs(1, Start, Size);

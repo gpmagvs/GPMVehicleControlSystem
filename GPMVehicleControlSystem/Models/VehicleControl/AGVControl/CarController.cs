@@ -362,27 +362,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             return await Task.Run(async () =>
             {
-                string new_path = string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-                LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+                bool isCancelTask = rosGoal.planPath.poses.Length == 0;
+                string new_path = isCancelTask ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
+                if (isCancelTask)
+                    LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
+                else
+                    LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
-                if (rosGoal.planPath.poses.Length == 0)//取消任務
+                if (isCancelTask)//取消任務
                 {
                     return (true, "");
                 }
                 LOG.TRACE($"Acation Timeout setting = {timeout} sec");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-                await Task.Delay(500);
-                while (_ActionStatus != ActionStatus.ACTIVE)
+                while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED)
                 {
                     await Task.Delay(1);
                     if (wait_agvc_execute_action_cts.IsCancellationRequested)
                     {
+                        string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}";
+                        LOG.Critical(error_msg);
                         AbortTask();
-                        return (false, $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}");
+                        return (false, error_msg);
                     }
                 }
-                LOG.INFO($"AGVC Accept Task and Start Executing：Path Tracking = {new_path}", true);
+                LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {_ActionStatus},Path Tracking = {new_path}", true);
                 return (true, "");
             });
         }
