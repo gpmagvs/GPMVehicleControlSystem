@@ -195,11 +195,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 await Task.Delay(500);
-                if (!Agv.Parameters.LDULD_Task_No_Entry && (Agv.BarcodeReader.DistanceToTagCenter > Agv.Parameters.TagParkingTolerance | Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination | Agv.Sub_Status != SUB_STATUS.RUN))
+                AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
+                if ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
                 {
-                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
                     Agv.SetAGV_TR_REQ(false);
-                    return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                    return (false, checkstatus_alarm_code);
                 }
                 HSResult = await Agv.WaitEQBusyOFF(action);
                 if (!HSResult.hs_success)
@@ -276,11 +276,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             try
             {
-
-                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
+                if ((checkstatus_alarm_code = CheckAGVStatus(false)) != AlarmCodes.None)
                 {
-                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
-                    return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                    Agv.SetAGV_TR_REQ(false);
+                    return (false, checkstatus_alarm_code);
                 }
                 if (Agv.Parameters.LDULD_Task_No_Entry)
                 {
@@ -322,6 +322,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw;
             }
 
+        }
+
+        private AlarmCodes CheckAGVStatus(bool check_park_position = true)
+        {
+            if (Agv.Parameters.LDULD_Task_No_Entry)
+                return AlarmCodes.None;
+            AlarmCodes alarm_code = AlarmCodes.None;
+            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                alarm_code = AlarmCodes.AGV_State_Cant_Move;
+            else if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
+                alarm_code = AlarmCodes.AGV_BarcodeReader_Not_Match_Tag_of_Destination;
+            else if (check_park_position && Agv.BarcodeReader.DistanceToTagCenter > Agv.Parameters.TagParkingTolerance)
+                alarm_code = AlarmCodes.AGV_Park_Position_Too_Far_From_Tag_Of_Destination;
+            else
+                alarm_code = AlarmCodes.None;
+
+            if (alarm_code != AlarmCodes.None)
+                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+            return alarm_code;
         }
 
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)

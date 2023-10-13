@@ -641,10 +641,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
 
-            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD) && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
+            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
             {
-                CSTReader.ValidCSTID = "";
-                LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+                if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
+                {
+                    CSTReader.ValidCSTID = "";
+                    LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+                }
+                if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && HasAnyCargoOnAGV() && CSTReader.ValidCSTID == "")
+                {
+                    (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
+                    if (result.request_success)
+                        LOG.WARN($"偵測到AGV無帳有料，已完成自動建帳");
+                }
             }
 
             InitializeCancelTokenResourece = new CancellationTokenSource();
