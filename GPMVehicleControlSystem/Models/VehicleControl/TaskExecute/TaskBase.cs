@@ -1,3 +1,4 @@
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
@@ -8,6 +9,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -21,6 +23,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     {
         public Vehicle Agv { get; }
         private clsTaskDownloadData _RunningTaskData = new clsTaskDownloadData();
+        public bool isSegmentTask = false;
+
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         private bool disposedValue;
@@ -35,16 +39,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             get => _RunningTaskData;
             set
             {
+                try
+                {
 
-                if (_RunningTaskData == null | value.Task_Name != _RunningTaskData?.Task_Name)
-                {
-                    TrackingTags = value.TagsOfTrajectory;
+                    if (_RunningTaskData == null | value.Task_Name != _RunningTaskData?.Task_Name)
+                    {
+                        TrackingTags = value.TagsOfTrajectory;
+                    }
+                    else
+                    {
+                        List<int> newTrackingTags = value.TagsOfTrajectory;
+                        if (TrackingTags.First() == newTrackingTags.First())
+                            TrackingTags = newTrackingTags;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    List<int> newTrackingTags = value.TagsOfTrajectory;
-                    if (TrackingTags.First() == newTrackingTags.First())
-                        TrackingTags = newTrackingTags;
+                    LOG.ERROR(ex);
                 }
                 _RunningTaskData = value;
             }
@@ -160,7 +171,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         await Task.Delay(10);
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-
                         await Task.Delay(100);
                         await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
 
@@ -175,8 +185,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
-
-
                 return AlarmCodes.None;
             }
             catch (Exception ex)
@@ -197,7 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 BuzzerPlayer.Action();
             }
         }
-
+        public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;
         protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
         {
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
@@ -278,31 +286,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.Sub_Status = SUB_STATUS.IDLE;
-            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 2000);
+            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }
 
         internal async Task AGVSPathExpand(clsTaskDownloadData taskDownloadData)
         {
-            _ = Task.Run(async () =>
-            {
-                string new_path = string.Join("->", taskDownloadData.TagsOfTrajectory);
-                string ori_path = string.Join("->", RunningTaskData.TagsOfTrajectory);
-                LOG.INFO($"AGV導航路徑變更\r\n-原路徑：{ori_path}\r\n新路徑:{new_path}");
-                RunningTaskData = taskDownloadData;
-                if (Agv.BarcodeReader.Data.tagID == 0)
-                {
-
-                    LOG.INFO($"AGV導航路徑變更-當前Tag為0,等待AGV抵達下一個目的地");
-                    while (Agv.BarcodeReader.Data.tagID == 0)
-                    {
-                        await Task.Delay(1);
-                    }
-                }
-                LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控");
-                Agv.AGVC.Replan(taskDownloadData);
-
-            });
+            RunningTaskData = taskDownloadData;
+            LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控");
+            Agv.AGVC.Replan(taskDownloadData);
+            LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控-已發送");
         }
 
         /// <summary>
@@ -329,7 +322,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             AGVCActionStatusChaged = null;
             TaskCancelCTS.Cancel();
-
         }
 
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)

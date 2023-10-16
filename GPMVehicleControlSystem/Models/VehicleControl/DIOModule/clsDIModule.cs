@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Security.AccessControl;
 using static AGVSystemCommonNet6.clsEnums;
@@ -16,6 +17,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     {
         TcpClient client;
         protected ModbusIpMaster? master;
+
         private AGV_TYPE _AgvType = AGV_TYPE.UNKNOWN;
         public AGV_TYPE AgvType
         {
@@ -67,6 +69,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnResetButtonPressed;
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
+        public bool ModuleDisconnected { get; protected set; }
 
 
         public Action OnResetButtonPressing { get; set; }
@@ -147,10 +150,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 master.Transport.Retries = 10;
                 Current_Alarm_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
+                ModuleDisconnected = false;
+                DoModuleRef.ModuleDisconnected = false;
                 return true;
             }
             catch (Exception ex)
             {
+                ModuleDisconnected = true;
+                DoModuleRef.ModuleDisconnected = true;
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
@@ -228,8 +235,30 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
+        private bool IsTimeout = false;
+        private Stopwatch timeoutSw = new Stopwatch();
+        private void ConnectionWatchDog()
+        {
+            Task.Factory.StartNew(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(1);
+                    if (timeoutSw.ElapsedMilliseconds > 2000)
+                    {
+                        LOG.Critical($"Wago Module Read Timeout!! {timeoutSw.ElapsedMilliseconds} ");
+                        timeoutSw.Restart();
+                        Disconnect();
+                        ModuleDisconnected = true;
+                        DoModuleRef.ModuleDisconnected = true;
+                        AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
+                    }
+                }
+            });
+        }
         public virtual async void StartAsync()
         {
+            ConnectionWatchDog();
             await Task.Run(() =>
             {
                 while (true)
@@ -254,11 +283,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         {
                             VCSInputs[i].State = input[i];
                         }
+                        timeoutSw.Restart();
                     }
                     catch (Exception ex)
                     {
                         LOG.Critical(ex.Message, ex);
-                        AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
                         Disconnect();
                     }
                 }

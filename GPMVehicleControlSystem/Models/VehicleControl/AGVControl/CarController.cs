@@ -378,6 +378,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED)
                 {
+                    LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {_ActionStatus}");
                     await Task.Delay(1);
                     if (wait_agvc_execute_action_cts.IsCancellationRequested)
                     {

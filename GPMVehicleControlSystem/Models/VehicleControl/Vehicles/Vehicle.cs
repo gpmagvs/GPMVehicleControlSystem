@@ -246,14 +246,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 SetAGV_TR_REQ(false);
                             if (value != SUB_STATUS.Initializing)
                                 BuzzerPlayer.Alarm();
-                            DirectionLighter.CloseAll();
+                            DirectionLighter.CloseAll(1000);
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)
                         {
                             BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
-                            DirectionLighter.CloseAll();
+                            DirectionLighter.CloseAll(1000);
                         }
                         else if (value == SUB_STATUS.RUN)
                         {
@@ -749,8 +749,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //if (lastVisitedMapPoint.StationType !=STATION_TYPE.Normal)
             //    return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
 
-
-
+            if (WagoDI.ModuleDisconnected)
+                return (false, $"DIO 模組連線異常");
             return (true, "");
         }
 

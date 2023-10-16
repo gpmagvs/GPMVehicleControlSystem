@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public override void CloseAll()
+        public override void CloseAll(int delay_ms = 10)
         {
             try
             {

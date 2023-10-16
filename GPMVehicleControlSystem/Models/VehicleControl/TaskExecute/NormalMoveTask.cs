@@ -14,9 +14,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
     public class NormalMoveTask : TaskBase
     {
+
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.None;
         public NormalMoveTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
+            var destine = taskDownloadData.Destination;
+            var end_of_traj = taskDownloadData.Trajectory.Last().Point_ID;
+            isSegmentTask = destine != end_of_traj;
+            if (isSegmentTask)
+            {
+                LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
+            }
         }
 
 

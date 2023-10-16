@@ -10,6 +10,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     public partial class clsDOModule : clsDIModule
     {
         public event EventHandler OnDisonnected;
+
         public List<clsIOSignal> VCSOutputs = new List<clsIOSignal>();
         public clsDOModule() : base()
         {
@@ -68,13 +69,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         private async Task<(bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster)> TryConnectAsync()
         {
+            if (ModuleDisconnected)
+                return (false, null, null);
             TcpClient tcpclient;
             ModbusIpMaster modbusMaster;
             int retry_cnt = 0;
             while (!Connect(out tcpclient, out modbusMaster))
             {
                 retry_cnt += 1;
-                if (retry_cnt >= 5)
+                if (retry_cnt >= 5 | ModuleDisconnected)
                 {
                     OnDisonnected?.Invoke(this, EventArgs.Empty);
                     Current_Alarm_Code = AlarmCodes.Wago_IO_Read_Fail;
@@ -138,12 +141,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-"+signal + "Sbuscribe Error.", ex);
+                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
             }
 
         }
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
+            if (ModuleDisconnected)
+                return false;
             try
             {
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
@@ -194,6 +199,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
+            if (ModuleDisconnected)
+                return;
             try
             {
                 clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
@@ -231,7 +238,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
-      
+
 
         public async Task<bool> ResetSaftyRelay()
         {

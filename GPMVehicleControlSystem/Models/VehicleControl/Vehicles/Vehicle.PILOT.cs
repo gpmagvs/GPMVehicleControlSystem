@@ -55,16 +55,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
-            _RunTaskData = new clsTaskDownloadData
-            {
-                IsLocalTask = taskDownloadData.IsLocalTask,
-                IsActionFinishReported = false,
-                Task_Name = taskDownloadData.Task_Name,
-                Task_Sequence = taskDownloadData.Task_Sequence,
-                Trajectory = taskDownloadData.Trajectory,
-                Homing_Trajectory = taskDownloadData.Homing_Trajectory,
-            };
-            //AutoClearOldCstReadFailAlarms();
+            if (ExecutingActionTask != null)
+                ExecutingActionTask.Abort();
+
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
             Laser.AllLaserActive();
@@ -72,81 +65,99 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
-
-            if (!TaskTrackingTags.TryAdd(taskDownloadData.Task_Simplex, taskDownloadData.TagsOfTrajectory))
-            {
-                if (taskDownloadData.TagsOfTrajectory.Count != 1)
-                    TaskTrackingTags[taskDownloadData.Task_Simplex] = taskDownloadData.TagsOfTrajectory;
-            }
-
+            AGVC.OnAGVCActionChanged = null;
             Task.Run(async () =>
             {
-                if (IsReplanTask(taskDownloadData))
+                #region Legacy Code
+                //if (IsReplanTask(taskDownloadData))
+                //{
+                //    LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
+                //    if (!BuzzerPlayer.IsMovingPlaying)
+                //    {
+                //        await BuzzerPlayer.Stop();
+                //        await Task.Delay(100);
+                //        BuzzerPlayer.Move();
+                //    }
+                //    StatusLighter.RUN();
+                //    string new_path = string.Join("->", taskDownloadData.TagsOfTrajectory);
+                //    string ori_path = string.Join("->", _RunTaskData.TagsOfTrajectory);
+                //    LOG.INFO($"AGV導航路徑變更\r\n-原路徑：{ori_path}\r\n新路徑:{new_path}");
+                //    try
+                //    {
+                //        ExecutingActionTask.AGVSPathExpand(taskDownloadData);
+                //        FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        LOG.Critical(ex.Message, ex);
+                //    }
+                //}
+                //else
+                //{
+                #endregion
+                clsTaskDownloadData _taskDownloadData;
+                _taskDownloadData = taskDownloadData;
+                _RunTaskData = new clsTaskDownloadData
                 {
-                    LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
-                    if (!BuzzerPlayer.IsMovingPlaying)
-                    {
-                        await BuzzerPlayer.Stop();
-                        await Task.Delay(100);
-                        BuzzerPlayer.Move();
-                    }
-                    StatusLighter.RUN();
-                    await ExecutingActionTask.AGVSPathExpand(taskDownloadData);
-                    FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                    IsLocalTask = taskDownloadData.IsLocalTask,
+                    IsActionFinishReported = false,
+                    Task_Name = taskDownloadData.Task_Name,
+                    Task_Sequence = taskDownloadData.Task_Sequence,
+                    Trajectory = taskDownloadData.Trajectory,
+                    Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+                };
+                if (action == ACTION_TYPE.None)
+                {
+                    ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
+                    if (Parameters.SimulationMode)
+                        WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
                 }
                 else
                 {
-                    clsTaskDownloadData _taskDownloadData;
-                    _taskDownloadData = taskDownloadData;
-
-                    if (action == ACTION_TYPE.None)
-                    {
-                        ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
-                        if (Parameters.SimulationMode)
-                            WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
-                    }
+                    if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                        _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                    if (action == ACTION_TYPE.Charge)
+                        ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Discharge)
+                        ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Load)
+                        ExecutingActionTask = new LoadTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Unload)
+                        ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Park)
+                        ExecutingActionTask = new ParkTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Unpark)
+                        ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.Measure)
+                        ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
+                    else if (action == ACTION_TYPE.ExchangeBattery)
+                        ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
                     else
                     {
-                        if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                            _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
-
-                        if (action == ACTION_TYPE.Charge)
-                            ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Discharge)
-                            ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Load)
-                            ExecutingActionTask = new LoadTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Unload)
-                            ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Park)
-                            ExecutingActionTask = new ParkTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Unpark)
-                            ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.Measure)
-                            ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
-                        else if (action == ACTION_TYPE.ExchangeBattery)
-                            ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
-                        else
-                        {
-                            throw new NotImplementedException();
-                        }
-                    }
-                    previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
-                    ExecutingActionTask.ForkLifter = ForkLifter;
-                    await Task.Delay(300);
-                    IsLaserRecoveryHandled = false;
-
-                    var result = await ExecutingActionTask.Execute();
-                    if (result != AlarmCodes.None)
-                    {
-                        Sub_Status = SUB_STATUS.DOWN;
-                        LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                        AlarmManager.AddAlarm(result, false);
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
-                        AGVC.OnAGVCActionChanged = null;
+                        throw new NotImplementedException();
                     }
                 }
+                previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
+                ExecutingActionTask.ForkLifter = ForkLifter;
+                await Task.Delay(300);
+                IsLaserRecoveryHandled = false;
+                var result = await ExecutingActionTask.Execute();
+                if (result != AlarmCodes.None)
+                {
+                    Sub_Status = SUB_STATUS.DOWN;
+                    LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                    AlarmManager.AddAlarm(result, false);
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
+                    AGVC.OnAGVCActionChanged = null;
+                }
+                //}
             });
+        }
+
+        private void ExecutingActionTask_OnSegmentTaskExecuting2Sec(object? sender, clsTaskDownloadData e)
+        {
+            LOG.Critical($"分段任務模擬-發送整段任務");
+            ExecuteAGVSTask(sender, e);
         }
 
         private void AutoClearOldCstReadFailAlarms()
@@ -164,19 +175,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool IsReplanTask(clsTaskDownloadData taskDownloadData)
         {
-            if (ExecutingActionTask == null)
+            if (_RunTaskData == null)
+                return false;
+            if (_RunTaskData.ExecutingTrajecory.Length == 0)
                 return false;
 
             var newAction = taskDownloadData.Action_Type;
             var newTaskName = taskDownloadData.Task_Name;
-            var previousAction = ExecutingActionTask.RunningTaskData.Action_Type;
-            var previousTaskName = ExecutingActionTask.RunningTaskData.Task_Name;
+            var previousAction = _RunTaskData.Action_Type;
+            var previousTaskName = _RunTaskData.Task_Name;
 
-            if (newTaskName != ExecutingActionTask.RunningTaskData.Task_Name)
+            if (newTaskName != previousTaskName)
                 return false;
             if (newAction != ACTION_TYPE.None)
                 return false;
-            if (taskDownloadData.Trajectory.First().Point_ID != ExecutingActionTask.RunningTaskData.Trajectory.First().Point_ID)
+
+            if (taskDownloadData.Trajectory.First().Point_ID != _RunTaskData.Trajectory.First().Point_ID)
                 return false;
 
             return newAction == previousAction && taskDownloadData.Task_Name == previousTaskName;
@@ -376,7 +390,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 2000, AlarmCodes alarm_tracking = AlarmCodes.None)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None)
         {
             try
             {

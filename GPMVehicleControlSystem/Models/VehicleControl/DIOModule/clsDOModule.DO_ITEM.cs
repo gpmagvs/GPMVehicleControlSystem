@@ -2,6 +2,7 @@
 {
     public partial class clsDOModule
     {
+
         public enum DO_ITEM : byte
         {
             Unknown,

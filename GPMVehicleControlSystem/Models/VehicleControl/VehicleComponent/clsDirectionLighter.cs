@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -16,10 +17,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
         }
 
-        public override async void CloseAll()
+        public override async void CloseAll(int delay_ms = 10)
         {
             try
             {
+                await Task.Delay(delay_ms);
                 AbortFlash();
                 this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
                 this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
@@ -28,6 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
+                LOG.ERROR(ex);
             }
         }
 
