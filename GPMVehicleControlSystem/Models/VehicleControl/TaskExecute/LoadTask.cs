@@ -312,9 +312,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     else
                     {
-                        await Task.Delay(10);
+                        await Task.Delay(500);
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
                         await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
@@ -339,6 +340,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (Agv.Parameters.LDULD_Task_No_Entry)
                 return AlarmCodes.None;
+
             AlarmCodes alarm_code = AlarmCodes.None;
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 alarm_code = AlarmCodes.AGV_State_Cant_Move;
@@ -371,6 +373,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (status == ActionStatus.SUCCEEDED)
                 {
+                    if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodes.AGV_Location_Not_Secondary, false);
+                        return;
+                    }
                     AGVCActionStatusChaged = null;
                     back_to_secondary_flag = true;
                     if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)

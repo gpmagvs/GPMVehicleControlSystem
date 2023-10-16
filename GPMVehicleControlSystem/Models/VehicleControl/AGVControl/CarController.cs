@@ -376,6 +376,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 LOG.TRACE($"Acation Timeout setting = {timeout} sec");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                _ActionStatus = ActionStatus.PENDING;
+                await Task.Delay(500);
                 while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED)
                 {
                     LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {_ActionStatus}");
