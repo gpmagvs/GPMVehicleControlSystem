@@ -379,12 +379,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            if (ExecuteAGVSTask == null)
-                return;
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && _RunTaskData.Action_Type == ACTION_TYPE.None)
+            //方向燈
+            LOG.TRACE($"AGV Direction changed to = {direction}");
+            DirectionLighter.LightSwitchByAGVDirection(sender, direction);
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
             {
-                //方向燈
-                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
                 //雷射
                 if (direction != clsNavigation.AGV_DIRECTION.STOP)
                     Laser.LaserChangeByAGVDirection(sender, direction);

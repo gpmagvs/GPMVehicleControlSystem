@@ -1,12 +1,14 @@
-﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace AGVSystemCommonNet6.Abstracts
 {
     public abstract class Lighter
     {
+        public bool AllCloseFlag = false;
         public clsDOModule DOModule { get; set; }
-        public Lighter( )
+        public Lighter()
         {
         }
 
@@ -19,43 +21,62 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public void AbortFlash()
         {
-            flash_cts.Cancel();
+            AllCloseFlag = true;
         }
 
         public void Flash(DO_ITEM light_DO, int flash_period = 400)
         {
-            flash_cts = new CancellationTokenSource();
             Task.Factory.StartNew(async () =>
             {
                 await DOModule.SetState(light_DO, true);
+                await Task.Delay(100);
+                flash_cts = new CancellationTokenSource();
+                AllCloseFlag = false;
+                bool light_active = false;
                 while (true)
                 {
-                    if (flash_cts.IsCancellationRequested)
-                        break;
-                    bool previous_state_on = DOModule.GetState(light_DO);
-                    await DOModule.SetState(light_DO, !previous_state_on);
-                    await Task.Delay(flash_period, flash_cts.Token);
+                    try
+                    {
+                        if (AllCloseFlag)
+                            break;
+                        await DOModule.SetState(light_DO, light_active);
+                        await Task.Delay(flash_period, flash_cts.Token);
+                        light_active = !light_active;
+                    }
+                    catch (Exception ex)
+                    {
+                        LOG.ERROR(ex);
+                    }
                 }
             });
         }
 
-        public void Flash(DO_ITEM[] light_DOs, int flash_period = 400)
+        public async void Flash(DO_ITEM[] light_DOs, int flash_period = 400)
         {
             foreach (var item in light_DOs)
-                this.DOModule.SetState(item, true);
+                await this.DOModule.SetState(item, true);
 
             flash_cts = new CancellationTokenSource();
-            Task.Factory.StartNew(async () =>
+            _ = Task.Factory.StartNew(async () =>
             {
+                await Task.Delay(100);
+                AllCloseFlag = false;
+                bool light_active = false;
                 while (true)
                 {
-                    if (flash_cts.IsCancellationRequested)
-                        break;
-
-                    bool previous_state_on = DOModule.GetState(light_DOs.First());
-                    foreach (var item in light_DOs)
-                        this.DOModule.SetState(item, !previous_state_on);
-                    await Task.Delay(flash_period, flash_cts.Token);
+                    try
+                    {
+                        if (AllCloseFlag)
+                            break;
+                        foreach (var item in light_DOs)
+                            await DOModule.SetState(item, light_active);
+                        await Task.Delay(flash_period, flash_cts.Token);
+                        light_active = !light_active;
+                    }
+                    catch (Exception ex)
+                    {
+                        LOG.ERROR(ex);
+                    }
                 }
             });
         }
