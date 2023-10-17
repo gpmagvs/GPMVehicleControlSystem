@@ -368,6 +368,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
                 else
                     LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+                _ActionStatus = ActionStatus.PENDING;
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
                 if (isCancelTask)//取消任務

@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+﻿using AGVSystemCommonNet6.AGVDispatch.RunMode;
+using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
 using Modbus.Device;
@@ -24,6 +25,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
         }
 
+        public override bool ModuleDisconnected { get => _ModuleDisconnected; set => _ModuleDisconnected = value; }
         protected override void RegistSignalEvents()
         {
         }
@@ -77,7 +79,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             while (!Connect(out tcpclient, out modbusMaster))
             {
                 retry_cnt += 1;
-                if (retry_cnt >= 5 | ModuleDisconnected)
+                if (ModuleDisconnected)
+                    return (false, null, null);
+                if (retry_cnt >= 5)
                 {
                     OnDisonnected?.Invoke(this, EventArgs.Empty);
                     Current_Alarm_Code = AlarmCodes.Wago_IO_Read_Fail;
@@ -118,13 +122,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             master = null;
             if (IP == null | Port <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
+
             try
             {
                 client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 5000;
-                master.Transport.WriteTimeout = 5000;
-                master.Transport.Retries = 10;
+                master.Transport.WriteTimeout = 1000;
+                master.Transport.Retries = 1;
                 return true;
             }
             catch (Exception ex)
@@ -145,6 +149,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
 
         }
+
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
             if (ModuleDisconnected)
@@ -158,8 +163,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
                     if (connresult.connected)
                     {
+                        IOBusy = true;
                         connresult.modbusMaster?.WriteSingleCoil((ushort)(Start + DO.index), DO.State);
                         Disconnect(connresult.tcpclient, connresult.modbusMaster);
+                        IOBusy = false;
                         return true;
                     }
                     else
@@ -170,11 +177,57 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
+                IOBusy = false;
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
                 return false;
             }
         }
 
+       
+        internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
+        {
+            if (ModuleDisconnected)
+                return;
+            try
+            {
+                clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
+                if (DO_Start == null)
+                {
+                    throw new Exception();
+                }
+                for (int i = 0; i < writeStates.Length; i++)
+                {
+                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == DO_Start.index + i);
+                    if (_DO != null)
+                        _DO.State = writeStates[i];
+                }
+                (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
+                if (connresult.connected)
+                {
+                    IOBusy = true;
+                    connresult.modbusMaster?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
+                    Disconnect(connresult.tcpclient, connresult.modbusMaster);
+                    IOBusy = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                IOBusy = false;
+                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                throw ex;
+            }
+        }
+        public new bool GetState(DO_ITEM signal)
+        {
+            try
+            {
+                return VCSOutputs.FirstOrDefault(k => k.Name == signal + "").State;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
         private bool Disconnect(TcpClient tcpclient, ModbusIpMaster? modbusMaster)
         {
             try
@@ -197,48 +250,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 Disconnect(connresult.tcpclient, connresult.modbusMaster);
             }
         }
-        internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
-        {
-            if (ModuleDisconnected)
-                return;
-            try
-            {
-                clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
-                if (DO_Start == null)
-                {
-                    throw new Exception();
-                }
-                for (int i = 0; i < writeStates.Length; i++)
-                {
-                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == DO_Start.index + i);
-                    if (_DO != null)
-                        _DO.State = writeStates[i];
-                }
-                (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
-                if (connresult.connected)
-                {
-                    connresult.modbusMaster?.WriteMultipleCoils((ushort)(Start + DO_Start.index), writeStates);
-                    Disconnect(connresult.tcpclient, connresult.modbusMaster);
-                }
-            }
-            catch (Exception ex)
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                throw ex;
-            }
-        }
-        public new bool GetState(DO_ITEM signal)
-        {
-            try
-            {
-                return VCSOutputs.FirstOrDefault(k => k.Name == signal + "").State;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
 
         public async Task<bool> ResetSaftyRelay()
         {
@@ -248,11 +259,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             await Task.Delay(500);
             do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false);
             return true;
-        }
-        public override async void StartAsync()
-        {
-            if (!IsConnected())
-                Connect();
         }
 
     }

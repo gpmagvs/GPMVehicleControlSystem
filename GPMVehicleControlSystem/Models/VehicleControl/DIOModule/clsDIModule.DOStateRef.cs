@@ -7,6 +7,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     public partial class clsDIModule
     {
         public clsDOModule DoModuleRef { get; }
+        public int IO_Interval_ms { get; }
 
         public bool IsRightLsrBypass => DoModuleRef.GetState(DO_ITEM.Right_LsrBypass);
         public bool IsLeftLsrBypass => DoModuleRef.GetState(DO_ITEM.Left_LsrBypass);

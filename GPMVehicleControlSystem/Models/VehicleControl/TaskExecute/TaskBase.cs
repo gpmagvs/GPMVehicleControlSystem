@@ -139,7 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
-                        var forkGoTeachPositionResult = await ChangeForkPositionBeforeGoToWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
+                        var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
                         if (!forkGoTeachPositionResult.success)
                         {
                             return forkGoTeachPositionResult.alarm_code;
@@ -333,10 +333,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             TaskCancelCTS.Cancel();
         }
 
-        public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionBeforeGoToWorkStation(FORK_HEIGHT_POSITION position)
+        public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(FORK_HEIGHT_POSITION position)
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
-            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1.0).Result;
+            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1).Result;
             return result;
         }
         /// <summary>

@@ -45,11 +45,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
 
         public event EventHandler OnDisonnected;
+        public event EventHandler OnReConnected;
         public override string alarm_locate_in_name => "DI Module";
 
         public event EventHandler<ROBOT_CONTROL_CMD> OnLaserDIRecovery;
         public event EventHandler OnFarLaserDITrigger;
         public event EventHandler OnNearLaserDiTrigger;
+
 
         /// <summary>
         /// EMO觸發
@@ -69,7 +71,36 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnResetButtonPressed;
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
-        public bool ModuleDisconnected { get; protected set; }
+        protected bool IOBusy = false;
+        protected bool _ModuleDisconnected = true;
+        public virtual bool ModuleDisconnected
+        {
+            get => _ModuleDisconnected;
+            set
+            {
+                if (_ModuleDisconnected != value)
+                {
+                    _ModuleDisconnected = value;
+
+                    if (value)
+                        Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(5000);
+                            if (_ModuleDisconnected)
+                            {
+                                LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
+                                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+                            }
+                        });
+                    else
+                    {
+                        OnReConnected?.Invoke(this, null);
+                        AlarmManager.ClearAlarm(AlarmCodes.Wago_IO_Disconnect);
+                        LOG.INFO($"Wago Module Reconnected");
+                    }
+                }
+            }
+        }
 
 
         public Action OnResetButtonPressing { get; set; }
@@ -85,17 +116,20 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public clsDIModule()
         {
         }
-        public clsDIModule(string IP, int Port)
+        public clsDIModule(string IP, int Port, int IO_Interval_ms = 5)
         {
             this.IP = IP;
             this.Port = Port;
+            this.IO_Interval_ms = IO_Interval_ms;
             ReadIOSettingsFromIniFile();
         }
-        public clsDIModule(string IP, int Port, clsDOModule DoModuleRef)
+        public clsDIModule(string IP, int Port, clsDOModule DoModuleRef,int IO_Interval_ms = 5)
         {
             this.IP = IP;
             this.Port = Port;
             this.DoModuleRef = DoModuleRef;
+            this.IO_Interval_ms = IO_Interval_ms;
+            LOG.TRACE($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
             ReadIOSettingsFromIniFile();
         }
 
@@ -141,14 +175,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             if (IP == null | Port <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
+            if (!ModuleDisconnected)
+                return true;
             try
             {
                 client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 5000;
+                master.Transport.ReadTimeout = 500;
                 master.Transport.WriteTimeout = 5000;
-                master.Transport.Retries = 10;
-                Current_Alarm_Code = AlarmCodes.None;
+                master.Transport.Retries = 2;
+                Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 ModuleDisconnected = false;
                 DoModuleRef.ModuleDisconnected = false;
@@ -158,7 +194,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 ModuleDisconnected = true;
                 DoModuleRef.ModuleDisconnected = true;
-                Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
+                Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
                 client = null;
@@ -169,6 +205,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public override void Disconnect()
         {
+            Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
             try
             {
                 client?.Close();
@@ -244,14 +281,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 while (true)
                 {
                     Thread.Sleep(1);
-                    if (timeoutSw.ElapsedMilliseconds > 2000)
+                    if (timeoutSw.ElapsedMilliseconds > 5000)
                     {
                         LOG.Critical($"Wago Module Read Timeout!! {timeoutSw.ElapsedMilliseconds} ");
                         timeoutSw.Restart();
                         Disconnect();
                         ModuleDisconnected = true;
                         DoModuleRef.ModuleDisconnected = true;
-                        AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Read_Fail, false);
                     }
                 }
             });
@@ -259,18 +295,29 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public virtual async void StartAsync()
         {
             ConnectionWatchDog();
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 while (true)
                 {
                     Thread.Sleep(1);
                     if (!IsConnected())
                     {
+                        OnDisonnected?.Invoke(this, EventArgs.Empty);
+                        await Task.Delay(1000);
                         Connect();
                         continue;
                     }
                     try
                     {
+                        CancellationTokenSource cts = new CancellationTokenSource(3000);
+                        while (DoModuleRef.IOBusy)
+                        {
+                            await Task.Delay(1);
+                            if (cts.IsCancellationRequested)
+                            {
+                                continue;
+                            }
+                        }
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {

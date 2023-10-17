@@ -45,6 +45,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         protected virtual void DIOStatusChangedEventRegist()
         {
+
+            WagoDI.OnDisonnected += WagoDI_OnDisonnected;
+            WagoDI.OnReConnected += WagoDI_OnReConnected;
             WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
@@ -81,6 +84,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
                 LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
             }
+        }
+
+        private void WagoDI_OnReConnected(object? sender, EventArgs e)
+        {
+            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                return;
+
+            if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
+            {
+                LOG.WARN("AGV Executing Task and Wago Module Reconnected,and No Obstacle,Send Complex Control Speed Reconvery");
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+            }
+        }
+
+        private void WagoDI_OnDisonnected(object? sender, EventArgs e)
+        {
+            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                return;
+            LOG.WARN("AGV Executing Task but Wago Module Disconnect,Send Complex Control STOP => AGV STOP");
+            AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
         }
 
         /// <summary>

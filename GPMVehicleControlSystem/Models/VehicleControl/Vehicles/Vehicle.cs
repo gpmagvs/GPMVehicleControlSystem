@@ -280,6 +280,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsSystemInitialized = false;
                 string Wago_IP = Parameters.Connections["Wago"].IP;
                 int Wago_Port = Parameters.Connections["Wago"].Port;
+                int Wago_Protocol_Interval_ms = Parameters.Connections["Wago"].Protocol_Interval_ms;
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
                 int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
@@ -288,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     AgvType = Parameters.AgvType
                 };
-                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO)
+                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO, Wago_Protocol_Interval_ms)
                 {
                     AgvType = Parameters.AgvType
                 };
@@ -608,9 +609,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             });
         }
-
-
-
 
         internal bool IsAllLaserNoTrigger()
         {
