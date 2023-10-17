@@ -13,6 +13,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> GetAllParkLoc()
         {
             List<string>? locList = DBhelper.QueryAllParkLoc();
+            locList.Sort();
             return Ok(locList);
         }
 
