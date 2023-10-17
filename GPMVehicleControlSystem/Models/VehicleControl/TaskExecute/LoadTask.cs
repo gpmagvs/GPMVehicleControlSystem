@@ -14,6 +14,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using AGVSystemCommonNet6.Tools.Database;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -192,6 +193,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
+          
+
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 await Task.Delay(500);

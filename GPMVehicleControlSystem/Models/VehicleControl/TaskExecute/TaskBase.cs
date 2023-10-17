@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
+using AGVSystemCommonNet6.Tools.Database;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -271,7 +272,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return;
                     }
                     LOG.INFO($"AGVC Action Status is success,Do Work defined!");
-
+                    DBhelper.InsertParkingAccuracy(new AGVSystemCommonNet6.Tools.clsParkingAccuracy
+                    {
+                        ParkingLocation = Agv.lastVisitedMapPoint.Name,
+                        ParkingTag = Agv.BarcodeReader.CurrentTag,
+                        X = Agv.BarcodeReader.CurrentX,
+                        Y = Agv.BarcodeReader.CurrentY,
+                        Time = DateTime.Now,
+                        TaskName = this.RunningTaskData.Task_Name
+                    });
                     Agv.DirectionLighter.CloseAll();
                     var result = await HandleAGVCActionSucceess();
                     if (!result.success)
