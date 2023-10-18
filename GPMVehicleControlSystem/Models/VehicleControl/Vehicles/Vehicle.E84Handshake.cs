@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (WorkStations.Stations.TryGetValue(ExecutingActionTask.destineTag, out var data))
+                if (WorkStations.Stations.TryGetValue(ExecutingTaskModel.destineTag, out var data))
                 {
                     return data.ModbusTcpPort;
                 }
@@ -428,9 +428,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     try
                     {
                         await Task.Delay(1);
-                        if (ExecutingActionTask == null)
+                        if (ExecutingTaskModel == null)
                             break;
-                        if (ExecutingActionTask != null && ExecutingActionTask.action != ACTION_TYPE.Load && ExecutingActionTask.action != ACTION_TYPE.Unload)
+                        if (ExecutingTaskModel != null && ExecutingTaskModel.action != ACTION_TYPE.Load && ExecutingTaskModel.action != ACTION_TYPE.Unload)
                             break;
 
                         bool isEQGoOff = !IsEQGOOn();

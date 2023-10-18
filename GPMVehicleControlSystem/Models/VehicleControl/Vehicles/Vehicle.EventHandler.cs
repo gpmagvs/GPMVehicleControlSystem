@@ -269,12 +269,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        if (ExecutingActionTask == null)
+                        if (ExecutingTaskModel == null)
                         {
                         }
                         else
                         {
-                            if (ExecutingActionTask.action == ACTION_TYPE.None)
+                            if (ExecutingTaskModel.action == ACTION_TYPE.None)
                             {
                                 LOG.WARN($"No obstacle.  buzzer Move");
                                 BuzzerPlayer.Move();
@@ -375,7 +375,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
-                    //FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1);
                     Sub_Status = SUB_STATUS.IDLE;
                     return true;
                 }
@@ -392,7 +391,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 Sub_Status = SUB_STATUS.DOWN;
                             }
                             await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
-                            ExecutingActionTask.Abort();
+                            ExecutingTaskModel.Abort();
                         });
                     }
                     return result;

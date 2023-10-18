@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private TaskBase _ExecutingTask;
-        public TaskBase ExecutingActionTask
+        public TaskBase ExecutingTaskModel
         {
             get => _ExecutingTask;
             set
@@ -55,12 +55,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
-
-
-
             AGVC.OnAGVCActionChanged = null;
-            if (ExecutingActionTask != null)
-                ExecutingActionTask.Abort();
+            if (ExecutingTaskModel != null)
+                ExecutingTaskModel.Dispose();
 
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
@@ -85,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  };
                  if (action == ACTION_TYPE.None)
                  {
-                     ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
+                     ExecutingTaskModel = new NormalMoveTask(this, _taskDownloadData);
                      if (Parameters.SimulationMode)
                          WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
                  }
@@ -94,31 +91,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
                          _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
                      if (action == ACTION_TYPE.Charge)
-                         ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ChargeTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Discharge)
-                         ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new DischargeTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Load)
-                         ExecutingActionTask = new LoadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new LoadTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Unload)
-                         ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnloadTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Park)
-                         ExecutingActionTask = new ParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ParkTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Unpark)
-                         ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnParkTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Measure)
-                         ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new MeasureTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.ExchangeBattery)
-                         ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ExchangeBatteryTask(this, _taskDownloadData);
                      else
                      {
                          throw new NotImplementedException();
                      }
                  }
-                 previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
-                 ExecutingActionTask.ForkLifter = ForkLifter;
+                 previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
+                 ExecutingTaskModel.ForkLifter = ForkLifter;
                  await Task.Delay(600);
                  IsLaserRecoveryHandled = false;
-                 var result = await ExecutingActionTask.Execute();
+                 var result = await ExecutingTaskModel.Execute();
                  if (result != AlarmCodes.None)
                  {
                      Sub_Status = SUB_STATUS.DOWN;
@@ -203,10 +200,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
                     return;
-                if (ExecutingActionTask == null)
+                if (ExecutingTaskModel == null)
                     return;
 
-                previousTagPoint = ExecutingActionTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+                previousTagPoint = ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
                 if (previousTagPoint == null)
                 {
                     LOG.Critical($"AGV抵達 {newVisitedNodeTag} 但在任務軌跡上找不到該站點。");//脫離路徑
@@ -216,13 +213,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
 
-                if (ExecutingActionTask.action == ACTION_TYPE.None)
+                if (ExecutingTaskModel.action == ACTION_TYPE.None)
                 {
-                    var laser_mode = ExecutingActionTask.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
+                    var laser_mode = ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
                     await Laser.ModeSwitch(laser_mode, true);
                 }
 
-                if (ExecutingActionTask.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
+                if (ExecutingTaskModel.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
                 {
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
@@ -395,11 +392,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
-                    if (ExecutingActionTask != null)
+                    if (ExecutingTaskModel != null)
                     {
-                        ExecutingActionTask.Abort();
-                        ExecutingActionTask.Dispose();
-                        ExecutingActionTask = null;
+                        ExecutingTaskModel.Abort();
+                        ExecutingTaskModel.Dispose();
+                        ExecutingTaskModel = null;
                     }
                 }
             }

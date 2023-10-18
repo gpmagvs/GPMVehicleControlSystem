@@ -34,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
         {
 
-            if (ExecutingActionTask != null && Sub_Status == SUB_STATUS.RUN)
+            if (ExecutingTaskModel != null && Sub_Status == SUB_STATUS.RUN)
             {
                 return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
             }

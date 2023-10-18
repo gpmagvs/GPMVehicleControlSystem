@@ -364,7 +364,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     try
                     {
                         Agv.AGVC.EMOHandler(this, EventArgs.Empty);
-                        Agv.ExecutingActionTask.Abort();
+                        Agv.ExecutingTaskModel.Abort();
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                         AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
                     }

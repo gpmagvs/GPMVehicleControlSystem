@@ -58,10 +58,10 @@ namespace GPMVehicleControlSystem.ViewModels
                     Laser_Mode = (int)AGV.Laser.Mode,
                     NavInfo = new NavStateVM
                     {
-                        Destination = AGV.ExecutingActionTask == null ? "" : AGV.ExecutingActionTask.RunningTaskData.Destination + "",
+                        Destination = AGV.ExecutingTaskModel == null ? "" : AGV.ExecutingTaskModel.RunningTaskData.Destination + "",
                         DestinationMapPoint = AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
-                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingActionTask == null ? new int[0] : AGV.ExecutingActionTask.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
+                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
                     },
                     Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserMonitoringCase})",
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,

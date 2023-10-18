@@ -216,7 +216,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsMeasureResult measure_result = ParseMeasureData(result.result_cmd);
             measure_result.StartTime = result.start_time;
-            measure_result.TaskName = ExecutingActionTask.RunningTaskData.Task_Name;
+            measure_result.TaskName = ExecutingTaskModel.RunningTaskData.Task_Name;
             MeasureCompleteInvoke(measure_result);
         }
         internal void MeasureCompleteInvoke(clsMeasureResult measure_result)

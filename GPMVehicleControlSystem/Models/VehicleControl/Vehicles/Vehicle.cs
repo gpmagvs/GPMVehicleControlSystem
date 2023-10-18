@@ -210,18 +210,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (ExecutingActionTask == null)
+                if (ExecutingTaskModel == null)
                     return new MapPoint { Name = "" };
                 else
                 {
                     try
                     {
-                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingActionTask.RunningTaskData.Destination);
-                        return _point == null ? new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination } : _point;
+                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTaskModel.RunningTaskData.Destination);
+                        return _point == null ? new MapPoint { Name = ExecutingTaskModel.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTaskModel.RunningTaskData.Destination } : _point;
                     }
                     catch (Exception)
                     {
-                        return new MapPoint { Name = ExecutingActionTask.RunningTaskData.Destination.ToString(), TagNumber = ExecutingActionTask.RunningTaskData.Destination };
+                        return new MapPoint { Name = ExecutingTaskModel.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTaskModel.RunningTaskData.Destination };
 
                     }
                 }
@@ -412,7 +412,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -478,7 +478,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingActionTask == null ? false : ExecutingActionTask.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                 };
                 return status;
             }
@@ -720,12 +720,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            if (ExecutingActionTask != null)
+            if (ExecutingTaskModel != null)
             {
-                ExecutingActionTask.AGVCActionStatusChaged = null;
+                ExecutingTaskModel.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
-            ExecutingActionTask = null;
+            ExecutingTaskModel = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
             if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(DI_ITEM.EQ_BUSY))
@@ -852,7 +852,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);
-                ExecutingActionTask?.Abort();
+                ExecutingTaskModel?.Dispose();
                 if (!_RunTaskData.IsLocalTask)
                 {
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
@@ -867,7 +867,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StatusLighter.DOWN();
             }
             IsInitialized = false;
-            ExecutingActionTask = null;
+            ExecutingTaskModel = null;
             previousSoftEmoTime = DateTime.Now;
             _RunTaskData.IsActionFinishReported = true;
             _RunTaskData.IsLocalTask = true;

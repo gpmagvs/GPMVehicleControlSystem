@@ -160,7 +160,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           await Task.Delay(10);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
-                          while (agv.ExecutingActionTask != null)
+                          while (agv.ExecutingTaskModel != null)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
