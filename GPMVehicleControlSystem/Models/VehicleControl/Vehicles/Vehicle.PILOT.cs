@@ -53,105 +53,82 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="taskDownloadData"></param>
-        internal void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
+        internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
+
+
+
+            AGVC.OnAGVCActionChanged = null;
             if (ExecutingActionTask != null)
                 ExecutingActionTask.Abort();
 
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
-            Laser.AllLaserActive();
+            await Laser.AllLaserActive();
             WriteTaskNameToFile(taskDownloadData.Task_Name);
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
-            AGVC.OnAGVCActionChanged = null;
-            Task.Run(async () =>
-            {
-                #region Legacy Code
-                //if (IsReplanTask(taskDownloadData))
-                //{
-                //    LOG.INFO($"在 TAG {BarcodeReader.CurrentTag} (LastVisitedTag={Navigation.LastVisitedTag},Coordination:{Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y}) 收到新的路徑擴充任務");
-                //    if (!BuzzerPlayer.IsMovingPlaying)
-                //    {
-                //        await BuzzerPlayer.Stop();
-                //        await Task.Delay(100);
-                //        BuzzerPlayer.Move();
-                //    }
-                //    StatusLighter.RUN();
-                //    string new_path = string.Join("->", taskDownloadData.TagsOfTrajectory);
-                //    string ori_path = string.Join("->", _RunTaskData.TagsOfTrajectory);
-                //    LOG.INFO($"AGV導航路徑變更\r\n-原路徑：{ori_path}\r\n新路徑:{new_path}");
-                //    try
-                //    {
-                //        ExecutingActionTask.AGVSPathExpand(taskDownloadData);
-                //        FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        LOG.Critical(ex.Message, ex);
-                //    }
-                //}
-                //else
-                //{
-                #endregion
-                clsTaskDownloadData _taskDownloadData;
-                _taskDownloadData = taskDownloadData;
-                _RunTaskData = new clsTaskDownloadData
-                {
-                    IsLocalTask = taskDownloadData.IsLocalTask,
-                    IsActionFinishReported = false,
-                    Task_Name = taskDownloadData.Task_Name,
-                    Task_Sequence = taskDownloadData.Task_Sequence,
-                    Trajectory = taskDownloadData.Trajectory,
-                    Homing_Trajectory = taskDownloadData.Homing_Trajectory,
-                };
-                if (action == ACTION_TYPE.None)
-                {
-                    ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
-                    if (Parameters.SimulationMode)
-                        WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
-                }
-                else
-                {
-                    if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                        _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
-                    if (action == ACTION_TYPE.Charge)
-                        ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Discharge)
-                        ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Load)
-                        ExecutingActionTask = new LoadTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Unload)
-                        ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Park)
-                        ExecutingActionTask = new ParkTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Unpark)
-                        ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.Measure)
-                        ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
-                    else if (action == ACTION_TYPE.ExchangeBattery)
-                        ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
-                    else
-                    {
-                        throw new NotImplementedException();
-                    }
-                }
-                previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
-                ExecutingActionTask.ForkLifter = ForkLifter;
-                await Task.Delay(300);
-                IsLaserRecoveryHandled = false;
-                var result = await ExecutingActionTask.Execute();
-                if (result != AlarmCodes.None)
-                {
-                    Sub_Status = SUB_STATUS.DOWN;
-                    LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                    AlarmManager.AddAlarm(result, false);
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
-                    AGVC.OnAGVCActionChanged = null;
-                }
-                //}
-            });
+
+            await Task.Run(async () =>
+             {
+                 clsTaskDownloadData _taskDownloadData;
+                 _taskDownloadData = taskDownloadData;
+                 _RunTaskData = new clsTaskDownloadData
+                 {
+                     IsLocalTask = taskDownloadData.IsLocalTask,
+                     IsActionFinishReported = false,
+                     Task_Name = taskDownloadData.Task_Name,
+                     Task_Sequence = taskDownloadData.Task_Sequence,
+                     Trajectory = taskDownloadData.Trajectory,
+                     Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+                 };
+                 if (action == ACTION_TYPE.None)
+                 {
+                     ExecutingActionTask = new NormalMoveTask(this, _taskDownloadData);
+                     if (Parameters.SimulationMode)
+                         WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
+                 }
+                 else
+                 {
+                     if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                         _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                     if (action == ACTION_TYPE.Charge)
+                         ExecutingActionTask = new ChargeTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Discharge)
+                         ExecutingActionTask = new DischargeTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Load)
+                         ExecutingActionTask = new LoadTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Unload)
+                         ExecutingActionTask = new UnloadTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Park)
+                         ExecutingActionTask = new ParkTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Unpark)
+                         ExecutingActionTask = new UnParkTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.Measure)
+                         ExecutingActionTask = new MeasureTask(this, _taskDownloadData);
+                     else if (action == ACTION_TYPE.ExchangeBattery)
+                         ExecutingActionTask = new ExchangeBatteryTask(this, _taskDownloadData);
+                     else
+                     {
+                         throw new NotImplementedException();
+                     }
+                 }
+                 previousTagPoint = ExecutingActionTask?.RunningTaskData.ExecutingTrajecory[0];
+                 ExecutingActionTask.ForkLifter = ForkLifter;
+                 await Task.Delay(600);
+                 IsLaserRecoveryHandled = false;
+                 var result = await ExecutingActionTask.Execute();
+                 if (result != AlarmCodes.None)
+                 {
+                     Sub_Status = SUB_STATUS.DOWN;
+                     LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                     AlarmManager.AddAlarm(result, false);
+                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
+                     AGVC.OnAGVCActionChanged = null;
+                 }
+                 //}
+             });
         }
 
         private void ExecutingActionTask_OnSegmentTaskExecuting2Sec(object? sender, clsTaskDownloadData e)

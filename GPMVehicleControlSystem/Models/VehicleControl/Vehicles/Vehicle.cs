@@ -848,14 +848,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-            {
-                _ = Task.Run(async () =>
-                {
-                    await AGVC.AbortTask();
-                    await Task.Delay(200);
-                });
-            }
+            AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
             {
                 AlarmManager.AddAlarm(alarmCode);

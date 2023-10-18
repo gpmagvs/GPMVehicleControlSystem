@@ -310,7 +310,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
                     await Agv.Laser.FrontBackLasersEnable(false, true);
 
-                    await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                     (bool agvc_executing, string message) agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.agvc_executing)
                     {
@@ -320,12 +319,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     else
                     {
                         await Task.Delay(500);
-                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                        await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
-
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);

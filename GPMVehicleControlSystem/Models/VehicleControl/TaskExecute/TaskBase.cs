@@ -30,11 +30,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         private bool disposedValue;
 
-        public Action<ActionStatus>? AGVCActionStatusChaged
+        public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
             set => Agv.AGVC.OnAGVCActionChanged = value;
         }
+
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;
@@ -42,7 +43,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 try
                 {
-
                     if (_RunningTaskData == null | value.Task_Name != _RunningTaskData?.Task_Name)
                     {
                         TrackingTags = value.TagsOfTrajectory;
@@ -170,19 +170,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
                     else
                     {
-                        //await Task.Delay(10);
-                        //await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                        //await Task.Delay(100);
-                        //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
-
+                        await Task.Delay(1000);
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE| Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
                                 StartFrontendObstcleDetection();
                             AGVCActionStatusChaged += HandleAGVActionChanged;
-                            //await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                         }
                     }
                 }

@@ -78,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
         public event EventHandler OnAGVCCycleStopRequesting;
-        public Action<ActionStatus>? OnAGVCActionChanged;
+        public Action<ActionStatus> OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
 
@@ -90,16 +90,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    LOG.TRACE($"Action Status Changed To : {_ActionStatus}");
-                    if (OnAGVCActionChanged != null)
+                    LOG.TRACE($"Action Status Changed To : {value}");
+                    Task.Factory.StartNew(() =>
                     {
-                        Task.Factory.StartNew(() =>
-                        {
-                            OnAGVCActionChanged(_ActionStatus);
-                        });
-                    }
+                        if (OnAGVCActionChanged != null)
+                            OnAGVCActionChanged(value);
+                    });
+                    _ActionStatus = value;
                 }
-                _ActionStatus = value;
             }
         }
 

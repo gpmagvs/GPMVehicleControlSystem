@@ -269,15 +269,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        if (ExecutingActionTask.action== ACTION_TYPE.None)
+                        if (ExecutingActionTask == null)
                         {
-                            LOG.WARN($"No obstacle.  buzzer Move");
-                            BuzzerPlayer.Move();
                         }
                         else
                         {
-                            LOG.WARN($"No obstacle.  buzzer Action");
-                            BuzzerPlayer.Action();
+                            if (ExecutingActionTask.action == ACTION_TYPE.None)
+                            {
+                                LOG.WARN($"No obstacle.  buzzer Move");
+                                BuzzerPlayer.Move();
+                            }
+                            else
+                            {
+                                LOG.WARN($"No obstacle.  buzzer Action");
+                                BuzzerPlayer.Action();
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -359,14 +365,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSResetCmdFlag = true;
             try
             {
-                LOG.INFO($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
+                LOG.WARN($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
 
                 if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
                 {
-                    Sub_Status = SUB_STATUS.IDLE;
                     AGVC.OnAGVCActionChanged = null;
-                    AGVC.AbortTask();
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                    AGV_Reset_Flag = false;
+                    LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
+                    await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
+                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                    AGV_Reset_Flag = true;
+                    //FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, 1);
+                    Sub_Status = SUB_STATUS.IDLE;
                     return true;
                 }
                 else
