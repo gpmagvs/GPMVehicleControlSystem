@@ -848,13 +848,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
-            if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
             {
                 _ = Task.Run(async () =>
                 {
                     await AGVC.AbortTask();
                     await Task.Delay(200);
-                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
                 });
             }
             if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
@@ -876,7 +875,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             IsInitialized = false;
             ExecutingActionTask = null;
-            AGVC._ActionStatus = ActionStatus.NO_GOAL;
             previousSoftEmoTime = DateTime.Now;
             _RunTaskData.IsActionFinishReported = true;
             _RunTaskData.IsLocalTask = true;

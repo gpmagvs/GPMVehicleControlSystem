@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
 
                 (bool agvc_executing, string message) agvc_response = (false, "");
-                await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
+                //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                 if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     agvc_response = (true, "空取空放");
@@ -170,19 +170,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
                     else
                     {
-                        await Task.Delay(10);
-                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
-                        await Task.Delay(100);
-                        await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+                        //await Task.Delay(10);
+                        //await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+                        //await Task.Delay(100);
+                        //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE| Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
                                 StartFrontendObstcleDetection();
                             AGVCActionStatusChaged += HandleAGVActionChanged;
-                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                            //await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                         }
                     }
                 }

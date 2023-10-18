@@ -90,7 +90,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    _ActionStatus = value;
                     LOG.TRACE($"Action Status Changed To : {_ActionStatus}");
                     if (OnAGVCActionChanged != null)
                     {
@@ -100,6 +99,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         });
                     }
                 }
+                _ActionStatus = value;
             }
         }
 
@@ -253,7 +253,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void InitTaskCommandActionClient()
         {
-            ActionStatus = ActionStatus.NO_GOAL;
             if (actionClient != null)
             {
                 try
@@ -299,8 +298,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 SendGoal(new TaskCommandGoal());
             return true;
         }
-
-        internal bool NavPathExpandedFlag { get; private set; } = false;
 
 
         private void DisposeTaskCommandActionClient()
@@ -351,7 +348,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task<(bool confirm, string message)> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
-            NavPathExpandedFlag = false;
             RunningTaskData = taskDownloadData;
             return await SendGoal(RunningTaskData.RosTaskCommandGoal, action_timeout);
         }
@@ -376,19 +372,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.TRACE($"Acation Timeout setting = {timeout} sec-Current Action Status={_ActionStatus}");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 await Task.Delay(500);
-                while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED)
+                while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
                 {
-                    LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {_ActionStatus}");
+                    LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
                     await Task.Delay(1);
                     if (wait_agvc_execute_action_cts.IsCancellationRequested)
                     {
-                        string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}";
+                        string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
                         LOG.Critical(error_msg);
                         AbortTask();
                         return (false, error_msg);
                     }
                 }
-                LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {_ActionStatus},Path Tracking = {new_path}", true);
+                LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
                 return (true, "");
             });
         }

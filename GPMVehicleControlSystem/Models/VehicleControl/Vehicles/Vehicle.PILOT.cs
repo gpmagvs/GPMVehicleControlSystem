@@ -417,7 +417,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
-                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
                     if (ExecutingActionTask != null)
                     {
