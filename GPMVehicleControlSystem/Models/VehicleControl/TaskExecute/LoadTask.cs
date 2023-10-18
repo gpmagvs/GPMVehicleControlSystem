@@ -193,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
-          
+
 
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
@@ -305,6 +305,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     Agv.DirectionLighter.Backward(delay: 800);
                     RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
+
+                    await Agv.Laser.AllLaserDisable();
+                    await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+                    await Agv.Laser.FrontBackLasersEnable(false, true);
 
                     await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                     (bool agvc_executing, string message) agvc_response = await TransferTaskToAGVC();

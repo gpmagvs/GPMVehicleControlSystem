@@ -268,10 +268,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 actionClient.Dispose();
             }
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
-            actionClient.OnActionStatusChanged += (status) =>
+            actionClient.OnActionStatusChanged += (sender, status) =>
             {
-                Task.Factory.StartNew(() => ActionStatus = status);
-
+                ActionStatus = status;
             };
             actionClient.Initialize();
         }
@@ -368,14 +367,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
                 else
                     LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-                _ActionStatus = ActionStatus.PENDING;
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
                 if (isCancelTask)//取消任務
                 {
                     return (true, "");
                 }
-                LOG.TRACE($"Acation Timeout setting = {timeout} sec");
+                LOG.TRACE($"Acation Timeout setting = {timeout} sec-Current Action Status={_ActionStatus}");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 await Task.Delay(500);
                 while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED)

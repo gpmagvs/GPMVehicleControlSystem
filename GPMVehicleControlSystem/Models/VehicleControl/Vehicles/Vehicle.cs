@@ -310,24 +310,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (AGVC?.rosSocket != null)
                         {
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
-                            await Task.Delay(1000);
+
+                            Task WagoDIConnTask = WagoDIInit();
+                            WagoDIConnTask.Start();
+                            lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
+                            Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
+                            BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
+                            AGVSInit();
+                            CommonEventsRegist();
+                            //TrafficMonitor();
+                            LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
+                            IsSystemInitialized = true;
+
+                            await Task.Delay(3000);
                             BuzzerPlayer.Alarm();
                         }
                     }
                     );
                 });
 
-                Task WagoDIConnTask = WagoDIInit();
                 RosConnTask.Start();
-                WagoDIConnTask.Start();
-                lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
-                Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
-                BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
-                AGVSInit();
-                CommonEventsRegist();
-                //TrafficMonitor();
-                LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                IsSystemInitialized = true;
             }
             catch (Exception ex)
             {

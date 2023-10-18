@@ -24,7 +24,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             catch (Exception ex)
             {
-                return Ok(MapManager.LoadMapFromFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/Map_UMTC_3F_Yellow.json")));
+                return Ok(MapManager.LoadMapFromFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "param/Map_UMTC_3F_Yellow.json"), out string msg, false));
             }
         }
         [HttpGet("UploadCoordination")]

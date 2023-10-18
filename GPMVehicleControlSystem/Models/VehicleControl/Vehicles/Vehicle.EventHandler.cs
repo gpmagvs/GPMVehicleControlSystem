@@ -269,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                        if (ExecutingActionTask.action== ACTION_TYPE.None)
                         {
                             LOG.WARN($"No obstacle.  buzzer Move");
                             BuzzerPlayer.Move();
