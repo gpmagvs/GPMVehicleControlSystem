@@ -8,6 +8,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
+using WebSocketSharp;
+using WebSocket = System.Net.WebSockets.WebSocket;
 
 namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 {
@@ -26,71 +28,117 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETSystemMessages,
             GETRDTestData
         }
-  
+
         public static async Task ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
         {
             if (_HttpContext.WebSockets.IsWebSocketRequest)
             {
                 WebSocket webSocket = await _HttpContext.WebSockets.AcceptWebSocketAsync();
-                await SendMessagesAsync(webSocket, client_req);
+                MessageSender msg_sender = new MessageSender(webSocket, client_req);
+                msg_sender.OnViewDataFetching += () => { return GetData(client_req); };
+                await msg_sender.SendMessage();
             }
             else
             {
                 _HttpContext.Response.StatusCode = 400;
             }
         }
-
-        private static async Task SendMessagesAsync(WebSocket webSocket, WEBSOCKET_CLIENT_ACTION client_req)
+        public class MessageSender
         {
-            var delay = TimeSpan.FromSeconds(0.1);
+            public WebSocket client { get; }
+            public WEBSOCKET_CLIENT_ACTION client_req { get; }
 
-            while (webSocket.State == WebSocketState.Open)
+            internal delegate object OnViewDataFetchDelate();
+            internal OnViewDataFetchDelate OnViewDataFetching;
+            public MessageSender(WebSocket client, WEBSOCKET_CLIENT_ACTION client_req)
             {
-                await Task.Delay(delay);
-                try
-                {
-                  var viewmodel=   GetData(client_req);
-                   await  webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(viewmodel))), WebSocketMessageType.Text, true, CancellationToken.None);
-                
-                }
-                catch (WebSocketException)
-                {
-                    // 客戶端已斷開連線，停止傳送訊息
-                    break;
-                }
+                this.client = client;
+                this.client_req = client_req;
             }
 
-            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
+            public async Task SendMessage()
+            {
+                while (client.State == System.Net.WebSockets.WebSocketState.Open)
+                {
+                    try
+                    {
+                        await Task.Delay(100);
 
+                        _ = Task.Factory.StartNew(async () =>
+                         {
+                             var result = await client.ReceiveAsync(new ArraySegment<byte>(new byte[10]), CancellationToken.None);
+                         });
+
+                        if (OnViewDataFetching == null)
+                            break;
+
+                        var data = OnViewDataFetching();
+                        if (data != null)
+                        {
+                            await client.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data))), WebSocketMessageType.Text, true, CancellationToken.None);
+                            data = null;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        break;
+                    }
+                }
+                Console.WriteLine($"Websocket channel {client_req}-closed");
+                client.Dispose();
+
+            }
         }
+
+        private static object ConnectionStatesVM;
+        private static object VMSStatesVM;
+        private static object DIOTableVM;
+        private static object SystemMessagesVM;
+        private static object RDTestData;
+
+        internal static async Task StartViewDataCollect()
+        {
+            await Task.Run(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(100);
+                    ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
+                    VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
+                    DIOTableVM = ViewModelFactory.GetDIOTableVM();
+                    SystemMessagesVM = ViewModelFactory.GetSystemMessagesVM();
+                    RDTestData = ViewModelFactory.GetRDTestData();
+                }
+            });
+        }
+
         private static object GetData(WEBSOCKET_CLIENT_ACTION client_req)
         {
             object viewmodel = "";
             switch (client_req)
             {
                 case WEBSOCKET_CLIENT_ACTION.GETConnectionStates:
-                    viewmodel = ViewModelFactory.GetConnectionStatesVM();
-
+                    viewmodel = ConnectionStatesVM;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETVMSStates:
-                    viewmodel = ViewModelFactory.GetVMSStatesVM();
+                    viewmodel = VMSStatesVM;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETAGVCModuleInformation:
                     //viewmodel = AgvEntity.ModuleInformation;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETDIOTable:
-                    viewmodel = ViewModelFactory.GetDIOTableVM();
+                    viewmodel = DIOTableVM;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETFORKTestState:
-                    // viewmodel = ViewModelFactory.GetForkTestStateVM();
+                    // viewmodel Factory.GetForkTestStateVM();
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA:
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
-                    viewmodel = ViewModelFactory.GetSystemMessagesVM();
+                    viewmodel = SystemMessagesVM;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETRDTestData:
-                    viewmodel = ViewModelFactory.GetRDTestData();
+                    viewmodel = RDTestData;
                     break;
                 default:
                     break;

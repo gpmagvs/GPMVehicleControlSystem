@@ -21,8 +21,13 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static AGVCStatusVM GetVMSStatesVM()
         {
+            if (AGV == null)
+                return new AGVCStatusVM();
+            if (!AGV.IsSystemInitialized)
+                return new AGVCStatusVM();
             try
             {
+
                 List<DriverState> driverStates = new List<DriverState>();
                 driverStates.AddRange(AGV.WheelDrivers.Select(d => d.Data).ToArray());
                 driverStates.Add(AGV.VerticalDriverState.Data);
@@ -63,7 +68,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
                         PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
                     },
-                    Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserMonitoringCase})",
+                    Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserModeOfSick})",
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.HasAnyCargoOnAGV(),

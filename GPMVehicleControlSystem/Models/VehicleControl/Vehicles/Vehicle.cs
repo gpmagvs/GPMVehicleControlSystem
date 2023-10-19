@@ -13,6 +13,7 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VCSSystem;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
@@ -310,7 +311,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (AGVC?.rosSocket != null)
                         {
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
-
                             Task WagoDIConnTask = WagoDIInit();
                             WagoDIConnTask.Start();
                             lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
@@ -321,7 +321,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             //TrafficMonitor();
                             LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
                             IsSystemInitialized = true;
-
+                            WebsocketAgent.StartViewDataCollect();
                             await Task.Delay(3000);
                             BuzzerPlayer.Alarm();
                         }
@@ -811,12 +811,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
+            AGVC.Throttle_rate_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevHandlePeriod;
             AGVC.Connect();
             AGVC.ManualController.vehicle = this;
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
-            AGVC.OnSickLocalicationDataUpdated += CarController_OnSickDataUpdated;
+            AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
-            AGVC.OnSickOutputPathsDataUpdated += (sender, OutputPaths) => Laser.CurrentLaserMonitoringCase = OutputPaths.active_monitoring_case;
+            AGVC.OnSickLaserModeSettingChanged += (sender, active_monitoring_case) => Laser.CurrentLaserModeOfSick = active_monitoring_case;
         }
 
 

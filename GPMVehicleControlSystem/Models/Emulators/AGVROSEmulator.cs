@@ -12,6 +12,7 @@ using System.Linq;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -260,9 +261,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
             await Task.Delay(1);
             await Task.Factory.StartNew(async () =>
             {
+                Stopwatch stopwatch = Stopwatch.StartNew();
                 while (true)
                 {
                     await Task.Delay(10);
+                    if (stopwatch.ElapsedMilliseconds > 10000)
+                    {
+                        module_info.Battery.batteryLevel -= 1;
+                        module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 0 ? 0 : module_info.Battery.batteryLevel);
+                        stopwatch.Restart();
+                    }
                     try
                     {
                         rosSocket.Publish("AGVC_Emu", module_info);

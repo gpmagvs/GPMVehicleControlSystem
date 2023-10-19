@@ -53,6 +53,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public double ActionTimeout { get; set; } = 5;
         /// <summary>
+        /// 訂閱/Module_Information接收處理數據的週期
+        /// </summary>
+        /// <remarks>
+        /// 單位:毫秒(ms)
+        /// </remarks>
+        public int ModuleInfoTopicRevHandlePeriod { get; set; } = 100;
+        /// <summary>
         /// 禁止上線的TAG
         /// </summary>
         public List<int> ForbidToOnlineTags { get; set; } = new List<int>();

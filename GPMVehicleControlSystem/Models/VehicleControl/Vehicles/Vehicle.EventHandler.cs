@@ -492,7 +492,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == Navigation.LastVisitedTag);//虛擬點
         }
 
-        private void CarController_OnSickDataUpdated(object? sender, LocalizationControllerResultMessage0502 sick_loc_data)
+        private void HandleSickLocalizationStateChanged(object? sender, LocalizationControllerResultMessage0502 sick_loc_data)
         {
             SickData.StateData = sick_loc_data;
         }

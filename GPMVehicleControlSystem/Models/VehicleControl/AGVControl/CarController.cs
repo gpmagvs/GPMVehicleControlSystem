@@ -17,7 +17,6 @@ using System.Threading;
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
 
-
     /// <summary>
     /// 使用ＲＯＳ與車控端通訊
     /// /sick_safetyscanners/output_paths =>訂閱sick 雷射輸出結果(有包含雷射設定組數)
@@ -64,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             STOP_RIGHTNOW = 101,
             NONE = 090
         }
-        public RosSocket? rosSocket;
+        public RosSocket rosSocket;
 
         /// <summary>
         /// 地圖比對率
@@ -76,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<ModuleInformation> OnModuleInformationUpdated;
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
-        public event EventHandler<OutputPathsMsg> OnSickOutputPathsDataUpdated;
+        public event EventHandler<int> OnSickLaserModeSettingChanged;
         public event EventHandler OnAGVCCycleStopRequesting;
         public Action<ActionStatus> OnAGVCActionChanged;
 
@@ -125,6 +124,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public MoveControl ManualController { get; set; }
         public double CurrentSpeedLimit { get; internal set; }
 
+        /// <summary>
+        /// 訂閱/Module_Information接收處理數據的週期
+        /// </summary>
+        /// <remarks>
+        /// 單位:毫秒(ms)
+        /// </remarks>
+        public int Throttle_rate_of_Topic_ModuleInfo { get; internal set; } = 100;
+
         public CarController()
         {
         }
@@ -171,20 +178,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         public virtual void SubscribeROSTopics()
         {
-            rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, queue_length: 50);
-            rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickStateCallback, queue_length: 50);
-            rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 1, queue_length: 1);
-            rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 1, queue_length: 50);
+            Task.Run(() =>
+            {
+                rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: 1);
+                rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
+                rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
+                rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 100, queue_length: 5);
+            });
         }
         private void ModuleInformationCallback(ModuleInformation _ModuleInformation)
         {
             module_info = _ModuleInformation;
         }
-        public OutputPathsMsg SickOutPutPaths { get; private set; } = new OutputPathsMsg();
+        private int LaserModeSetting = -1;
         private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
         {
-            OnSickOutputPathsDataUpdated?.Invoke(this, sick_scanner_out_data);
-            SickOutPutPaths = sick_scanner_out_data;
+            if (LaserModeSetting != sick_scanner_out_data.active_monitoring_case)
+            {
+                OnSickLaserModeSettingChanged?.Invoke(this, LaserModeSetting);
+                LaserModeSetting = sick_scanner_out_data.active_monitoring_case;
+            }
         }
 
         private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)
@@ -316,7 +329,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
 
-        private void SickStateCallback(LocalizationControllerResultMessage0502 _LocalizationControllerResult)
+        private void SickLocalizationStateCallback(LocalizationControllerResultMessage0502 _LocalizationControllerResult)
         {
             LocalizationControllerResult = _LocalizationControllerResult;
             OnSickLocalicationDataUpdated?.Invoke(this, _LocalizationControllerResult);

@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         private LASER_MODE _Mode = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
-        internal int CurrentLaserMonitoringCase = -1;
+        internal int CurrentLaserModeOfSick = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserMonitoringCase);
+                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
                 }
                 catch (Exception)
                 {
@@ -75,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-        internal async Task FrontBackLasersEnable(bool front_active,bool back_active)
+        internal async Task FrontBackLasersEnable(bool front_active, bool back_active)
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, !front_active);
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, !back_active);
@@ -88,11 +88,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, !active);
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, !active);
-        } 
+        }
         /// <summary>
-            /// 前後雷射Bypass關閉
-            /// </summary>
-            /// <exception cref="NotImplementedException"></exception>
+        /// 前後雷射Bypass關閉
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
         internal async Task SideLasersEnable(bool active)
         {
             await DOModule.SetState(DO_ITEM.Right_LsrBypass, !active);
@@ -153,7 +153,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
             int mode_int = (int)mode;
-            if (CurrentLaserMonitoringCase == mode_int | (CurrentLaserMonitoringCase == 16 && mode_int == 0) | (CurrentLaserMonitoringCase == 0 && mode_int == 16))
+            if (CurrentLaserModeOfSick == mode_int | (CurrentLaserModeOfSick == 16 && mode_int == 0) | (CurrentLaserModeOfSick == 0 && mode_int == 16))
                 return true;
             return await ModeSwitch((int)mode, isSettingByAGVS);
         }
@@ -161,16 +161,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
-            if (CurrentLaserMonitoringCase == mode_int)
+            if (CurrentLaserModeOfSick == mode_int)
                 return true;
 
             try
             {
                 DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                if (CurrentLaserMonitoringCase != -1)
+                if (CurrentLaserModeOfSick != -1)
                 {
-                    while ((mode_int != 0 & mode_int != 16) ? CurrentLaserMonitoringCase != mode_int : (CurrentLaserMonitoringCase != 0 && CurrentLaserMonitoringCase != 16))
+                    while ((mode_int != 0 & mode_int != 16) ? CurrentLaserModeOfSick != mode_int : (CurrentLaserModeOfSick != 0 && CurrentLaserModeOfSick != 16))
                     {
                         if (cts.IsCancellationRequested)
                         {
