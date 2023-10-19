@@ -560,7 +560,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else
                         {
-                            LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl}) and not any local map file exist");
+                            LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl}) and not any local map file exist({Parameters.MapParam.LocalMapFileFullName})");
                         }
                     }
                 }

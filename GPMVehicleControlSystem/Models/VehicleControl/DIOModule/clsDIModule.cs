@@ -123,7 +123,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             this.IO_Interval_ms = IO_Interval_ms;
             ReadIOSettingsFromIniFile();
         }
-        public clsDIModule(string IP, int Port, clsDOModule DoModuleRef,int IO_Interval_ms = 5)
+        public clsDIModule(string IP, int Port, clsDOModule DoModuleRef, int IO_Interval_ms = 5)
         {
             this.IP = IP;
             this.Port = Port;
@@ -331,6 +331,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                             VCSInputs[i].State = input[i];
                         }
                         timeoutSw.Restart();
+                        input = null;
                     }
                     catch (Exception ex)
                     {
