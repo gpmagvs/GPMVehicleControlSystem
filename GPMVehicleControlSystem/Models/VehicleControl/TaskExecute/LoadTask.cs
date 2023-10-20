@@ -197,7 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                await Task.Delay(500);
+                await Task.Delay(2000);
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
                 if ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
                 {
@@ -341,6 +341,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true)
         {
+
+            LOG.INFO("Check AGV Status--");
+
+
             if (Agv.Parameters.LDULD_Task_No_Entry)
                 return AlarmCodes.None;
 
@@ -356,6 +360,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (alarm_code != AlarmCodes.None)
                 LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+
             return alarm_code;
         }
 

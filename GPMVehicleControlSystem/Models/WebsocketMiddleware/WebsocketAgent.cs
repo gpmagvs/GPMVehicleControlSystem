@@ -37,19 +37,22 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 MessageSender msg_sender = new MessageSender(webSocket, client_req);
                 msg_sender.OnViewDataFetching += () => { return GetData(client_req); };
                 await msg_sender.SendMessage();
+                msg_sender.Dispose();
             }
             else
             {
                 _HttpContext.Response.StatusCode = 400;
             }
         }
-        public class MessageSender
+        public class MessageSender : IDisposable
         {
-            public WebSocket client { get; }
+            public WebSocket client { get; private set; }
             public WEBSOCKET_CLIENT_ACTION client_req { get; }
 
             internal delegate object OnViewDataFetchDelate();
             internal OnViewDataFetchDelate OnViewDataFetching;
+            private bool disposedValue;
+
             public MessageSender(WebSocket client, WEBSOCKET_CLIENT_ACTION client_req)
             {
                 this.client = client;
@@ -58,35 +61,70 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 
             public async Task SendMessage()
             {
-                while (client.State == System.Net.WebSockets.WebSocketState.Open)
+                var buff = new ArraySegment<byte>(new byte[10]);
+                bool closeFlag = false;
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    while (!closeFlag)
+                    {
+                        await Task.Delay(100);
+                        var data = OnViewDataFetching();
+                        if (data != null)
+                        {
+                            try
+                            {
+
+                                await client.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data))), WebSocketMessageType.Text, true, CancellationToken.None);
+                                data = null;
+                            }
+                            catch (Exception)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                });
+
+                while (true)
                 {
                     try
                     {
                         await Task.Delay(100);
-
-                        _ = Task.Factory.StartNew(async () =>
-                         {
-                             var result = await client.ReceiveAsync(new ArraySegment<byte>(new byte[10]), CancellationToken.None);
-                         });
-
-                        if (OnViewDataFetching == null)
-                            break;
-
-                        var data = OnViewDataFetching();
-                        if (data != null)
-                        {
-                            await client.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data))), WebSocketMessageType.Text, true, CancellationToken.None);
-                            data = null;
-                        }
+                        WebSocketReceiveResult result = await client.ReceiveAsync(buff, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         break;
                     }
                 }
+                closeFlag = true;
                 Console.WriteLine($"Websocket channel {client_req}-closed");
                 client.Dispose();
+                GC.Collect();
 
+            }
+
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        // TODO: 處置受控狀態 (受控物件)
+                    }
+
+                    // TODO: 釋出非受控資源 (非受控物件) 並覆寫完成項
+                    // TODO: 將大型欄位設為 Null
+                    OnViewDataFetching = null;
+                    client = null;
+                    disposedValue = true;
+                }
+            }
+            public void Dispose()
+            {
+                // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
             }
         }
 

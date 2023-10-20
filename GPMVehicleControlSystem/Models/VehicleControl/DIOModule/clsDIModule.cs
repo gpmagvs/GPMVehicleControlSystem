@@ -85,12 +85,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     if (value)
                         Task.Factory.StartNew(async () =>
                         {
-                            await Task.Delay(5000);
-                            if (_ModuleDisconnected)
-                            {
-                                LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
-                                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
-                            }
+                            LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
+                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
                         });
                     else
                     {
@@ -209,13 +205,18 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             try
             {
                 client?.Close();
+                master?.Transport.Dispose();
                 master?.Dispose();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                LOG.ERROR(ex);
             }
-            client = null;
-            master = null;
+            finally
+            {
+                client = null;
+                master = null;
+            }
         }
 
         public override bool IsConnected()
@@ -273,18 +274,21 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
 
         private bool IsTimeout = false;
-        private Stopwatch timeoutSw = new Stopwatch();
-        private void ConnectionWatchDog()
+
+
+        private DateTime lastReadTime = DateTime.MaxValue;
+        private async void ConnectionWatchDog()
         {
-            Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
                 while (true)
                 {
-                    Thread.Sleep(1);
-                    if (timeoutSw.ElapsedMilliseconds > 5000)
+                    await Task.Delay(10);
+                    var period = (DateTime.Now - lastReadTime).TotalMilliseconds;
+                    if (period > 5000)
                     {
-                        LOG.Critical($"Wago Module Read Timeout!! {timeoutSw.ElapsedMilliseconds} ");
-                        timeoutSw.Restart();
+                        LOG.Critical($"Wago Module Read Timeout!! ({period} ms) ");
+                        lastReadTime = DateTime.Now;
                         Disconnect();
                         ModuleDisconnected = true;
                         DoModuleRef.ModuleDisconnected = true;
@@ -299,11 +303,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 while (true)
                 {
-                    Thread.Sleep(1);
+                    Thread.Sleep(IO_Interval_ms);
                     if (!IsConnected())
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
-                        await Task.Delay(1000);
+                        Thread.Sleep(1000);
                         Connect();
                         continue;
                     }
@@ -312,12 +316,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         CancellationTokenSource cts = new CancellationTokenSource(3000);
                         while (DoModuleRef.IOBusy)
                         {
-                            await Task.Delay(1);
+                            Thread.Sleep(1);
                             if (cts.IsCancellationRequested)
                             {
+                                cts.Dispose();
                                 continue;
                             }
                         }
+                        cts.Dispose();
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {
@@ -327,14 +333,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         }
 
                         for (int i = 0; i < input.Length; i++)
-                        {
                             VCSInputs[i].State = input[i];
-                        }
-                        timeoutSw.Restart();
+
+                        lastReadTime = DateTime.Now;
                         input = null;
                     }
                     catch (Exception ex)
                     {
+                        LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
                         LOG.Critical(ex.Message, ex);
                         Disconnect();
                     }

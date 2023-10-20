@@ -93,7 +93,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             { "Wago" , new clsConnectionParam
                 {
                      IP = "127.0.0.1",
-                     Port = 9999
+                     Port = 9999,
+                     Protocol_Interval_ms =50
                 }
             },
             { "AGVS" , new clsConnectionParam
