@@ -24,6 +24,7 @@ _ = Task.Run(() =>
     if (!alarmListLoaded)
         StaSysMessageManager.AddNewMessage(message, 1);
     DBhelper.Initialize();
+    Console.WriteLine(LinuxTools.GetMemUsedMB());
     VehicheAndWagoIOConfiguraltion();
 });
 

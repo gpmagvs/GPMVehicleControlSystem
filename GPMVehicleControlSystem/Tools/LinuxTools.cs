@@ -31,7 +31,11 @@ namespace GPMVehicleControlSystem.Tools
             int pid = currentProcess.Id;
             File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "VCS_PID"), pid.ToString());
         }
-
+        public static double GetMemUsedMB()
+        {
+            var currentProcess = Process.GetCurrentProcess();
+          return  currentProcess.WorkingSet64 / 1024 / 1024;
+        }
     }
 
 }
