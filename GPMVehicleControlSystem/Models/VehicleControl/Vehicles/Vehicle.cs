@@ -311,6 +311,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (AGVC?.rosSocket != null)
                         {
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
+                            AlarmManager.Active = false;
                             Task WagoDIConnTask = WagoDIInit();
                             WagoDIConnTask.Start();
                             lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
@@ -320,10 +321,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             CommonEventsRegist();
                             //TrafficMonitor();
                             LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                            IsSystemInitialized = true;
                             WebsocketAgent.StartViewDataCollect();
                             await Task.Delay(3000);
                             BuzzerPlayer.Alarm();
+                            IsSystemInitialized = true;
+                            AlarmManager.Active = true;
                         }
                     }
                     );
