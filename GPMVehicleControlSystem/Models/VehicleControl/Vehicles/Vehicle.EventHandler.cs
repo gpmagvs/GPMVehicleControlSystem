@@ -20,6 +20,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.WorkStation;
 using System.Reflection.Metadata;
 using static SQLite.SQLite3;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -303,7 +304,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected void HandleWheelDriverStatusError(object? sender, bool status)
         {
-            if (status)
+            if (status && WagoDI.GetState(DI_ITEM.EMO))
             {
                 clsIOSignal signal = (clsIOSignal)sender;
                 var input = signal?.Input;

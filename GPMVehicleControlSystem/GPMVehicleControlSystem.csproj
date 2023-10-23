@@ -46,7 +46,7 @@
 
 	<ItemGroup>
 	  <Compile Update="Program.cs">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Compile>
 	</ItemGroup>
 
