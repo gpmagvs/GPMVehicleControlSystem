@@ -58,6 +58,7 @@ void VehicheAndWagoIOConfiguraltion()
     }
     StaStored.CurrentVechicle.DownloadMapFromServer();
     LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
+    LinuxTools.SysLoadingLogProcess();
 }
 
 var builder = WebApplication.CreateBuilder(args);

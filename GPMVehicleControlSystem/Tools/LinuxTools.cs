@@ -1,4 +1,5 @@
-﻿using GitVersion.Extensions;
+﻿using AGVSystemCommonNet6.Log;
+using GitVersion.Extensions;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Tools
@@ -31,10 +32,24 @@ namespace GPMVehicleControlSystem.Tools
             int pid = currentProcess.Id;
             File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "VCS_PID"), pid.ToString());
         }
+
+        public static void SysLoadingLogProcess()
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                while (true)
+                {
+                    var mem = GetMemUsedMB();
+                    LOG.TRACE($"[Sys-Loading] CPU: Memory:{mem}Mb");
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                }
+            });
+        }
+
         public static double GetMemUsedMB()
         {
             var currentProcess = Process.GetCurrentProcess();
-          return  currentProcess.WorkingSet64 / 1024 / 1024;
+            return currentProcess.WorkingSet64 / 1024 / 1024;
         }
     }
 
