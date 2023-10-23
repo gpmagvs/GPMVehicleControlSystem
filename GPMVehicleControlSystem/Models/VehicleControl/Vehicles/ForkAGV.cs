@@ -125,6 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
                     forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
+                    ForkLifter.IsInitialized = true;
                 }
                 else
                     forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);

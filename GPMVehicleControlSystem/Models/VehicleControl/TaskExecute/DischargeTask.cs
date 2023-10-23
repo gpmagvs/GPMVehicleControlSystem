@@ -3,7 +3,9 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
@@ -41,14 +43,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-
             if (ForkLifter != null)
             {
-                (bool confirm, AlarmCodes alarm_code) goHomeResult = await ForkLifter.ForkGoHome(wait_done: true);
-                LOG.WARN($"Fork Go Home When AGVC Action Finish , {goHomeResult.confirm}:{goHomeResult.alarm_code}");
-                if (!goHomeResult.confirm)
+                (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
+                await RegisterSideLaserTriggerEvent();
+                while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
-                    return (true, goHomeResult.alarm_code);
+                    ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                }
+                await UnRegisterSideLaserTriggerEvent();
+
+                LOG.WARN($"Fork Go Home When AGVC Action Finish , {ForkGoHomeActionResult.confirm}:{ForkGoHomeActionResult.alarm_code}");
+                if (!ForkGoHomeActionResult.confirm)
+                {
+                    return (true, ForkGoHomeActionResult.alarm_code);
                 }
             }
             return await base.HandleAGVCActionSucceess();

@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -62,7 +63,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected override async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
+            await RegisterSideLaserTriggerEvent();
             var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.UP_, 0.5);
+            await UnRegisterSideLaserTriggerEvent();
             return forkHeightChangeReuslt;
         }
     }

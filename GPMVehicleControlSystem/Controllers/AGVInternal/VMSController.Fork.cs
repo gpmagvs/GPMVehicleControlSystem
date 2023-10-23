@@ -108,7 +108,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             bool isForkWorking = (forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag;
             string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkAction;
 
-            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag)
+            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag && action!="stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
             if (action == "home" | action == "orig")
@@ -123,7 +123,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             else if (action == "pose")
             {
-
+                if (pose < forkAgv.Parameters.ForkAGV.DownlimitPose)
+                    pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
+                else if (pose> forkAgv.Parameters.ForkAGV.UplimitPose)
+                    pose = forkAgv.Parameters.ForkAGV.UplimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
                 return Ok(new { confirm = result.success, message = result.message });
             }
@@ -138,6 +141,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition - 0.1;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 return Ok(new { confirm = result.success, message = result.message });
+            }
+            else if (action == "up_limit")
+            {
+                var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                return Ok(new { confirm = true});
+            }
+            else if (action == "down_limit")
+            {
+                var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
+                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                return Ok(new { confirm = true});
             }
             else if (action == "stop")
             {

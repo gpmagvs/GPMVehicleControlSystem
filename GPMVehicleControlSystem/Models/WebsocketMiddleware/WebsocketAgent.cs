@@ -98,7 +98,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     }
                 }
                 closeFlag = true;
-                Console.WriteLine($"Websocket channel {client_req}-closed");
                 client.Dispose();
                 GC.Collect();
 

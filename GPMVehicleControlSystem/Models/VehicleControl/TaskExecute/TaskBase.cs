@@ -10,12 +10,14 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
@@ -332,9 +334,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(FORK_HEIGHT_POSITION position)
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
+            await RegisterSideLaserTriggerEvent();
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1).Result;
+            await UnRegisterSideLaserTriggerEvent();
             return result;
         }
+
+        protected async Task RegisterSideLaserTriggerEvent()
+        {
+            Agv.WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
+            Agv.WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
+            await Task.Delay(500);
+            await Agv.Laser.SideLasersEnable(true);//開啟左右雷射
+        }
+        protected async Task UnRegisterSideLaserTriggerEvent()
+        {
+            Agv.WagoDI.UnRegistSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
+            Agv.WagoDI.UnRegistSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
+            await Agv.Laser.SideLasersEnable(false);
+        }
+
+        private async void LaserTriggerWhenForkLiftMove(object? sender, bool active)
+        {
+            clsIOSignal input = (clsIOSignal)sender;
+            AlarmCodes alarm_code = input.Input == DI_ITEM.RightProtection_Area_Sensor_3 ? AlarmCodes.RightProtection_Area3 : AlarmCodes.LeftProtection_Area3;
+            if (!active)
+            {
+                await Agv.ForkLifter.ForkStopAsync(false);
+                AlarmManager.AddWarning(alarm_code);
+                BuzzerPlayer.Alarm();
+            }
+            else
+            {
+                if (Agv.WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && Agv.WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
+                {
+                    AlarmManager.ClearAlarm(alarm_code);
+                    Agv.ForkLifter.fork_ros_controller.IsZAxisActionDone = true;
+                    BuzzerPlayer.Action();
+                }
+            }
+        }
+
         /// <summary>
         /// 車頭二次檢Sensor檢察功能
         /// </summary>

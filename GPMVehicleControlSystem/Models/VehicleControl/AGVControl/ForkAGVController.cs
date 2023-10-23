@@ -71,9 +71,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await CallVerticalCommandService(request, false);
         }
 
-
+        private double PoseTarget = 0;
+        private double Speed = 0;
         public async Task<(bool success, string message)> ZAxisGoTo(double target, double speed = 1.0, bool wait_done = true)
         {
+            PoseTarget = target;
+            Speed = speed;
             IsZAxisActionDone = false;
             WaitActionDoneFlag = wait_done;
             VerticalCommandRequest request = new VerticalCommandRequest
@@ -222,6 +225,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 model = "FORK",
                 command = "resum",
+                speed = Speed,
+                target = PoseTarget
             };
             return await CallVerticalCommandService(request);
         }

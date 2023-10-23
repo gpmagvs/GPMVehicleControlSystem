@@ -405,13 +405,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
-                        var ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                        (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
+                        await Agv.Laser.SideLasersEnable(true);
+                        await RegisterSideLaserTriggerEvent();
+                        while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                        {
+                            ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                        }
+                        await UnRegisterSideLaserTriggerEvent();
+                        await Task.Delay(500);
+                        await Agv.Laser.SideLasersEnable(false);
                         if (!ForkGoHomeActionResult.confirm)
                         {
                             AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                             Agv.Sub_Status = SUB_STATUS.DOWN;
                             await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: ForkGoHomeActionResult.alarm_code);
                         }
+
                     }
                     (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
                     if (!CstBarcodeCheckResult.success)
@@ -450,7 +460,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            return await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            await RegisterSideLaserTriggerEvent();
+            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            await UnRegisterSideLaserTriggerEvent();
+            return result;
 
         }
         private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)

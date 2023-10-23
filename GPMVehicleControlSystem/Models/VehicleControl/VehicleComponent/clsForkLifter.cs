@@ -85,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 是否以初始化
         /// </summary>
-        public bool IsInitialized { get; private set; } = false;
+        public bool IsInitialized { get; internal set; } = false;
         public bool IsInitialing { get; private set; } = false;
         /// <summary>
         /// 可以走的上極限位置
@@ -181,12 +181,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override void CheckStateDataContent()
         {
         }
-        public async Task<(bool confirm, string message)> ForkStopAsync()
+        public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = true)
         {
-            (forkAGV.AGVC as ForkAGVController).wait_action_down_cts.Cancel();
-            LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
+            if (IsEMS)
+            {
+                (forkAGV.AGVC as ForkAGVController).wait_action_down_cts.Cancel();
+                LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
+            }
             return await fork_ros_controller.ZAxisStop();
         }
+
+        internal async Task ForkResumeAction()
+        {
+            await fork_ros_controller.ZAxisResume();
+        }
+
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
             return await fork_ros_controller.ZAxisInit();
@@ -205,12 +214,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
         {
-            if (pose < 0)
-                pose = 0;
-            //if (pose > ForkTeachData.Up_Pose_Limit)
-            //    pose = ForkTeachData.Up_Pose_Limit;
-            //if (pose < ForkTeachData.Down_Pose_Limit)
-            //    pose = ForkTeachData.Down_Pose_Limit;
+            if (pose < forkAGV.Parameters.ForkAGV.DownlimitPose)
+                pose = forkAGV.Parameters.ForkAGV.DownlimitPose;
+            else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
+                pose = forkAGV.Parameters.ForkAGV.UplimitPose;
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
@@ -311,7 +318,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
 
 
-
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
@@ -386,7 +392,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         if (!response.confirm)
                             continue;
                         Thread.Sleep(1000);
-                        response = await ForkPose(2.5, 1);
+                        response = await ForkPose(2.25, 1);
                         LOG.INFO($" Fork init and Go To 2.5 ForkPose {response.confirm},{response.message}");
                         if (!response.confirm)
                             continue;
@@ -484,7 +490,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
-
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
                     await Task.Delay(1, fork_ros_controller.wait_action_down_cts.Token);
@@ -504,15 +509,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
                     forkMoveREsult = await ForkPose(position_to_reach, speed);
 
-                    if (!forkMoveREsult.confirm && tryCnt > 2)
+                    if (!forkMoveREsult.confirm)
                     {
                         return (false, AlarmCodes.Action_Timeout);
                     }
-                    else if (positionError > errorTorlence && tryCnt > 2)
-                    {
-                        return (false, AlarmCodes.Fork_Height_Setting_Error);
-                    }
                 }
+                LOG.TRACE($"Position={Driver.CurrentPosition}/{position_to_reach}(Error={positionError})");
+                if (positionError > errorTorlence && forkMoveREsult.confirm)
+                    return (false, AlarmCodes.Fork_Height_Setting_Error);
 
                 return (true, AlarmCodes.None);
 
@@ -536,5 +540,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
 
         }
+
     }
 }

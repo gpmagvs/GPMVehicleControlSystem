@@ -128,6 +128,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public CST_ID_NO_MATCH_ACTION Cst_ID_Not_Match_Action { get; set; } = CST_ID_NO_MATCH_ACTION.REPORT_READER_RESULT;
         public EQ_INTERACTION_FAIL_ACTION HandshakeFailWhenLoadFinish { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;
         public clsInspectionAGVParams InspectionAGV { get; set; } = new clsInspectionAGVParams();
+        public clsForkAGVParams ForkAGV { get; set; } = new clsForkAGVParams();
         /// <summary>
         /// 模擬器參數
         /// </summary>
@@ -136,6 +137,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool BuzzerOn { get; set; } = true;
     }
 
+    public class clsForkAGVParams
+    {
+        public double UplimitPose { get; set; } = 35;
+        public double DownlimitPose { get; set; } = 0;
+    }
     public class clsInspectionAGVParams
     {
         public bool CheckBatteryLockStateWhenInit { get; set; } = false;

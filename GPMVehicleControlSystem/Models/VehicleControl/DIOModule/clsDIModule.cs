@@ -249,6 +249,19 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
             }
         }
+
+        public virtual void UnRegistSignalStateChange(Enum signal, EventHandler<bool> handler)
+        {
+            try
+            {
+                VCSInputs[Indexs[signal]].OnStateChanged -= handler;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
+            }
+        }
+
         protected virtual void RegistSignalEvents()
         {
             VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
