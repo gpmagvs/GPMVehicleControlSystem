@@ -69,7 +69,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             await Task.Run(async () =>
              {
-                 TaskBase _ExecutingTaskModel = null;
                  clsTaskDownloadData _taskDownloadData;
                  _taskDownloadData = taskDownloadData;
                  _RunTaskData = new clsTaskDownloadData
@@ -83,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  };
                  if (action == ACTION_TYPE.None)
                  {
-                     _ExecutingTaskModel = new NormalMoveTask(this, _taskDownloadData);
+                     ExecutingTaskModel = new NormalMoveTask(this, _taskDownloadData);
                      if (Parameters.SimulationMode)
                          WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
                  }
@@ -92,31 +91,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
                          _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
                      if (action == ACTION_TYPE.Charge)
-                         _ExecutingTaskModel = new ChargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ChargeTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Discharge)
-                         _ExecutingTaskModel = new DischargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new DischargeTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Load)
-                         _ExecutingTaskModel = new LoadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new LoadTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Unload)
-                         _ExecutingTaskModel = new UnloadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnloadTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Park)
-                         _ExecutingTaskModel = new ParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ParkTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Unpark)
-                         _ExecutingTaskModel = new UnParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnParkTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.Measure)
-                         _ExecutingTaskModel = new MeasureTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new MeasureTask(this, _taskDownloadData);
                      else if (action == ACTION_TYPE.ExchangeBattery)
-                         _ExecutingTaskModel = new ExchangeBatteryTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ExchangeBatteryTask(this, _taskDownloadData);
                      else
                      {
                          throw new NotImplementedException();
                      }
                  }
-                 previousTagPoint = _ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
-                 _ExecutingTaskModel.ForkLifter = ForkLifter;
-                 await Task.Delay(600);
+                 previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
+                 ExecutingTaskModel.ForkLifter = ForkLifter;
                  IsLaserRecoveryHandled = false;
-                 var result = await _ExecutingTaskModel.Execute();
+                 var result = await ExecutingTaskModel.Execute();
                  if (result != AlarmCodes.None)
                  {
                      Sub_Status = SUB_STATUS.DOWN;
@@ -124,10 +122,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      AlarmManager.AddAlarm(result, false);
                      FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
                      AGVC.OnAGVCActionChanged = null;
-                 }
-                 else
-                 {
-                     ExecutingTaskModel = _ExecutingTaskModel;
                  }
                  //}
              });
