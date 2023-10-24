@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Controllers
         {
             await Task.Factory.StartNew(() =>
             {
-                string bodyJson = body == null ? "" : body.ToJson(Formatting.None);
+                string bodyJson = body == null ? "" : body.ToJson();
                 Agv.AGVS.LogMsgFromAGVS($"({method}) api route= /api/TaskDispatch/{api_name},body={bodyJson}");
             });
         }
@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Controllers
         {
             await Task.Factory.StartNew(() =>
             {
-                string bodyJson = response == null ? "" : response.ToJson(Formatting.None);
+                string bodyJson = response == null ? "" : response.ToJson();
                 Agv.AGVS.LogMsgToAGVS($"({method}) api route= /api/TaskDispatch/{api_name},Response={bodyJson}");
             });
         }
@@ -35,9 +35,9 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpPost("Execute")]
         public async Task<IActionResult> Execute([FromBody] object taskDto)
         {
-            LogAsync("Execute", taskDto, method: "POST");
             TaskDownloadRequestResponse task_download_feedback = new TaskDownloadRequestResponse();
             clsTaskDownloadData? data = JsonConvert.DeserializeObject<clsTaskDownloadData>(taskDto.ToString());
+            LogAsync("Execute", data, method: "POST");
             TASK_DOWNLOAD_RETURN_CODES return_code = Agv.AGVSTaskDownloadConfirm(data);
             task_download_feedback.ReturnCode = return_code;
             if (return_code == TASK_DOWNLOAD_RETURN_CODES.OK)
