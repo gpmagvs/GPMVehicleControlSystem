@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
-        private void CommonEventsRegist()
+        protected virtual void CommonEventsRegist()
         {
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
@@ -39,6 +39,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;
             };
+            foreach (var driver in WheelDrivers)
+            {
+                driver.OnAlarmHappened += (alarm_code) =>
+                {
+                    if (alarm_code != AlarmCodes.None)
+                    {
+                        return WagoDI.GetState(DI_ITEM.EMO) == true;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                };
+            }
         }
 
         /// <summary>
