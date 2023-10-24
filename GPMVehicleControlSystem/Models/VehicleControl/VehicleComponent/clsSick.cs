@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
+using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -17,6 +18,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public bool _LaserModeSettingError = false;
         public bool _SickConnectionError = false;
+        internal RawMicroScanDataMsg SickRawData = new RawMicroScanDataMsg();
 
         public bool LaserModeSettingError
         {
@@ -27,7 +29,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     if (value)
                     {
-                        Current_Alarm_Code = AlarmCodes.Laser_Mode_value_fail;
+                        Current_Warning_Code = AlarmCodes.Laser_Mode_value_fail;
+                        LogSickRawData(SickRawData);
                     }
                     _LaserModeSettingError = value;
 
@@ -44,6 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (value)
                     {
                         Current_Warning_Code = AlarmCodes.Sick_Lidar_Communication_Error;
+                        LogSickRawData(SickRawData);
                     }
                     _SickConnectionError = value;
 
@@ -68,5 +72,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
+
+        private void LogSickRawData(RawMicroScanDataMsg sick_scanner_raw_data)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
+                string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), Path.Combine(AppSettingsHelper.LogFolder, "SickData"));
+                Directory.CreateDirectory(LogFolder);
+                var fileName = Path.Combine(LogFolder, "tmp_sick_data.json");
+                using (StreamWriter writer = new StreamWriter(fileName))
+                {
+                    writer.WriteLine($"{DateTime.Now} {json}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
+            }
+        }
+
     }
 }

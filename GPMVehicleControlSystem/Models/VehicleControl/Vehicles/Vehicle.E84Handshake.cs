@@ -207,7 +207,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsULReqOn(action))
                 {
-                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status ==SUB_STATUS.DOWN)
+                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -251,6 +251,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (true, AlarmCodes.None);
             }
             catch (OperationCanceledException ex)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
+                return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
+            }
+            catch (Exception ex)
             {
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
                 return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
@@ -485,15 +490,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
                 {
                     await Task.Delay(1);
-                    ////AGV作動中發生AGV異常
-                    if (Sub_Status == SUB_STATUS.DOWN)
-                    {
-                        AGVC.AbortTask();
-                        LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-                        SetAGV_TR_REQ(false);
-                        return;
-                    }
+
                     bool isEQReadyOff = !IsEQReadyOn();
                     bool isEQBusyOn = IsEQBusyOn();
 
@@ -504,6 +501,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!isEQReadyOff)
                             LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
+                    ////AGV作動中發生AGV異常
+                    if (Sub_Status == SUB_STATUS.DOWN)
+                    {
+                        AGVC.AbortTask();
+                        SetAGV_TR_REQ(false);
+                        if (isEQReadyOff | isEQBusyOn | !IsEQGOOn())
+                            return;
+                        LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
+                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
+                        return;
+                    }
+
 
                     if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
                     {
@@ -514,6 +523,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
                         AlarmManager.AddAlarm(isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY, false);
                         await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_EQ_GO);
+                        return;
                     }
                 }
 
@@ -529,11 +539,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (IsEQBusyOn())
                 {
                     await Task.Delay(1);
+                    var isEQReadyOFF = !IsEQReadyOn();
+                    if (isEQReadyOFF)
+                    {
+                        await Task.Delay(500);
+                        isEQReadyOFF = !IsEQReadyOn();
+                        if (!isEQReadyOFF)
+                            LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!! [When EQ BUSY]");
+                    }
+
                     if (Sub_Status == SUB_STATUS.DOWN)
                     {
                         AGVAlarmWhenEQBusyFlag = true;
                         SetAGV_TR_REQ(false);
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
+
+                        if (!isEQReadyOFF && IsEQGOOn())
+                            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
 
                         while (IsEQBusyOn())
                         {
@@ -542,14 +563,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         SetAGVREADY(false);
                         SetAGVVALID(false);
                         break;
-                    }
-                    var isEQReadyOFF = !IsEQReadyOn();
-                    if (isEQReadyOFF)
-                    {
-                        await Task.Delay(500);
-                        isEQReadyOFF = !IsEQReadyOn();
-                        if (!isEQReadyOFF)
-                            LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!! [When EQ BUSY]");
                     }
 
                     if (isEQReadyOFF && Sub_Status == SUB_STATUS.RUN)//異常發生
