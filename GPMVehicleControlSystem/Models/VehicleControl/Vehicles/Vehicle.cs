@@ -887,26 +887,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
-        private bool IsResetAlarmWorking = false;
+        protected bool IsResetAlarmWorking = false;
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            BuzzerPlayer.Stop();
             if (IsResetAlarmWorking)
                 return;
+
             IsResetAlarmWorking = true;
-            await ResetMotor();
+            BuzzerPlayer.Stop();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
+
+            await ResetMotor();
             StaSysMessageManager.Clear();
 
             _ = Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
                 bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-                if (isObstacle && AGVC.ActionStatus == ActionStatus.ACTIVE)
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                 {
-                    BuzzerPlayer.Alarm();
-                    return;
+                    if (isObstacle)
+                    {
+                        BuzzerPlayer.Alarm();
+                        return;
+                    }
+                    else
+                    {
+                        if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                            BuzzerPlayer.Move();
+                        else
+                            BuzzerPlayer.Action();
+                        return;
+                    }
                 }
 
             });

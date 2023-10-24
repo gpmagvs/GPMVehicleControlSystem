@@ -81,7 +81,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (alarm_code != AlarmCodes.None)
                 {
-                    return WagoDI.GetState(DI_ITEM.EMO) == true;
+                    bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
+                    bool isResetAlarmProcessing = IsResetAlarmWorking;
+                    return !isEMOING && !isResetAlarmProcessing;
                 }
                 else
                 {

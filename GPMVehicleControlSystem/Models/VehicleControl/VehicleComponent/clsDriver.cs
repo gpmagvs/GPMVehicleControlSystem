@@ -30,12 +30,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             DriverState _driverState = (DriverState)StateData;
             AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
+            if (_Current_Alarm_Code == Current_Alarm_Code)
+                return;
 
-            if (OnAlarmHappened != null)
+            if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
             {
                 bool allow_added = OnAlarmHappened(_Current_Alarm_Code);
                 if (!allow_added)
-                    return;
+                {
+                    _Current_Alarm_Code= AlarmCodes.None;
+                }
             }
             Current_Alarm_Code = _Current_Alarm_Code;
         }
