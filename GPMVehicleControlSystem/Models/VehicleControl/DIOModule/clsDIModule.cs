@@ -167,7 +167,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
 
         }
-        public override bool Connect()
+        public override async Task<bool> Connect()
         {
             if (IP == null | Port <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
@@ -321,7 +321,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
                         Thread.Sleep(1000);
-                        Connect();
+                        await Connect();
                         continue;
                     }
                     try

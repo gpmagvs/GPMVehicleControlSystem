@@ -140,11 +140,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
         }
 
-        public override bool Connect()
+        public override async Task<bool> Connect()
         {
             while (!IsConnected())
             {
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
                 LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{Port}) Processing...");
                 try
                 {

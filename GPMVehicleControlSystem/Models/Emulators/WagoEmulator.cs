@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             INPUT_INDEXS = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().ToDictionary(e => e, e => (int)e);
         }
-        public override bool Connect()
+        public override async Task<bool> Connect()
         {
             IPAddress iPAddress = IPAddress.Parse("127.0.0.1");
             int port = 9999;

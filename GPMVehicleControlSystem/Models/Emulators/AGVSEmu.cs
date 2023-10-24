@@ -5,9 +5,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
     {
         public override string alarm_locate_in_name => throw new NotImplementedException();
 
-        public override bool Connect()
+        public override async Task<bool> Connect()
         {
-
             throw new NotImplementedException();
         }
 

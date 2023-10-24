@@ -307,7 +307,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     await Task.Delay(1).ContinueWith(async t =>
                     {
-                        InitAGVControl(RosBridge_IP, RosBridge_Port);
+                        await InitAGVControl(RosBridge_IP, RosBridge_Port);
                         if (AGVC?.rosSocket != null)
                         {
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
@@ -585,6 +585,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+            AGVS.OnPingFail += (sender, arg) =>
+            {
+                AlarmManager.AddAlarm(AlarmCodes.AGVS_PING_FAIL);
+            };
+            AGVS.OnPingSuccess += (sender, arg) =>
+            {
+                AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
+            };
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
@@ -596,7 +604,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     DIOStatusChangedEventRegist();
-                    while (!WagoDI.Connect())
+                    while (!await WagoDI.Connect())
                     {
                         await Task.Delay(1000);
                     }
@@ -810,11 +818,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return new(tag, x, y, theta);
         }
 
-        protected internal void InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+        protected internal async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
             AGVC.Throttle_rate_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevHandlePeriod;
-            AGVC.Connect();
+            await AGVC.Connect();
             AGVC.ManualController.vehicle = this;
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
             AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
