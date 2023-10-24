@@ -835,7 +835,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             Task.Factory.StartNew(() =>
             {
-                SickData.LaserModeSettingError = RawData.general_system_state.application_error;
+                //SickData.LaserModeSettingError = RawData.general_system_state.application_error;
                 SickData.SickConnectionError = RawData.general_system_state.contamination_error;
             });
         }

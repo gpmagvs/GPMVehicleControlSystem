@@ -16,14 +16,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpGet("Query")]
-        public async Task<IActionResult> QueryAlarmsByPage(int page, int page_size = 16)
+        public async Task<IActionResult> QueryAlarmsByPage(int page, int page_size = 16,string alarm_type = "All")
         {
-            return Ok(DBhelper.QueryAlarm(page, page_size));
+            return Ok(DBhelper.QueryAlarm(page, page_size, alarm_type));
         }
         [HttpGet("Total")]
-        public async Task<IActionResult> Total()
+        public async Task<IActionResult> Total(string alarm_type = "All")
         {
-            return Ok(DBhelper.AlarmsTotalNum());
+            return Ok(DBhelper.AlarmsTotalNum(alarm_type));
         }
     }
 }
