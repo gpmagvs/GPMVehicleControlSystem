@@ -209,25 +209,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             });
         }
 
-        private void LogSickRawData(RawMicroScanDataMsg sick_scanner_raw_data)
-        {
-            try
-            {
-                string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
-                string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), Path.Combine(AppSettingsHelper.LogFolder, "SickData"));
-                Directory.CreateDirectory(LogFolder);
-                var fileName = Path.Combine(LogFolder, "tmp_sick_data.json");
-                using (StreamWriter writer = new StreamWriter(fileName))
-                {
-                    writer.Write(json);
-                }
-            }
-            catch (Exception ex)
-            {
-                LOG.ERROR($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
-            }
-        }
-
+     
         /// <summary>
         /// 建立車載端的ROS Service server 
         /// </summary>

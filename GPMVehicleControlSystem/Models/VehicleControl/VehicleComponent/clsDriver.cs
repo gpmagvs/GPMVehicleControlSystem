@@ -29,7 +29,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override void CheckStateDataContent()
         {
             DriverState _driverState = (DriverState)StateData;
-            Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
+            AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
+            if (_Current_Alarm_Code == Current_Alarm_Code)
+                return;
+
+            if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
+            {
+                bool allow_added = OnAlarmHappened(_Current_Alarm_Code);
+                if (!allow_added)
+                {
+                    _Current_Alarm_Code= AlarmCodes.None;
+                }
+            }
+            Current_Alarm_Code = _Current_Alarm_Code;
         }
     }
 }

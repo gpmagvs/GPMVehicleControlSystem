@@ -74,7 +74,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
-
+        protected override void CommonEventsRegist()
+        {
+            base.CommonEventsRegist();
+            ForkLifter.Driver.OnAlarmHappened += (alarm_code) =>
+            {
+                if (alarm_code != AlarmCodes.None)
+                {
+                    bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
+                    bool isResetAlarmProcessing = IsResetAlarmWorking;
+                    return !isEMOING && !isResetAlarmProcessing;
+                }
+                else
+                {
+                    return true;
+                }
+            };
+        }
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();

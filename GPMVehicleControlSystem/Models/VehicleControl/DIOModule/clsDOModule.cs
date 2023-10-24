@@ -159,6 +159,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
                 if (DO != null)
                 {
+                    if (DO.State == state)
+                        return true;
+
                     DO.State = state;
                     (bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster) connresult = await TryConnectAsync();
                     if (connresult.connected)
@@ -183,7 +186,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-       
+
         internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             if (ModuleDisconnected)
