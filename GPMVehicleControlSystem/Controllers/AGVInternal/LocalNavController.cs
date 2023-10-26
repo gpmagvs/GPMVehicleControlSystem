@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (agv.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV)
+            if (agv.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV && agv.Parameters.LocalTaskCheckCargoExist)
             {
                 if (agv.BarcodeReader.CurrentTag == 0)
                     return Ok(new
@@ -69,7 +69,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                         error_message = $"AGV車上無貨物不可進行放貨任務"
                     });
             }
-
 
 
             (bool confirm, string message) hardware_status_check;

@@ -362,7 +362,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (!active)
             {
-                await Task.Delay(100);
+                await Task.Delay(300);
                 if (Agv.WagoDI.GetState(input.Input))
                 {
                     IsSideLsrFlickBefore = true;

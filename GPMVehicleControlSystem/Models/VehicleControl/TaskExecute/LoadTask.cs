@@ -464,15 +464,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 break;
                         }
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
+                        if (CSTTrigger && action == ACTION_TYPE.Unload)
+                            await WaitCSTIDReported();
                         await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                     }
                     else
                     {
+                        if (CSTTrigger && action == ACTION_TYPE.Unload)
+                            await WaitCSTIDReported();
                         await base.HandleAGVCActionSucceess();
                     }
                 }
 
             });
+        }
+
+        private async Task WaitCSTIDReported()
+        {
+            LOG.TRACE($"Start Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS");
+
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            if (Agv.AGVS.UseWebAPI)
+                while (Agv.AGVS.previousRunningStatusReport_via_WEBAPI.CSTID.First() != Agv.CSTReader.ValidCSTID)
+                {
+                    await Task.Delay(1);
+                    if (cts.IsCancellationRequested)
+                    {
+                        LOG.Critical($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
+                        return;
+                    }
+                }
+            else
+            {
+                while (Agv.AGVS.previousRunningStatusReport_via_TCPIP.CSTID.First() != Agv.CSTReader.ValidCSTID)
+                {
+                    await Task.Delay(1);
+                    if (cts.IsCancellationRequested)
+                    {
+                        LOG.Critical($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
+                        return;
+                    }
+                }
+            }
+            LOG.TRACE($"CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS SUCCESS");
         }
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()

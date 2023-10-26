@@ -22,6 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool FrontLighterFlashWhenNormalMove { get; set; } = false;
 
         public bool CheckObstacleWhenForkInit { get; set; } = true;
+        public bool LocalTaskCheckCargoExist { get; set; } = false;
         /// <summary>
         /// 一搬走行時偵測貨物傾倒
         /// </summary>
