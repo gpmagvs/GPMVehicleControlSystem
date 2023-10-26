@@ -12,6 +12,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.RDTEST;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -77,7 +78,11 @@ namespace GPMVehicleControlSystem.ViewModels
                         EQ = AGV.EQHsSignalStates,
                         AGV = AGV.AGVHsSignalStates
                     },
-                    HandShakeTimers = AGV.EQHSTimers
+                    HandShakeTimers = AGV.EQHSTimers,
+                    SysLoading = new AGVCStatusVM.clsSysLoading
+                    {
+                        Memory = LinuxTools.Memory
+                    }
 
                 };
                 return data_view_model;

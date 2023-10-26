@@ -95,5 +95,12 @@ namespace GPMVehicleControlSystem.ViewModels
         public bool ForkHasLoading { get; set; }
         public object HandShakeSignals { get; set; } = new object();
         public object HandShakeTimers { get; set; } = new object();
+        public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
+        public class clsSysLoading
+        {
+            public double CPU { get; set; }
+            public double Memory { get; set; }
+        }
+
     }
 }

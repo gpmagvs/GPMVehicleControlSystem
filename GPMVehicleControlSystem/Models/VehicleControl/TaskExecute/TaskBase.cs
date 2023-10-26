@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
@@ -353,15 +354,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.WagoDI.UnRegistSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
             await Agv.Laser.SideLasersEnable(false);
         }
-
+        private bool IsSideLsrFlickBefore = false;
         private async void LaserTriggerWhenForkLiftMove(object? sender, bool active)
         {
             clsIOSignal input = (clsIOSignal)sender;
             AlarmCodes alarm_code = input.Input == DI_ITEM.RightProtection_Area_Sensor_3 ? AlarmCodes.RightProtection_Area3 : AlarmCodes.LeftProtection_Area3;
+
             if (!active)
             {
+                await Task.Delay(100);
+                if (Agv.WagoDI.GetState(input.Input))
+                {
+                    IsSideLsrFlickBefore = true;
+                    return;
+                }
+                IsSideLsrFlickBefore = false;
                 await Agv.ForkLifter.ForkStopAsync(false);
-                AlarmManager.AddWarning(alarm_code);
+                AlarmManager.AddAlarm(alarm_code);
+                await Task.Delay(100);
                 BuzzerPlayer.Alarm();
             }
             else
@@ -370,6 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     AlarmManager.ClearAlarm(alarm_code);
                     Agv.ForkLifter.fork_ros_controller.IsZAxisActionDone = true;
+                    await Task.Delay(100);
                     BuzzerPlayer.Action();
                 }
             }

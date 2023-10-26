@@ -47,6 +47,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsLocalTask = true,
             IsActionFinishReported = true
         };
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskDownloadData"></param>
+        /// <returns></returns>
+        internal TASK_DOWNLOAD_RETURN_CODES AGVSTaskDownloadConfirm(clsTaskDownloadData taskDownloadData)
+        {
+
+            TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
+
+            var action_type = taskDownloadData.Action_Type;
+
+            if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
+
+            if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
+            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
+
+            LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
+            return returnCode;
+        }
+
         /// <summary>
         /// 執行派車系統任務
         /// 19:10:07 端點未掃描到QR Code
@@ -181,16 +208,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 TaskName = File.ReadAllText("task_name.txt");
         }
 
-        private void OnTagLeaveHandler(object? sender, int leaveTag)
-        {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
-                return;
-            Task.Factory.StartNew(() =>
-            {
-                LOG.INFO($"脫離 Tag {previousTagPoint.Point_ID}", false);
-            });
-
-        }
 
         private clsMapPoint? previousTagPoint;
         private void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)

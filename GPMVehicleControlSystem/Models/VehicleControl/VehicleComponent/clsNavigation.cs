@@ -41,7 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_previousDirection != value)
                 {
-                    LOG.INFO($"AGVC Direction changed to : {value} ", color: ConsoleColor.DarkBlue);
+                    LOG.TRACE($"AGVC Direction changed to : {value}");
                     OnDirectionChanged?.Invoke(this, value);
                     _previousDirection = value;
                 }

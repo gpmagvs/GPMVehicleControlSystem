@@ -42,6 +42,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 量測儀器服務模擬器
         /// </summary>
         public bool MeasureServiceSimulator { get; set; } = false;
+        public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
+        public bool BuzzerOn { get; set; } = true;
         public int LastVisitedTag { get; set; } = 8;
 
         /// <summary>
@@ -59,6 +61,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 單位:毫秒(ms)
         /// </remarks>
         public int ModuleInfoTopicRevHandlePeriod { get; set; } = 100;
+        public int ModuleInfoTopicRevQueueSize { get; set; } = 10;
+
         /// <summary>
         /// 禁止上線的TAG
         /// </summary>
@@ -133,14 +137,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 模擬器參數
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
-        public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
-        public bool BuzzerOn { get; set; } = true;
     }
 
     public class clsForkAGVParams
     {
         public double UplimitPose { get; set; } = 35;
         public double DownlimitPose { get; set; } = 0;
+        public bool NoWaitForkArmFinishAndMoveOutInWorkStation { get; set; } = true;
     }
     public class clsInspectionAGVParams
     {

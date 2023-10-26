@@ -131,6 +131,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// 單位:毫秒(ms)
         /// </remarks>
         public int Throttle_rate_of_Topic_ModuleInfo { get; internal set; } = 100;
+        public int QueueSize_of_Topic_ModuleInfo { get; internal set; } = 10;
+
+        public ROBOT_CONTROL_CMD previous_ComplexCmd { get; private set; } = ROBOT_CONTROL_CMD.NONE;
 
         public CarController()
         {
@@ -180,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             Task.Run(() =>
             {
-                rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: 1);
+                rosSocket.Subscribe<ModuleInformation>("/module_information", ModuleInformationCallback, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: QueueSize_of_Topic_ModuleInfo);
                 rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
                 rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
                 rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
@@ -209,7 +212,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             });
         }
 
-     
+
         /// <summary>
         /// 建立車載端的ROS Service server 
         /// </summary>
@@ -324,7 +327,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
         {
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} (Task ID={task_id},車控Action當前狀態= {ActionStatus})");
+            if (previous_ComplexCmd == cmd)
+            {
+                LOG.TRACE($"{cmd} already requet to AGVC");
+                previous_ComplexCmd = ROBOT_CONTROL_CMD.NONE;
+                return true;
+            }
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -336,6 +344,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 return false;
             }
             LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd} 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id},)");
+            if (res.confirm)
+                previous_ComplexCmd = cmd;
             return res.confirm;
         }
 
@@ -362,7 +372,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     return (true, "");
                 }
-                LOG.TRACE($"Acation Timeout setting = {timeout} sec-Current Action Status={_ActionStatus}");
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 await Task.Delay(500);
                 while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)

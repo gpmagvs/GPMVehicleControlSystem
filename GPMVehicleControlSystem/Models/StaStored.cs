@@ -4,7 +4,7 @@ namespace GPMVehicleControlSystem.Models
 {
     public static class StaStored
     {
-        public static string APPVersion = "10.24.1";
+        public static string APPVersion = "10.26.1";
         public static Vehicle CurrentVechicle;
     }
 }

@@ -1,12 +1,12 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsBarcodeReader : CarComponent
     {
-        public event EventHandler<int> OnTagLeave;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.BARCODE_READER;
 
         public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;
@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;
             if (_brState.tagID == 0 && PreviousTag != _brState.tagID)
-                OnTagLeave?.Invoke(this, (int)_brState.tagID);
+                LOG.INFO($"脫離 Tag {PreviousTag}", false);
 
             PreviousTag = _brState.tagID;
             if (_brState.state == -1)

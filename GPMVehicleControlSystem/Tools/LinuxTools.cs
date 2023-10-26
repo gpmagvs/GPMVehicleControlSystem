@@ -6,6 +6,7 @@ namespace GPMVehicleControlSystem.Tools
 {
     public class LinuxTools
     {
+        internal static double Memory = 0;
         public static void FindTerminals()
         {
             string command = "ps aux | grep -E 'bash|sh'";
@@ -39,8 +40,8 @@ namespace GPMVehicleControlSystem.Tools
             {
                 while (true)
                 {
-                    var mem = GetMemUsedMB();
-                    LOG.TRACE($"[Sys-Loading] CPU: Memory:{mem}Mb");
+                    Memory = GetMemUsedMB();
+                    LOG.TRACE($"[Sys-Loading] CPU: Memory:{Memory}Mb");
                     await Task.Delay(TimeSpan.FromSeconds(30));
                 }
             });

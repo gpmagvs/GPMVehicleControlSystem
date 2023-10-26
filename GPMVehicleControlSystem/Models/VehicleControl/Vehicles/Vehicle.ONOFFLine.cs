@@ -31,10 +31,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private bool OnlineModeChangingFlag = false;
-        internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode)
-        {
 
-            if (ExecutingTaskModel != null && Sub_Status == SUB_STATUS.RUN)
+
+        internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
+        {
+            if (mode != Remote_Mode)
+            {
+                string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
+                LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
+
+                (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
+                if (result.success)
+                    LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
+                else
+                    LOG.ERROR($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
+
+                if (IsOnlineButDissconnected && mode == REMOTE_MODE.OFFLINE)
+                {
+                    IsOnlineButDissconnected = false;
+                    Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(1000);
+                        LOG.WARN($"因為與派車系統斷線重新連線，造成下線車載強制請求變更Online模式為 ONLINE");
+                        bool reOnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
+                        LOG.WARN($"車載強制請求變更Online模式為 ONLINE Result={reOnlineSuccess}");
+                    });
+                }
+
+                return result.success;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode, bool bypassStatusCheck = false)
+        {
+            if (bypassStatusCheck == false && ExecutingTaskModel != null && Sub_Status == SUB_STATUS.RUN)
             {
                 return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
             }
@@ -46,7 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
-                if (Parameters.ForbidToOnlineTags.Contains(currentTag))
+                if (!bypassStatusCheck && Parameters.ForbidToOnlineTags.Contains(currentTag))
                 {
                     AlarmManager.AddWarning(AlarmCodes.Cant_Online_With_Forbid_Tag);
                     //檢查是否停在禁止上線的TAG位置

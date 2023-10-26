@@ -197,12 +197,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                await Task.Delay(2000);
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
-                if ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
+                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                while ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
                 {
-                    Agv.SetAGV_TR_REQ(false);
-                    return (false, checkstatus_alarm_code);
+                    await Task.Delay(100);
+                    if (cts.IsCancellationRequested)
+                    {
+                        Agv.SetAGV_TR_REQ(false);
+                        return (false, checkstatus_alarm_code);
+                    }
                 }
                 HSResult = await Agv.WaitEQBusyOFF(action);
                 if (!HSResult.hs_success)
@@ -261,16 +265,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(1000);
                     if (isNeedArmExtend)
                     {
-                        var arm_move_result = await ForkLifter.ForkShortenInAsync();
-                        if (!arm_move_result.confirm)
+                        var FormArmShortenTask = Task.Run(async () =>
                         {
-                            return (false, AlarmCodes.Action_Timeout);
-                        }
-                        if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                            var arm_move_result = await ForkLifter.ForkShortenInAsync();
+                            if (!arm_move_result.confirm)
+                            {
+                                return (false, AlarmCodes.Action_Timeout);
+                            }
+                            if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                            {
+                                return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                            }
+                            return (true, AlarmCodes.None);
+                        });
+
+                        if (!Agv.Parameters.ForkAGV.NoWaitForkArmFinishAndMoveOutInWorkStation)
                         {
-                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                            await FormArmShortenTask;
+                            await Task.Delay(1000);
                         }
-                        await Task.Delay(1000);
                     }
                 }
 
@@ -342,15 +355,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private AlarmCodes CheckAGVStatus(bool check_park_position = true)
         {
 
-            LOG.INFO("Check AGV Status--");
-
-
+            LOG.INFO($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
             if (Agv.Parameters.LDULD_Task_No_Entry)
                 return AlarmCodes.None;
 
             AlarmCodes alarm_code = AlarmCodes.None;
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 alarm_code = AlarmCodes.AGV_State_Cant_Move;
+
             else if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
                 alarm_code = AlarmCodes.AGV_BarcodeReader_Not_Match_Tag_of_Destination;
             else if (check_park_position && Agv.BarcodeReader.DistanceToTagCenter > Agv.Parameters.TagParkingTolerance)
@@ -359,7 +371,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 alarm_code = AlarmCodes.None;
 
             if (alarm_code != AlarmCodes.None)
-                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
 
             return alarm_code;
         }
@@ -411,6 +423,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                         {
                             ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                            if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                            {
+                                AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+                                break;
+                            }
                         }
                         await UnRegisterSideLaserTriggerEvent();
                         await Task.Delay(500);
@@ -460,9 +477,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            await RegisterSideLaserTriggerEvent();
             var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.5);
-            await UnRegisterSideLaserTriggerEvent();
             return result;
 
         }

@@ -475,7 +475,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 if (!workStation.LayerDatas.TryGetValue(layer, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
-                (bool confirm, string message) forkMoveREsult = (false, "");
+                (bool confirm, string message) forkMoveResult = (false, "");
 
                 double position_to_reach = 0;
 
@@ -488,7 +488,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 double positionError = 0;
                 double errorTorlence = 0.5;
 
-                LOG.WARN($"Tag:{tag},{position} {position_to_reach}");
+                LOG.WARN($"Fork Start Goto {position_to_reach} at Tag:{tag}.[{position}]");
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
@@ -506,16 +506,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
                         return (false, AlarmCodes.Fork_Action_Aborted);
 
-                    LOG.WARN($"Tag:{tag},{position} Error:{positionError}_Try-{tryCnt}");
-                    forkMoveREsult = await ForkPose(position_to_reach, speed);
+                    LOG.WARN($"[Tag={tag}] Fork pose error to {position_to_reach} is {positionError}。Try change pose-{tryCnt}");
+                    forkMoveResult = await ForkPose(position_to_reach, speed);
 
-                    if (!forkMoveREsult.confirm)
+                    if (!forkMoveResult.confirm)
                     {
                         return (false, AlarmCodes.Action_Timeout);
                     }
                 }
                 LOG.TRACE($"Position={Driver.CurrentPosition}/{position_to_reach}(Error={positionError})");
-                if (positionError > errorTorlence && forkMoveREsult.confirm)
+                if (positionError > errorTorlence && forkMoveResult.confirm)
                     return (false, AlarmCodes.Fork_Height_Setting_Error);
 
                 return (true, AlarmCodes.None);

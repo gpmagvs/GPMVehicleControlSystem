@@ -274,6 +274,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Parameters = LoadParameters();
+
                 CIMConnectionInitialize();
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
@@ -326,6 +327,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             BuzzerPlayer.Alarm();
                             IsSystemInitialized = true;
                             AlarmManager.Active = true;
+                            AlarmManager.AddAlarm(AlarmCodes.None);
                         }
                     }
                     );
@@ -342,7 +344,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-
         private void EmulatorInitialize()
         {
             if (Parameters.SimulationMode)
@@ -413,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = alarm_codes,
+                    Alarm_Code = _RunTaskData.IsLocalTask ? new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[0] : alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                 };
                 return status;
@@ -456,16 +457,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            //if (Parameters.SimulationMode)
-            //    emulator.Runstatus.AGV_Status = _Main_Status;
-
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
             Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
             //gen alarm codes 
-
             AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS();
-
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
@@ -479,7 +475,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = alarm_codes,
+                    Alarm_Code = _RunTaskData.IsLocalTask ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                 };
                 return status;
@@ -585,16 +581,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+            AGVS.OnOnlineStateQueryFail += AGVS_OnOnlineStateQueryFail;
+            AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
             AGVS.OnPingFail += (sender, arg) =>
             {
+                LOG.TRACE($"AGVS Network Ping Fail.... ");
                 AlarmManager.AddAlarm(AlarmCodes.AGVS_PING_FAIL);
             };
             AGVS.OnPingSuccess += (sender, arg) =>
             {
+                LOG.TRACE($"AGVS Network restored. ");
                 AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
             };
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
+        }
+
+        private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
+        {
+        }
+
+        bool IsOnlineButDissconnected = false;
+        private void AGVS_OnOnlineStateQueryFail(object? sender, EventArgs e)
+        {
+            IsOnlineButDissconnected = Remote_Mode == REMOTE_MODE.ONLINE;
         }
 
         private Task WagoDIInit()
@@ -610,6 +620,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     WagoDI.StartAsync();
                     DOSignalDefaultSetting();
+                    ResetMotor();
                 }
                 catch (SocketException ex)
                 {
@@ -822,6 +833,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
             AGVC.Throttle_rate_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevHandlePeriod;
+            AGVC.QueueSize_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevQueueSize;
             await AGVC.Connect();
             AGVC.ManualController.vehicle = this;
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
@@ -924,6 +936,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
             });
+            await Task.Delay(1500);
             IsResetAlarmWorking = false;
             return;
         }
@@ -961,25 +974,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-
-        internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
-        {
-            if (mode != Remote_Mode)
-            {
-                string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
-                LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
-                (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
-                if (result.success)
-                    LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
-                else
-                    LOG.ERROR($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
-                return result.success;
-            }
-            else
-            {
-                return true;
-            }
-        }
 
         /// <summary>
         /// 取得載物的類型 0:tray, 1:rack , 200:tray

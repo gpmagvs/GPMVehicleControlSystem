@@ -237,6 +237,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
             }
+            catch (Exception ex)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
+            }
             SetAGV_TR_REQ(true);
             try
             {
@@ -332,6 +337,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
                 return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
             }
+            catch (Exception)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+                return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
+            }
             try
             {
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
@@ -353,6 +363,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return (false, alarm_code);
             }
+            catch (Exception ex)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
+                if (!EQAlarmWhenEQBusyFlag)
+                    return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
+                else
+                    return (false, alarm_code);
+            }
+
         }
 
         /// <summary>
@@ -401,6 +420,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
             }
+            catch (Exception ex)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
+            }
             try
             {
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
@@ -412,10 +436,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SetAGV_TR_REQ(false);
                 SetAGVVALID(false);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-                LOG.Critical("[EQ Handshake] EQ READY OFF=>Handshake Done");
+                LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
                 return (true, AlarmCodes.None);
             }
             catch (OperationCanceledException ex)
+            {
+                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
+            }
+            catch (Exception ex)
             {
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
