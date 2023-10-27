@@ -32,6 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LDULD_Task_No_Entry { get; set; } = false;
         public bool WebKeyboardMoveControl { get; set; } = false;
+        public bool CSTIDReadNotMatchSimulation { get; set; } = false;
         public bool CIMConn { get; set; } = false;
 
         /// <summary>
@@ -81,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public int CutOffChargeRelayVoltageThreshodlval { get; set; } = 28800;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Turning;
-
+        public List<int> StationNeedQueryVirtualID { get; set; } = new List<int>();
         /// <summary>
         /// 侵入設備取放或的前後雷射Bypass
         /// </summary>

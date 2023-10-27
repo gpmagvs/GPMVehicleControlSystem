@@ -866,7 +866,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
             StatusLighter.CloseAll();
-            LOG.TRACE($"IsSystemInitialized {IsSystemInitialized}");
             AGVSResetCmdFlag = true;
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             Sub_Status = SUB_STATUS.DOWN;

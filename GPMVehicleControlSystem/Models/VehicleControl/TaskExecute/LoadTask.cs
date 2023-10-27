@@ -41,6 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Load;
+        private bool IsNeedQueryVirutalStation = false;
 
         private WORKSTATION_HS_METHOD eqHandshakeMode
         {
@@ -193,7 +194,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.CloseAll();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
-
+            IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
+            LOG.TRACE($"TAG= {destineTag} is need query virtual station? {IsNeedQueryVirutalStation}");
 
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
@@ -441,10 +443,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     }
                     (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
+
                     if (!CstBarcodeCheckResult.success)
                     {
                         AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
-                        AlarmManager.AddAlarm(cst_read_fail_alarm, Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_NORMAL_STATUS);
+                        AlarmManager.AddAlarm(cst_read_fail_alarm, false);
                         //向派車詢問虛擬ID
                         //cst 類型
                         CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
@@ -454,11 +457,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         switch (query_cause)
                         {
                             case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL:
+                                LOG.TRACE($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
                                 await Agv.QueryVirtualID(query_cause, cst_type);
                                 break;
                             case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH:
-                                if (Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
+
+                                if (IsNeedQueryVirutalStation)
+                                {
+                                    LOG.TRACE($"Station {destineTag} is need to query virtual id from AGVS when ID Not Match");
                                     await Agv.QueryVirtualID(query_cause, cst_type);
+                                }
                                 break;
                             default:
                                 break;
@@ -466,6 +474,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
                         if (CSTTrigger && action == ACTION_TYPE.Unload)
                             await WaitCSTIDReported();
+
                         await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                     }
                     else
@@ -482,7 +491,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private async Task WaitCSTIDReported()
         {
             LOG.TRACE($"Start Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS");
-
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             if (Agv.AGVS.UseWebAPI)
                 while (Agv.AGVS.previousRunningStatusReport_via_WEBAPI.CSTID.First() != Agv.CSTReader.ValidCSTID)
@@ -564,8 +572,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID);
                 }
             }
-            var cst_id_expect = RunningTaskData.CST.First().CST_ID;
-            var reader_read_id = Agv.CSTReader.Data.data;
+            var cst_id_expect = RunningTaskData.CST.First().CST_ID.Trim();
+            var reader_read_id = Agv.CSTReader.ValidCSTID.Trim();
+
+
+            if (Agv.Parameters.CSTIDReadNotMatchSimulation)
+            {
+                LOG.ERROR($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_read_id}");
+                return (false, AlarmCodes.Cst_ID_Not_Match);
+            }
+
+
             if (reader_read_id == "ERROR")
             {
                 LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_read_id}");
@@ -573,10 +590,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             if (reader_read_id != cst_id_expect)
             {
-                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {Agv.CSTReader.Data.data}");
+                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_read_id}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
-            Agv.CSTReader.ValidCSTID = Agv.CSTReader.Data.data;
+            Agv.CSTReader.ValidCSTID = reader_read_id;
             return (true, AlarmCodes.None);
         }
 

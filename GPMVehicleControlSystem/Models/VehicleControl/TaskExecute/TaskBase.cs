@@ -298,13 +298,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        internal async Task AGVSPathExpand(clsTaskDownloadData taskDownloadData)
-        {
-            RunningTaskData = taskDownloadData;
-            LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控");
-            Agv.AGVC.Replan(taskDownloadData);
-            LOG.INFO($"AGV導航路徑變更-發送新的導航資訊TO車控-已發送");
-        }
 
         /// <summary>
         /// 執行任務前動作

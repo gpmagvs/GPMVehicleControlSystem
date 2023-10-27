@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 });
 
                 LOG.TRACE($"Call Service /CSTReader_action, command ,WaitOne");
-                wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(3));
+                wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(10));
                 if (cst_reader_confirm_ack != null)
                 {
                     break;
@@ -122,10 +122,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     TK.Wait(waitCstActionDoneCts.Token);
                     LOG.INFO($"CST Reader  Action Done ..{CSTActionResult}--");
-                    AbortCSTReader();
+                    if (CSTActionResult != "done")
+                        AbortCSTReader();
+
+                    await Task.Delay(2000);
                     _ = Task.Factory.StartNew(async () =>
                     {
-                        await Task.Delay(100);
                         OnCSTReaderActionDone?.Invoke(this, this.module_info.CSTReader.data);
                     });
                     return (true, true);
