@@ -35,10 +35,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override void CheckStateDataContent()
         {
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;
-            if (_brState.tagID == 0 && PreviousTag != _brState.tagID)
-                LOG.INFO($"脫離 Tag {PreviousTag}", false);
+            var currentTag = _brState.tagID;
+            if (currentTag != PreviousTag)
+            {
+                if (currentTag == 0)
+                    LOG.INFO($"Leave Tag {PreviousTag}", true);
+                else
+                    LOG.INFO($"Reach Tag {currentTag}", true);
 
-            PreviousTag = _brState.tagID;
+            }
+
+            PreviousTag = currentTag;
             if (_brState.state == -1)
             {
                 Current_Warning_Code = AlarmCodes.Barcode_Module_Error;

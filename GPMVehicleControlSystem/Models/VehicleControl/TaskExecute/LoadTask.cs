@@ -583,7 +583,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            if (reader_read_id == "ERROR")
+            if (reader_read_id == "ERROR"| reader_read_id == "TrayUnknow")
             {
                 LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

@@ -170,6 +170,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new ForkAGVController(RosBridge_IP, RosBridge_Port);
+            (AGVC as ForkAGVController).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
+            LOG.TRACE($"(AGVC as ForkAGVController).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
         }
 
         protected internal override void SoftwareEMO(AlarmCodes alarmCode)

@@ -400,7 +400,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
 
                 LOG.INFO($"Fork Shorten move to find Home Point Start");
-                await Task.Delay(1000);
+                if (hasCargo)
+                    LOG.WARN($"[Find Home]Has Cargo On Fork, 緩衝時間2s");
+                await Task.Delay(hasCargo ? 2000 : 1000);
                 while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
                     Thread.Sleep(1000);

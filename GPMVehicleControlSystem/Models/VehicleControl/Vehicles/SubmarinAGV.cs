@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -85,6 +86,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
+            LOG.TRACE($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
 
         }
         protected virtual CARGO_STATUS GetCargoStatus()

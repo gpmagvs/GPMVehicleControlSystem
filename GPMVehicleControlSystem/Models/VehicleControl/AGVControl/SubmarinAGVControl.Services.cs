@@ -121,15 +121,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 try
                 {
                     TK.Wait(waitCstActionDoneCts.Token);
-                    LOG.INFO($"CST Reader  Action Done ..{CSTActionResult}--");
+                    LOG.INFO($"CST Reader Action Done, Action Result : command = {CSTActionResult}--");
                     if (CSTActionResult != "done")
                         AbortCSTReader();
 
-                    await Task.Delay(2000);
-                    _ = Task.Factory.StartNew(async () =>
-                    {
-                        OnCSTReaderActionDone?.Invoke(this, this.module_info.CSTReader.data);
-                    });
+                    Thread.Sleep(1000);
+                    var cst_id = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
+                    LOG.TRACE($"Inovke CSTReaderAction Done event with CST ID = {cst_id}");
+                    OnCSTReaderActionDone?.Invoke(this, cst_id);
                     return (true, true);
                 }
                 catch (OperationCanceledException)

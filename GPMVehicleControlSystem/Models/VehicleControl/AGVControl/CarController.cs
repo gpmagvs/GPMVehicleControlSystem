@@ -281,8 +281,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private async Task<bool> CycleStop()
         {
+            if (ActionStatus == ActionStatus.ACTIVE && actionClient.goal.mobilityModes != 0)
+            {
+                LOG.WARN($"AGV Is Navigating at working station, Cycle Stop is not nessary.");
+                return true;
+            }
             return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
-            //AbortTask();
         }
 
         /// <summary>

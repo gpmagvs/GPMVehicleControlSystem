@@ -50,6 +50,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
                     ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                    if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+                        break;
+                    }
                 }
                 await UnRegisterSideLaserTriggerEvent();
 
