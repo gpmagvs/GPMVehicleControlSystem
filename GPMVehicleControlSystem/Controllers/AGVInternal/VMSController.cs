@@ -10,7 +10,7 @@ using AGVSystemCommonNet6.AGVDispatch.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using Microsoft.AspNetCore.Identity;
-using GPMVehicleControlSystem.Models.VCSSystem;
+
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
@@ -146,12 +146,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             try
             {
                 agv.SoftwareEMO(AlarmCodes.SoftwareEMS);
-                StaSysMessageManager.AddNewMessage("Software EMO !", 2);
             }
             catch (Exception ex)
             {
-                StaSysMessageManager.AddNewMessage(ex.Message, 1);
-
             }
             return Ok("OK");
         }
@@ -254,10 +251,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             bool open = !agv.WagoDO.GetState(DO_ITEM.Recharge_Circuit);
             bool success = await agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
-            if (success)
-                StaSysMessageManager.AddNewMessage($"充電迴路已{(open ? "開啟" : "關閉")}");
-            else
-                StaSysMessageManager.AddNewMessage($"充電迴路{(open ? "開啟" : "關閉")}失敗", 1);
             return Ok(success);
         }
     }

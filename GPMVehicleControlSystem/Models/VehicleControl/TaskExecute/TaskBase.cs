@@ -284,7 +284,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     var result = await HandleAGVCActionSucceess();
                     if (!result.success)
                     {
-                        AlarmManager.AddAlarm(result.alarmCode, false);
+                        if (result.alarmCode != AlarmCodes.None)
+                            AlarmManager.AddAlarm(result.alarmCode, false);
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                     }
                 }

@@ -1,5 +1,4 @@
-﻿using GPMVehicleControlSystem.Models.VCSSystem;
-using GPMVehicleControlSystem.Models.WebsocketMiddleware;
+﻿using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Diagnostics;

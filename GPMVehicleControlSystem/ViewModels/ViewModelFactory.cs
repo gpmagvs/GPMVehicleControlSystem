@@ -6,7 +6,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Abstracts;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using AGVSystemCommonNet6;
-using GPMVehicleControlSystem.Models.VCSSystem;
+
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using AGVSystemCommonNet6.MAP;
@@ -227,12 +227,6 @@ namespace GPMVehicleControlSystem.ViewModels
                 IsE84HsUseEmulator = AGV.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.EMULATION
             };
         }
-
-        internal static object GetSystemMessagesVM()
-        {
-            return StaSysMessageManager.SysMessages;
-        }
-
         internal static object GetRDTestData()
         {
             return new

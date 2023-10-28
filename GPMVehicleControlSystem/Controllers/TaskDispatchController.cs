@@ -37,8 +37,11 @@ namespace GPMVehicleControlSystem.Controllers
         {
             TaskDownloadRequestResponse task_download_feedback = new TaskDownloadRequestResponse();
             clsTaskDownloadData? data = JsonConvert.DeserializeObject<clsTaskDownloadData>(taskDto.ToString());
+            data.IsLocalTask = false;
             LogAsync("Execute", data, method: "POST");
+
             TASK_DOWNLOAD_RETURN_CODES return_code = Agv.AGVSTaskDownloadConfirm(data);
+
             task_download_feedback.ReturnCode = return_code;
             if (return_code == TASK_DOWNLOAD_RETURN_CODES.OK)
             {

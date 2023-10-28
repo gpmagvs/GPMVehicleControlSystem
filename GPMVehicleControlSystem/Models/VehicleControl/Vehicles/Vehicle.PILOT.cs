@@ -93,25 +93,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
-
+            _RunTaskData = new clsTaskDownloadData
+            {
+                Action_Type = taskDownloadData.Action_Type,
+                IsLocalTask = taskDownloadData.IsLocalTask,
+                IsActionFinishReported = false,
+                Task_Name = taskDownloadData.Task_Name,
+                Task_Sequence = taskDownloadData.Task_Sequence,
+                Trajectory = taskDownloadData.Trajectory,
+                Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+            };
+            LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
              {
                  clsTaskDownloadData _taskDownloadData;
                  _taskDownloadData = taskDownloadData;
-                 _RunTaskData = new clsTaskDownloadData
-                 {
-                     IsLocalTask = taskDownloadData.IsLocalTask,
-                     IsActionFinishReported = false,
-                     Task_Name = taskDownloadData.Task_Name,
-                     Task_Sequence = taskDownloadData.Task_Sequence,
-                     Trajectory = taskDownloadData.Trajectory,
-                     Homing_Trajectory = taskDownloadData.Homing_Trajectory,
-                 };
+
                  if (action == ACTION_TYPE.None)
                  {
                      ExecutingTaskModel = new NormalMoveTask(this, _taskDownloadData);
-                     if (Parameters.SimulationMode)
-                         WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
+                     //if (Parameters.SimulationMode)
+                     //    WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
                  }
                  else
                  {

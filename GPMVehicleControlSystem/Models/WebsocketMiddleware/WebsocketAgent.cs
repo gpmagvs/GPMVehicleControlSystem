@@ -25,7 +25,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETDIOTable,
             GETFORKTestState,
             GETAGVSMSGIODATA,
-            GETSystemMessages,
             GETRDTestData
         }
 
@@ -130,7 +129,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         private static object ConnectionStatesVM;
         private static object VMSStatesVM;
         private static object DIOTableVM;
-        private static object SystemMessagesVM;
         private static object RDTestData;
 
         internal static async Task StartViewDataCollect()
@@ -143,7 +141,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
                     VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
                     DIOTableVM = ViewModelFactory.GetDIOTableVM();
-                    SystemMessagesVM = ViewModelFactory.GetSystemMessagesVM();
                     RDTestData = ViewModelFactory.GetRDTestData();
                 }
             });
@@ -170,9 +167,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     // viewmodel Factory.GetForkTestStateVM();
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETAGVSMSGIODATA:
-                    break;
-                case WEBSOCKET_CLIENT_ACTION.GETSystemMessages:
-                    viewmodel = SystemMessagesVM;
                     break;
                 case WEBSOCKET_CLIENT_ACTION.GETRDTestData:
                     viewmodel = RDTestData;

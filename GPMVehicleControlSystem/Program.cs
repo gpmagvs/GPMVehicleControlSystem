@@ -5,7 +5,7 @@ using GPMVehicleControlSystem;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
-using GPMVehicleControlSystem.Models.VCSSystem;
+
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.ViewModels;
@@ -21,8 +21,6 @@ _ = Task.Run(() =>
 {
     LOG.SetLogFolderName(param.LogFolder);
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
-    if (!alarmListLoaded)
-        StaSysMessageManager.AddNewMessage(message, 1);
     DBhelper.Initialize();
     Console.WriteLine(LinuxTools.GetMemUsedMB());
     VehicheAndWagoIOConfiguraltion();

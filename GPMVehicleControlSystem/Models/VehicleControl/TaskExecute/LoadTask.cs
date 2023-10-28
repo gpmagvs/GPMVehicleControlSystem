@@ -15,6 +15,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.Tools.Database;
+using GPMVehicleControlSystem.Models.Emulators;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -214,12 +215,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!HSResult.hs_success)
                 {
                     Agv.DirectionLighter.CloseAll();
-                    AlarmManager.AddAlarm(HSResult.alarmCode, false);
                     return (false, HSResult.alarmCode);
                 }
                 else
                 {
-
                     //放貨完成->清除CST帳籍
                     if (action == ACTION_TYPE.Load)
                         Agv.CSTReader.ValidCSTID = "";
@@ -299,7 +298,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, AlarmCodes.None);
 
             if (action == ACTION_TYPE.Unload && Agv.HasAnyCargoOnAGV())
+            {
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
+            }
+
+
+
+            if (Agv.Parameters.SimulationMode)
+            {
+                if (action == ACTION_TYPE.Unload)
+                    HasCargoIOSimulation();
+                else
+                    NoCargoIOSimulation();
+            }
+
 
             //下Homing Trajectory 任務讓AGV退出
 
@@ -353,6 +365,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
         }
+
+        private void HasCargoIOSimulation()
+        {
+            if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_1, false);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_2, false);
+            }
+            else if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, false);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, false);
+            }
+        }
+        private void NoCargoIOSimulation()
+        {
+            if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_1, true);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_2, true);
+            }
+            else if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, true);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, true);
+            }
+        }
+
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true)
         {
@@ -583,7 +623,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            if (reader_read_id == "ERROR"| reader_read_id == "TrayUnknow")
+            if (reader_read_id == "ERROR" | reader_read_id == "TrayUnknow")
             {
                 LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

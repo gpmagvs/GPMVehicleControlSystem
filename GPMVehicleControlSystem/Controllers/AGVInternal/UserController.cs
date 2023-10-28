@@ -1,6 +1,6 @@
 ﻿using AGVSystemCommonNet6.Tools.Database;
 using AGVSystemCommonNet6.User;
-using GPMVehicleControlSystem.Models.VCSSystem;
+
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +25,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 if (user_query_out.Password == user.Password)
                 {
-                    StaSysMessageManager.AddNewMessage($"Hi {user_query_out.UserName} , Login Success !");
                     return Ok(new LoginResult()
                     {
                         Success = true,

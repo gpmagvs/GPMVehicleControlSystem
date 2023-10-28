@@ -10,7 +10,7 @@ using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
-using GPMVehicleControlSystem.Models.VCSSystem;
+
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WebsocketMiddleware;
@@ -339,7 +339,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 IsSystemInitialized = false;
                 string msg = $"車輛實例化時於建構函式發生錯誤 : {ex.Message}:{ex.StackTrace}";
-                StaSysMessageManager.AddNewMessage(msg, 2);
                 throw ex;
             }
 
@@ -381,11 +380,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (SocketException)
                 {
-                    StaSysMessageManager.AddNewMessage("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
+                    LOG.ERROR("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
                 }
                 catch (Exception ex)
                 {
-                    StaSysMessageManager.AddNewMessage("\"模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
+                    LOG.ERROR("\"模擬器無法啟動 : 異常訊息\" + ex.Message"); ;
                 }
             }
             if (Parameters.MeasureServiceSimulator)
@@ -396,11 +395,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (SocketException)
                 {
-                    StaSysMessageManager.AddNewMessage("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式", 1);
+                    LOG.ERROR("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
                 }
                 catch (Exception ex)
                 {
-                    StaSysMessageManager.AddNewMessage("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message", 1); ;
+                    LOG.ERROR("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message");
                 }
             }
 
@@ -419,13 +418,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-            //if (Parameters.SimulationMode)
-            //    emulator.Runstatus.AGV_Status = _Main_Status;
 
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
             Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
             Corrdination.Theta = Math.Round(Navigation.Angle, 3);
-            //gen alarm codes 
 
             AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS_WebAPI();
             try
@@ -441,7 +437,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = _RunTaskData.IsLocalTask ? new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[0] : alarm_codes,
+                    Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                 };
                 return status;
@@ -453,17 +449,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()
-        {
-            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
-            {
-                Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
-                Alarm_Description = alarm.Value.CN,
-                Alarm_Description_EN = alarm.Value.Description,
-                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
-            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
-        }
         private AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] GetAlarmCodesUserReportToAGVS_WebAPI()
         {
             return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
@@ -514,7 +499,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-
+        private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()
+        {
+            return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode
+            {
+                Alarm_ID = alarm.Value.Code,
+                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Description = alarm.Value.CN,
+                Alarm_Description_EN = alarm.Value.Description,
+                Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
+            }).DistinctBy(alarm => alarm.Alarm_ID).ToArray();
+        }
         public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
         private void LoadWorkStationConfigs()
@@ -529,7 +524,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
                 if (json == null)
                 {
-                    StaSysMessageManager.AddNewMessage("Load Fork Teach Data Fail...Read Json Null", 2);
+                    LOG.ERROR("Load Fork Teach Data Fail...Read Json Null");
                     return;
                 }
                 WorkStations = DeserializeWorkStationJson(json);
@@ -538,7 +533,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                StaSysMessageManager.AddNewMessage($"Load Fork Teach Data Fail...{ex.Message}", 2);
+                LOG.ERROR($"Load Fork Teach Data Fail...{ex.Message}");
             }
             finally
             {
@@ -596,7 +591,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-       
+
 
         private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
         {
@@ -866,6 +861,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            LOG.WARN($"Software EMO!!! {alarmCode}");
             StatusLighter.CloseAll();
             AGVSResetCmdFlag = true;
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
@@ -873,29 +869,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
             AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
-            if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+
+            AlarmManager.AddAlarm(alarmCode);
+            //if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
+            //{
+
+            //}
+            ExecutingTaskModel?.Dispose();
+            if (!_RunTaskData.IsLocalTask)
             {
-                AlarmManager.AddAlarm(alarmCode);
-                ExecutingTaskModel?.Dispose();
-                if (!_RunTaskData.IsLocalTask)
+                if (!IsEMOAlarmCodeInLDULD(alarmCode))
                 {
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
-                    if (Remote_Mode == REMOTE_MODE.ONLINE)
-                    {
-                        LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
-                        await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
-                    }
                 }
-                DirectionLighter.CloseAll();
-                DOSettingWhenEmoTrigger();
-                StatusLighter.DOWN();
+                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                {
+                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                    await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                }
             }
+            DirectionLighter.CloseAll();
+            DOSettingWhenEmoTrigger();
+            StatusLighter.DOWN();
             IsInitialized = false;
             ExecutingTaskModel = null;
             previousSoftEmoTime = DateTime.Now;
-            _RunTaskData.IsActionFinishReported = true;
-            _RunTaskData.IsLocalTask = true;
         }
+
+        private bool IsEMOAlarmCodeInLDULD(AlarmCodes alarmCode)
+        {
+            bool isHSAlarmCode = ((int)alarmCode).ToString().Substring(0, 2) == "32";
+            if (isHSAlarmCode)
+            {
+                LOG.WARN($"HS Alarm-{alarmCode} happend!");
+                return true;
+            }
+
+            if (_RunTaskData.Action_Type == ACTION_TYPE.Load | _RunTaskData.Action_Type == ACTION_TYPE.Unload)
+            {
+                LOG.WARN($"{alarmCode} happend when AGV  {_RunTaskData.Action_Type} executing");
+                return true;
+            }
+            return false;
+
+        }
+
+
         protected internal virtual void SoftwareEMO()
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
@@ -910,10 +929,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.Stop();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
-
             await ResetMotor();
-            StaSysMessageManager.Clear();
-
             _ = Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);

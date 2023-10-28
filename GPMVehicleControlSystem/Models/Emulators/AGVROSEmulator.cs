@@ -264,7 +264,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (true)
                 {
-                    await Task.Delay(10);
+                    Thread.Sleep(100);
                     if (stopwatch.ElapsedMilliseconds > 10000)
                     {
                         module_info.Battery.batteryLevel -= 1;
