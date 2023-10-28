@@ -53,19 +53,58 @@ namespace GPMVehicleControlSystem.Models.Emulators
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
             string RosBridge_IP = param.Connections["RosBridge"].IP;
             int RosBridge_Port = param.Connections["RosBridge"].Port;
-            rosSocket = new RosSocket(new WebSocketSharpProtocol($"ws://{RosBridge_IP}:{RosBridge_Port}"));
 
-            Task.Factory.StartNew(async () =>
+            bool connected = Init(RosBridge_IP, RosBridge_Port);
+            if (!connected)
             {
-                await Task.Delay(1000);
+                HandleRosDisconnected(null, EventArgs.Empty);
 
-                TopicsAdvertise();
-                AdvertiseServices();
-                InitNewTaskCommandActionServer();
-                TopicsPublish();
-                // _ = PublishLocalizeResult(rosSocket);
-            });
+            }
+            void HandleRosDisconnected(object sender, EventArgs e)
+            {
+                rosSocket.protocol.OnClosed -= HandleRosDisconnected;
+                Task.Factory.StartNew(async () =>
+                {
+                    EmuLog("AGVC ROS Trying Reconnect...");
+                    while (!Init(RosBridge_IP, RosBridge_Port))
+                    {
+                        await Task.Delay(1000);
+                    }
+                    EmuLog("AGVC ROS Reconnected");
+                    rosSocket.protocol.OnClosed += HandleRosDisconnected;
+                });
+            }
+            rosSocket.protocol.OnClosed += HandleRosDisconnected;
         }
+
+        private bool Init(string RosBridge_IP, int RosBridge_Port)
+        {
+            bool isconnected = false;
+            try
+            {
+                rosSocket = new RosSocket(new WebSocketSharpProtocol($"ws://{RosBridge_IP}:{RosBridge_Port}"));
+                isconnected = rosSocket.protocol.IsAlive();
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            if (isconnected)
+            {
+
+                Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    TopicsAdvertise();
+                    AdvertiseServices();
+                    InitNewTaskCommandActionServer();
+                    TopicsPublish();
+                    // _ = PublishLocalizeResult(rosSocket);
+                });
+            }
+            return isconnected;
+        }
+
 
         internal virtual void TopicsPublish()
         {
@@ -263,7 +302,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             await Task.Factory.StartNew(async () =>
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                while (true)
+                while (rosSocket.protocol.IsAlive())
                 {
                     Thread.Sleep(100);
                     if (stopwatch.ElapsedMilliseconds > 10000)
@@ -278,9 +317,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     }
                     catch (Exception ex)
                     {
-                        throw ex;
+                        EmuLog($"Ros socket error,{ex.Message}");
+                        break;
                     }
                 }
+                EmuLog($"AGVC ROS Emu module-information publish process end.");
+
             });
         }
 

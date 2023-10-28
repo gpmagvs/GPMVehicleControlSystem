@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         Dictionary<string, List<int>> TaskTrackingTags = new Dictionary<string, List<int>>();
 
-        protected clsTaskDownloadData _RunTaskData = new clsTaskDownloadData()
+        internal clsTaskDownloadData _RunTaskData = new clsTaskDownloadData()
         {
             IsLocalTask = true,
             IsActionFinishReported = true
@@ -93,7 +93,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
-            
+            IsWaitForkNextSegmentTask = false;
             _RunTaskData = new clsTaskDownloadData
             {
                 Action_Type = taskDownloadData.Action_Type,
@@ -101,6 +101,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Task_Sequence = taskDownloadData.Task_Sequence,
                 Trajectory = taskDownloadData.Trajectory,
                 Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+                Destination = taskDownloadData.Destination,
                 IsLocalTask = taskDownloadData.IsLocalTask,
                 IsActionFinishReported = false,
             };
@@ -224,6 +225,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
+                    IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel.isSegmentTask;
+
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
                         return;
                     else

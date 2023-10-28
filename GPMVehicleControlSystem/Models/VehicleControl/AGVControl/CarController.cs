@@ -77,6 +77,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler<int> OnSickLaserModeSettingChanged;
         public event EventHandler OnAGVCCycleStopRequesting;
+        public event EventHandler OnRosSocketReconnected;
         public Action<ActionStatus> OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
@@ -135,6 +136,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public ROBOT_CONTROL_CMD previous_ComplexCmd { get; private set; } = ROBOT_CONTROL_CMD.NONE;
 
+        private bool TryConnecting = false;
+
         public CarController()
         {
         }
@@ -172,6 +175,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             AdertiseROSServices();
             InitTaskCommandActionClient();
             ManualController = new MoveControl(rosSocket);
+            if (TryConnecting)
+            {
+                TryConnecting = false;
+                OnRosSocketReconnected?.Invoke(rosSocket, null);
+            }
             return true;
         }
 
@@ -222,6 +230,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             rosSocket.protocol.OnClosed -= Protocol_OnClosed;
             LOG.WARN("Rosbridger Server On Closed...Retry connecting...");
+            TryConnecting = true;
             Connect();
         }
 

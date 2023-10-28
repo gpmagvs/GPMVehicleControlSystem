@@ -64,10 +64,12 @@ namespace GPMVehicleControlSystem.ViewModels
                     Laser_Mode = (int)AGV.Laser.Mode,
                     NavInfo = new NavStateVM
                     {
-                        Destination = AGV.ExecutingTaskModel == null ? "" : AGV.ExecutingTaskModel.RunningTaskData.Destination + "",
-                        DestinationMapPoint = AGV.DestinationMapPoint,
+                        Destination = AGV.ExecutingTaskModel == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
+                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "" } : AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
-                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag)
+                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
+                        IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
+
                     },
                     Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserModeOfSick})",
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
@@ -197,18 +199,6 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {
-            if (AGV.Parameters.SimulationMode)
-            {
-                return new ConnectionStateVM
-                {
-                    AGVC = ConnectionStateVM.CONNECTION.CONNECTED,
-                    RosbridgeServer = ConnectionStateVM.CONNECTION.CONNECTED,
-                    WAGO = ConnectionStateVM.CONNECTION.CONNECTED,
-                    VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-
-                };
-            }
-
             ConnectionStateVM data_view_model = new ConnectionStateVM()
             {
                 RosbridgeServer = AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,

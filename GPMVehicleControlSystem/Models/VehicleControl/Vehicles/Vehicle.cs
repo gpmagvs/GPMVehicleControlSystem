@@ -17,6 +17,7 @@ using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -97,6 +98,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Points = new Dictionary<int, MapPoint>()
         };
         public bool IsHasCSTReader => CSTReader != null;
+        internal bool IsWaitForkNextSegmentTask = false;
         /// <summary>
         /// 里程數
         /// </summary>
@@ -211,20 +213,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (ExecutingTaskModel == null)
-                    return new MapPoint { Name = "" };
-                else
+                try
                 {
-                    try
-                    {
-                        var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == ExecutingTaskModel.RunningTaskData.Destination);
-                        return _point == null ? new MapPoint { Name = ExecutingTaskModel.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTaskModel.RunningTaskData.Destination } : _point;
-                    }
-                    catch (Exception)
-                    {
-                        return new MapPoint { Name = ExecutingTaskModel.RunningTaskData.Destination.ToString(), TagNumber = ExecutingTaskModel.RunningTaskData.Destination };
-
-                    }
+                    var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == _RunTaskData.Destination);
+                    return _point == null ? new MapPoint { Name = _RunTaskData.Destination.ToString(), TagNumber = _RunTaskData.Destination } : _point;
+                }
+                catch (Exception)
+                {
+                    return new MapPoint { Name = _RunTaskData.Destination.ToString(), TagNumber = _RunTaskData.Destination };
                 }
             }
         }
@@ -311,6 +307,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await InitAGVControl(RosBridge_IP, RosBridge_Port);
                         if (AGVC?.rosSocket != null)
                         {
+                            AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
                             AlarmManager.Active = false;
                             Task WagoDIConnTask = WagoDIInit();
@@ -343,6 +340,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
+        private void AGVC_OnRosSocketReconnected(object? sender, EventArgs e)
+        {
+            BuzzerPlayer.rossocket = (RosSocket)sender;
+        }
+
         private void AGVSInit()
         {
             string vms_ip = Parameters.Connections["AGVS"].IP;
@@ -678,7 +681,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         LOG.WARN($"偵測到AGV無帳有料，已完成自動建帳");
                 }
             }
-
+            IsWaitForkNextSegmentTask = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
             return await Task.Run(async () =>
             {
@@ -862,6 +865,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
             LOG.WARN($"Software EMO!!! {alarmCode}");
+
+            IsWaitForkNextSegmentTask = false;
             StatusLighter.CloseAll();
             DirectionLighter.CloseAll();
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());

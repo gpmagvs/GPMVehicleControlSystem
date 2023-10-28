@@ -407,6 +407,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (AGVSResetCmdFlag)
                 return true;
             AGVSResetCmdFlag = true;
+            IsWaitForkNextSegmentTask = false;
+
             try
             {
                 LOG.WARN($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
