@@ -22,6 +22,7 @@ using System.Reflection.Metadata;
 using static SQLite.SQLite3;
 using GPMVehicleControlSystem.Tools;
 using System.Diagnostics;
+using GPMVehicleControlSystem.Models.Emulators;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -433,7 +434,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
                                 Sub_Status = SUB_STATUS.DOWN;
                             }
-                            await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.AGVs_Abort_Task);
                             ExecutingTaskModel.Abort();
                         });
                     }
@@ -465,6 +465,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
         {
+
+            if (Parameters.SimulationMode)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
+
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
+                if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                {
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, false);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, false);
+
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, true);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, true);
+                }
+            }
             SoftwareEMO(AlarmCodes.EMS);
         }
 

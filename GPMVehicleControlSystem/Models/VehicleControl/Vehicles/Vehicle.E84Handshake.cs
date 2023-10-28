@@ -473,7 +473,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 AGVC.AbortTask();
                                 Sub_Status = SUB_STATUS.DOWN;
                                 AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
-                                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_EQ_GO);
                                 StopAllHandshakeTimer();
                                 break;
                             }
@@ -527,8 +526,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             return;
                         LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_AGV_DOWN);
-
                         return;
                     }
 
@@ -540,7 +537,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         Sub_Status = SUB_STATUS.DOWN;
                         var alarm_code = isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
                         AlarmManager.AddAlarm(alarm_code, false);
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarm_code);
                         return;
                     }
                 }
@@ -574,7 +570,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!isEQReadyOFF && IsEQGOOn())
                         {
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-                            FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_AGV_DOWN);
                         }
                         break;
                     }
@@ -586,7 +581,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AGVC.AbortTask();
                         Sub_Status = SUB_STATUS.DOWN;
                         AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
-                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO);
                         break;
 
                     }

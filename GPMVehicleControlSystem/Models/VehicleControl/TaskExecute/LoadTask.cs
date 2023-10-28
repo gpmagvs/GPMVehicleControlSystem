@@ -447,13 +447,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
                         if (!HSResult.eqready)
                         {
-                            AlarmManager.AddAlarm(HSResult.alarmCode, false);
                             if (Agv.Parameters.HandshakeFailWhenLoadFinish == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                            {
                                 Agv.Sub_Status = SUB_STATUS.DOWN;
-                            else
-                                Agv.Sub_Status = SUB_STATUS.IDLE;
-                            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: HSResult.alarmCode);
-                            return;
+                                AlarmManager.AddAlarm(HSResult.alarmCode, false);
+                                return;
+                            }
                         }
                     }
 
@@ -476,9 +475,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         await Agv.Laser.SideLasersEnable(false);
                         if (!ForkGoHomeActionResult.confirm)
                         {
-                            AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code);
                             Agv.Sub_Status = SUB_STATUS.DOWN;
-                            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: ForkGoHomeActionResult.alarm_code);
+                            AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code, false);
                         }
 
                     }

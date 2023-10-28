@@ -863,32 +863,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             LOG.WARN($"Software EMO!!! {alarmCode}");
             StatusLighter.CloseAll();
-            AGVSResetCmdFlag = true;
+            DirectionLighter.CloseAll();
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
             SetAGV_TR_REQ(false);
             AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
-
             AlarmManager.AddAlarm(alarmCode);
-            //if ((DateTime.Now - previousSoftEmoTime).TotalSeconds > 2)
-            //{
-
-            //}
             ExecutingTaskModel?.Dispose();
-            if (!_RunTaskData.IsLocalTask)
-            {
-                if (!IsEMOAlarmCodeInLDULD(alarmCode))
-                {
-                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
-                }
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
-                {
-                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
-                    await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
-                }
-            }
-            DirectionLighter.CloseAll();
+            AGVSTaskFeedBackReportAndOffline(alarmCode);
             DOSettingWhenEmoTrigger();
             StatusLighter.DOWN();
             IsInitialized = false;
@@ -896,22 +879,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             previousSoftEmoTime = DateTime.Now;
         }
 
-        private bool IsEMOAlarmCodeInLDULD(AlarmCodes alarmCode)
+
+        private async void AGVSTaskFeedBackReportAndOffline(AlarmCodes alarmCode)
         {
-            bool isHSAlarmCode = ((int)alarmCode).ToString().Substring(0, 2) == "32";
+            if (!_RunTaskData.IsLocalTask && !_RunTaskData.IsActionFinishReported)
+            {
+                if (_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) //非取放貨任務 一律上報任務完成
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
+                {
+                    if (IsHandshakeFailAlarmCode(alarmCode))
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                }
+
+                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                {
+                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                    await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否為交握異常碼
+        /// </summary>
+        /// <param name="alarmCode"></param>
+        /// <returns></returns>
+        private bool IsHandshakeFailAlarmCode(AlarmCodes alarmCode)
+        {
+            string alarcode_str = ((int)alarmCode).ToString();
+            if (alarcode_str.Length != 4)
+                return false;
+
+            bool isHSAlarmCode = alarcode_str.Substring(0, 2) == "32";
             if (isHSAlarmCode)
-            {
                 LOG.WARN($"HS Alarm-{alarmCode} happend!");
-                return true;
-            }
 
-            if (_RunTaskData.Action_Type == ACTION_TYPE.Load | _RunTaskData.Action_Type == ACTION_TYPE.Unload)
-            {
-                LOG.WARN($"{alarmCode} happend when AGV  {_RunTaskData.Action_Type} executing");
-                return true;
-            }
-            return false;
-
+            return isHSAlarmCode;
         }
 
 
@@ -966,7 +970,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                     return true;
 
-                Console.WriteLine("Reset Motor Process Start");
+                LOG.TRACE("Reset Motor Process Start");
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                 await Task.Delay(100);
@@ -976,7 +980,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
-                Console.WriteLine("Reset Motor Process End");
+                LOG.TRACE("Reset Motor Process End");
+
+                if (Parameters.SimulationMode)
+                {
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, true);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, true);
+
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, false);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, false);
+                    if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                    {
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, true);
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, true);
+
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, false);
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, false);
+                    }
+                }
+
                 return true;
             }
             catch (SocketException ex)

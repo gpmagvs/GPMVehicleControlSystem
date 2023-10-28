@@ -66,12 +66,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 Thread.Sleep(1);
                 await Task.Run(() =>
                 {
-                    LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK");
+                    LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
                     var id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
-                    LOG.TRACE($"Call Service /CSTReader_action done. id={id} ");
+                    LOG.TRACE($"Call Service /CSTReader_action done. id={id} ", false);
                 });
 
-                LOG.TRACE($"Call Service /CSTReader_action, command ,WaitOne");
+                LOG.TRACE($"Call Service /CSTReader_action, command ,WaitOne", false);
                 wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(10));
                 if (cst_reader_confirm_ack != null)
                 {
@@ -104,7 +104,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             else
             {
-                LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.");
+                LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.", false);
                 CSTActionDone = false;
                 CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
                 Task TK = new Task(async () =>
@@ -127,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
                     Thread.Sleep(1000);
                     var cst_id = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
-                    LOG.TRACE($"Inovke CSTReaderAction Done event with CST ID = {cst_id}");
+                    LOG.TRACE($"Inovke CSTReaderAction Done event with CST ID = {cst_id}", false);
                     OnCSTReaderActionDone?.Invoke(this, cst_id);
                     return (true, true);
                 }

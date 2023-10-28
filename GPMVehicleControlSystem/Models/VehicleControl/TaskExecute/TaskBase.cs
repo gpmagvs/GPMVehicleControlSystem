@@ -247,9 +247,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
                     LOG.ERROR($"存在貨物傾倒異常");
                     IsCargoBiasTrigger = IsCargoBiasDetecting = false;
-                    AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error);
+                    AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error, false);
                     Agv.Sub_Status = SUB_STATUS.DOWN;
-                    await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: AlarmCodes.Cst_Slope_Error);
                     return;
                 }
 
@@ -282,10 +281,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     });
                     Agv.DirectionLighter.CloseAll();
                     var result = await HandleAGVCActionSucceess();
+
                     if (!result.success)
                     {
-                        if (result.alarmCode != AlarmCodes.None)
-                            AlarmManager.AddAlarm(result.alarmCode, false);
+
+                        var alarm_code = result.alarmCode;
+                        if (alarm_code != AlarmCodes.None)
+                        {
+                            AlarmManager.AddAlarm(alarm_code, false);
+                        }
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                     }
                 }

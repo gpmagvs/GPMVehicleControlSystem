@@ -127,8 +127,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.WriteTimeout = 1000;
-                master.Transport.Retries = 1;
+                master.Transport.WriteTimeout = 300;
+                master.Transport.Retries = 3;
                 return true;
             }
             catch (Exception ex)
@@ -259,7 +259,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             //安全迴路RELAY
             bool RelayON = false;
             var do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, true);
-            await Task.Delay(500);
+            await Task.Delay(200);
             do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false);
             return true;
         }

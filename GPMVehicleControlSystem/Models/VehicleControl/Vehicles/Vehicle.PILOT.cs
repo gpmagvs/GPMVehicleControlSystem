@@ -93,48 +93,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
+            
             _RunTaskData = new clsTaskDownloadData
             {
                 Action_Type = taskDownloadData.Action_Type,
-                IsLocalTask = taskDownloadData.IsLocalTask,
-                IsActionFinishReported = false,
                 Task_Name = taskDownloadData.Task_Name,
                 Task_Sequence = taskDownloadData.Task_Sequence,
                 Trajectory = taskDownloadData.Trajectory,
                 Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+                IsLocalTask = taskDownloadData.IsLocalTask,
+                IsActionFinishReported = false,
             };
+
             LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
              {
-                 clsTaskDownloadData _taskDownloadData;
-                 _taskDownloadData = taskDownloadData;
-
                  if (action == ACTION_TYPE.None)
                  {
-                     ExecutingTaskModel = new NormalMoveTask(this, _taskDownloadData);
-                     //if (Parameters.SimulationMode)
-                     //    WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);//模擬離開二次定位點EQ GO訊號會消失
+                     ExecutingTaskModel = new NormalMoveTask(this, taskDownloadData);
                  }
                  else
                  {
-                     if (_taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                         _taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                     if (taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                         taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
                      if (action == ACTION_TYPE.Charge)
-                         ExecutingTaskModel = new ChargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ChargeTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Discharge)
-                         ExecutingTaskModel = new DischargeTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Load)
-                         ExecutingTaskModel = new LoadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new LoadTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Unload)
-                         ExecutingTaskModel = new UnloadTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Park)
-                         ExecutingTaskModel = new ParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ParkTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Unpark)
-                         ExecutingTaskModel = new UnParkTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new UnParkTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.Measure)
-                         ExecutingTaskModel = new MeasureTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
                      else if (action == ACTION_TYPE.ExchangeBattery)
-                         ExecutingTaskModel = new ExchangeBatteryTask(this, _taskDownloadData);
+                         ExecutingTaskModel = new ExchangeBatteryTask(this, taskDownloadData);
                      else
                      {
                          throw new NotImplementedException();
@@ -149,32 +146,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                      Sub_Status = SUB_STATUS.DOWN;
                      LOG.Critical($"{action} 任務失敗:Alarm:{result}");
                      AlarmManager.AddAlarm(result, false);
-                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: result);
                      AGVC.OnAGVCActionChanged = null;
                  }
                  //}
              });
         }
-
-        private void ExecutingActionTask_OnSegmentTaskExecuting2Sec(object? sender, clsTaskDownloadData e)
-        {
-            LOG.Critical($"分段任務模擬-發送整段任務");
-            ExecuteAGVSTask(sender, e);
-        }
-
-        private void AutoClearOldCstReadFailAlarms()
-        {
-            if (AlarmManager.CurrentAlarms.Count == 0)
-                return;
-            var alarm_codes = new AlarmCodes[] { AlarmCodes.Cst_ID_Not_Match, AlarmCodes.Read_Cst_ID_Fail, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID };
-            foreach (var alarm_code in alarm_codes)
-            {
-                var _alarm_key_pair = AlarmManager.CurrentAlarms.FirstOrDefault(a => a.Value.EAlarmCode == alarm_code);
-                if (_alarm_key_pair.Value != null)
-                    AlarmManager.ClearAlarm(alarm_code);
-            }
-        }
-
 
         private void WriteTaskNameToFile(string task_Name)
         {
@@ -286,7 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async Task WaitAlarmCodeReported(AlarmCodes alarm_tracking)
         {
-            LOG.TRACE($"Before TaskFeedback, AlarmCodes({alarm_tracking}) reported tracking ");
+            LOG.WARN($"Before TaskFeedback, AlarmCodes({alarm_tracking}) reported tracking ");
 
             bool alarm_reported()
             {
@@ -295,13 +271,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
             }
-            CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (!alarm_reported())
             {
                 await Task.Delay(1);
                 if (cancel_wait.IsCancellationRequested)
                 {
-                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(2sec) ");
+                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(5 sec) ");
                     return;
                 }
             }

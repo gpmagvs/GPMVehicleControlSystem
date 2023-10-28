@@ -46,6 +46,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private ROBOT_CONTROL_CMD complex_cmd;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
         private bool IsCharge = false;
+        private bool IsCSTTriggering = false;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
         public AGVROSEmulator()
         {
@@ -318,25 +319,27 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 confirm = true,
             };
-
+            module_info.CSTReader.state = 2;
+            module_info.CSTReader.data = "";
             Task.Factory.StartNew(async () =>
-            {
-                //模擬拍照
-                await Task.Delay(500);
-                module_info.CSTReader.data = $"TA030{DateTime.Now.ToString("HHmsf")}";
-                rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", new CSTReaderCommandRequest
                 {
-                    model = tin.model,
-                    command = "done",
-                });
+                    //模擬拍照
+                    await Task.Delay(500);
+                    module_info.CSTReader.state = 1;
+                    module_info.CSTReader.data = $"TA030{DateTime.Now.ToString("HHmsf")}";
+                    rosSocket.CallServiceAndWait<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", new CSTReaderCommandRequest
+                    {
+                        model = tin.model,
+                        command = "done",
+                    });
 
-            });
+                });
 
             return true;
         }
-        private void EmuLog(string msg)
+        private void EmuLog(string msg, bool show_console = true)
         {
-            LOG.TRACE($"[車控模擬] {msg}");
+            LOG.TRACE($"[車控模擬] {msg}", show_console);
         }
 
     }
