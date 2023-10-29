@@ -611,27 +611,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             var cst_id_expect = RunningTaskData.CST.First().CST_ID.Trim();
-            var reader_read_id = Agv.CSTReader.ValidCSTID.Trim();
+            var reader_valid_id = Agv.CSTReader.ValidCSTID.Trim();
+            var reader_actual_read_id = Agv.CSTReader.Data.data.Trim().ToUpper();
 
 
             if (Agv.Parameters.CSTIDReadNotMatchSimulation)
             {
-                LOG.ERROR($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_read_id}");
+                LOG.ERROR($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
 
 
-            if (reader_read_id == "ERROR" | reader_read_id == "TrayUnknow")
+            if (reader_valid_id == "ERROR" | reader_actual_read_id == "ERROR" | reader_valid_id == "TrayUnknow")
             {
-                LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_read_id}");
+                LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
-            if (reader_read_id != cst_id_expect)
+            if (reader_valid_id != cst_id_expect)
             {
-                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_read_id}");
+                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
-            Agv.CSTReader.ValidCSTID = reader_read_id;
+            Agv.CSTReader.ValidCSTID = reader_valid_id;
             return (true, AlarmCodes.None);
         }
 

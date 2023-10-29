@@ -225,7 +225,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
-                    IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel.isSegmentTask;
+                    IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel == null ? false : ExecutingTaskModel.isSegmentTask;
 
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
                         return;
@@ -266,7 +266,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task WaitAlarmCodeReported(AlarmCodes alarm_tracking)
         {
             LOG.WARN($"Before TaskFeedback, AlarmCodes({alarm_tracking}) reported tracking ");
-
             bool alarm_reported()
             {
                 if (AGVS.UseWebAPI)
@@ -274,17 +273,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
             }
-            CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             while (!alarm_reported())
             {
                 await Task.Delay(1);
                 if (cancel_wait.IsCancellationRequested)
                 {
-                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(5 sec) ");
+                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(10 sec) ");
                     return;
                 }
             }
-            LOG.TRACE($"AlarmCodes({alarm_tracking}) reported ! ");
+            LOG.WARN($"AlarmCodes({alarm_tracking}) reported ! ");
 
         }
 

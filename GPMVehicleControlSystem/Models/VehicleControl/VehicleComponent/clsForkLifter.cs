@@ -326,17 +326,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
             try
             {
+                bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
                 this.InitForkSpeed = InitForkSpeed;
                 IsInitialized = false;
                 IsInitialing = true;
                 bool IsDownSearch = CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
 
                 if (IsDownSearch)
-                    await ForkDownSearchAsync(InitForkSpeed);
+                    await ForkDownSearchAsync(hasCargo ? InitForkSpeed : 1);
                 else
                 {
                     await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-                    var rsponse = await ForkUpSearchAsync(InitForkSpeed);
+                    var rsponse = await ForkUpSearchAsync(hasCargo ? InitForkSpeed : 1);
                 }
                 LOG.INFO($"Fork {(IsDownSearch ? "Down " : "Up")} Search Start");
 
@@ -375,7 +376,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 }
                 await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-                bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
                 if (hasCargo)
                     LOG.WARN($"Has Cargo On Fork, 緩衝時間2s");
                 await Task.Delay(hasCargo ? 2000 : 1000);
