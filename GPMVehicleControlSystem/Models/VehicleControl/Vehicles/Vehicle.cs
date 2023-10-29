@@ -12,6 +12,7 @@ using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
 
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -875,8 +876,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SetAGV_TR_REQ(false);
             AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
             AlarmManager.AddAlarm(alarmCode);
-            ExecutingTaskModel?.Dispose();
             AGVSTaskFeedBackReportAndOffline(alarmCode);
+            ExecutingTaskModel?.Dispose();
             DOSettingWhenEmoTrigger();
             StatusLighter.DOWN();
             IsInitialized = false;
@@ -893,8 +894,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
                 else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
                 {
-                    if (IsHandshakeFailAlarmCode(alarmCode))
+                    if (IsHandshakeFailAlarmCode(alarmCode) | ((LoadTask)ExecutingTaskModel)._eqHandshakeMode == WORKSTATION_HS_METHOD.NO_HS)
                         FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+
                 }
 
                 if (Remote_Mode == REMOTE_MODE.ONLINE)

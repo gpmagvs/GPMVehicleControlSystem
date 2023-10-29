@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
         internal bool back_to_secondary_flag = false;
-        private WORKSTATION_HS_METHOD _eqHandshakeMode;
+        internal WORKSTATION_HS_METHOD _eqHandshakeMode;
 
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
@@ -238,6 +238,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (isNeedArmExtend)
                 {
+                    LOG.INFO($"FORK ARM Extend Out");
                     var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                     arm_move_Done = _arm_move_result.confirm;
                     if (!arm_move_Done)
@@ -248,7 +249,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         return (false, AlarmCodes.Fork_Arm_Pose_Error);
                     }
-
+                    LOG.INFO($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
                     await Task.Delay(1000);
                 }
                 else
@@ -258,7 +259,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (arm_move_Done)
                 {
                     //check arm position 
-
                     (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                     if (!fork_height_change_result.success)
                         return (false, fork_height_change_result.alarm_code);
@@ -347,9 +347,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         await Task.Delay(500);
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
+                        {
+                            if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
+                                ForkHomeProcess();
                             HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                        }
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
+                            if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
+                                ForkHomeProcess();
                             AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
                         }
@@ -417,7 +423,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             return alarm_code;
         }
-
+        bool IsNeedWaitForkHome = false;
+        Task forkGoHomeTask = null;
         private async void HandleBackToHomeActionStatusChanged(ActionStatus status)
         {
             _ = Task.Factory.StartNew(async () =>
@@ -431,7 +438,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
 
+
                 LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
+
 
                 if (status == ActionStatus.SUCCEEDED)
                 {
@@ -442,46 +451,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     AGVCActionStatusChaged = null;
                     back_to_secondary_flag = true;
-                    if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+
+                    if (!Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                     {
-                        (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
-                        if (!HSResult.eqready)
-                        {
-                            if (Agv.Parameters.HandshakeFailWhenLoadFinish == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
-                            {
-                                Agv.Sub_Status = SUB_STATUS.DOWN;
-                                AlarmManager.AddAlarm(HSResult.alarmCode, false);
-                                return;
-                            }
-                        }
+                        await ForkHomeProcess();
                     }
 
-                    if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+                    if (IsNeedWaitForkHome)
                     {
-                        (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
-                        await Agv.Laser.SideLasersEnable(true);
-                        await RegisterSideLaserTriggerEvent();
-                        while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
-                        {
-                            ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
-                            if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
-                            {
-                                AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
-                                break;
-                            }
-                        }
-                        await UnRegisterSideLaserTriggerEvent();
-                        await Task.Delay(500);
-                        await Agv.Laser.SideLasersEnable(false);
-                        if (!ForkGoHomeActionResult.confirm)
-                        {
-                            Agv.Sub_Status = SUB_STATUS.DOWN;
-                            AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code, false);
-                        }
-
+                        LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                        Task.WaitAll(new Task[] { forkGoHomeTask });
+                        LOG.TRACE($"[Async Action] Fork is Home Now");
                     }
+
+                    var HSResult = await AGVCOMPTHandshake();
+
+                    if (!HSResult.confirm)
+                    {
+                        AlarmManager.AddAlarm(HSResult.alarmCode, false);
+                        await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: HSResult.alarmCode);
+                        return;
+                    }
+
                     (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
-
                     if (!CstBarcodeCheckResult.success)
                     {
                         AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
@@ -512,7 +504,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
                         if (CSTTrigger && action == ACTION_TYPE.Unload)
                             await WaitCSTIDReported();
-
                         await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                     }
                     else
@@ -526,6 +517,59 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
+        private async Task ForkHomeProcess()
+        {
+            if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+            {
+                IsNeedWaitForkHome = true;
+                forkGoHomeTask = await Task.Factory.StartNew(async () =>
+                {
+                    LOG.TRACE($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.");
+                    while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
+                    {
+                        await Task.Delay(1);
+                    }
+                    LOG.TRACE($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
+                    (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
+                    await Agv.Laser.SideLasersEnable(true);
+                    await RegisterSideLaserTriggerEvent();
+                    while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                    {
+                        ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                        if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+                            break;
+                        }
+                    }
+                    await UnRegisterSideLaserTriggerEvent();
+                    await Task.Delay(500);
+                    await Agv.Laser.SideLasersEnable(false);
+                    if (!ForkGoHomeActionResult.confirm)
+                    {
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
+                        AlarmManager.AddAlarm(ForkGoHomeActionResult.alarm_code, false);
+                    }
+                });
+
+            }
+            else
+                IsNeedWaitForkHome = false;
+        }
+
+        private async Task<(bool confirm, AlarmCodes alarmCode)> AGVCOMPTHandshake()
+        {
+            if (_eqHandshakeMode != WORKSTATION_HS_METHOD.HS)
+                return (true, AlarmCodes.None);
+            (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
+            if (!HSResult.eqready)
+            {
+                Agv.Sub_Status = SUB_STATUS.DOWN;
+                return (false, HSResult.alarmCode);
+            }
+            else
+                return (true, AlarmCodes.None);
+        }
         private async Task WaitCSTIDReported()
         {
             LOG.TRACE($"Start Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS");

@@ -333,11 +333,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 bool IsDownSearch = CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
 
                 if (IsDownSearch)
-                    await ForkDownSearchAsync(hasCargo ? InitForkSpeed : 1);
+                    await ForkDownSearchAsync(InitForkSpeed);
                 else
                 {
                     await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-                    var rsponse = await ForkUpSearchAsync(hasCargo ? InitForkSpeed : 1);
+                    var rsponse = await ForkUpSearchAsync(InitForkSpeed);
                 }
                 LOG.INFO($"Fork {(IsDownSearch ? "Down " : "Up")} Search Start");
 
@@ -369,7 +369,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         LOG.INFO($"Fork leave home ");
                         if (!IsDownSearch)
-                            await Task.Delay(10);
+                            await Task.Delay(hasCargo ? 500 : 10);
                         var rsponse = await ForkStopAsync();
                         break;
                     }
