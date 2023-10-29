@@ -308,7 +308,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     if (stopwatch.ElapsedMilliseconds > 10000)
                     {
                         module_info.Battery.batteryLevel -= 1;
-                        module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 0 ? 0 : module_info.Battery.batteryLevel);
+                        module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
                         stopwatch.Restart();
                     }
                     try
