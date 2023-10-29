@@ -513,7 +513,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                     if (!forkMoveResult.confirm)
                     {
-                        return (false, AlarmCodes.Action_Timeout);
+                        return (false, fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout);
                     }
                 }
                 LOG.TRACE($"Position={Driver.CurrentPosition}/{position_to_reach}(Error={positionError})");

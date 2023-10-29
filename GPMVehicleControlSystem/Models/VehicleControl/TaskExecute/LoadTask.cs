@@ -261,7 +261,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                     if (!fork_height_change_result.success)
-                        return (false, AlarmCodes.Fork_Height_Setting_Error);
+                        return (false, fork_height_change_result.alarm_code);
 
                     await Task.Delay(1000);
                     if (isNeedArmExtend)
