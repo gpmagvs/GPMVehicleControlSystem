@@ -169,6 +169,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     Thread.Sleep(5000);
                 }
             }
+            AlarmManager.ClearAlarm(AlarmCodes.ROS_Bridge_server_Disconnect);
             rosSocket.protocol.OnClosed += Protocol_OnClosed;
             LOG.INFO($"ROS Connected ! ws://{IP}:{Port}");
             SubscribeROSTopics();
