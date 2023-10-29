@@ -15,6 +15,7 @@ using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 
 KillRunningVCSProcesses();
+StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
