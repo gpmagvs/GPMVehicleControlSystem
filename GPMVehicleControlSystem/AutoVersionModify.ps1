@@ -7,7 +7,7 @@ $date = Get-Date
 $month = $date.Month
 $day = $date.Day
 
-if ($content -match "<AssemblyVersion>$month.$day.(.*?)<\/AssemblyVersion>") {
+if ($content -match "<AssemblyVersion>$month\.$day\.(.*?)<\/AssemblyVersion>") {
     $old_serialNumber = [int]$matches[1]
     $serialNumber = $old_serialNumber + 1
     $newVersion = "$month.$day.$serialNumber"
