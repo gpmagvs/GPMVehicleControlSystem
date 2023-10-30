@@ -99,7 +99,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         new clsAlarmCode
                         {
                             Time=DateTime.Now,
-                             Code =  (int)AlarmCodes.AGVS_OnlineModeQuery_T1_Timeout,
+                             Code =  (int)AlarmCodes.AGVS_ALIVE_CHECK_TIMEOUT,
                               Description ="系統異常",
                               ELevel = clsAlarmCode.LEVEL.Alarm
                         },
