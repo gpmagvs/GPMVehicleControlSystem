@@ -198,6 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
+            await Task.Delay(1000);
             return await fork_ros_controller.ZAxisInit();
         }
 
@@ -405,14 +406,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 await Task.Delay(hasCargo ? 2000 : 1000);
                 while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
+                    if(CurrentForkLocation == FORK_LOCATIONS.HOME)
+                        break;
                     if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
                     {
                         return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
                     var pose = Driver.CurrentPosition - 0.05;
                     LOG.INFO($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
-                    var response = await ForkPose(pose, 1);
+                    var response = await ForkPose(pose, 0.1);
                     LOG.INFO($"{response.confirm},{response.message}");
                 }
 

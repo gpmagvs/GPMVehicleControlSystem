@@ -528,6 +528,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
                     {
                         await Task.Delay(1);
+                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        {
+                            IsNeedWaitForkHome = false;
+                            return;
+                        }
                     }
                     LOG.TRACE($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
                     (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
@@ -535,7 +540,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await RegisterSideLaserTriggerEvent();
                     while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                     {
+                        await Task.Delay(1);
+                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        {
+                            IsNeedWaitForkHome = false;
+                            return;
+                        }
                         ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
+                        LOG.TRACE($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
                         if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                         {
                             AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);

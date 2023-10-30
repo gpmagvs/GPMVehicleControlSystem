@@ -346,13 +346,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        if (ExecutingTaskModel != null)
-                        {
-                            if (ExecutingTaskModel.action == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
-                            else
-                                BuzzerPlayer.Action();
-                        }
+                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                            BuzzerPlayer.Move();
+                        else
+                            BuzzerPlayer.Action();
                     }
                     catch (Exception ex)
                     {
