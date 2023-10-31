@@ -301,6 +301,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
             }
+            else
+                Agv.CSTReader.ValidCSTID = "";
 
 
 
