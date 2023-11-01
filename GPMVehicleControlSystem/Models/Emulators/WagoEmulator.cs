@@ -60,12 +60,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.RightProtection_Area_Sensor_3, true);
             SetState(DI_ITEM.LeftProtection_Area_Sensor_3, true);
             SetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor, true);
-
             SetState(DI_ITEM.Cst_Sensor_1, true);
             SetState(DI_ITEM.Cst_Sensor_2, true);
 
             SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, true);
             SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, true);
+            SetState(DI_ITEM.EQ_GO, true);
         }
         public void SetState(DI_ITEM item, bool state)
         {

@@ -116,7 +116,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     if (!Agv.IsEQGOOn())
-                        return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
+                    {
+                        await Task.Delay(200);
+                        if (!Agv.IsEQGOOn())
+                            return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
+                    }
 
                     if (!Agv.IsEQHsSignalInitialState())
                         return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);

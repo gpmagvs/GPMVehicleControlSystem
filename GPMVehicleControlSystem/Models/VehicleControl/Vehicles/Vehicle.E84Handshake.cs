@@ -6,9 +6,11 @@ using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net.Sockets;
+using YamlDotNet.Core.Tokens;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -104,9 +106,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 if (action == ACTION_TYPE.Load)
+                {
                     return WagoDO.GetState(DO_ITEM.EMU_EQ_L_REQ);
+                }
                 else
+                {
+
                     return WagoDO.GetState(DO_ITEM.EMU_EQ_U_REQ);
+                }
             }
             else
             {
@@ -134,7 +141,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS)
                 return true;
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
-                return WagoDO.GetState(DO_ITEM.EMU_EQ_GO);
+            {
+                if (Parameters.EQHandshakeSimulationAutoRun)
+                {
+                    _ = Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(20);
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, true);
+                    });
+                }
+            }
             return EQHsSignalStates[EQ_HSSIGNAL.EQ_GO];
         }
         private bool IsEQBusyOn()
@@ -151,30 +167,88 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         #region 交握
 
-        private async void SetAGVBUSY(bool value)
+        private async void SetAGVBUSY(bool value, bool isInEQ = true)
         {
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = value;
+
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && !value) //AGV_BUSY OFF
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(200);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, isInEQ);
+                    if (isInEQ)
+                    {
+                        await Task.Delay(1000);
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
+                    }
+
+                });
+            }
         }
         private async void SetAGVREADY(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_READY, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = value;
+
+
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, true);
+                });
+            }
+
         }
         private async void SetAGVVALID(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = value;
+
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, true);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, true);
+                });
+            }
+
         }
         internal async void SetAGV_TR_REQ(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = value;
+
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, true);
+                });
+            }
+
+
         }
         private async void SetAGV_COMPT(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, value);
             AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = value;
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
+                });
+            }
         }
         internal bool IsEQHsSignalInitialState()
         {
@@ -277,7 +351,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CancellationTokenSource waitEQ_BUSY_ON_CTS = new CancellationTokenSource();
             CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
 
-            SetAGVBUSY(false);
+            SetAGVBUSY(false, true);
             SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
             Task wait_eq_busy_ON = new Task(() =>
@@ -352,7 +426,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag | AGVAlarmWhenEQBusyFlag;
                 LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
-                LOG.Critical( ex);
+                LOG.Critical(ex);
                 if (!IsEQOrAGVAlarmWhenEQBUSY)
                     return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
                 else
@@ -391,7 +465,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             });
 
-            SetAGVBUSY(false);
+            SetAGVBUSY(false, false);
             SetAGV_COMPT(true);
             try
             {

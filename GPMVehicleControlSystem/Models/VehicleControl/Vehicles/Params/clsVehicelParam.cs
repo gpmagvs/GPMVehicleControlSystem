@@ -46,6 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool MeasureServiceSimulator { get; set; } = false;
         public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
         public bool BuzzerOn { get; set; } = true;
+        public bool EQHandshakeSimulationAutoRun { get; set; } = true;
         public int LastVisitedTag { get; set; } = 8;
 
         /// <summary>
