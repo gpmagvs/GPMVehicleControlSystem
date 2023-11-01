@@ -90,8 +90,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
             if (!result.success)
             {
-                Remote_Mode = _oriMode;
-                LOG.ERROR($"車輛{mode}失敗 : Return Code : {result.return_code}");
+                if (mode == REMOTE_MODE.OFFLINE && result.return_code == RETURN_CODE.System_Error)
+                {
+                    Remote_Mode = REMOTE_MODE.OFFLINE;
+                    return (true, RETURN_CODE.OK);
+                }
+                else
+                {
+                    Remote_Mode = _oriMode;
+                    LOG.ERROR($"車輛{mode}失敗 : Return Code : {result.return_code}");
+                }
             }
             else
                 Remote_Mode = mode;
