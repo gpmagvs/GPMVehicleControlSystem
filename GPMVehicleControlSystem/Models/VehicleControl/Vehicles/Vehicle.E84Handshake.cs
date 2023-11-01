@@ -232,13 +232,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 wait_eq_UL_req_ON.Wait(waitEQSignalCST.Token);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
             }
-            catch (OperationCanceledException ex)
-            {
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
-            }
             catch (Exception ex)
             {
+                LOG.Critical(ex);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
             }
@@ -257,6 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
+                LOG.Critical(ex);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
                 return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
             }
@@ -322,7 +319,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Thread.Sleep(1);
                 }
             });
-
             try
             {
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
@@ -331,8 +327,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 wait_eq_busy_ON.Wait(waitEQ_BUSY_ON_CTS.Token);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                LOG.ERROR($"[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON] {ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
+                LOG.Critical(ex);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
                 return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
             }
@@ -353,10 +351,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag | AGVAlarmWhenEQBusyFlag;
+                LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
+                LOG.Critical( ex);
                 if (!IsEQOrAGVAlarmWhenEQBUSY)
                     return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
                 else
-                    return (false, AlarmCodes.None);
+                    return (true, AlarmCodes.None);
             }
 
         }
@@ -402,13 +402,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 wait_eq_UL_req_OFF.Wait(wait_eq_l_u_req_off_cts.Token);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
             }
-            catch (OperationCanceledException ex)
-            {
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
-            }
             catch (Exception ex)
             {
+                LOG.Critical(ex);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
             }
@@ -426,13 +422,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
                 return (true, AlarmCodes.None);
             }
-            catch (OperationCanceledException ex)
-            {
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
-            }
             catch (Exception ex)
             {
+                LOG.Critical(ex);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
             }
