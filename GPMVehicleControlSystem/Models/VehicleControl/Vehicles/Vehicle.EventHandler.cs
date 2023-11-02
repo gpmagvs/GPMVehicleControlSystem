@@ -31,6 +31,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class Vehicle
     {
         private bool IsLaserRecoveryHandled = false;
+        private bool IsAutoControlRechargeCircuitSuitabtion
+        {
+            get
+            {
+                return Remote_Mode == REMOTE_MODE.OFFLINE && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch);
+            }
+        }
         private bool IsNoObstacleAroundAGV => WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) &&
             WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) &&
             WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) &&
@@ -78,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
                 var previousPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == previousTag);
                 if (previousPoint != null)
@@ -90,7 +97,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                         Task.Factory.StartNew(async () =>
                         {
-                            await Task.Delay(10);
                             await WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
                         });
                     }
@@ -100,15 +106,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
         {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
-                if (lastVisitedMapPoint.IsCharge)
+                var currentPt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == BarcodeReader.CurrentTag);
+                if (currentPt == null) return;
+
+                if (currentPt.IsCharge)
                 {
                     if (WagoDO.GetState(DO_ITEM.Recharge_Circuit))
                         return;
                     Task.Factory.StartNew(async () =>
                     {
-                        await Task.Delay(1000);
                         await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
                     });
                 }
