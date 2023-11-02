@@ -219,12 +219,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
             try
             {
-                if (status == TASK_RUN_STATUS.ACTION_FINISH)
+                if (status == TASK_RUN_STATUS.ACTION_FINISH && !IsTaskCancel)
                 {
+
                     IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel == null ? false : ExecutingTaskModel.isSegmentTask;
 
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
@@ -244,7 +245,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await WaitAlarmCodeReported(alarm_tracking);
                     }
-                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination);
+                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination, IsTaskCancel);
                 }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {

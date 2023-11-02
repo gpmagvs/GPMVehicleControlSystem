@@ -417,6 +417,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = false;
                     LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
                     Sub_Status = SUB_STATUS.IDLE;
