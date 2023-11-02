@@ -673,6 +673,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             var cst_id_expect = RunningTaskData.CST.First().CST_ID.Trim();
+
+            if (cst_id_expect == "")
+                return (true, AlarmCodes.None);
+
             var reader_valid_id = Agv.CSTReader.ValidCSTID.Trim();
             var reader_actual_read_id = Agv.CSTReader.Data.data.Trim().ToUpper();
 
