@@ -42,22 +42,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
                 if (result.success)
+                {
+
                     LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
+                    if (IsAGVSRequest && mode == REMOTE_MODE.OFFLINE && AutoOnlineRaising)
+                    {
+                        Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(1000);
+                            while (Sub_Status != SUB_STATUS.IDLE)
+                                await Task.Delay(1000);
+                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
+                            bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
+                            AutoOnlineRaising = false;
+                        });
+                    }
+                }
                 else
                     LOG.ERROR($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
-
-                if (IsOnlineButDissconnected && mode == REMOTE_MODE.OFFLINE)
-                {
-                    IsOnlineButDissconnected = false;
-                    Task.Factory.StartNew(async () =>
-                    {
-                        await Task.Delay(1000);
-                        LOG.WARN($"因為與派車系統斷線重新連線，造成下線車載強制請求變更Online模式為 ONLINE");
-                        bool reOnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
-                        LOG.WARN($"車載強制請求變更Online模式為 ONLINE Result={reOnlineSuccess}");
-                    });
-                }
-
                 return result.success;
             }
             else
@@ -67,13 +69,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode, bool bypassStatusCheck = false)
         {
-            if (bypassStatusCheck == false && ExecutingTaskModel != null && Sub_Status == SUB_STATUS.RUN)
-            {
-                return (false, RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing);
-            }
-
             var currentTag = BarcodeReader.CurrentTag;
-
             if (mode == REMOTE_MODE.ONLINE && Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);

@@ -235,14 +235,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (_Sub_Status != value)
                 {
-                    _Sub_Status = value;
                     try
                     {
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
                                 SetAGV_TR_REQ(false);
-                            if (value != SUB_STATUS.Initializing)
+                            if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
                                 BuzzerPlayer.Alarm();
                             DirectionLighter.CloseAll(1000);
                             StatusLighter.DOWN();
@@ -262,6 +261,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     catch (Exception ex)
                     {
                     }
+                    _Sub_Status = value;
                 }
             }
         }
@@ -359,8 +359,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
-            AGVS.OnOnlineStateQueryFail += AGVS_OnOnlineStateQueryFail;
             AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
+            AGVS.OnDisconnected += AGVS_OnDisconnected;
             AGVS.OnPingFail += (sender, arg) =>
             {
                 LOG.TRACE($"AGVS Network Ping Fail.... ");
@@ -374,6 +374,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
+
+
         private void EmulatorInitialize()
         {
             if (Parameters.SimulationMode)
@@ -597,14 +599,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
 
-        private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
-        {
-        }
-
-        bool IsOnlineButDissconnected = false;
         private void AGVS_OnOnlineStateQueryFail(object? sender, EventArgs e)
         {
-            IsOnlineButDissconnected = Remote_Mode == REMOTE_MODE.ONLINE;
         }
 
         private Task WagoDIInit()

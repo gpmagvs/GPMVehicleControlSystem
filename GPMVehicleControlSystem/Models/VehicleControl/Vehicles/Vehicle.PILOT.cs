@@ -17,6 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         private string TaskName = "";
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
+        internal bool AutoOnlineRaising = false;
         public enum EQ_HS_METHOD
         {
             E84,
@@ -242,6 +243,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+                bool needReOnline = false;
+                if (!AGVS.IsConnected() && !_RunTaskData.IsLocalTask)
+                {
+                    if (status != TASK_RUN_STATUS.ACTION_FINISH)
+                    {
+                        LOG.ERROR($"AGVs disconnected, Task Status-{status} Feedback Bypass");
+                        return;
+                    }
+                    else
+                    {
+                        LOG.ERROR($"Task Status-{status} need waiting AGVs connection restored..");
+                        while (!AGVS.IsConnected())
+                        {
+                            await Task.Delay(1000);
+                        }
+                        LOG.INFO($"Connection of AGVs is restored now !! . Task Status-{status} will reported out ");
+                        needReOnline = true;
+                    }
+                }
+
                 IsActionFinishTaskFeedbackExecuting = status == TASK_RUN_STATUS.ACTION_FINISH;
                 if (status == TASK_RUN_STATUS.ACTION_FINISH && !IsTaskCancel)
                 {
@@ -279,6 +300,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTaskModel?.Abort();
                         ExecutingTaskModel?.Dispose();
                         ExecutingTaskModel = null;
+                    }
+                    if (needReOnline | (!_RunTaskData.IsLocalTask && Remote_Mode == REMOTE_MODE.OFFLINE))
+                    {
+                        //到這AGVs連線已恢復
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(1000);
+                            while (Sub_Status != SUB_STATUS.IDLE)
+                                await Task.Delay(1000);
+                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
+                            bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
+                            AutoOnlineRaising = false;
+
+                        });
+                        AutoOnlineRaising = true;
                     }
                 }
                 IsActionFinishTaskFeedbackExecuting = false;

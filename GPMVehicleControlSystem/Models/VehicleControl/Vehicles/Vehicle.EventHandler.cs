@@ -82,7 +82,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 };
             }
         }
+        private void AGVS_OnDisconnected(object? sender, EventArgs e)
+        {
+            Remote_Mode = REMOTE_MODE.OFFLINE;
+        }
+        private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
+        {
 
+        }
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
