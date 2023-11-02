@@ -963,7 +963,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
             });
-            await Task.Delay(1500);
+            await Task.Delay(500);
             IsResetAlarmWorking = false;
             return;
         }

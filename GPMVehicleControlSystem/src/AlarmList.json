@@ -477,7 +477,7 @@
   {
     "Code": 1000,
     "Description": "Switch Type Error",
-    "CN": "AGV旋鈕異常"
+    "CN": "AGV煞車旋鈕狀態異常"
   },
   {
     "Code": 1001,

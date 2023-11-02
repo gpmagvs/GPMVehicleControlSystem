@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
             {
-                bool allow_added = OnAlarmHappened(_Current_Alarm_Code);
+                bool allow_added = await OnAlarmHappened(_Current_Alarm_Code);
                 if (!allow_added)
                 {
                     _Current_Alarm_Code = AlarmCodes.None;
@@ -46,11 +46,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 LOG.Critical($"{location} Driver Alarm , Code=_{_Current_Alarm_Code}({_driverState.errorCode})");
             }
-            if(_Current_Alarm_Code== AlarmCodes.Other_error && location == DRIVER_LOCATION.FORK)
+            if (_Current_Alarm_Code == AlarmCodes.Other_error && location == DRIVER_LOCATION.FORK)
             {
                 _Current_Alarm_Code = AlarmCodes.Fork_Pose_Change_Too_Large;
             }
-            Current_Alarm_Code = _Current_Alarm_Code;
+            await Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                if (((DriverState)StateData).errorCode == 0)
+                    return;
+                Current_Alarm_Code = _Current_Alarm_Code;
+            });
         }
     }
 }

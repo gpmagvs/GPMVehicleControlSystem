@@ -77,13 +77,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CommonEventsRegist()
         {
             base.CommonEventsRegist();
-            ForkLifter.Driver.OnAlarmHappened += (alarm_code) =>
+            ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
                 {
-                    bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
-                    bool isResetAlarmProcessing = IsResetAlarmWorking;
-                    return !isEMOING && !isResetAlarmProcessing;
+                    Task<bool> state = await Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(1000);
+                        bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
+                        if (isEMOING)
+                            return false;
+                        bool isResetAlarmProcessing = IsResetAlarmWorking;
+                        return !isResetAlarmProcessing;
+                    });
+                    bool isAlarmNeedAdd = await state;
+                    return isAlarmNeedAdd;
                 }
                 else
                 {
@@ -207,7 +215,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
-            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Busy, HandleWheelDriverStatusError);
         }
 
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)
