@@ -82,6 +82,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
+
+            if (IsActionFinishTaskFeedbackExecuting)
+            {
+                LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
+            }
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (IsActionFinishTaskFeedbackExecuting)
+            {
+                if (cts.IsCancellationRequested)
+                {
+                    taskfeedbackCanceTokenSoruce?.Cancel();
+                    IsActionFinishTaskFeedbackExecuting = false;
+                    break;
+                }
+                await Task.Delay(1);
+            }
+            LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
+
             AGVC.OnAGVCActionChanged = null;
             if (ExecutingTaskModel != null)
                 ExecutingTaskModel.Dispose();
@@ -212,7 +230,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddWarning(AlarmCodes.Measure_Result_Data_Report_Fail);
             }
         }
-
+        private bool IsActionFinishTaskFeedbackExecuting = false;
+        private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
         /// <summary>
         /// 上報任務狀態
         /// </summary>
@@ -223,16 +242,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+                IsActionFinishTaskFeedbackExecuting = status == TASK_RUN_STATUS.ACTION_FINISH;
                 if (status == TASK_RUN_STATUS.ACTION_FINISH && !IsTaskCancel)
                 {
 
                     IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel == null ? false : ExecutingTaskModel.isSegmentTask;
 
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
+                    {
+                        IsActionFinishTaskFeedbackExecuting = false;
                         return;
+                    }
                     else
                         _RunTaskData.IsActionFinishReported = true;
                 }
+                taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
                 await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
                 if (!_RunTaskData.IsLocalTask)
@@ -245,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await WaitAlarmCodeReported(alarm_tracking);
                     }
-                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination, IsTaskCancel);
+                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
                 }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
@@ -257,11 +281,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTaskModel = null;
                     }
                 }
+                IsActionFinishTaskFeedbackExecuting = false;
             }
             catch (Exception ex)
             {
                 LOG.Critical(ex);
             }
+            IsActionFinishTaskFeedbackExecuting = false;
         }
 
         private async Task WaitAlarmCodeReported(AlarmCodes alarm_tracking)
