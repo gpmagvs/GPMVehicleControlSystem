@@ -256,7 +256,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                         _RunTaskData.IsActionFinishReported = true;
                 }
-                taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
+                taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
                 if (!_RunTaskData.IsLocalTask)
