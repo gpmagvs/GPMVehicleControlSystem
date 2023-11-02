@@ -24,6 +24,7 @@ using GPMVehicleControlSystem.Tools;
 using System.Diagnostics;
 using GPMVehicleControlSystem.Models.Emulators;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
+using GPMVehicleControlSystem.Models.NaviMap;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -43,6 +44,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
+            BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+            BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;
@@ -55,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         Task<bool> state = await Task.Factory.StartNew(async () =>
                         {
-                            await Task.Delay(1000);
+                            await Task.Delay(10);
                             bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
                             if (isEMOING)
                                 return false;
@@ -70,6 +73,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return true;
                     }
                 };
+            }
+        }
+
+        private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
+        {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            {
+                var previousPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == previousTag);
+                if (previousPoint != null)
+                {
+                    if (previousPoint.IsCharge)
+                    {
+                        if (!WagoDO.GetState(DO_ITEM.Recharge_Circuit))
+                            return;
+
+                        Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(10);
+                            await WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+                        });
+                    }
+                }
+            }
+        }
+
+        private void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+        {
+            if (Operation_Mode == OPERATOR_MODE.MANUAL && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            {
+                if (lastVisitedMapPoint.IsCharge)
+                {
+                    if (WagoDO.GetState(DO_ITEM.Recharge_Circuit))
+                        return;
+                    Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(1000);
+                        await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
+                    });
+                }
             }
         }
 
@@ -380,7 +422,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!status)
             {
                 await Task.Delay(1000);
-                if (!WagoDI.GetState(DI_ITEM.EMO)| IsResetAlarmWorking)
+                if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
                     return;
                 clsIOSignal signal = (clsIOSignal)sender;
                 var input = signal?.Input;

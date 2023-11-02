@@ -20,7 +20,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool Auto_Read_CST_ID_When_No_Data_But_Has_Cargo { get; set; } = false;
         public bool ForkLifer_Enable { get; set; } = false;
         public bool FrontLighterFlashWhenNormalMove { get; set; } = false;
-
         public bool CheckObstacleWhenForkInit { get; set; } = true;
         public bool LocalTaskCheckCargoExist { get; set; } = false;
         /// <summary>
@@ -47,6 +46,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool ForkNoInitializeWhenPoseIsHome { get; set; } = false;
         public bool BuzzerOn { get; set; } = true;
         public bool EQHandshakeSimulationAutoRun { get; set; } = true;
+
+        public bool Recharge_Circuit_Auto_Control_In_ManualMode { get; set; } = true;
+
         public int LastVisitedTag { get; set; } = 8;
 
         /// <summary>

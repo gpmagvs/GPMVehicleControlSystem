@@ -9,6 +9,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.BARCODE_READER;
 
+        public event EventHandler OnAGVReachingTag;
+        public event EventHandler<uint> OnAGVLeavingTag;
+
         public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;
         public int CurrentTag => Data == null ? 0 : (int)Data.tagID;
 
@@ -39,9 +42,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (currentTag != PreviousTag)
             {
                 if (currentTag == 0)
+                {
                     LOG.INFO($"Leave Tag {PreviousTag}", true);
+                    OnAGVLeavingTag?.Invoke(this, PreviousTag);
+                }
                 else
+                {
                     LOG.INFO($"Reach Tag {currentTag}", true);
+                    OnAGVReachingTag?.Invoke(this, EventArgs.Empty);
+                }
 
             }
 
