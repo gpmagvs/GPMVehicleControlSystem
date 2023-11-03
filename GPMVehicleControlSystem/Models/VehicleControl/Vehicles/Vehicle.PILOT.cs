@@ -244,11 +244,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 bool needReOnline = false;
-                if (!AGVS.IsConnected() && !_RunTaskData.IsLocalTask)
+                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && !_RunTaskData.IsLocalTask)
                 {
                     if (status != TASK_RUN_STATUS.ACTION_FINISH)
                     {
-                        LOG.ERROR($"AGVs disconnected, Task Status-{status} Feedback Bypass");
+                        LOG.ERROR($"AGVs {(AGVS.IsGetOnlineModeTrying ? "Trying Get OnlineMode Now" : "disconnected")}, Task Status-{status} Feedback Bypass");
                         return;
                     }
                     else

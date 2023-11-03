@@ -9,6 +9,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        internal REMOTE_MODE RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
         private REMOTE_MODE _Remote_Mode = REMOTE_MODE.OFFLINE;
         /// <summary>
         /// Online/Offline 模式
@@ -32,6 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool OnlineModeChangingFlag = false;
 
+                               
 
         internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {

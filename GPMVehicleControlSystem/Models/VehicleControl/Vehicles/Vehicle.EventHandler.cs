@@ -82,19 +82,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 };
             }
         }
-        private void AGVS_OnDisconnected(object? sender, EventArgs e)
-        {
-            AutoOnlineRaising = _Remote_Mode == REMOTE_MODE.ONLINE;
-            Remote_Mode = REMOTE_MODE.OFFLINE;
-        }
-        private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
-        {
-            if (AutoOnlineRaising && Sub_Status == SUB_STATUS.IDLE && !IsActionFinishTaskFeedbackExecuting)
-            {
-                HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
-                AutoOnlineRaising = false;
-            }
-        }
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)

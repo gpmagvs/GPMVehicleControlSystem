@@ -347,33 +347,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.rossocket = (RosSocket)sender;
         }
 
-        private void AGVSInit()
-        {
-            string vms_ip = Parameters.Connections["AGVS"].IP;
-            int vms_port = Parameters.Connections["AGVS"].Port;
-            //AGVS
-            AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
-            AGVS.SetLogFolder(Path.Combine(Parameters.LogFolder, "AGVS_Message_Log"));
-            AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
-            AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
-            AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
-            AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
-            AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
-            AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
-            AGVS.OnDisconnected += AGVS_OnDisconnected;
-            AGVS.OnPingFail += (sender, arg) =>
-            {
-                LOG.TRACE($"AGVS Network Ping Fail.... ");
-                AlarmManager.AddAlarm(AlarmCodes.AGVS_PING_FAIL);
-            };
-            AGVS.OnPingSuccess += (sender, arg) =>
-            {
-                LOG.TRACE($"AGVS Network restored. ");
-                AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
-            };
-            AGVS.Start();
-            AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
-        }
+       
 
 
         private void EmulatorInitialize()
