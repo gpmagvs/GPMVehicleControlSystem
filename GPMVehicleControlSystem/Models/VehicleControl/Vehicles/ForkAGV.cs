@@ -215,7 +215,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
-            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Busy, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleWheelDriverStatusError);
         }
 
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)

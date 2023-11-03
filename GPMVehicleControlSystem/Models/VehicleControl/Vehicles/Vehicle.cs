@@ -909,7 +909,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Operation_Mode = mode;
             if (mode == OPERATOR_MODE.AUTO)
             {
-                await Laser.AllLaserActive();
+                await Laser.FrontBackLasersEnable(true, true);
+                await Laser.SideLasersEnable(false);
             }
             else
             {

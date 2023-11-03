@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-           
+
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
@@ -147,8 +147,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
-            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Busy_1, HandleWheelDriverStatusError);
-            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Busy_2, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleWheelDriverStatusError);
 
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
@@ -425,18 +425,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected async void HandleWheelDriverStatusError(object? sender, bool status)
         {
-            if (!status)
+            if (status)
             {
                 await Task.Delay(1000);
                 if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
                     return;
                 clsIOSignal signal = (clsIOSignal)sender;
                 var input = signal?.Input;
-                if (input == DI_ITEM.Horizon_Motor_Busy_1)
+                if (input == DI_ITEM.Horizon_Motor_Alarm_1)
                     AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Left, false);
-                if (input == DI_ITEM.Horizon_Motor_Busy_2)
+                if (input == DI_ITEM.Horizon_Motor_Alarm_2)
                     AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Right, false);
-                if (input == DI_ITEM.Vertical_Motor_Busy)
+                if (input == DI_ITEM.Vertical_Motor_Alarm)
                     AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
             }
         }
