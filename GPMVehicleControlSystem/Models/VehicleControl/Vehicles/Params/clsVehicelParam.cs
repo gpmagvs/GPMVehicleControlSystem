@@ -59,6 +59,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 送Action任務給車控時等待Action狀態變為Active的Timeout時間(秒)
         /// </summary>
         public double ActionTimeout { get; set; } = 5;
+        public double VehielLength { get; set; } = 145.0;
         /// <summary>
         /// 訂閱/Module_Information接收處理數據的週期
         /// </summary>
@@ -146,6 +147,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
     public class clsForkAGVParams
     {
+        /// <summary>
+        /// 牙叉伸出後總車長(cm)
+        /// </summary>
+        public double VehielLengthWitchForkArmExtend { get; set; } = 160.0;
         public double UplimitPose { get; set; } = 35;
         public double DownlimitPose { get; set; } = 0;
         public bool NoWaitForkArmFinishAndMoveOutInWorkStation { get; set; } = true;

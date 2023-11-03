@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
 
         private Vehicle agv => StaStored.CurrentVechicle;
-      
+
         [HttpGet("Where_r_u")]
         public async Task Where_r_u()
         {
@@ -86,12 +86,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 LOG.WARN($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 string _message = "";
+
                 if (result.return_code == RETURN_CODE.AGV_Need_Park_Above_Tag)
                     _message = "AGV必須停在TAG上";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online)
                     _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
                 else if (result.return_code == RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing)
                     _message = "AGV執行任務中不可切換Online/Offline Mode";
+                else if (result.return_code == RETURN_CODE.AGV_Not_Initialized)
+                    _message = "AGV尚未完成初始化時不可上線";
                 else
                     _message = result.return_code.ToString();
                 return Ok(new

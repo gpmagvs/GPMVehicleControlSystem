@@ -301,7 +301,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTaskModel?.Dispose();
                         ExecutingTaskModel = null;
                     }
-                    if (needReOnline | (!_RunTaskData.IsLocalTask && Remote_Mode == REMOTE_MODE.OFFLINE))
+                    if (needReOnline | (!_RunTaskData.IsLocalTask && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE))
                     {
                         //到這AGVs連線已恢復
                         _ = Task.Factory.StartNew(async () =>

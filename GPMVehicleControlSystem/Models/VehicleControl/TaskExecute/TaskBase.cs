@@ -119,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Task.Delay(10);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
-                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+                if (ForkLifter != null)
                 {
                     if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
                     {
@@ -140,12 +140,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
                     {
-                        var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
-                        if (!forkGoTeachPositionResult.success)
+                        if (!Agv.Parameters.LDULD_Task_No_Entry | action == ACTION_TYPE.Charge)
                         {
-                            return forkGoTeachPositionResult.alarm_code;
+
+                            var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
+                            if (!forkGoTeachPositionResult.success)
+                            {
+                                return forkGoTeachPositionResult.alarm_code;
+                            }
                         }
                     }
                 }

@@ -259,6 +259,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                     {
                         await Task.Delay(1);
+                        bool isStopState = !DOModule.GetState(DO_ITEM.Fork_Extend) && !DOModule.GetState(DO_ITEM.Fork_Shortend);
+                        if (isStopState)
+                            return (true, "");
+                        if (!DIModule.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor))
+                        {
+                            ForkARMStop();
+                            return (false, "前端障礙物檢出");
+                        }
                         if (cts.IsCancellationRequested)
                             return (false, "Timeout");
                     }
@@ -291,6 +299,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     {
                         await Task.Delay(1);
+                        bool isStopState = !DOModule.GetState(DO_ITEM.Fork_Extend) && !DOModule.GetState(DO_ITEM.Fork_Shortend);
+                        if (isStopState)
+                            return (true, "");
                         if (cts.IsCancellationRequested)
                             return (false, "Timeout");
                     }
@@ -407,7 +418,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 while (CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
                     await Task.Delay(1000);
-                    if(CurrentForkLocation == FORK_LOCATIONS.HOME)
+                    if (CurrentForkLocation == FORK_LOCATIONS.HOME)
                         break;
                     if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
                     {

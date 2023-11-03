@@ -74,7 +74,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var currentTag = BarcodeReader.CurrentTag;
             if (mode == REMOTE_MODE.ONLINE && Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
-                await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
+                if (!IsInitialized)
+                {
+                    return (false, RETURN_CODE.AGV_Not_Initialized);
+                }
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
                 if (!bypassStatusCheck && Parameters.ForbidToOnlineTags.Contains(currentTag))
@@ -84,6 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online);
                 }
             }
+            await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             var _oriMode = Remote_Mode;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
             if (!result.success)

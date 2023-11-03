@@ -108,7 +108,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             bool isForkWorking = (forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag;
             string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkAction;
 
-            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag && action!="stop")
+            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag && action != "stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
             if (action == "home" | action == "orig")
@@ -125,7 +125,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 if (pose < forkAgv.Parameters.ForkAGV.DownlimitPose)
                     pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
-                else if (pose> forkAgv.Parameters.ForkAGV.UplimitPose)
+                else if (pose > forkAgv.Parameters.ForkAGV.UplimitPose)
                     pose = forkAgv.Parameters.ForkAGV.UplimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
                 return Ok(new { confirm = result.success, message = result.message });
@@ -146,13 +146,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
-                return Ok(new { confirm = true});
+                return Ok(new { confirm = true });
             }
             else if (action == "down_limit")
             {
                 var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
-                return Ok(new { confirm = true});
+                return Ok(new { confirm = true });
             }
             else if (action == "stop")
             {
@@ -173,20 +173,31 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Extend")]
         public async Task<IActionResult> ForkArmExtend()
         {
-            if (forkAgv.lastVisitedMapPoint.IsChargeAble())
+            if(agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                return Ok(new { confirm = false, message = "禁止在AGV移動過程中伸出牙叉" });
+            if (agv.BarcodeReader.CurrentTag != 0)
             {
-                return Ok(new { confirm = false, message = "AGV 位於充電站內禁止牙叉伸出" });
+                var currentTag = agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == agv.BarcodeReader.CurrentTag);
+                if (currentTag != null)
+                {
+                    if (currentTag.IsCharge)
+                    {
+                        return Ok(new { confirm = false, message = "AGV 位於充電站內禁止牙叉伸出" });
+                    }
+                }
             }
-
-            var result = await forkAgv.ForkLifter.ForkExtendOutAsync();
-            return Ok(new { confirm = result.confirm, message = result.message });
+            else if (!agv.WagoDI.GetState(VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Frontend_Abstacle_Sensor))
+            {
+                return Ok(new { confirm = false, message = "前端障礙物檢出!" });
+            }
+            forkAgv.ForkLifter.ForkExtendOutAsync();
+            return Ok(new { confirm = true, message = "" });
         }
         [HttpGet("Fork/Arm/Shorten")]
         public async Task<IActionResult> ForkArmShorten()
         {
-            var result = await forkAgv.ForkLifter.ForkShortenInAsync();
-            return Ok(new { confirm = result.confirm, message = result.message });
-
+            forkAgv.ForkLifter.ForkShortenInAsync();
+            return Ok(new { confirm = true, message = "" });
         }
         [HttpGet("Fork/Arm/Stop")]
         public async Task<IActionResult> ForkArmStop()
