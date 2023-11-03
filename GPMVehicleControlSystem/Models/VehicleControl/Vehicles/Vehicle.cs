@@ -283,7 +283,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
                 int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
-                AGVSMessageFactory.Setup(Parameters.SID, Parameters.VehicleName);
                 WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
                 {
                     AgvType = Parameters.AgvType

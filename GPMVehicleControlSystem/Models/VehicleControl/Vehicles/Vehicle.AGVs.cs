@@ -14,8 +14,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             int vms_port = Parameters.Connections["AGVS"].Port;
             //AGVS
             AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
+            AGVS.Setup(Parameters.SID, Parameters.VehicleName);
             AGVS.SetLogFolder(Path.Combine(Parameters.LogFolder, "AGVS_Message_Log"));
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
+            AGVS.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
+            AGVS.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
@@ -39,17 +42,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void AGVS_OnDisconnected(object? sender, EventArgs e)
         {
-            RemoteModeSettingWhenAGVsDisconnect = _Remote_Mode;
+            AlarmManager.AddWarning(AlarmCodes.AGVs_Disconnected);
+            RemoteModeSettingWhenAGVsDisconnect = _Remote_Mode == REMOTE_MODE.OFFLINE ? REMOTE_MODE.OFFLINE : REMOTE_MODE.ONLINE;
             AutoOnlineRaising = _Remote_Mode == REMOTE_MODE.ONLINE;
             Remote_Mode = REMOTE_MODE.OFFLINE;
         }
         private void AGVS_OnConnectionRestored(object? sender, EventArgs e)
         {
-            if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && Sub_Status == SUB_STATUS.IDLE && !IsActionFinishTaskFeedbackExecuting)
+            AlarmManager.ClearAlarm(AlarmCodes.AGVs_Disconnected);
+            Task.Factory.StartNew(async () =>
             {
-                HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
-                AutoOnlineRaising = false;
-            }
+                await Task.Delay(1000);
+                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && Sub_Status == SUB_STATUS.IDLE)
+                {
+                    HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
+                }
+            });
         }
     }
 }

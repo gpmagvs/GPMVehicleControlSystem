@@ -33,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool OnlineModeChangingFlag = false;
 
-                               
+
 
         internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
@@ -45,16 +45,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
                 if (result.success)
                 {
-
+                    RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
                     LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
-                    if (IsAGVSRequest && mode == REMOTE_MODE.OFFLINE && AutoOnlineRaising)
+                    if (IsAGVSRequest && mode == REMOTE_MODE.OFFLINE && !IsActionFinishTaskFeedbackExecuting && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE)
                     {
                         Task.Factory.StartNew(async () =>
                         {
                             await Task.Delay(1000);
                             while (Sub_Status != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
-                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
+                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
                             bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
                         });

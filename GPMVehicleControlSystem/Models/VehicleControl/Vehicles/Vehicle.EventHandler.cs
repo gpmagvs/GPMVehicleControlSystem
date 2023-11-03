@@ -47,8 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-            AGVSMessageFactory.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
-            AGVSMessageFactory.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
+           
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;

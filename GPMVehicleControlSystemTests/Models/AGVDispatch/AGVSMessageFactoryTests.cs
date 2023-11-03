@@ -26,8 +26,8 @@ namespace GPMVehicleControlSystem.Models.AGVDispatch.Tests
         [TestMethod()]
         public void CreateOnlineModeQueryDataTest()
         {
-            byte[] data = AGVSMessageFactory.CreateOnlineModeQueryData(out clsOnlineModeQueryMessage msg);
-            data = AGVSMessageFactory.CreateOnlineModeQueryData(out clsOnlineModeQueryMessage msg2);
+            byte[] data = AGVSMessageFactory.CreateOnlineModeQueryData("AGV_001","001:001:001", out clsOnlineModeQueryMessage msg);
+            data = AGVSMessageFactory.CreateOnlineModeQueryData("AGV_001", "001:001:001", out clsOnlineModeQueryMessage msg2);
             Assert.IsTrue(msg.SystemBytes == 1);
             Assert.IsTrue(msg2.SystemBytes == 2);
             Assert.AreEqual(0xD, data.Last());
