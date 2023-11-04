@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -479,7 +479,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
-                    Sub_Status = SUB_STATUS.IDLE;
+                    //Sub_Status = SUB_STATUS.IDLE;
                     return true;
                 }
                 else
