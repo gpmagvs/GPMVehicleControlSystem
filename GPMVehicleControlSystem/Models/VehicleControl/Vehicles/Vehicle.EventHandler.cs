@@ -43,6 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) &&
             WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
 
+        /// <summary>
+        /// 是否偵測雷測觸發
+        /// </summary>
+        private bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
         protected virtual void CommonEventsRegist()
         {
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
@@ -194,9 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="di_state"></param>
         private async void HandleSideLaserSignal(object? sender, bool di_state)
         {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
-                return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+            if (!IsLaserMonitorActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -250,9 +252,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="e"></param>
         private void HandleLaserArea1SinalChange(object? sender, bool e)
         {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
-                return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+            if (!IsLaserMonitorActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -291,9 +291,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="e"></param>
         private void HandleLaserArea2SinalChange(object? sender, bool e)
         {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
-                return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+
+            if (!IsLaserMonitorActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -329,11 +328,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="sender"></param>
         /// <param name="di_state"></param>
         protected virtual void HandleLaserArea3SinalChange(object? sender, bool di_state)
-        {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
+        {         
+            if (!IsLaserMonitorActived)
                 return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
-                return;
+
             clsIOSignal diState = (clsIOSignal)sender;
 
             bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_3;
