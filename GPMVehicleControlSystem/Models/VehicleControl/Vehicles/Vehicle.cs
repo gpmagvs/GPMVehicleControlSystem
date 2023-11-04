@@ -580,14 +580,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
-                    LOG.INFO("Init done. Laser mode chaged to Bypass");
+                    
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
+                    await Laser.AllLaserDisable();
                     await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
                     DirectionLighter.CloseAll();
                     Sub_Status = SUB_STATUS.IDLE;
+                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
-                    LOG.INFO("Init done");
+                    LOG.INFO("Init done, and Laser mode chaged to Bypass");
                     return (true, "");
                 }
                 catch (TaskCanceledException ex)
