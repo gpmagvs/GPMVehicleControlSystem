@@ -176,12 +176,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
-                    await Task.Delay(200);
-                    await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, isInEQ);
                     if (isInEQ)
                     {
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, true);
                         await Task.Delay(1000);
                         await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
+                    }
+                    else
+                    {
+                        //模擬EQ未等COMPT OFF就提前OFF
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
+                        await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
                     }
 
                 });
@@ -466,11 +472,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
             SetAGVBUSY(false, false);
+            await Task.Delay(200);
             SetAGV_COMPT(true);
             try
             {
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-
                 wait_eq_l_u_req_off_cts.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]));
                 wait_eq_UL_req_OFF.Start();
                 wait_eq_UL_req_OFF.Wait(wait_eq_l_u_req_off_cts.Token);
@@ -568,13 +574,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(1);
             _ = Task.Factory.StartNew(async () =>
             {
-                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
+                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ])
                 {
                     await Task.Delay(1);
 
                     bool isEQReadyOff = !IsEQReadyOn();
                     bool isEQBusyOn = IsEQBusyOn();
-
                     if (isEQReadyOff)
                     {
                         await Task.Delay(500);
@@ -598,12 +603,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
                     {
-                        EQAlarmWhenAGVBusyFlag = true;
-                        AGVC.AbortTask();
-                        Sub_Status = SUB_STATUS.DOWN;
-                        var alarm_code = isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
-                        AlarmManager.AddAlarm(alarm_code, false);
-                        return;
+                        await Task.Delay(500);
+                        if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])//判斷當下是否AGV BUSY ON著
+                        {
+                            EQAlarmWhenAGVBusyFlag = true;
+                            AGVC.AbortTask();
+                            Sub_Status = SUB_STATUS.DOWN;
+                            var alarm_code = isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
+                            AlarmManager.AddAlarm(alarm_code, false);
+                            return;
+                        }
                     }
                 }
 
