@@ -119,9 +119,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
             if (LeftLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
-            bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
-            if (forkFrontendSensorAbnormal)
-                return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 前端障礙物檢出)");
+            //bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+            //if (forkFrontendSensorAbnormal)
+            //    return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 前端障礙物檢出)");
             else
             {
                 return (true, "");
