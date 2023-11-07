@@ -9,7 +9,9 @@ using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.ViewModels;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
@@ -66,6 +68,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+builder.Services.AddDirectoryBrowser();
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = null;
@@ -79,7 +82,25 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseWebSockets();
 app.UseCors(c => c.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+app.UseDefaultFiles();
 app.UseStaticFiles();
+
+var imageFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+var fileProvider = new PhysicalFileProvider(imageFolder);
+var requestPath = "/Download";
+
+// Enable displaying browser links.
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = requestPath
+});
+app.UseDirectoryBrowser(new DirectoryBrowserOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = requestPath
+});
+
 app.UseRouting();
 app.UseVueRouterHistory();
 app.UseAuthorization();

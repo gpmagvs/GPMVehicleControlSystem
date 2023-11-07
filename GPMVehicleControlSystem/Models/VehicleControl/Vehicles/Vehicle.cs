@@ -580,7 +580,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
-                    
+
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
                     await Laser.AllLaserDisable();
                     await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
@@ -739,23 +739,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
             LOG.WARN($"Software EMO!!! {alarmCode}");
-
+            RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
             IsWaitForkNextSegmentTask = false;
             StatusLighter.CloseAll();
             DirectionLighter.CloseAll();
             Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
             Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
-            SetAGV_TR_REQ(false);
+            SetAGV_TR_REQ(false); 
+            AGVC.OnAGVCActionChanged += RaiseActionStatusNoGoal;
             AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
             AlarmManager.AddAlarm(alarmCode);
             AGVSTaskFeedBackReportAndOffline(alarmCode);
-            ExecutingTaskModel?.Dispose();
             DOSettingWhenEmoTrigger();
             StatusLighter.DOWN();
             IsInitialized = false;
-            ExecutingTaskModel = null;
             previousSoftEmoTime = DateTime.Now;
+
+            void RaiseActionStatusNoGoal(ActionStatus status)
+            {
+                LOG.WARN($"[Software EMO] AGVC Status changed to {status}");
+                if (status == ActionStatus.SUCCEEDED)
+                {
+                    Task.Factory.StartNew(async () =>
+                    {
+                        await Task.Delay(1000);
+                        AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                        LOG.WARN($"[Software EMO] Set AGVC Status changed to {ActionStatus.NO_GOAL}");
+                        AGVC.OnAGVCActionChanged -= RaiseActionStatusNoGoal;
+                        ExecutingTaskModel?.Dispose();
+                        ExecutingTaskModel = null;
+                    });
+                }
+            }
         }
 
 

@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models;
+﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.ViewModels.BatteryQuery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,25 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(results);
         }
 
+        [HttpPost("QueryBatteryStatus")]
+        public async Task<IActionResult> QueryBatteryStatus([FromBody] clsBatQueryOptions options)
+        {
+            clsAGVSLogAnaylsis logAnalysiser = new clsAGVSLogAnaylsis();
+            logAnalysiser.logFolder = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), StaStored.CurrentVechicle.Parameters.LogFolder), "AGVS_Message_Log");
+            Console.WriteLine(logAnalysiser.logFolder);
+            var outputs = logAnalysiser.GetRunningStatusDto(options.timedt_range);
+            var batteryStatus = outputs.Select(x => new { Time = x.Time_Stamp, BatteryLevel = x.Electric_Volume.First(), Status = x.AGV_Status });
+            var outputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "battery_status.csv");
+            System.IO.File.WriteAllText(outputFile, "Time,Battery Level,AGV Status\r\n");
+            using (StreamWriter sw = new StreamWriter(outputFile, true))
+            {
+                foreach (var item in batteryStatus)
+                {
+                    sw.WriteLine($"{item.Time},{item.BatteryLevel},{item.Status}");
+                }
+            }
+            return Ok(new { file_path = outputFile, count = batteryStatus.Count() });
+        }
         /// <summary>
         /// 控制充電迴路
         /// </summary>
