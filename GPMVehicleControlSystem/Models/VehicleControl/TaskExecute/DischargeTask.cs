@@ -45,23 +45,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (ForkLifter != null)
             {
-                (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (false, AlarmCodes.None);
-                await RegisterSideLaserTriggerEvent();
-                while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                if (!Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
                 {
-                    ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
-                    if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
-                    {
-                        AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
-                        break;
-                    }
+                    ForkHomeProcess(false);
+                };
+                if (IsNeedWaitForkHome)
+                {
+                    LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                    Task.WaitAll(new Task[] { forkGoHomeTask });
+                    LOG.TRACE($"[Async Action] Fork is Home Now");
                 }
-                await UnRegisterSideLaserTriggerEvent();
-
-                LOG.WARN($"Fork Go Home When AGVC Action Finish , {ForkGoHomeActionResult.confirm}:{ForkGoHomeActionResult.alarm_code}");
-                if (!ForkGoHomeActionResult.confirm)
+                LOG.WARN($"Fork Go Home When AGVC Action Finish , {ForkGoHomeResultAlarmCode}");
+                if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
                 {
-                    return (true, ForkGoHomeActionResult.alarm_code);
+                    return (false, ForkGoHomeResultAlarmCode);
                 }
             }
             return await base.HandleAGVCActionSucceess();
@@ -69,6 +66,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+            if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
+            {
+                ForkHomeProcess(false);
+            }
             return (true, AlarmCodes.None);
         }
 
