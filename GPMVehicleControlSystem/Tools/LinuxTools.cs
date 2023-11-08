@@ -41,7 +41,7 @@ namespace GPMVehicleControlSystem.Tools
                 while (true)
                 {
                     Memory = GetMemUsedMB();
-                    LOG.TRACE($"[Sys-Loading] CPU: Memory:{Memory}Mb");
+                    LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: false);
                     await Task.Delay(TimeSpan.FromSeconds(30));
                 }
             });

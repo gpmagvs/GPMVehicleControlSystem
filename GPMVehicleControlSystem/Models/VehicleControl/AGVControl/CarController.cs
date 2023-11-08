@@ -151,10 +151,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             while (!IsConnected())
             {
                 await Task.Delay(1000);
-                LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{Port}) Processing...");
+                LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
                 try
                 {
-                    rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{Port}"));
+                    rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{VMSPort}"));
                     if (!rosSocket.protocol.IsAlive())
                     {
                         AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
@@ -171,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             AlarmManager.ClearAlarm(AlarmCodes.ROS_Bridge_server_Disconnect);
             rosSocket.protocol.OnClosed += Protocol_OnClosed;
-            LOG.INFO($"ROS Connected ! ws://{IP}:{Port}");
+            LOG.INFO($"ROS Connected ! ws://{IP}:{VMSPort}");
             SubscribeROSTopics();
             AdertiseROSServices();
             InitTaskCommandActionClient();

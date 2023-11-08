@@ -99,7 +99,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.INFO($"New Task : \r\nTask Name:{taskDownloadData.Task_Name}\r\n Task_Simplex:{taskDownloadData.Task_Simplex}\r\nTask_Sequence:{taskDownloadData.Task_Sequence}");
 
         }
-
+        public int ModBusTcpPort
+        {
+            get
+            {
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                {
+                    return data.ModbusTcpPort;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+        }
+        public WORKSTATION_HS_METHOD eqHandshakeMode
+        {
+            get
+            {
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                {
+                    WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
+                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
+                    return mode;
+                }
+                else
+                {
+                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
+                    return WORKSTATION_HS_METHOD.HS;
+                }
+            }
+        }
+        public CARGO_TRANSFER_MODE CargoTransferMode
+        {
+            get
+            {
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                {
+                    return data.CargoTransferMode;
+                }
+                else
+                    return CARGO_TRANSFER_MODE.EQ_Pick_and_Place;
+            }
+        }
         /// <summary>
         /// 執行任務
         /// </summary>
@@ -149,7 +191,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (!Agv.Parameters.LDULD_Task_No_Entry | action == ACTION_TYPE.Charge)
                         {
 
-                            var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_);
+                            var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_);
                             if (!forkGoTeachPositionResult.success)
                             {
                                 return forkGoTeachPositionResult.alarm_code;

@@ -39,10 +39,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (mode != Remote_Mode)
             {
+                if (RemoteModeRequestingflag)
+                    return false;
+                RemoteModeRequestingflag = true;
                 string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
                 LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
 
                 (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
+                RemoteModeRequestingflag = false;
                 if (result.success)
                 {
                     RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
@@ -69,6 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return true;
             }
         }
+        private bool RemoteModeRequestingflag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode, bool bypassStatusCheck = false)
         {
             var currentTag = BarcodeReader.CurrentTag;
@@ -90,6 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             var _oriMode = Remote_Mode;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
+    
             if (!result.success)
             {
                 if (mode == REMOTE_MODE.OFFLINE && result.return_code == RETURN_CODE.System_Error)
@@ -105,6 +111,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
                 Remote_Mode = mode;
+
+
             return result;
         }
 

@@ -115,14 +115,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public clsDIModule(string IP, int Port, int IO_Interval_ms = 5)
         {
             this.IP = IP;
-            this.Port = Port;
+            this.VMSPort = Port;
             this.IO_Interval_ms = IO_Interval_ms;
             ReadIOSettingsFromIniFile();
         }
         public clsDIModule(string IP, int Port, clsDOModule DoModuleRef, int IO_Interval_ms = 5)
         {
             this.IP = IP;
-            this.Port = Port;
+            this.VMSPort = Port;
             this.DoModuleRef = DoModuleRef;
             this.IO_Interval_ms = IO_Interval_ms;
             LOG.TRACE($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
@@ -169,13 +169,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override async Task<bool> Connect()
         {
-            if (IP == null | Port <= 0)
+            if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
             if (!ModuleDisconnected)
                 return true;
             try
             {
-                client = new TcpClient(IP, Port);
+                client = new TcpClient(IP, VMSPort);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.ReadTimeout = 500;
                 master.Transport.WriteTimeout = 5000;

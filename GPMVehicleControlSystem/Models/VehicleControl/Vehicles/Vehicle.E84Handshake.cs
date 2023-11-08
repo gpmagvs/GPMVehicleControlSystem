@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
@@ -511,6 +512,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+
         #endregion
         private async Task WatchE84EQGOSignalWhenHSStart()
         {
@@ -550,21 +552,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        LOG.ERROR($"WatchE84EQGOSignalWhenHS Process end[{ex.Message}]");
                         break;
                     }
                 }
+                LOG.TRACE($"WatchE84EQGOSignalWhenHS Process end");
             });
-        }
-
-        internal void StopAllHandshakeTimer()
-        {
-            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
-            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
-            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
-            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
-            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
         }
 
         private async Task WatchE84AlarmWhenAGVBUSY()
@@ -588,36 +583,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             LOG.WARN($"PID_EQ_READY Signal Flick!!!!!!!!!![WhenAGVBUSY]");
                     }
                     ////AGV作動中發生AGV異常
-                    if (Sub_Status == SUB_STATUS.DOWN)
+                    if (Sub_Status == SUB_STATUS.DOWN && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
                     {
-                        AGVAlarmWhenAGVBusyFlag = true;
-                        AGVC.AbortTask();
-                        SetAGV_TR_REQ(false);
                         if (isEQReadyOff | isEQBusyOn | !IsEQGOOn())
                             return;
-                        LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
+                        RaiseAGVAlarmWhenHS();
                         return;
                     }
 
-
-                    if (isEQReadyOff | isEQBusyOn)//AGV作動中發生EQ異常
+                    if ((isEQReadyOff | isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])//AGV作動中發生EQ異常
                     {
-                        await Task.Delay(500);
-                        if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])//判斷當下是否AGV BUSY ON著
-                        {
-                            EQAlarmWhenAGVBusyFlag = true;
-                            AGVC.AbortTask();
-                            Sub_Status = SUB_STATUS.DOWN;
-                            var alarm_code = isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
-                            AlarmManager.AddAlarm(alarm_code, false);
-                            return;
-                        }
+                        EQAlarmWhenAGVBusyFlag = true;
+                        AGVC.AbortTask();
+                        Sub_Status = SUB_STATUS.DOWN;
+                        var alarm_code = isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
+                        AlarmManager.AddAlarm(alarm_code, false);
+                        LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end.[isEQReadyOff/isEQBusyOn]");
+                        return;
                     }
+                } ////AGV作動中發生AGV異常
+                if (Sub_Status == SUB_STATUS.DOWN && IsEQGOOn())
+                {
+                    RaiseAGVAlarmWhenHS();
                 }
-
+                LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end[AGV_BUSY OFF/AGV_TR_REQ OFF]");
             });
         }
+
+        private void RaiseAGVAlarmWhenHS()
+        {
+            AGVAlarmWhenAGVBusyFlag = true;
+            AGVC.AbortTask();
+            SetAGV_TR_REQ(false);
+            LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
+            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
+            LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end.[Handshake_Fail_AGV_DOWN]");
+        }
+
         private async Task WatchE84EQAlarmWhenEQBUSY(CancellationTokenSource waitEQSignalCST)
         {
             AGVAlarmWhenEQBusyFlag = false;
@@ -646,7 +648,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
                         }
-                        break;
+                        LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[AGVSub_Status DOWN]");
+                        return;
                     }
 
                     if (isEQReadyOFF && Sub_Status == SUB_STATUS.RUN)//異常發生
@@ -655,13 +658,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         waitEQSignalCST.Cancel();
                         AGVC.AbortTask();
                         Sub_Status = SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
-                        break;
-
+                        AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_READY_OFF, false);
+                        LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[EQ_READY OFF]");
+                        return;
                     }
-
                 }
+                LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[EQ_BUSY OFF]");
             });
+        }
+        internal void StopAllHandshakeTimer()
+        {
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
         }
 
         private void StartTimer(HANDSHAKE_EQ_TIMEOUT timer)
@@ -684,58 +695,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EQHSTimersStopwatches[timer].Stop();
         }
 
-        public async Task<bool> ModbusTcpConnect(int port = -1)
-        {
-            try
-            {
-                var client = new TcpClient(AGVS.IP, port == -1 ? EqModbusTcpPort : port);
-                ModbusIpMaster master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 5000;
-                master.Transport.WriteTimeout = 5000;
-                master.Transport.Retries = 10;
 
-                _ = Task.Run(() =>
-                {
-                    LOG.WARN($"LDULD Handshake Use MODBUS TCP! Running...({AGVS.IP}:{(port == -1 ? EqModbusTcpPort : port)})");
-                    while (_Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN)
-                    {
-                        Thread.Sleep(10);
-                        bool[] inputs = master.ReadInputs(8, 8);
-
-                        EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = inputs[0];
-                        EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = inputs[1];
-                        EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = inputs[2];
-                        EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = inputs[3];
-
-                        bool[] outputs = new bool[8];
-                        outputs[0] = AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID];
-                        outputs[3] = AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY];
-                        outputs[4] = AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ];
-                        outputs[5] = AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY];
-                        outputs[6] = AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
-                        master.WriteMultipleCoils(8, outputs);
-                    }
-                    LOG.Critical($"MODBUS TCP Finish Fetch EQ Signal");
-                    try
-                    {
-                        client.Dispose();
-                        master.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR(ex);
-                    }
-                });
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LOG.ERROR(ex);
-                return false;
-            }
-        }
-
+      
         public async Task EQTimeoutDetectionTest(HANDSHAKE_AGV_TIMEOUT test_item)
         {
             await Task.Delay(1).ContinueWith((t) =>

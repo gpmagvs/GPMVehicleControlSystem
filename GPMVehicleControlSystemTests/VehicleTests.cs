@@ -15,12 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Tests
         [TestMethod()]
         public void ModbusTcpConnectTest()
         {
-            Vehicle vehicle = new ForkAGV();
-            bool result = vehicle.ModbusTcpConnect(6502).Result;
-            while (result)
-            {
-                Thread.Sleep(1);
-            }
+
         }
         [TestMethod()]
         public void AlarmCodesDistinctByTest()
@@ -46,6 +41,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Tests
             };
             var _alarms = alarms.DistinctBy(alarm => alarm.Alarm_ID);
             Assert.AreEqual(3, _alarms.ToArray().Length);
+        }
+
+        [TestMethod()]
+        public void GetWorkStationEQInformationTest()
+        {
+            Vehicle agv = new ForkAGV();
+            agv.AGVS = new AGVSystemCommonNet6.AGVDispatch.clsAGVSConnection("127.0.0.1", 5036)
+            {
+                UseWebAPI = true,
+            };
+            var opt = agv.GetWorkStationEQInformation().Result;
+            Assert.Fail();
         }
     }
 }

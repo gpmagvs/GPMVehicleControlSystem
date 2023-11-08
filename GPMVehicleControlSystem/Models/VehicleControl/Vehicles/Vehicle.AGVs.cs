@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -38,8 +39,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             };
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
-        }
 
+        }
+        public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation()
+        {
+            List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(WorkStations.Stations.Keys.ToArray());
+            LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
+            return eqOptions;
+        }
 
         private void AGVS_OnDisconnected(object? sender, EventArgs e)
         {

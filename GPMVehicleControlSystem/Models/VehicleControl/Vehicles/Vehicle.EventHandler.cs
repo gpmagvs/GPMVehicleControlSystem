@@ -381,19 +381,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (IsNoObstacleAroundAGV)
             {
-                if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                {
-                    LOG.TRACE($"速度恢復-減速後加速");
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                    while (!IsNoObstacleAroundAGV)
-                    {
-                        await Task.Delay(1);
-                    }
-                    await Task.Delay(1000);
-                    if (!IsNoObstacleAroundAGV)
-                        return;
-                }
-                await AGVC.CarSpeedControl(speed_control);
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                 {
                     IsLaserRecoveryHandled = true;
@@ -412,6 +399,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
 
                 }
+                if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                {
+                    LOG.TRACE($"速度恢復-減速後加速");
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                    while (!IsNoObstacleAroundAGV)
+                    {
+                        await Task.Delay(1);
+                    }
+                    await Task.Delay(1000);
+                    if (!IsNoObstacleAroundAGV)
+                        return;
+                }
+                await AGVC.CarSpeedControl(speed_control);
+                
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()

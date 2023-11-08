@@ -19,6 +19,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             var mapped_data = settings.OrderBy(dat => dat.Key).Select(dat => new
             {
                 Tag = dat.Key,
+                Name = dat.Value.Name,
+                NeedHandshake = dat.Value.HandShakeModeHandShakeMode == WORKSTATION_HS_METHOD.HS,
                 Layers = new List<object> {
                     new {
                         Key=0,
@@ -75,12 +77,28 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             bool confirm = forkAgv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });
         }
+
+        [HttpGet("Workstation/HandshakeSetting")]
+        public async Task<IActionResult> HandshakeSetting(int eq_tag, bool need_handshake)
+        {
+            if (agv.WorkStations.Stations.TryGetValue(eq_tag, out var options))
+            {
+                options.HandShakeModeHandShakeMode = need_handshake ? WORKSTATION_HS_METHOD.HS : WORKSTATION_HS_METHOD.NO_HS;
+                LOG.TRACE($"WorkStation-{eq_tag} Handshake Mode changed to {options.HandShakeModeHandShakeMode}");
+            }
+            bool confirm = agv.SaveTeachDAtaSettings();
+            return Ok(new { confirm, data = GetMappData() });
+        }
+
+
+
         [HttpPost("Fork/SaveUnitTeachData")]
         public async Task<IActionResult> SaveUnitTeachData(clsSaveUnitTeachDataVM unit_teach_data)
         {
             bool confirm = forkAgv.ForkLifter.SaveUnitTeachData(unit_teach_data);
             return Ok(confirm);
         }
+
 
 
         [HttpGet("Fork/RemoveTagTeachData")]
@@ -173,7 +191,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Arm/Extend")]
         public async Task<IActionResult> ForkArmExtend()
         {
-            if(agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+            if (agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                 return Ok(new { confirm = false, message = "禁止在AGV移動過程中伸出牙叉" });
             if (agv.BarcodeReader.CurrentTag != 0)
             {

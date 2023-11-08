@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
 using static AGVSystemCommonNet6.clsEnums;
@@ -100,10 +101,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(1);
             }
             LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
-
+            clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             AGVC.OnAGVCActionChanged = null;
             if (ExecutingTaskModel != null)
+            {
                 ExecutingTaskModel.Dispose();
+            }
 
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
@@ -122,6 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Homing_Trajectory = taskDownloadData.Homing_Trajectory,
                 Destination = taskDownloadData.Destination,
                 IsLocalTask = taskDownloadData.IsLocalTask,
+                IsEQHandshake = false,
                 IsActionFinishReported = false,
             };
 
@@ -160,6 +164,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
                  ExecutingTaskModel.ForkLifter = ForkLifter;
                  IsLaserRecoveryHandled = false;
+                 _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
                  var result = await ExecutingTaskModel.Execute();
                  if (result != AlarmCodes.None)
                  {
@@ -196,14 +201,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
 
                 previousTagPoint = ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
-                if (previousTagPoint == null)
-                {
-                    LOG.Critical($"AGV抵達 {newVisitedNodeTag} 但在任務軌跡上找不到該站點。");//脫離路徑
-                    AGVC.AbortTask();
-                    AlarmManager.AddAlarm(AlarmCodes.Motion_control_Out_Of_Line_While_Moving, false);
-                    Sub_Status = SUB_STATUS.DOWN;
-                    return;
-                }
 
                 if (ExecutingTaskModel.action == ACTION_TYPE.None)
                 {

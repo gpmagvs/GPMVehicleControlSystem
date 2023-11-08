@@ -327,6 +327,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             IsSystemInitialized = true;
                             AlarmManager.Active = true;
                             AlarmManager.AddAlarm(AlarmCodes.None);
+
+
+                            if (AGVS.UseWebAPI)
+                            {
+                                var eqinfomations = await GetWorkStationEQInformation();
+                                WorkStations.SyncInfo(eqinfomations);
+                                SaveTeachDAtaSettings();
+                            }
+
                         }
                     }
                     );
@@ -431,6 +440,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 string json = JsonConvert.SerializeObject(WorkStations, Formatting.Indented);
                 File.WriteAllText(WorkStationSettingsJsonFilePath, json);
+                LOG.INFO($"WorkStation Settings Save done");
                 return true;
             }
             catch (Exception ex)
@@ -659,6 +669,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
+
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
+            {
+                await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
+                await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
+                await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
+                await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
+            }
         }
 
         public virtual (bool confirm, string message) CheckHardwareStatus()
@@ -739,23 +757,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
             LOG.WARN($"Software EMO!!! {alarmCode}");
+            AlarmManager.AddAlarm(alarmCode);
+            _Sub_Status = SUB_STATUS.DOWN;
+            BuzzerPlayer.Alarm();
+            SetAGV_TR_REQ(false);
+            StatusLighter.CloseAll();
+            StatusLighter.DOWN();
+            DirectionLighter.CloseAll();
+            DOSettingWhenEmoTrigger();
             RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
             IsWaitForkNextSegmentTask = false;
-            StatusLighter.CloseAll();
-            DirectionLighter.CloseAll();
-            Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
-            Sub_Status = SUB_STATUS.DOWN;
             InitializeCancelTokenResourece.Cancel();
-            SetAGV_TR_REQ(false); 
-            AGVC.OnAGVCActionChanged += RaiseActionStatusNoGoal;
-            AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
-            AlarmManager.AddAlarm(alarmCode);
-            AGVSTaskFeedBackReportAndOffline(alarmCode);
-            DOSettingWhenEmoTrigger();
-            StatusLighter.DOWN();
             IsInitialized = false;
             previousSoftEmoTime = DateTime.Now;
+            AGVSTaskFeedBackReportAndOffline(alarmCode);
 
+            if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
+            {
+                AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                AGVC.OnAGVCActionChanged += RaiseActionStatusNoGoal;
+                AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
+            }
             void RaiseActionStatusNoGoal(ActionStatus status)
             {
                 LOG.WARN($"[Software EMO] AGVC Status changed to {status}");
@@ -779,11 +801,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!_RunTaskData.IsLocalTask && !_RunTaskData.IsActionFinishReported)
             {
-                if (_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) //非取放貨任務 一律上報任務完成
+                if ((_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) | !_RunTaskData.IsEQHandshake) //非取放貨任務 一律上報任務完成
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
                 else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
                 {
-                    if (IsHandshakeFailAlarmCode(alarmCode) | ((LoadTask)ExecutingTaskModel)._eqHandshakeMode == WORKSTATION_HS_METHOD.NO_HS)
+                    if (IsHandshakeFailAlarmCode(alarmCode))
                         FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
 
                 }

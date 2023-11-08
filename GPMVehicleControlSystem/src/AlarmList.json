@@ -977,17 +977,17 @@
   {
     "Code": 3201,
     "Description": "Handshake Fail(EQ_L_REQ)",
-    "CN": "交握失敗(EQ_L_REQ)"
+    "CN": "交握失敗-EQ_L_REQ 訊號逾時"
   },
   {
     "Code": 3202,
     "Description": "Handshake Fail(EQ_U_REQ)",
-    "CN": "交握失敗(EQ_U_REQ)"
+    "CN": "交握失敗-EQ_U_REQ 訊號逾時"
   },
   {
     "Code": 3203,
     "Description": "Handshake Fail(EQ_READY)",
-    "CN": "交握失敗(EQ_READY)"
+    "CN": "交握失敗-EQ_READY 訊號逾時)"
   },
   {
     "Code": 3204,
@@ -1072,22 +1072,22 @@
   {
     "Code": 3232,
     "Description": "Handshake_Fail_AGV_DOWN",
-    "CN": "Handshake_Fail_AGV_DOWN"
+    "CN": "交握失敗-AGV發生異常"
   },
   {
     "Code": 3233,
     "Description": "Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY",
-    "CN": "Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY"
+    "CN": "交握失敗-設備於AGV動作時開始動作"
   },
   {
     "Code": 3234,
-    "Description": "Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY",
-    "CN": "Handshake_Fail_EQ_READY_OFF_When_AGV_BUSY"
+    "Description": "Handshake_Fail_EQ_READY_OFF",
+    "CN": "交握失敗-設備發生異常"
   },
   {
     "Code": 3235,
     "Description": "Handshake_Fail_EQ_BUSY_NOT_ON",
-    "CN": "Handshake_Fail_EQ_BUSY_NOT_ON"
+    "CN": "交握失敗-設備_EQ_BUSY ON逾時"
   },
   {
     "Code": 3236,
@@ -1097,37 +1097,37 @@
   {
     "Code": 3237,
     "Description": "Handshake_Fail_TA1_EQ_L_REQ",
-    "CN": "交握T1(EQ_L_REQ)逾時"
+    "CN": "交握失敗-設備_EQ_L_REQ ON逾時(T1)"
   },
   {
     "Code": 3238,
     "Description": "Handshake_Fail_TA1_EQ_U_REQ",
-    "CN": "交握T1(EQ_U_REQ)逾時"
+    "CN": "交握失敗-設備_EQ_U_REQ ON逾時(T1)"
   },
   {
     "Code": 3239,
     "Description": "Handshake_Fail_TA2_EQ_READY",
-    "CN": "交握T2(EQ_READY)逾時"
+    "CN": "交握失敗-設備_EQ_READY ON逾時(T2)"
   },
   {
     "Code": 3240,
     "Description": "Handshake_Fail_TA3_EQ_BUSY_ON",
-    "CN": "交握T3(EQ_BUSY)逾時"
+    "CN": "交握失敗-設備EQ_BUSY ON逾時(T3)"
   },
   {
     "Code": 3241,
     "Description": "Handshake_Fail_TA4_EQ_BUSY_OFF",
-    "CN": "交握T4(EQ_BUSY)逾時"
+    "CN": "交握失敗-設備EQ_BUSY OFF逾時(T4)"
   },
   {
     "Code": 3242,
     "Description": "Handshake_Fail_TA5_EQ_L_REQ",
-    "CN": "交握T5(EQ_L_REQ)逾時"
+    "CN": "交握失敗-設備_EQ_L_REQ OFF逾時(T5)"
   },
   {
     "Code": 3243,
     "Description": "Handshake_Fail_TA5_EQ_U_REQ",
-    "CN": "交握T5(EQ_U_REQ)逾時"
+    "CN": "交握失敗-設備_EQ_U_REQ OFF逾時(T5)"
   },
   {
     "Code": 3245,

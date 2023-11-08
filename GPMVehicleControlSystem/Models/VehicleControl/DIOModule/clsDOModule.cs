@@ -120,12 +120,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             client = null;
             master = null;
-            if (IP == null | Port <= 0)
+            if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
 
             try
             {
-                client = new TcpClient(IP, Port);
+                client = new TcpClient(IP, VMSPort);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.WriteTimeout = 300;
                 master.Transport.Retries = 3;

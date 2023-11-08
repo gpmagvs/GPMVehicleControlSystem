@@ -198,7 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
-            await Task.Delay(1000);
+            await Task.Delay(300);
             return await fork_ros_controller.ZAxisInit();
         }
 
@@ -345,7 +345,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 bool IsDownSearch = CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
 
                 if (IsDownSearch)
-                    await ForkDownSearchAsync(InitForkSpeed);
+                    await ForkDownSearchAsync(hasCargo ? InitForkSpeed : 1.0);
                 else
                 {
                     await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
@@ -404,7 +404,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         if (!response.confirm)
                             continue;
                         Thread.Sleep(1000);
-                        response = await ForkPose(2.25, 1);
+                        response = await ForkPose(2.3, 1);
                         LOG.INFO($" Fork init and Go To 2.5 ForkPose {response.confirm},{response.message}");
                         if (!response.confirm)
                             continue;

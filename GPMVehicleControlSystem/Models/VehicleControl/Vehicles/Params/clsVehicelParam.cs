@@ -143,6 +143,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 模擬器參數
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
+        public clsModbusDIOParams ModbusIO { get; set; } = new clsModbusDIOParams();
     }
 
     public class clsForkAGVParams
@@ -168,7 +169,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public byte ExchangeBatLevelThresholdVal { get; set; } = 100;
     }
-
     public class clsEmulatorParams
     {
         public enum MOVE_TIME_EMULATION
@@ -178,5 +178,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         }
         public MOVE_TIME_EMULATION Move_Time_Mode { get; set; } = MOVE_TIME_EMULATION.FIXED_TIME;
         public double Move_Fixed_Time { get; set; } = 0.5;
+    }
+
+    public class clsModbusDIOParams
+    {
+        public enum IO_VALUE_TYPE
+        {
+            /// <summary>
+            /// Inputs 讀 / CoilS 寫 
+            /// </summary>
+            INPUT,
+            /// <summary>
+            /// 歐迪爾,使用 InputRegist 讀/ SingleRegister 寫 
+            /// </summary>
+            INPUT_REGISTER
+
+        }
+        public IO_VALUE_TYPE IO_VAL_TYPE { get; set; } = IO_VALUE_TYPE.INPUT_REGISTER;
+        public ushort Input_Read_Start { get; set; } = 1;
+        public ushort Input_Read_Num { get; set; } = 8;
+        public ushort Input_Write_Start { get; set; } = 1;
+
+        public ushort InputRegister_Read_Start { get; set; } = 0;
+        public ushort InputRegister_Read_Num { get; set; } = 1;
+        public ushort InputRegister_Write_Start { get; set; } = 0;
     }
 }
