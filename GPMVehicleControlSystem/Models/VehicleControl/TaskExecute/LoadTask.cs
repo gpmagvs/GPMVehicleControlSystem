@@ -204,22 +204,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return (false, checkstatus_alarm_code);
                     }
                 }
-                HSResult = await Agv.WaitEQBusyOFF(action);
-                if (!HSResult.hs_success)
+                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
                 {
-                    Agv.DirectionLighter.CloseAll();
-                    return (false, HSResult.alarmCode);
+                    HSResult = await Agv.WaitEQBusyOFF(action);
+                    if (!HSResult.hs_success)
+                    {
+                        Agv.DirectionLighter.CloseAll();
+                        return (false, HSResult.alarmCode);
+                    }
+                    //檢查在席
+                    (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
+                    if (!CstExistCheckResult.confirm)
+                        return (false, CstExistCheckResult.alarmCode);
                 }
                 else
                 {
-                    //放貨完成->清除CST帳籍
-                    if (action == ACTION_TYPE.Load)
-                        Agv.CSTReader.ValidCSTID = "";
+                    LOG.TRACE($"AGV Pick and Place not need Wait EQ Busy ON/OFF.");
                 }
-                //檢查在席
-                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
-                if (!CstExistCheckResult.confirm)
-                    return (false, CstExistCheckResult.alarmCode);
+                //放貨完成->清除CST帳籍
+                if (action == ACTION_TYPE.Load)
+                    Agv.CSTReader.ValidCSTID = "";
+               
             }
 
             Agv.DirectionLighter.CloseAll();
@@ -235,6 +240,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
                 if (!forkActionResult.success)
                     return forkActionResult;
+
             }
 
 
@@ -358,6 +364,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                 if (!fork_height_change_result.success)
                     return (false, fork_height_change_result.alarm_code);
+
+                //檢查在席
+                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
+                if (!CstExistCheckResult.confirm)
+                    return (false, CstExistCheckResult.alarmCode);
 
                 await Task.Delay(1000);
                 if (isNeedArmExtend)

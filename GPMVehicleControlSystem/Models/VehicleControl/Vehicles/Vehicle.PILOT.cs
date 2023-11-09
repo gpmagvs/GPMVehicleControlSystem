@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool AutoOnlineRaising = false;
         public enum EQ_HS_METHOD
         {
-            E84,
+            PIO,
             MODBUS,
             /// <summary>
             /// 模擬

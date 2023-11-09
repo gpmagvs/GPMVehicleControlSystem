@@ -280,7 +280,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
 
-            WatchE84EQGOSignalWhenHSStart();
+            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.PIO)
+                WatchE84EQGOSignalWhenHSStart();
 
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
             CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
@@ -696,7 +697,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-      
+
         public async Task EQTimeoutDetectionTest(HANDSHAKE_AGV_TIMEOUT test_item)
         {
             await Task.Delay(1).ContinueWith((t) =>
