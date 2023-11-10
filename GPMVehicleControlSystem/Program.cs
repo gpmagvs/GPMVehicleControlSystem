@@ -85,7 +85,7 @@ app.UseCors(c => c.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-var imageFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+var imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
 var fileProvider = new PhysicalFileProvider(imageFolder);
 var requestPath = "/Download";
 

@@ -25,8 +25,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             clsAGVSLogAnaylsis logAnalysiser = new clsAGVSLogAnaylsis();
             logAnalysiser.logFolder = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), StaStored.CurrentVechicle.Parameters.LogFolder), "AGVS_Message_Log");
             Console.WriteLine(logAnalysiser.logFolder);
-            var outputs = logAnalysiser.GetRunningStatusDto(options.timedt_range);
-            var batteryStatus = outputs.Select(x => new { Time = x.Time_Stamp, BatteryLevel = x.Electric_Volume.First(), Status = x.AGV_Status });
+            var outputs = logAnalysiser.GetDatas(options.timedt_range);
+            var batteryStatus = outputs.Item2.Select(x => new { Time = x.Time_Stamp, BatteryLevel = x.Electric_Volume.First(), Status = x.AGV_Status });
             var outputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "battery_status.csv");
             System.IO.File.WriteAllText(outputFile, "Time,Battery Level,AGV Status\r\n");
             using (StreamWriter sw = new StreamWriter(outputFile, true))
