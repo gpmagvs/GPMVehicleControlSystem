@@ -367,6 +367,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     StaEmuManager.StartAGVROSEmu();
+                    StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
                 }
                 catch (SocketException)
                 {
@@ -459,6 +460,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         MapStore.SaveCurrentMap(NavingMap);
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                        var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
+                        if (lastPoint != null && Parameters.SimulationMode)
+                            StaEmuManager.agvRosEmu.SetCoordination(lastPoint.X, lastPoint.Y, 0);
                     }
                     else
                     {

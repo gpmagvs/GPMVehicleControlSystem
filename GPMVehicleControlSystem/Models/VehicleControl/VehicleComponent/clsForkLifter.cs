@@ -48,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             this.forkAGV = forkAGV;
         }
-
+        private bool IsSimulationMode => forkAGV.Parameters.SimulationMode;
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -188,6 +188,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 (forkAGV.AGVC as ForkAGVController).wait_action_down_cts.Cancel();
                 LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
+            if (IsSimulationMode)
+                return (true, "");
             return await fork_ros_controller.ZAxisStop();
         }
 
@@ -198,12 +200,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
+            if (IsSimulationMode)
+                return (true, "");
             await Task.Delay(300);
             return await fork_ros_controller.ZAxisInit();
         }
 
         public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
         {
+            if (IsSimulationMode)
+                return (true, AlarmCodes.None);
             (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
 
             if (!response.confirm)
@@ -215,6 +221,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
         {
+            if (IsSimulationMode)
+                return (true, "");
             if (pose < forkAGV.Parameters.ForkAGV.DownlimitPose)
                 pose = forkAGV.Parameters.ForkAGV.DownlimitPose;
             else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
@@ -224,19 +232,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, string message)> ForkUpAsync(double speed = 0.1)
         {
+            if (IsSimulationMode)
+                return (true, "");
             return await fork_ros_controller.ZAxisUp(speed);
         }
         public async Task<(bool confirm, string message)> ForkDownAsync(double speed = 0.1)
         {
+            if (IsSimulationMode)
+                return (true, "");
             return await fork_ros_controller.ZAxisDown(speed);
         }
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
         {
+            if (IsSimulationMode)
+                return (true, "");
             return await fork_ros_controller.ZAxisUpSearch(speed);
         }
 
         public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
         {
+            if (IsSimulationMode)
+                return (true, "");
             return await fork_ros_controller.ZAxisDownSearch(speed);
         }
         /// <summary>
@@ -245,6 +261,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <returns></returns>
         public async Task<(bool confirm, string message)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
+            if (IsSimulationMode)
+                return (true, "");
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
                 return (true, "");
@@ -285,6 +303,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <returns></returns>
         public async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
+            if (IsSimulationMode)
+                return (true, "");
             await ForkARMStop();
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
                 return (true, "");
@@ -483,6 +503,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position, double speed)
         {
+           
             try
             {
                 fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
@@ -491,6 +512,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 if (!workStation.LayerDatas.TryGetValue(layer, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
+
+                if (IsSimulationMode)
+                    return (true, AlarmCodes.None);
+
                 (bool confirm, string message) forkMoveResult = (false, "");
 
                 double position_to_reach = 0;

@@ -294,7 +294,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         private clsTaskDownloadData CreateMoveActionTaskJob(Map mapData, ACTION_TYPE actionType, string TaskName, int fromTag, int toTag, int Task_Sequence)
         {
             var pathFinder = new PathFinder();
-            var pathPlanDto = pathFinder.FindShortestPathByTagNumber(mapData.Points, fromTag, toTag);
+            var pathPlanDto = pathFinder.FindShortestPathByTagNumber(mapData, fromTag, toTag);
             clsTaskDownloadData actionData = new clsTaskDownloadData()
             {
                 Action_Type = actionType,
@@ -352,7 +352,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
 
             //add normal 
-            PathFinder.clsPathInfo? planPath = pathFinder.FindShortestPath(mapData.Points, isInChargeOrEqPortStation ? secondaryLocStation_of_chargeStateion : currentStation, actionType == ACTION_TYPE.None ? destineStation : secondaryLocStation);
+            PathFinder.clsPathInfo? planPath = pathFinder.FindShortestPath(mapData, isInChargeOrEqPortStation ? secondaryLocStation_of_chargeStateion : currentStation, actionType == ACTION_TYPE.None ? destineStation : secondaryLocStation);
             clsTaskDownloadData normal_move_task = new clsTaskDownloadData
             {
                 IsLocalTask = true,

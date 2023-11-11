@@ -73,6 +73,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     ff.Value.LayerDatas = item.Value.LayerDatas;
                 }
+                else
+                {
+                    forkAgv.WorkStations.Stations.Add(item.Key, new clsWorkStationData
+                    {
+                        LayerDatas = item.Value.LayerDatas
+                    });
+                }
             }
             bool confirm = forkAgv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });

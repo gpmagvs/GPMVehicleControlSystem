@@ -86,6 +86,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
+Directory.CreateDirectory(imageFolder);
 var fileProvider = new PhysicalFileProvider(imageFolder);
 var requestPath = "/Download";
 

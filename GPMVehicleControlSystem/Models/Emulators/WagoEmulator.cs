@@ -49,6 +49,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.EMO, true);
             SetState(DI_ITEM.Bumper_Sensor, true);
             SetState(DI_ITEM.Horizon_Motor_Switch, true);
+            SetState(DI_ITEM.Vertical_Motor_Switch, true);
             SetState(DI_ITEM.FrontProtection_Area_Sensor_1, true);
             SetState(DI_ITEM.FrontProtection_Area_Sensor_2, true);
             SetState(DI_ITEM.FrontProtection_Area_Sensor_3, true);

@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             },
             reader = new BarcodeReaderState
             {
-                tagID = 31
+                tagID = 5
             }
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
@@ -384,5 +384,15 @@ namespace GPMVehicleControlSystem.Models.Emulators
             LOG.TRACE($"[車控模擬] {msg}", show_console);
         }
 
+        internal void SetInitTag(int lastVisitedTag)
+        {
+            module_info.reader.tagID = (uint)lastVisitedTag;
+            module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(lastVisitedTag);
+        }
+
+        internal void SetCoordination(double x, double y, int theta)
+        {
+            module_info.nav_state.robotPose.pose.position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(x, y, theta);
+        }
     }
 }
