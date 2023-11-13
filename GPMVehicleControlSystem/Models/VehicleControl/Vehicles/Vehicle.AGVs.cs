@@ -113,7 +113,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
             {
                 Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.IsRecoverable ? 0 : 1,
+                Alarm_Level = alarm.Value.ELevel == AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode.LEVEL.Alarm ? 1 : 0,
                 Alarm_Description = alarm.Value.CN,
                 Alarm_Description_EN = alarm.Value.Description,
                 Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
