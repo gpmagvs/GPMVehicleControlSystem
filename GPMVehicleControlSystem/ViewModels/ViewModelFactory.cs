@@ -24,8 +24,8 @@ namespace GPMVehicleControlSystem.ViewModels
         {
             if (AGV == null)
                 return new AGVCStatusVM();
-            if (!AGV.IsSystemInitialized)
-                return new AGVCStatusVM();
+            //if (!AGV.IsSystemInitialized)
+            //    return new AGVCStatusVM();
             try
             {
 

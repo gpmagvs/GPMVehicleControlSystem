@@ -181,7 +181,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
-        public MapPoint lastVisitedMapPoint { get; private set; }
+        public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
         public bool IsCharging
         {
@@ -312,16 +312,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
                             AlarmManager.Active = false;
-                            Task WagoDIConnTask = WagoDIInit();
-                            WagoDIConnTask.Start();
+
                             lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
                             Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                             BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
-                            AGVSInit();
+
                             CommonEventsRegist();
                             //TrafficMonitor();
                             LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                            WebsocketAgent.StartViewDataCollect();
                             await Task.Delay(3000);
                             BuzzerPlayer.Alarm();
                             IsSystemInitialized = true;
@@ -340,7 +338,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
-
+                Task WagoDIConnTask = WagoDIInit();
+                WagoDIConnTask.Start();
+                WebsocketAgent.StartViewDataCollect();
+                AGVSInit();
                 RosConnTask.Start();
             }
             catch (Exception ex)

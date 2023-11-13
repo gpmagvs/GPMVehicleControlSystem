@@ -138,10 +138,16 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 while (true)
                 {
                     Thread.Sleep(100);
-                    ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
-                    VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
-                    DIOTableVM = ViewModelFactory.GetDIOTableVM();
-                    RDTestData = ViewModelFactory.GetRDTestData();
+                    try
+                    {
+                        ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
+                        VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
+                        DIOTableVM = ViewModelFactory.GetDIOTableVM();
+                        RDTestData = ViewModelFactory.GetRDTestData();
+                    }
+                    catch (Exception ex)
+                    {
+                    }
                 }
             });
         }

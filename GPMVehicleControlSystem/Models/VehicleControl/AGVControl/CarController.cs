@@ -145,11 +145,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public CarController(string IP, int Port) : base(IP, Port)
         {
         }
-
+        private bool _Connected = true;
+        public bool Connected
+        {
+            get => _Connected;
+            set
+            {
+                if (_Connected != value)
+                {
+                    _Connected = value;
+                    if (!value)
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
+                    }
+                    else
+                    {
+                        AlarmManager.ClearAlarm(AlarmCodes.ROS_Bridge_server_Disconnect);
+                    }
+                }
+            }
+        }
         public override async Task<bool> Connect()
         {
             while (!IsConnected())
             {
+
+                Connected = false;
                 await Task.Delay(1000);
                 LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
                 try
@@ -157,19 +178,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{VMSPort}"));
                     if (!rosSocket.protocol.IsAlive())
                     {
-                        AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
                         rosSocket.protocol.Close();
                     }
                 }
                 catch (Exception ex)
                 {
                     rosSocket = null;
-                    AlarmManager.AddWarning(AlarmCodes.ROS_Bridge_server_Disconnect);
                     Console.WriteLine("ROS Bridge Server Connect Fail...Will Retry After 5 Secnonds...Error Message : " + ex.Message);
                     Thread.Sleep(5000);
                 }
             }
-            AlarmManager.ClearAlarm(AlarmCodes.ROS_Bridge_server_Disconnect);
+            Connected = true;
             rosSocket.protocol.OnClosed += Protocol_OnClosed;
             LOG.INFO($"ROS Connected ! ws://{IP}:{VMSPort}");
             SubscribeROSTopics();

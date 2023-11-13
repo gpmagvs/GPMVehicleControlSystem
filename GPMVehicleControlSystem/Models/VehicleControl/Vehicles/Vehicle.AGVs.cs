@@ -76,11 +76,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
-
-            Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
-            Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-            Corrdination.Theta = Math.Round(Navigation.Angle, 3);
-
+            int lastVisitedNode = 0;
+            if (Navigation.Data != null)
+            {
+                Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
+                Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
+                Corrdination.Theta = Math.Round(Navigation.Angle, 3);
+                lastVisitedNode = Navigation.Data.lastVisitedNode.data;
+            }
             AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS_WebAPI();
             try
             {
@@ -91,7 +94,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
-                    Last_Visited_Node = Navigation.Data.lastVisitedNode.data,
+                    Last_Visited_Node = lastVisitedNode,
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
