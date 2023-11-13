@@ -194,8 +194,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             INPUT_REGISTER
 
         }
-        public IO_VALUE_TYPE IO_VAL_TYPE { get; set; } = IO_VALUE_TYPE.INPUT_REGISTER;
-        public ushort Input_Read_Start { get; set; } = 1;
+        public IO_VALUE_TYPE IO_VAL_TYPE { get; set; } = IO_VALUE_TYPE.INPUT;
+        public ushort Input_Read_Start { get; set; } = 0;
         public ushort Input_Read_Num { get; set; } = 8;
         public ushort Input_Write_Start { get; set; } = 1;
 
