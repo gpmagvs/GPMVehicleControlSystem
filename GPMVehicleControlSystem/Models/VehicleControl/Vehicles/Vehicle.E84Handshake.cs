@@ -83,8 +83,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             { AGV_HSSIGNAL.AGV_VALID, false },
             { AGV_HSSIGNAL.AGV_TR_REQ, false },
             { AGV_HSSIGNAL.AGV_BUSY, false },
-            { AGV_HSSIGNAL.AGV_COMPT, false },
             { AGV_HSSIGNAL.AGV_READY, false },
+            { AGV_HSSIGNAL.AGV_COMPT, false },
         };
         private int EqModbusTcpPort
         {

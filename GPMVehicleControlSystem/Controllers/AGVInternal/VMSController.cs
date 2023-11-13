@@ -16,6 +16,8 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
+using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -256,5 +258,31 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             bool success = await agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
             return Ok(success);
         }
+
+
+        [HttpGet("GetWorkstations")]
+        public async Task<IActionResult> GetWorkstations()
+        {
+            return Ok(agv.WorkStations.Stations.Select(w => new { w.Value.Name, Tag = w.Key, w.Value.ModbusTcpPort }));
+        }
+
+        [HttpPost("WorkstationModbusIOTest")]
+        public async Task<IActionResult> WorkstationModbusIOTest(int Tag)
+        {
+            if (agv.WorkStations.Stations.TryGetValue(Tag, out var data))
+            {
+                clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                await Task.Delay(1000);
+                var modbusTcp = new clsEQHandshakeModbusTcp(agv.Parameters.ModbusIO, Tag, data.ModbusTcpPort);
+                if (!modbusTcp.Start(agv.AGVS, agv.AGVHsSignalStates, agv.EQHsSignalStates))
+                    return Ok(new { confirm = false, message = $"無法連線({modbusTcp.IP}:{modbusTcp.Port})" });
+                return Ok(new { confirm = true, message = "" });
+            }
+            else
+            {
+                return Ok(new { confirm = false, message = $"Tag-{Tag} 工位配置不存在!" });
+            }
+        }
+
     }
 }

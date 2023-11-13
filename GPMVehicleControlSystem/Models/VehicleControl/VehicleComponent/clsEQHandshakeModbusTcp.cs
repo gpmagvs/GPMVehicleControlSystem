@@ -26,12 +26,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private Dictionary<Vehicle.AGV_HSSIGNAL, bool> aGVHsSignalStates;
         private Dictionary<Vehicle.EQ_HSSIGNAL, bool> eQHsSignalStates;
-
+        public bool Connected { get; private set; } = false;
+        public clsEQHandshakeModbusTcp()
+        {
+            StaStored.ConnectingEQHSModbus = this;
+        }
         public clsEQHandshakeModbusTcp(clsModbusDIOParams options, int EQTag, int ModbusPort = -1)
         {
             this.options = options;
             this.EQTag = EQTag;
             this.Port = ModbusPort;
+            StaStored.ConnectingEQHSModbus = this;
         }
         public bool Start(clsAGVSConnection AGVS, Dictionary<AGV_HSSIGNAL, bool> aGVHsSignalStates, Dictionary<EQ_HSSIGNAL, bool> eQHsSignalStates)
         {
@@ -46,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     GetEQInfoFromAGVs();
                     Port = eqOptions.AGVModbusGatewayPort;
                 }
-                bool connected = Connect();
+                bool connected = Connected = Connect();
                 if (!connected)
                 {
                     return false;
@@ -76,20 +81,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(100);
                     if (HandshakingModbusTcpProcessCancel.IsCancellationRequested)
                         break;
-                    bool[] outputs = new bool[8];
-                    outputs[0] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID];
-                    outputs[1] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ];
-                    outputs[2] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY];
-                    outputs[3] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_READY];
-                    outputs[4] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
-                    WriteAGVOutputs(outputs);
-                    var inputs = ReadEQOutputs();
-                    eQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = inputs[0];
-                    eQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = inputs[1];
-                    eQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = inputs[2];
-                    eQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = inputs[3];
-
+                    if (!Connected)
+                    {
+                        await Task.Delay(1000);
+                        Connected = Connect();
+                        continue;
+                    }
+                    try
+                    {
+                        bool[] outputs = new bool[8];
+                        outputs[0] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID];
+                        outputs[1] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ];
+                        outputs[2] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY];
+                        outputs[3] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_READY];
+                        outputs[4] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
+                        WriteAGVOutputs(outputs);
+                        var inputs = ReadEQOutputs();
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = inputs[0];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = inputs[1];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = inputs[2];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = inputs[3];
+                    }
+                    catch (Exception ex)
+                    {
+                        LOG.ERROR("clsEQHandshakeModbusTcp-IOSignalExchangeProcess Error", ex);
+                        Disconnect();
+                    }
                 }
+                Disconnect();
                 LOG.WARN($"Handshake Signal excahge via ModbusTcp Process END");
             });
         }
@@ -100,15 +119,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.TRACE($"[Modbus Tcp] Try connect to {IP}:{Port}");
                 var client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 5000;
-                master.Transport.WriteTimeout = 5000;
-                master.Transport.Retries = 10;
+                master.Transport.ReadTimeout = 1000;
+                master.Transport.WriteTimeout = 1000;
+                master.Transport.Retries = 2;
                 return true;
             }
             catch (Exception ex)
             {
                 return false;
             }
+        }
+        private void Disconnect()
+        {
+            master.Transport.Dispose();
+            master.Dispose();
+            Connected = false;
         }
         private void WriteAGVOutputs(bool[] outputs)
         {

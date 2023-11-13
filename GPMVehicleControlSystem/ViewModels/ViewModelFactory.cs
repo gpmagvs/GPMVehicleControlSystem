@@ -84,6 +84,11 @@ namespace GPMVehicleControlSystem.ViewModels
                     SysLoading = new AGVCStatusVM.clsSysLoading
                     {
                         Memory = LinuxTools.Memory
+                    },
+                    HandshakeStatus = new AGVCStatusVM.clsEQHandshake
+                    {
+                        ConnectionType = AGV.Parameters.EQHandshakeMethod,
+                        Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
                     }
 
                 };
@@ -214,7 +219,7 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 Inputs = AGV.WagoDI.VCSInputs.ToList(),
                 Outputs = AGV.WagoDO.VCSOutputs.ToList(),
-                IsE84HsUseEmulator = AGV.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.EMULATION
+                IsE84HsUseEmulator = AGV.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.EMULATION,
             };
         }
         internal static object GetRDTestData()

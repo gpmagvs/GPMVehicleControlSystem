@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.MAP;
 using clsAlarmCode = AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -96,11 +97,17 @@ namespace GPMVehicleControlSystem.ViewModels
         public object HandShakeSignals { get; set; } = new object();
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
+        public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
         public class clsSysLoading
         {
             public double CPU { get; set; }
             public double Memory { get; set; }
         }
+        public class clsEQHandshake
+        {
+            public EQ_HS_METHOD ConnectionType { get; set; }
+            public bool Connected { get; set; }
 
+        }
     }
 }
