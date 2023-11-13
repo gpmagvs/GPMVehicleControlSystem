@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
         private ROBOT_CONTROL_CMD complex_cmd;
-        public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52 };
+        public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52,6,10 };
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
@@ -168,10 +168,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     return;
                 }
                 CancellationTokenSource cts = new CancellationTokenSource();
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     while (true)
                     {
+                        await Task.Delay(1);
                         if (actionServer.GetStatus() != ActionStatus.ACTIVE)
                         {
                             cts.Cancel();
@@ -238,16 +239,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                     await Task.Delay(TimeSpan.FromSeconds(EmuParam.Move_Fixed_Time), cts.Token);
                             }
                             module_info.Battery.batteryLevel -= 0x01;
-
                             module_info.nav_state.lastVisitedNode.data = (int)tag;
-
                             module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
                             module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
                             module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
+
                             module_info.reader.tagID = tag;
                             module_info.reader.xValue = tag_pose_x;
                             module_info.reader.yValue = tag_pose_y;
                             module_info.reader.theta = tag_theta;
+                            EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                                 break;
                             RobotStopMRE.WaitOne();
@@ -304,7 +305,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (rosSocket.protocol.IsAlive())
                 {
-                    Thread.Sleep(100);
+                    await Task.Delay(10);
                     if (stopwatch.ElapsedMilliseconds > 10000)
                     {
                         module_info.Battery.batteryLevel -= 1;
