@@ -696,7 +696,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
-            if (Agv.HasAnyCargoOnAGV())
+            if (Agv.CargoStatus != Vehicle.CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
 
             Agv.CSTReader.ValidCSTID = "";

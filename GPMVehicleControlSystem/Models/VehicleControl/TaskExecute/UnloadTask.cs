@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = cst_id_expect;
                 return (true, AlarmCodes.None);
             }
-            return  CSTBarcodeRead().Result;
+            return CSTBarcodeRead().Result;
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
-            if (!Agv.HasAnyCargoOnAGV())
+            if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
                 return (false, AlarmCodes.Has_Job_Without_Cst);
 
             return (true, AlarmCodes.None);

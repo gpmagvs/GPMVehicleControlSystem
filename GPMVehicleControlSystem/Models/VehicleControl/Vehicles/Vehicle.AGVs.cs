@@ -143,7 +143,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new clsRunningStatus
                 {
-                    Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
+                    Cargo_Status =CargoStatus==CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
@@ -194,7 +194,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new RunningStatus
                 {
-                    Cargo_Status = HasAnyCargoOnAGV() ? 1 : 0,
+                    Cargo_Status =CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL?1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
