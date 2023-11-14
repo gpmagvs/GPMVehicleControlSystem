@@ -176,7 +176,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     return;
                 }
                 CancellationTokenSource cts = new CancellationTokenSource();
-                Task.Run(async () =>
+                var Task_Watch_StatusActive = new Task(async () =>
                 {
                     while (true)
                     {
@@ -187,6 +187,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             break;
                         }
                     }
+
                 });
                 EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
                 RobotStopMRE = new ManualResetEvent(true);
@@ -205,7 +206,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         {
                             Console.WriteLine($"[Move simulation] Motro Stop. wait...");
                             if (cts.IsCancellationRequested)
-                                break;
+                                return;
                             await Task.Delay(1000);
                         }
                         if (cts.IsCancellationRequested)
@@ -265,6 +266,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         {
                             EmuLog(ex.Message + $"\r\n{ex.StackTrace}");
                         }
+                        if (i == 0)
+                            Task_Watch_StatusActive.Start();
                     }
                     if (ChargeStationTags.Contains(obj.finalGoalID))
                     {
@@ -313,21 +316,22 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (rosSocket.protocol.IsAlive())
                 {
-                    await Task.Delay(10);
-                    if (stopwatch.ElapsedMilliseconds > 10000)
-                    {
-                        module_info.Battery.batteryLevel -= 1;
-                        module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
-                        stopwatch.Restart();
-                    }
                     try
                     {
+                        await Task.Delay(10);
+
+                        if (stopwatch.ElapsedMilliseconds > 10000)
+                        {
+                            module_info.Battery.batteryLevel -= 1;
+                            module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
+                            stopwatch.Restart();
+                        }
+
                         rosSocket.Publish("AGVC_Emu", module_info);
                     }
                     catch (Exception ex)
                     {
                         EmuLog($"Ros socket error,{ex.Message}");
-                        break;
                     }
                 }
                 EmuLog($"AGVC ROS Emu module-information publish process end.");

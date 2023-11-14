@@ -10,6 +10,22 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
     [ApiController]
     public class WagoEmuController : ControllerBase
     {
+
+        [HttpGet("Disconnect")]
+        public async Task<IActionResult> Disconnect()
+        {
+            StaEmuManager.wagoEmu.Disconnect();
+            return Ok();
+        }
+
+
+
+        [HttpGet("Connect")]
+        public async Task<IActionResult> Connect()
+        {
+            return Ok(await StaEmuManager.wagoEmu.Connect());
+        }
+
         [HttpGet("SetInput")]
         public async Task<IActionResult> SetInput(int YAddress, bool State)
         {

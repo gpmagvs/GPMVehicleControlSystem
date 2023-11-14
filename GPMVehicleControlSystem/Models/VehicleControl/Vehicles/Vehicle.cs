@@ -337,12 +337,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
+                AGVSInit();
                 EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
-                AGVSInit();
                 RosConnTask.Start();
+                Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    await DownloadMapFromServer();
+                });
             }
             catch (Exception ex)
             {
@@ -450,7 +455,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 throw ex;
             }
         }
-       
+
 
         private void AGVS_OnOnlineStateQueryFail(object? sender, EventArgs e)
         {

@@ -39,7 +39,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.TRACE($"AGVS Network restored. ");
                 AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
             };
-            DownloadMapFromServer();
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
 
@@ -77,7 +76,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
-                    LOG.WARN($"Map Download Fail....{ex.Message}");
+
+                    LOG.Critical($"Map Download Fail....{ex.Message}", ex);
                 }
             });
         }
