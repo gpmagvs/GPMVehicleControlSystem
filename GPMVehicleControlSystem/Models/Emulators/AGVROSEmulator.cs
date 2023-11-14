@@ -39,12 +39,20 @@ namespace GPMVehicleControlSystem.Models.Emulators
             reader = new BarcodeReaderState
             {
                 tagID = 5
+            },
+            Wheel_Driver = new DriversState()
+            {
+                driversState = new DriverState[2]
+                 {
+                     new DriverState{ errorCode=21},
+                     new DriverState{ errorCode=21}
+                 }
             }
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
         private ROBOT_CONTROL_CMD complex_cmd;
-        public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52,6,10 };
+        public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52, 6, 10 };
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
@@ -394,6 +402,20 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal void SetCoordination(double x, double y, int theta)
         {
             module_info.nav_state.robotPose.pose.position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(x, y, theta);
+        }
+
+        internal void ClearDriversErrorCodes()
+        {
+            SetDriversAlarm(0);
+        }
+
+        internal void SetDriversAlarm(int errorCode)
+        {
+            foreach (var item in module_info.Wheel_Driver.driversState)
+            {
+                item.errorCode = (byte)errorCode;
+            }
+            module_info.Action_Driver.errorCode = (byte)errorCode;
         }
     }
 }

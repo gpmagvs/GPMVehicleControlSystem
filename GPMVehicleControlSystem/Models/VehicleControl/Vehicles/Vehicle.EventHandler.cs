@@ -173,6 +173,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void WagoDI_OnReConnected(object? sender, EventArgs e)
         {
+            if (AGVC == null)
+                return;
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
 
@@ -328,7 +330,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="sender"></param>
         /// <param name="di_state"></param>
         protected virtual void HandleLaserArea3SinalChange(object? sender, bool di_state)
-        {         
+        {
             if (!IsLaserMonitorActived)
                 return;
 
@@ -412,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return;
                 }
                 await AGVC.CarSpeedControl(speed_control);
-                
+
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
@@ -527,6 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (Parameters.SimulationMode)
             {
+                StaEmuManager.agvRosEmu.SetDriversAlarm(errorCode: 10);
                 StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
                 StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
 

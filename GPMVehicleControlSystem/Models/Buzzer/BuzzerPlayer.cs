@@ -97,19 +97,27 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
         public static async Task Play(SOUNDS sound)
         {
-            if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+            try
             {
-                bool confirm = OnBuzzerPlay.Invoke();
-                if (!confirm)
+                if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                {
+                    bool confirm = OnBuzzerPlay.Invoke();
+                    if (!confirm)
+                        return;
+                }
+                if (rossocket == null)
                     return;
+                await Task.Delay(10);
+
+                PlayMusicResponse response = await rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                {
+                    file_path = sound.ToString().ToLower()
+                });
             }
-            if (rossocket == null)
-                return;
-            await Task.Delay(10);
-            PlayMusicResponse response = await rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+            catch (Exception ex)
             {
-                file_path = sound.ToString().ToLower()
-            });
+                LOG.ERROR(ex);
+            }
         }
 
     }

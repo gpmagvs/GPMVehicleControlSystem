@@ -301,7 +301,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
-                EmulatorInitialize();
                 Task RosConnTask = new Task(async () =>
                 {
                     await Task.Delay(1).ContinueWith(async t =>
@@ -342,6 +341,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
                 AGVSInit();
+                EmulatorInitialize();
                 RosConnTask.Start();
             }
             catch (Exception ex)
@@ -919,6 +919,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, false);
                         StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, false);
                     }
+                    StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
                 }
 
                 return true;

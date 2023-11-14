@@ -110,7 +110,13 @@ namespace GPMVehicleControlSystem.ViewModels
                         },
                         new clsAlarmCode
                         {
+        
+                            
+                            
+                            
+                            
                             Time=DateTime.Now,
+                                            
                              Code =  (int)AlarmCodes.Code_Error_In_System,
                               Description ="系統異常",
                               ELevel = clsAlarmCode.LEVEL.Alarm

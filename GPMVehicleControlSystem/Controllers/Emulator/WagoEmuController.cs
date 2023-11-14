@@ -160,5 +160,40 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_3, true);
             StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
         }
+
+
+        [HttpGet("EQ_GO_OFF")]
+        public async Task EQ_GO_OFF()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_GO, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, false);
+        }
+        [HttpGet("EQ_GO_Flick")]
+        public async Task EQ_GO_Flick()
+        {
+
+            var EQ_GO_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_GO);
+            var EQ_BUSY_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_BUSY);
+            var EQ_READY_oriState =StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_READY);
+            var EQ_L_REQ_oriState =StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_L_REQ);
+            var EQ_U_REQ_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_U_REQ);
+
+
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_GO, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, false);
+            await Task.Delay(300);
+
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_GO, EQ_GO_oriState);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, EQ_BUSY_oriState);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, EQ_READY_oriState);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, EQ_L_REQ_oriState);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, EQ_U_REQ_oriState);
+        }
     }
 }
