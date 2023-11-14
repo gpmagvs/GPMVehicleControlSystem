@@ -3,7 +3,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>11.14.13</AssemblyVersion>
+    <AssemblyVersion>11.14.20</AssemblyVersion>
     <InformationalVersion>23.7.7.1</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
   </PropertyGroup>
@@ -138,9 +138,16 @@
     </VisualStudio>
   </ProjectExtensions>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;AutoVersionModify.ps1&quot;&#xD;&#xA;call prebuild.bat" />
+    <!--<Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;AutoVersionModify.ps1&quot;&#xD;&#xA;call prebuild.bat" />-->
   </Target>
 </Project>
+
+
+
+
+
+
+
 
 
 

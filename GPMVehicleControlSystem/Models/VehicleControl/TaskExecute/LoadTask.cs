@@ -224,7 +224,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 //放貨完成->清除CST帳籍
                 if (action == ACTION_TYPE.Load)
                     Agv.CSTReader.ValidCSTID = "";
-               
+
             }
 
             Agv.DirectionLighter.CloseAll();
@@ -525,13 +525,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 break;
                         }
                         Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
-                        if (action == ACTION_TYPE.Unload)
+                        if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
                             await WaitCSTIDReported();
                         await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                     }
                     else
                     {
-                        if (action == ACTION_TYPE.Unload)
+                        if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
                             await WaitCSTIDReported();
                         await base.HandleAGVCActionSucceess();
                     }

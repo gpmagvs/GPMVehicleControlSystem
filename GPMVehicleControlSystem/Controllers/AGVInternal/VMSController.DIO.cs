@@ -85,35 +85,47 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             clsDIModule.DI_ITEM DI_ITEM = clsDIModule.DI_ITEM.EQ_GO;
             await Task.Delay(1);
             string address = "";
-            List<clsIOSignal> signalList = agv.Parameters.WagoSimulation ? agv.WagoDI.VCSInputs : agv.WagoDO.VCSOutputs;
+            List<clsIOSignal> signalList = agv.WagoDO.VCSOutputs;
+            bool IsWagoModuleSimulation = agv.Parameters.WagoSimulation;
             switch (signal_name)
             {
                 case "EQ_READY":
-                    DI_ITEM = clsDIModule.DI_ITEM.EQ_READY;
-                    address = signalList.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_READY.ToString()).Address;
+                    if (IsWagoModuleSimulation)
+                        DI_ITEM = clsDIModule.DI_ITEM.EQ_READY;
+                    else
+                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_READY.ToString()).Address;
                     break;
                 case "EQ_BUSY":
-                    DI_ITEM = clsDIModule.DI_ITEM.EQ_BUSY;
-                    address = signalList.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
+                    if (IsWagoModuleSimulation)
+                        DI_ITEM = clsDIModule.DI_ITEM.EQ_BUSY;
+                    else
+                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
                     break;
                 case "EQ_L_REQ":
-                    DI_ITEM = clsDIModule.DI_ITEM.EQ_L_REQ;
-                    address = signalList.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
+                    if (IsWagoModuleSimulation)
+                        DI_ITEM = clsDIModule.DI_ITEM.EQ_L_REQ;
+                    else
+                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
                     break;
                 case "EQ_U_REQ":
-                    DI_ITEM = clsDIModule.DI_ITEM.EQ_U_REQ;
-                    address = signalList.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
+                    if (IsWagoModuleSimulation)
+                        DI_ITEM = clsDIModule.DI_ITEM.EQ_U_REQ;
+                    else
+                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
                     break;
                 case "EQ_GO":
-                    DI_ITEM = clsDIModule.DI_ITEM.EQ_GO;
-                    address = signalList.First(output => output.Name == VehicleControl.DIOModule.clsDOModule.DO_ITEM.EMU_EQ_GO.ToString()).Address;
+                    if (IsWagoModuleSimulation)
+                        DI_ITEM = clsDIModule.DI_ITEM.EQ_GO;
+                    else
+                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_GO.ToString()).Address;
                     break;
 
                 default:
                     break;
             }
-            if (agv.Parameters.WagoSimulation) {
-                 StaEmuManager.wagoEmu.SetState(DI_ITEM, state);
+            if (IsWagoModuleSimulation)
+            {
+                StaEmuManager.wagoEmu.SetState(DI_ITEM, state);
             }
             else
                 agv.WagoDO.SetState(address, state);

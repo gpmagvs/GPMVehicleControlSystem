@@ -337,11 +337,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
+                EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
                 AGVSInit();
-                EmulatorInitialize();
                 RosConnTask.Start();
             }
             catch (Exception ex)
@@ -450,44 +450,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 throw ex;
             }
         }
-        internal async Task DownloadMapFromServer()
-        {
-            await Task.Run(async () =>
-            {
-                try
-                {
-                    NavingMap = await MapStore.GetMapFromServer();
-                    if (NavingMap != null)
-                    {
-                        MapStore.SaveCurrentMap(NavingMap);
-                        LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
-                        var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
-                        if (lastPoint != null && Parameters.SimulationMode)
-                            StaEmuManager.agvRosEmu.SetCoordination(lastPoint.X, lastPoint.Y, 0);
-                    }
-                    else
-                    {
-                        if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
-                        {
-                            LOG.WARN($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
-                            NavingMap = MapStore.GetMapFromFile(Parameters.MapParam.LocalMapFileFullName);
-                            if (NavingMap.Note != "empty")
-                                LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
-                        }
-                        else
-                        {
-                            LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl}) and not any local map file exist({Parameters.MapParam.LocalMapFileFullName})");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LOG.WARN($"Map Download Fail....{ex.Message}");
-                }
-            });
-        }
-
-
+       
 
         private void AGVS_OnOnlineStateQueryFail(object? sender, EventArgs e)
         {
@@ -658,7 +621,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //if (lastVisitedMapPoint.StationType !=STATION_TYPE.Normal)
             //    return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
 
-            if (WagoDI.ModuleDisconnected)
+            if (!WagoDI.Connected)
                 return (false, $"DIO 模組連線異常");
             return (true, "");
         }

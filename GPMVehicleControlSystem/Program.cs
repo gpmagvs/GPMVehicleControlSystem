@@ -57,7 +57,6 @@ void VehicheAndWagoIOConfiguraltion()
     {
         StaStored.CurrentVechicle = new TsmcMiniAGV();
     }
-    StaStored.CurrentVechicle.DownloadMapFromServer();
     LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
     LinuxTools.SysLoadingLogProcess();
 }

@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
         }
 
-        public override bool ModuleDisconnected { get => _ModuleDisconnected; set => _ModuleDisconnected = value; }
+        public override bool Connected { get => _Connected; set => _Connected = value; }
         protected override void RegistSignalEvents()
         {
         }
@@ -71,7 +71,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         private async Task<(bool connected, TcpClient tcpclient, ModbusIpMaster modbusMaster)> TryConnectAsync()
         {
-            if (ModuleDisconnected)
+            if (!Connected)
                 return (false, null, null);
             TcpClient tcpclient;
             ModbusIpMaster modbusMaster;
@@ -79,7 +79,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             while (!Connect(out tcpclient, out modbusMaster))
             {
                 retry_cnt += 1;
-                if (ModuleDisconnected)
+                if (!Connected)
                     return (false, null, null);
                 if (retry_cnt >= 5)
                 {
@@ -152,7 +152,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
-            if (ModuleDisconnected)
+            if (!Connected)
                 return false;
             try
             {
@@ -189,7 +189,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         internal async void SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            if (ModuleDisconnected)
+            if (!Connected)
                 return;
             try
             {

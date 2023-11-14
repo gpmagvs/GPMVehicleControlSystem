@@ -72,17 +72,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
         protected bool IOBusy = false;
-        protected bool _ModuleDisconnected = true;
-        public virtual bool ModuleDisconnected
+        protected bool _Connected = false;
+        public virtual bool Connected
         {
-            get => _ModuleDisconnected;
+            get => _Connected;
             set
             {
-                if (_ModuleDisconnected != value)
+                if (_Connected != value)
                 {
-                    _ModuleDisconnected = value;
+                    _Connected = value;
 
-                    if (value)
+                    if (!value)
                         Task.Factory.StartNew(async () =>
                         {
                             LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
@@ -171,7 +171,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
-            if (!ModuleDisconnected)
+            if (Connected)
                 return true;
             try
             {
@@ -182,14 +182,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 master.Transport.Retries = 2;
                 Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
-                ModuleDisconnected = false;
-                DoModuleRef.ModuleDisconnected = false;
+                Connected = true;
+                DoModuleRef.Connected = true;
                 return true;
             }
             catch (Exception ex)
             {
-                ModuleDisconnected = true;
-                DoModuleRef.ModuleDisconnected = true;
+                Connected = false;
+                DoModuleRef.Connected = false;
                 Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
                 LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
@@ -221,7 +221,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public override bool IsConnected()
         {
-            return client != null;
+            return Connected;
         }
 
         internal void SetState(string address, bool state)
@@ -303,8 +303,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         LOG.Critical($"Wago Module Read Timeout!! ({period} ms) ");
                         lastReadTime = DateTime.Now;
                         Disconnect();
-                        ModuleDisconnected = true;
-                        DoModuleRef.ModuleDisconnected = true;
+                        Connected = false;
+                        DoModuleRef.Connected = false;
                     }
                 }
             });
@@ -317,7 +317,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 while (true)
                 {
                     Thread.Sleep(IO_Interval_ms);
-                    if (!IsConnected())
+                    if (!Connected)
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
                         Thread.Sleep(1000);
