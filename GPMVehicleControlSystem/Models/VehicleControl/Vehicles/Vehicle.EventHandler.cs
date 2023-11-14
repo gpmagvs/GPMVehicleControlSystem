@@ -454,65 +454,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        /// <summary>
-        /// 處理任務取消請求
-        /// </summary>
-        /// <param name="mode">取消模式</param>
-        /// <param name="normal_state"></param>
-        /// <returns></returns>
-        internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
-        {
-            if (AGVSResetCmdFlag)
-                return true;
-            AGVSResetCmdFlag = true;
-            IsWaitForkNextSegmentTask = false;
-
-            try
-            {
-                LOG.WARN($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
-
-                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
-                {
-                    AGVC.OnAGVCActionChanged = null;
-                    AGV_Reset_Flag = false;
-                    LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
-                    await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
-                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                    AGV_Reset_Flag = true;
-                    //Sub_Status = SUB_STATUS.IDLE;
-                    return true;
-                }
-                else
-                {
-                    bool result = await AGVC.ResetTask(mode);
-                    if (mode == RESET_MODE.ABORT)
-                    {
-                        _ = Task.Factory.StartNew(async () =>
-                        {
-                            if (!normal_state)
-                            {
-                                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
-                                Sub_Status = SUB_STATUS.DOWN;
-                            }
-                            ExecutingTaskModel.Abort();
-                        });
-                    }
-                    return result;
-                }
-            }
-            catch (Exception ex)
-            {
-                LOG.Critical(ex);
-                if (mode == RESET_MODE.CYCLE_STOP)
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
-                else
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
-                return false;
-            }
-
-        }
-
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             DirectionLighter.LightSwitchByAGVDirection(sender, direction);

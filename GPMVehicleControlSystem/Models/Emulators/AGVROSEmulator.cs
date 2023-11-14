@@ -247,7 +247,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                 else
                                     await Task.Delay(TimeSpan.FromSeconds(EmuParam.Move_Fixed_Time), cts.Token);
                             }
-                            module_info.Battery.batteryLevel -= 0x01;
+                            //module_info.Battery.batteryLevel -= 0x01;
                             module_info.nav_state.lastVisitedNode.data = (int)tag;
                             module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
                             module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
