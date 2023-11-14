@@ -32,9 +32,10 @@ namespace GPMVehicleControlSystem.ViewModels
                 List<DriverState> driverStates = new List<DriverState>();
                 driverStates.AddRange(AGV.WheelDrivers.Select(d => d.Data).ToArray());
                 driverStates.Add(AGV.VerticalDriverState.Data);
+                string AppVersion = CreateAPPVersionString();
                 AGVCStatusVM data_view_model = new AGVCStatusVM()
                 {
-                    APPVersion = StaStored.APPVersion,
+                    APPVersion = AppVersion,
                     Agv_Type = AGV.Parameters.AgvType,
                     Simulation = AGV.Parameters.SimulationMode,
                     AutoMode = AGV.Operation_Mode,
@@ -110,13 +111,13 @@ namespace GPMVehicleControlSystem.ViewModels
                         },
                         new clsAlarmCode
                         {
-        
-                            
-                            
-                            
-                            
+
+
+
+
+
                             Time=DateTime.Now,
-                                            
+
                              Code =  (int)AlarmCodes.Code_Error_In_System,
                               Description ="系統異常",
                               ELevel = clsAlarmCode.LEVEL.Alarm
@@ -147,6 +148,21 @@ namespace GPMVehicleControlSystem.ViewModels
                 };
             }
 
+        }
+
+        private static string CreateAPPVersionString()
+        {
+            string headStr = "";
+            var agv_type = AGV.Parameters.AgvType;
+            if (agv_type == clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
+                headStr = "S";
+            else if (agv_type == clsEnums.AGV_TYPE.FORK)
+                headStr = "F";
+            else if (agv_type == clsEnums.AGV_TYPE.INSPECTION_AGV)
+                headStr = "I";
+            else
+                headStr = "V";
+            return headStr + StaStored.APPVersion;
         }
 
         private static BatteryStateVM[] GetBatteryStatusVM()

@@ -86,9 +86,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation()
         {
-            List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(WorkStations.Stations.Keys.ToArray());
-            LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
-            return eqOptions;
+            try
+            {
+                List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(WorkStations.Stations.Keys.ToArray());
+                LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
+                return eqOptions;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
+                return null;
+            }
         }
 
         private void AGVS_OnDisconnected(object? sender, EventArgs e)

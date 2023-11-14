@@ -329,8 +329,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (AGVS.UseWebAPI)
                             {
                                 var eqinfomations = await GetWorkStationEQInformation();
-                                WorkStations.SyncInfo(eqinfomations);
-                                SaveTeachDAtaSettings();
+                                if (eqinfomations != null)
+                                {
+                                    WorkStations.SyncInfo(eqinfomations);
+                                    SaveTeachDAtaSettings();
+                                }
                             }
 
                         }
