@@ -98,7 +98,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
         public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
-        public clsTaskDownloadData.clsOrderInfo TransferInfo { get; set; } = new clsTaskDownloadData.clsOrderInfo();
+        public clsTaskDownloadData.clsOrderInfo OrderInfo { get; set; } = new clsTaskDownloadData.clsOrderInfo();
         public class clsTransferInfoViewModel
         {
             public string Action { get; set; } = "";

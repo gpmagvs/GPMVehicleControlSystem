@@ -187,13 +187,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void UpdateOrderInfo(clsTaskDownloadData taskDownloadData)
         {
             if (AGVS.UseWebAPI)
-                transferViewModel = taskDownloadData.OrderInfo;
+                orderInfoViewModel = taskDownloadData.OrderInfo;
             else
             {
                 var firstTag = taskDownloadData.ExecutingTrajecory.First().Point_ID;
                 var sourcePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == firstTag);
                 var destinePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
-                transferViewModel = new clsTaskDownloadData.clsOrderInfo()
+                orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo()
                 {
                     ActionName = taskDownloadData.Action_Type,
                     SourceName = sourcePt == null ? firstTag.ToString() : destinePt.Name,
@@ -240,9 +240,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             DestinEQName = DestinePoint.Graph.Display;
                         }
-                        transferViewModel.SourceName = SourceEQName;
-                        transferViewModel.DestineName = DestinEQName;
-                        LOG.INFO($"Download TransferTask= {transferViewModel.ToJson()}", color: ConsoleColor.Green);
+                        orderInfoViewModel.SourceName = SourceEQName;
+                        orderInfoViewModel.DestineName = DestinEQName;
+                        LOG.INFO($"Download TransferTask= {orderInfoViewModel.ToJson()}", color: ConsoleColor.Green);
 
                     }
                 }
@@ -306,7 +306,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private bool IsActionFinishTaskFeedbackExecuting = false;
         private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
-        public clsTaskDownloadData.clsOrderInfo transferViewModel { get; private set; } = new clsTaskDownloadData.clsOrderInfo();
+        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel { get; private set; } = new clsTaskDownloadData.clsOrderInfo();
 
         /// <summary>
         /// 上報任務狀態
