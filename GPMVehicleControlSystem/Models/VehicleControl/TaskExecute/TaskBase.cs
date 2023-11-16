@@ -501,53 +501,73 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         protected virtual void StartFrontendObstcleDetection()
         {
-
-            bool Enable = action == ACTION_TYPE.Load ? StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Enable_Load :
-                                                                                        StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Enable_UnLoad;
-
+            var sensorInitStatus = Agv.WagoDI.GetState(Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? DI_ITEM.FrontProtection_Obstacle_Sensor : DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+            var options = Agv.Parameters.LOAD_OBS_DETECTION;
+            bool Enable = action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad;
+            var alarmLevel = options.AlarmLevelWhenTrigger;
             if (!Enable)
                 return;
-
-            int DetectionTime = StaStored.CurrentVechicle.Parameters.LOAD_OBS_DETECTION.Duration;
-            LOG.WARN($"前方二次檢Sensor 偵側開始 (偵測持續時間={DetectionTime} s)");
-            CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            bool detected = false;
-
-            void FrontendObsSensorDetectAction(object sender, EventArgs e)
+            if (options.Detection_Method == Vehicles.Params.clsObstacleDetection.FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION)
             {
-                detected = true;
-                if (!cancelDetectCTS.IsCancellationRequested)
+                if (!sensorInitStatus)
+                    return;
+                if (alarmLevel == ALARM_LEVEL.ALARM)
+                    EMO_STOP_AGV();
+                else
+                    AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+            }
+            else
+            {
+                int DetectionTime = options.Duration;
+                LOG.WARN($"前方二次檢Sensor 偵側開始 (偵測持續時間={DetectionTime} s)");
+                CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                bool detected = false;
+
+                void FrontendObsSensorDetectAction(object sender, EventArgs e)
                 {
-                    cancelDetectCTS.Cancel();
-                    stopwatch.Stop();
-                    LOG.Critical($" 前方二次檢Sensor觸發(第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
-                    try
+                    detected = true;
+                    if (!cancelDetectCTS.IsCancellationRequested)
                     {
-                        Agv.AGVC.EMOHandler(this, EventArgs.Empty);
-                        Agv.ExecutingTaskModel.Abort();
-                        Agv.Sub_Status = SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
+                        cancelDetectCTS.Cancel();
+                        stopwatch.Stop();
+                        LOG.Critical($" 前方二次檢Sensor觸發(第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
+                        if (alarmLevel == ALARM_LEVEL.ALARM)
+                            EMO_STOP_AGV();
+                        else
+                            AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                     }
-                    catch (Exception ex)
+                }
+                Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
+                
+                Task.Run(() =>
+                {
+                    while (!cancelDetectCTS.IsCancellationRequested)
                     {
-                        throw ex;
+                        Thread.Sleep(1);
                     }
+                    if (!detected)
+                    {
+                        LOG.WARN($"前方二次檢Sensor Pass. ");
+                    }
+                    Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
+                });
+
+            }
+            void EMO_STOP_AGV()
+            {
+                try
+                {
+                    Agv.AGVC.EMOHandler(this, EventArgs.Empty);
+                    Agv.ExecutingTaskModel.Abort();
+                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
                 }
             }
-            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
-            Task.Run(() =>
-            {
-                while (!cancelDetectCTS.IsCancellationRequested)
-                {
-                    Thread.Sleep(1);
-                }
-                if (!detected)
-                {
-                    LOG.WARN($"前方二次檢Sensor Pass. ");
-                }
-                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
-            });
         }
 
         protected virtual void Dispose(bool disposing)
