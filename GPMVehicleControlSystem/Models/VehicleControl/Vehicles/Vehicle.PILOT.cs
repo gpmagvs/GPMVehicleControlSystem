@@ -134,54 +134,74 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
-             {
-                 if (action == ACTION_TYPE.None)
-                 {
-                     ExecutingTaskModel = new NormalMoveTask(this, taskDownloadData);
-                 }
-                 else
-                 {
-                     if (taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                         taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
-                     if (action == ACTION_TYPE.Charge)
-                         ExecutingTaskModel = new ChargeTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Discharge)
-                         ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Load)
-                         ExecutingTaskModel = new LoadTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Unload)
-                         ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Park)
-                         ExecutingTaskModel = new ParkTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Unpark)
-                         ExecutingTaskModel = new UnParkTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.Measure)
-                         ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
-                     else if (action == ACTION_TYPE.ExchangeBattery)
-                         ExecutingTaskModel = new ExchangeBatteryTask(this, taskDownloadData);
-                     else
-                     {
-                         throw new NotImplementedException();
-                     }
-                 }
-                 previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
-                 ExecutingTaskModel.ForkLifter = ForkLifter;
-                 IsLaserRecoveryHandled = false;
-                 _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
-                 transferViewModel = taskDownloadData.OrderInfo;
-                 //TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
+            {
+                if (action == ACTION_TYPE.None)
+                {
+                    ExecutingTaskModel = new NormalMoveTask(this, taskDownloadData);
+                }
+                else
+                {
+                    if (taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                        taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                    if (action == ACTION_TYPE.Charge)
+                        ExecutingTaskModel = new ChargeTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Discharge)
+                        ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Load)
+                        ExecutingTaskModel = new LoadTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Unload)
+                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Park)
+                        ExecutingTaskModel = new ParkTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Unpark)
+                        ExecutingTaskModel = new UnParkTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.Measure)
+                        ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
+                    else if (action == ACTION_TYPE.ExchangeBattery)
+                        ExecutingTaskModel = new ExchangeBatteryTask(this, taskDownloadData);
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
+                }
+                previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
+                ExecutingTaskModel.ForkLifter = ForkLifter;
+                IsLaserRecoveryHandled = false;
+                _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
 
-                 var result = await ExecutingTaskModel.Execute();
-                 if (result != AlarmCodes.None)
-                 {
-                     Sub_Status = SUB_STATUS.DOWN;
-                     LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                     AlarmManager.AddAlarm(result, false);
-                     AGVC.OnAGVCActionChanged = null;
-                 }
-                 //}
-             });
+                UpdateOrderInfo(taskDownloadData);
+                //TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
+
+                var result = await ExecutingTaskModel.Execute();
+                if (result != AlarmCodes.None)
+                {
+                    Sub_Status = SUB_STATUS.DOWN;
+                    LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                    AlarmManager.AddAlarm(result, false);
+                    AGVC.OnAGVCActionChanged = null;
+                }
+                //}
+            });
         }
+
+        private void UpdateOrderInfo(clsTaskDownloadData taskDownloadData)
+        {
+            if (AGVS.UseWebAPI)
+                transferViewModel = taskDownloadData.OrderInfo;
+            else
+            {
+                var firstTag = taskDownloadData.ExecutingTrajecory.First().Point_ID;
+                var sourcePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == firstTag);
+                var destinePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
+                transferViewModel = new clsTaskDownloadData.clsOrderInfo()
+                {
+                    ActionName = taskDownloadData.Action_Type,
+                    SourceName = sourcePt == null ? firstTag.ToString() : destinePt.Name,
+                    DestineName = destinePt == null ? taskDownloadData.Destination.ToString() : destinePt.Name
+                };
+            }
+        }
+
         private async void TryGetTransferInformationFromCIM(string task_Name)
         {
             if (!Parameters.CIMConn)
