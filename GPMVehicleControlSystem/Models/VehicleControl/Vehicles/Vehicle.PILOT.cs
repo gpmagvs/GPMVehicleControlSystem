@@ -21,6 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private string TaskName = "";
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
         internal bool AutoOnlineRaising = false;
+
         public enum EQ_HS_METHOD
         {
             PIO,
@@ -105,7 +106,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             AGVC.OnAGVCActionChanged = null;
-            transferViewModel.Clear();
             if (ExecutingTaskModel != null)
             {
                 ExecutingTaskModel.Dispose();
@@ -168,8 +168,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  ExecutingTaskModel.ForkLifter = ForkLifter;
                  IsLaserRecoveryHandled = false;
                  _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
-
-                 TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
+                 transferViewModel = taskDownloadData.OrderInfo;
+                 //TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
 
                  var result = await ExecutingTaskModel.Execute();
                  if (result != AlarmCodes.None)
@@ -182,7 +182,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  //}
              });
         }
-        internal clsTransferInfoViewModel transferViewModel = new clsTransferInfoViewModel();
         private async void TryGetTransferInformationFromCIM(string task_Name)
         {
             if (!Parameters.CIMConn)
@@ -221,9 +220,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             DestinEQName = DestinePoint.Graph.Display;
                         }
-                        transferViewModel.Action = Action;
-                        transferViewModel.Source = SourceEQName;
-                        transferViewModel.Destine = DestinEQName;
+                        transferViewModel.SourceName = SourceEQName;
+                        transferViewModel.DestineName = DestinEQName;
                         LOG.INFO($"Download TransferTask= {transferViewModel.ToJson()}", color: ConsoleColor.Green);
 
                     }
@@ -288,6 +286,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private bool IsActionFinishTaskFeedbackExecuting = false;
         private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
+        public clsTaskDownloadData.clsOrderInfo transferViewModel { get; private set; } = new clsTaskDownloadData.clsOrderInfo();
+
         /// <summary>
         /// 上報任務狀態
         /// </summary>
@@ -296,17 +296,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
-            try
-            {
-                if (status == TASK_RUN_STATUS.ACTION_FINISH && _RunTaskData.Action_Type == ACTION_TYPE.Load)
-                {
-                    transferViewModel.Clear();
-                }
-            }
-            catch (Exception)
-            {
 
-            }
             try
             {
                 bool needReOnline = false;
