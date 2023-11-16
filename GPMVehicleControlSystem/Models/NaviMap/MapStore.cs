@@ -16,16 +16,17 @@ namespace GPMVehicleControlSystem.Models.NaviMap
             }
         }
 
-        public static bool SaveCurrentMap(Map map)
+        public static bool SaveCurrentMap(Map map, out string path)
         {
+            path = "";
             try
             {
                 var json = JsonConvert.SerializeObject(map, Formatting.Indented);
                 var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/temp");
                 Directory.CreateDirectory(folder);
-                var filepath = Path.Combine(folder, $"{map.Name}.json");
-                File.WriteAllText(filepath, json);
-                LOG.INFO($"Save Map  from server to {filepath} success!");
+                path = Path.Combine(folder, $"{map.Name}.json");
+                File.WriteAllText(path, json);
+                LOG.INFO($"Save Map  from server to {path} success!");
                 return true;
             }
             catch (Exception ex)
@@ -68,6 +69,7 @@ namespace GPMVehicleControlSystem.Models.NaviMap
 
         internal static Map? GetMapFromFile(string localMapFileFullName)
         {
+
             Map emptyMap = new Map()
             {
                 Note = "empty"

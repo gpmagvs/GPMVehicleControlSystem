@@ -9,6 +9,7 @@ using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using RosSharp.RosBridgeClient.Actionlib;
+using AGVSystemCommonNet6.MAP;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -53,9 +54,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     NavingMap = await MapStore.GetMapFromServer();
+
                     if (NavingMap != null)
                     {
-                        MapStore.SaveCurrentMap(NavingMap);
+                        NavingMap.Segments = MapManager.CreateSegments(NavingMap);
+                        MapStore.SaveCurrentMap(NavingMap, out string path);
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
                         var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
                         if (lastPoint != null && Parameters.SimulationMode)
@@ -143,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new clsRunningStatus
                 {
-                    Cargo_Status =CargoStatus==CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
+                    Cargo_Status = CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
@@ -194,7 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new RunningStatus
                 {
-                    Cargo_Status =CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL?1 : 0,
+                    Cargo_Status = CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
