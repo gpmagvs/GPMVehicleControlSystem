@@ -374,7 +374,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task wait_eq_busy_ON = new Task(() =>
             {
                 LOG.Critical("[EQ Handshake] 等待EQ BUSY ON ");
-                while (!IsEQBusyOn() && !isEQGoOff)
+                while (!IsEQBusyOn() && !isEQGoOff && IsEQReadyOn())
                 {
                     if (waitEQ_BUSY_ON_CTS.IsCancellationRequested)
                     {
@@ -429,6 +429,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                if (!IsEQReadyOn())
+                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+
                 return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
             }
             try
@@ -440,6 +443,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 wait_eq_busy_OFF.Wait(waitEQ_BUSY_OFF_CTS.Token);
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                if (!IsEQReadyOn())
+                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 SetAGVREADY(false); //AGV BUSY 開始退出
                 SetAGVBUSY(true);
@@ -455,7 +461,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-
+                if (!IsEQReadyOn())
+                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
                 if (!IsEQOrAGVAlarmWhenEQBUSY)
                     return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
                 else

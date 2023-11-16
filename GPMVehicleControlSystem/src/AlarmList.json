@@ -1082,7 +1082,7 @@
   {
     "Code": 3234,
     "Description": "Handshake_Fail_EQ_READY_OFF",
-    "CN": "交握失敗-設備發生異常"
+    "CN": "交握失敗-設備發生異常(EQ_READY訊號OFF)"
   },
   {
     "Code": 3235,

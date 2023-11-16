@@ -1,5 +1,6 @@
 ﻿using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Emulators;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -10,6 +11,9 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
     [ApiController]
     public class WagoEmuController : ControllerBase
     {
+
+        private Vehicle Agv => StaStored.CurrentVechicle;
+
 
         [HttpGet("Disconnect")]
         public async Task<IActionResult> Disconnect()
@@ -178,6 +182,23 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         }
 
 
+        [HttpGet("Submarine_Frontend_Obs_Control")]
+        public async Task Submarine_Frontend_Obs_Control()
+        {
+            var di_ = DI_ITEM.FrontProtection_Obstacle_Sensor;
+            bool state = Agv.WagoDI.GetState(di_);
+            StaEmuManager.wagoEmu.SetState(di_, !state);
+        }
+
+        [HttpGet("EQ_SIGNALS_OFF")]
+        public async Task EQ_SIGNALS_OFF()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, false);
+        }
+
         [HttpGet("EQ_GO_OFF")]
         public async Task EQ_GO_OFF()
         {
@@ -193,8 +214,8 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
 
             var EQ_GO_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_GO);
             var EQ_BUSY_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_BUSY);
-            var EQ_READY_oriState =StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_READY);
-            var EQ_L_REQ_oriState =StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_L_REQ);
+            var EQ_READY_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_READY);
+            var EQ_L_REQ_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_L_REQ);
             var EQ_U_REQ_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_U_REQ);
 
 

@@ -320,7 +320,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     {
                         await Task.Delay(10);
 
-                        if (stopwatch.ElapsedMilliseconds > 10000)
+                        if (stopwatch.ElapsedMilliseconds > 30000)
                         {
                             module_info.Battery.batteryLevel -= 1;
                             module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);

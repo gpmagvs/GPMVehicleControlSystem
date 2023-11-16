@@ -16,6 +16,8 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.Tools.Database;
 using GPMVehicleControlSystem.Models.Emulators;
+using AGVSystemCommonNet6.Alarm;
+using Microsoft.Extensions.Options;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -75,6 +77,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckBeforeHSStartInFrontOfEQ();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
+
+            #region 前方障礙物預檢
+            var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
+            bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
+
+            if (!isNoObstacle)
+                if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
+                    return (false, FrontendSecondarSensorTriggerAlarmCode);
+                else
+                    AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+            #endregion
 
             //(bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
 
