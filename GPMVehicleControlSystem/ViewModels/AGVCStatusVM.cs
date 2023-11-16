@@ -98,6 +98,19 @@ namespace GPMVehicleControlSystem.ViewModels
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
         public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
+        public clsTransferInfoViewModel TransferInfo { get; set; } = new clsTransferInfoViewModel();
+        public class clsTransferInfoViewModel
+        {
+            public string Action { get; set; } = "";
+            public string Destine { get; set; } = "";
+            public string Source { get; set; } = "";
+
+            internal void Clear()
+            {
+                Action = Source = Destine = "";
+            }
+        }
+
         public class clsSysLoading
         {
             public double CPU { get; set; }

@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
@@ -11,6 +12,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using static GPMVehicleControlSystem.ViewModels.AGVCStatusVM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -103,6 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             AGVC.OnAGVCActionChanged = null;
+            transferViewModel.Clear();
             if (ExecutingTaskModel != null)
             {
                 ExecutingTaskModel.Dispose();
@@ -165,6 +168,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  ExecutingTaskModel.ForkLifter = ForkLifter;
                  IsLaserRecoveryHandled = false;
                  _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
+
+                 TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
+
                  var result = await ExecutingTaskModel.Execute();
                  if (result != AlarmCodes.None)
                  {
@@ -175,6 +181,58 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                  }
                  //}
              });
+        }
+        internal clsTransferInfoViewModel transferViewModel = new clsTransferInfoViewModel();
+        private async void TryGetTransferInformationFromCIM(string task_Name)
+        {
+            if (!Parameters.CIMConn)
+                return;
+
+            await Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    TransferData transferData = new TransferData();
+                    CancellationTokenSource cancTs = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    while (transferData.ActionType == null)
+                    {
+                        await Task.Delay(1000);
+                        if (cancTs.IsCancellationRequested)
+                        {
+                            LOG.ERROR($"Cannot Download Transfer Infomation From CIM");
+                            return;
+                        }
+                        transferData = await QueryTaskInfoFromCIM(task_Name);
+                    }
+
+                    if (transferData != null)
+                    {
+                        var SourcePointIndex = transferData.FromStationId;
+                        var DestinePointIndex = transferData.ToStationId;
+                        string Action = transferData.ActionType;
+                        string SourceEQName = string.Empty;
+                        string DestinEQName = string.Empty;
+
+                        if (NavingMap.Points.TryGetValue(DestinePointIndex, out var SourcePoint))
+                        {
+                            SourceEQName = SourcePoint.Graph.Display;
+                        }
+                        if (NavingMap.Points.TryGetValue(DestinePointIndex, out var DestinePoint))
+                        {
+                            DestinEQName = DestinePoint.Graph.Display;
+                        }
+                        transferViewModel.Action = Action;
+                        transferViewModel.Source = SourceEQName;
+                        transferViewModel.Destine = DestinEQName;
+                        LOG.INFO($"Download TransferTask= {transferViewModel.ToJson()}", color: ConsoleColor.Green);
+
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex);
+                }
+            });
         }
 
         private void WriteTaskNameToFile(string task_Name)
@@ -238,6 +296,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
+            try
+            {
+                if (status == TASK_RUN_STATUS.ACTION_FINISH && _RunTaskData.Action_Type == ACTION_TYPE.Load)
+                {
+                    transferViewModel.Clear();
+                }
+            }
+            catch (Exception)
+            {
+
+            }
             try
             {
                 bool needReOnline = false;

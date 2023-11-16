@@ -90,7 +90,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     {
                         ConnectionType = AGV.Parameters.EQHandshakeMethod,
                         Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
-                    }
+                    },
+                    TransferInfo = AGV.transferViewModel
 
                 };
                 return data_view_model;

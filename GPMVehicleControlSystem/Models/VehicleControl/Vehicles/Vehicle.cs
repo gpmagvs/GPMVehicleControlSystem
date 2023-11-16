@@ -340,12 +340,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
+
                 AGVSInit();
                 EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
+
                 Task.Factory.StartNew(async () =>
                 {
                     await Task.Delay(1000);
