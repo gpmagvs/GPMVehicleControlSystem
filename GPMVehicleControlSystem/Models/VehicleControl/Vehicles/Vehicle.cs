@@ -526,6 +526,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
+            orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
             if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
             {

@@ -316,7 +316,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
-
+            if (status == TASK_RUN_STATUS.ACTION_FINISH && Sub_Status == SUB_STATUS.IDLE)
+                orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
             try
             {
                 bool needReOnline = false;
