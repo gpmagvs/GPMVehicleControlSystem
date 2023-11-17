@@ -94,6 +94,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public LightsStatesVM LightsStates { get; set; } = new LightsStatesVM();
         public bool IsLaserModeSettingError { get; set; } = false;
         public bool ForkHasLoading { get; set; }
+        public bool CargoExist { get; set; }
         public object HandShakeSignals { get; set; } = new object();
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();

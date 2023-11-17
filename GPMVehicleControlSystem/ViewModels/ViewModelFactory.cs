@@ -76,6 +76,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.HasAnyCargoOnAGV(),
+                    CargoExist = AGV.HasAnyCargoOnAGV(),
                     HandShakeSignals = new
                     {
                         EQ = AGV.EQHsSignalStates,
