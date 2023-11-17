@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool Recharge_Circuit_Auto_Control_In_ManualMode { get; set; } = true;
 
         public int LastVisitedTag { get; set; } = 8;
-
+        public ORDER_INFO_FETCH_SOURCE OrderInfoFetchSource { get; set; } = ORDER_INFO_FETCH_SOURCE.FROM_CIM_POST_IN;
         /// <summary>
         /// 停車的精度誤差值(mm)
         /// </summary>

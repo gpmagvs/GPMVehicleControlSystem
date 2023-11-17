@@ -169,8 +169,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsLaserRecoveryHandled = false;
                 _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
 
-                UpdateOrderInfo(taskDownloadData);
-                //TryGetTransferInformationFromCIM(taskDownloadData.Task_Name);
+                if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
+                    orderInfoViewModel = taskDownloadData.OrderInfo;
 
                 var result = await ExecutingTaskModel.Execute();
                 if (result != AlarmCodes.None)
@@ -184,23 +184,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        private void UpdateOrderInfo(clsTaskDownloadData taskDownloadData)
-        {
-            if (AGVS.UseWebAPI)
-                orderInfoViewModel = taskDownloadData.OrderInfo;
-            else
-            {
-                var firstTag = taskDownloadData.ExecutingTrajecory.First().Point_ID;
-                var sourcePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == firstTag);
-                var destinePt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
-                orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo()
-                {
-                    ActionName = taskDownloadData.Action_Type,
-                    SourceName = sourcePt == null ? firstTag.ToString() : destinePt.Name,
-                    DestineName = destinePt == null ? taskDownloadData.Destination.ToString() : destinePt.Name
-                };
-            }
-        }
 
         private async void TryGetTransferInformationFromCIM(string task_Name)
         {
@@ -306,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private bool IsActionFinishTaskFeedbackExecuting = false;
         private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
-        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel { get; private set; } = new clsTaskDownloadData.clsOrderInfo();
+        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel { get; internal set; } = new clsTaskDownloadData.clsOrderInfo();
 
         /// <summary>
         /// 上報任務狀態

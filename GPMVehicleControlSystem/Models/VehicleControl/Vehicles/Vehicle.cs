@@ -60,6 +60,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             GPM_VMS
         }
 
+        public enum ORDER_INFO_FETCH_SOURCE
+        {
+            FROM_TASK_DOWNLOAD_CONTENT,
+            FROM_CIM_POST_IN
+        }
         public abstract clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;

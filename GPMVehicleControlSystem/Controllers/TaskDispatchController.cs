@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using static AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData;
 
 namespace GPMVehicleControlSystem.Controllers
 {
@@ -67,6 +68,23 @@ namespace GPMVehicleControlSystem.Controllers
             }
             LogResponseAsync("Cancel", reply);
             return Ok(reply);
+        }
+
+        [HttpPost("OrderInfo")]
+        public async Task<IActionResult> OrderInfo([FromBody] clsOrderInfo OrderInfo)
+        {
+            LogAsync("Cancel", OrderInfo, method: "POST");
+            try
+            {
+                if (Agv.Parameters.OrderInfoFetchSource == Vehicle.ORDER_INFO_FETCH_SOURCE.FROM_CIM_POST_IN)
+                    Agv.orderInfoViewModel = OrderInfo;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
+            LogResponseAsync("Cancel", true);
+            return Ok(true);
         }
     }
 }
