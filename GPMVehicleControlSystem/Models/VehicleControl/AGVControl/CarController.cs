@@ -78,6 +78,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<int> OnSickLaserModeSettingChanged;
         public event EventHandler OnAGVCCycleStopRequesting;
         public event EventHandler OnRosSocketReconnected;
+
+        public delegate bool SpeedRecoveryRequestingDelegate();
+        public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
+
         public Action<ActionStatus> OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
@@ -134,7 +138,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public int Throttle_rate_of_Topic_ModuleInfo { get; internal set; } = 100;
         public int QueueSize_of_Topic_ModuleInfo { get; internal set; } = 10;
 
-        public ROBOT_CONTROL_CMD previous_ComplexCmd { get; private set; } = ROBOT_CONTROL_CMD.NONE;
 
         private bool TryConnecting = false;
 
@@ -354,18 +357,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
 
-        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
+        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, bool CheckLaserStatus = true)
         {
-            await CarSpeedControl(cmd, RunningTaskData.Task_Name);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name, CheckLaserStatus);
         }
-        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id)
+        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, bool CheckLaserStatus = true)
         {
-            if (previous_ComplexCmd == cmd)
+
+            if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
             {
-                LOG.TRACE($"{cmd} already requet to AGVC");
-                previous_ComplexCmd = ROBOT_CONTROL_CMD.NONE;
-                return true;
+
+                var speed_recoverable = OnSpeedRecoveryRequesting();
+                if (!speed_recoverable && CheckLaserStatus)
+                {
+                    LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控速度恢復但尚有雷射觸發中");
+                    return false;
+                }
             }
+
             ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
             {
                 taskID = task_id == null ? "" : task_id,
@@ -377,8 +386,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 return false;
             }
             LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd} 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id},)");
-            if (res.confirm)
-                previous_ComplexCmd = cmd;
             return res.confirm;
         }
 
