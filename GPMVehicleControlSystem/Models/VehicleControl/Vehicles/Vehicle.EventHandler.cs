@@ -25,6 +25,7 @@ using System.Diagnostics;
 using GPMVehicleControlSystem.Models.Emulators;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using GPMVehicleControlSystem.Models.NaviMap;
+using AGVSystemCommonNet6.Tools.Database;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -49,6 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
         protected virtual void CommonEventsRegist()
         {
+            DBhelper.OnDataBaseChanged += CopyDataBaseToLogFolder;
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVC.OnSpeedRecoveryRequesting += IsAllLaserNoTrigger;
@@ -86,7 +88,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        
+        private void CopyDataBaseToLogFolder(string database_file_name)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+
+                    string subFolder = Path.Combine(LOG.LogFolder, DateTime.Now.ToString("yyyy-MM-dd"));
+                    string fileName = Path.Combine(subFolder, Path.GetFileName(database_file_name));
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    File.Copy(database_file_name, fileName, true);
+                    stopwatch.Stop();
+                    LOG.TRACE($"DB File Copy spend:{stopwatch.ElapsedMilliseconds} ms", Debugger.IsAttached);
+                }
+                catch (Exception ex)
+                {
+                    LOG.Critical(ex);
+                }
+            });
+
+        }
+
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
