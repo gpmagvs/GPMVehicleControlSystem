@@ -103,9 +103,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             else
                 fromtag = int.Parse(from);
 
-            var fromStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == fromtag);
-            var toStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == totag);
+            MapPoint? fromStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == fromtag);
+            MapPoint? toStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == totag);
 
+            var _OrderInfo = new clsTaskDownloadData.clsOrderInfo
+            {
+                ActionName = action,
+                SourceName = fromStationFound?.Name,
+                DestineName = toStationFound?.Name
+            };
             if (fromStationFound == null)
             {
                 return Ok(new TaskActionResult
@@ -146,6 +152,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                       {
                           if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               return;
+                          _taskDataDto.OrderInfo = _OrderInfo;
                           agv.ExecuteAGVSTask(this, _taskDataDto);
                           await Task.Delay(200);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
@@ -324,7 +331,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             bool isInChargeOrEqPortStation = currentStation.StationType != STATION_TYPE.Normal;
             MapPoint secondaryLocStation_of_chargeStateion = mapData.Points[currentStation.Target.First().Key];
-
             if (isInChargeOrEqPortStation)
             {
                 //Discharge
@@ -362,7 +368,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Action_Type = ACTION_TYPE.None,
                 Destination = normal_move_final_tag,
                 Station_Type = STATION_TYPE.Normal,
-                Trajectory = PathFinder.GetTrajectory(mapData.Name, planPath.stations)
+                Trajectory = PathFinder.GetTrajectory(mapData.Name, planPath.stations),
             };
 
             if (actionType != ACTION_TYPE.None)
@@ -383,12 +389,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Action_Type = actionType,
                     Destination = destineStation.TagNumber,
                     Station_Type = destineStation.StationType,
-                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { secondaryLocStation, destineStation })
+                    Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { secondaryLocStation, destineStation }),
                 };
                 taskList.Add(homing_move_task);
             }
-
-
 
             return taskList.ToArray();
         }
