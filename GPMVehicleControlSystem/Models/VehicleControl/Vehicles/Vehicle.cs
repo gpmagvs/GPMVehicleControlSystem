@@ -500,7 +500,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal bool IsAllLaserNoTrigger()
         {
-            return WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+            var FrontArea1 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            var FrontArea2 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+            var FrontArea3 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+
+            var BackArea1 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1);
+            var BackArea2 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2);
+            var BackArea3 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3);
+
+            var RightArea = WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+            var LeftArea = WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+
+            LOG.INFO($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
+                        $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
+                        $"Back_Area  1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
+                        $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
+                        $"Left_Area       ={LeftArea.ToSymbol("O", "X")}");
+
+            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea | LeftArea;
         }
 
         protected virtual async void DOSignalDefaultSetting()
