@@ -355,6 +355,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 Task.Factory.StartNew(async () =>
                 {
+                    ReloadLocalMap();
                     await Task.Delay(1000);
                     await DownloadMapFromServer();
                 });

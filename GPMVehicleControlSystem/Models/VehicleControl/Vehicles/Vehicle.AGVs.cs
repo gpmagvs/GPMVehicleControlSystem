@@ -35,7 +35,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnPingFail += (sender, arg) =>
             {
                 LOG.TRACE($"AGVS Network Ping Fail.... ");
-                AlarmManager.AddAlarm(AlarmCodes.AGVS_PING_FAIL);
+                AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
             };
             AGVS.OnPingSuccess += (sender, arg) =>
             {
@@ -46,19 +46,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
 
         }
-
+        private void ReloadLocalMap()
+        {
+            if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
+            {
+                LOG.WARN($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
+                NavingMap = MapStore.GetMapFromFile(Parameters.MapParam.LocalMapFileFullName);
+                if (NavingMap.Note != "empty")
+                {
+                    LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
+                    var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
+                    if (lastPoint != null && Parameters.SimulationMode)
+                        StaEmuManager.agvRosEmu.SetCoordination(lastPoint.X, lastPoint.Y, 0);
+                }
+            }
+            else
+            {
+                LOG.ERROR($"Local map file dosen't exist({Parameters.MapParam.LocalMapFileFullName})");
+            }
+        }
         internal async Task DownloadMapFromServer()
         {
             await Task.Run(async () =>
             {
                 try
                 {
-                    NavingMap = await MapStore.GetMapFromServer();
+                    var _NavingMap = await MapStore.GetMapFromServer();
 
-                    if (NavingMap != null)
+                    if (_NavingMap != null)
                     {
-                        NavingMap.Segments = MapManager.CreateSegments(NavingMap);
-                        MapStore.SaveCurrentMap(NavingMap, out string path);
+                        _NavingMap.Segments = MapManager.CreateSegments(_NavingMap);
+                        MapStore.SaveCurrentMap(_NavingMap, out string map_file_saved_path);
+                        NavingMap = _NavingMap;
+
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
                         var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
                         if (lastPoint != null && Parameters.SimulationMode)
@@ -66,17 +86,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
-                        {
-                            LOG.WARN($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
-                            NavingMap = MapStore.GetMapFromFile(Parameters.MapParam.LocalMapFileFullName);
-                            if (NavingMap.Note != "empty")
-                                LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
-                        }
-                        else
-                        {
-                            LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl}) and not any local map file exist({Parameters.MapParam.LocalMapFileFullName})");
-                        }
+                        LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl})");
                     }
                 }
                 catch (Exception ex)
