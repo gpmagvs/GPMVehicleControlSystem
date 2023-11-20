@@ -170,7 +170,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
 
                 if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
-                    orderInfoViewModel = taskDownloadData.OrderInfo;
+                {
+                    if (taskDownloadData.Action_Type == ACTION_TYPE.None)
+                        orderInfoViewModel = taskDownloadData.OrderInfo;
+                    else
+                    {
+                        orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
+                        {
+                            ActionName = taskDownloadData.Action_Type,
+                            DestineName = DestinationMapPoint == null ? taskDownloadData.Destination.ToString() : DestinationMapPoint.Name
+                        };
+                    }
+                }
 
                 var result = await ExecutingTaskModel.Execute();
                 if (result != AlarmCodes.None)
