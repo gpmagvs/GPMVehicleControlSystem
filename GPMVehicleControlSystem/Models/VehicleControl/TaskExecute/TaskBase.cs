@@ -243,7 +243,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             }
 
                             AGVCActionStatusChaged += HandleAGVActionChanged;
-                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, false);
                         }
                     }
                 }
