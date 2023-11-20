@@ -18,6 +18,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -284,5 +285,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cmd">0:速度恢復 1:減速 2:停止 3:STOP_CALCULATE_PATH_CLOSE  100:STOP_WHEN_REACH_GOAL</param>
+        /// <returns></returns>
+        [HttpGet("SpeedControl")]
+        public async Task<IActionResult> CarSpeedControl(ROBOT_CONTROL_CMD cmd)
+        {
+            await agv.AGVC.CarSpeedControl(cmd);
+            return Ok();
+        }
     }
 }
