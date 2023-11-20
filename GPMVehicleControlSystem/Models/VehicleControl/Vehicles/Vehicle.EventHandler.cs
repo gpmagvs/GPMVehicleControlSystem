@@ -51,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-
+            AGVC.OnSpeedRecoveryRequesting += IsAllLaserNoTrigger;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
@@ -85,6 +85,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 };
             }
         }
+
+        
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
@@ -138,6 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
             WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal);
             WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal);
+
             WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
             WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
             WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
