@@ -293,7 +293,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("SpeedControl")]
         public async Task<IActionResult> CarSpeedControl(ROBOT_CONTROL_CMD cmd)
         {
-            await agv.AGVC.CarSpeedControl(cmd);
+            await agv.AGVC.CarSpeedControl(cmd, SPEED_CONTROL_REQ_MOMENT.UNKNOWN);
             return Ok();
         }
     }

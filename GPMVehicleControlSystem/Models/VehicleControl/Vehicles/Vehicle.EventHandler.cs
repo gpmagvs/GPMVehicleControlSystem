@@ -204,10 +204,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
 
-            if (WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) && WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
+            if (IsNoObstacleAroundAGV)
             {
                 LOG.WARN("AGV Executing Task and Wago Module Reconnected,and No Obstacle,Send Complex Control Speed Reconvery");
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_RECOVERY);
             }
         }
 
@@ -216,7 +216,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
             LOG.WARN("AGV Executing Task but Wago Module Disconnect,Send Complex Control STOP => AGV STOP");
-            AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+            AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_DISCONNECTED);
         }
 
         /// <summary>
@@ -250,11 +250,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     var theta = Navigation.Angle;
                     LOG.ERROR($"{(IsRightLaser ? "Right" : "Left")} Side Laser Flick! ({x},{y},{theta})");
                     if (IsNoObstacleAroundAGV)
-                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                     return;
                 }
 
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
 
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddAlarm(alarm_code);
@@ -268,7 +268,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (IsNoObstacleAroundAGV)
                 {
                     LOG.INFO($"[{alarm_code}] 側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                 }
             }
         }
@@ -295,7 +295,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddWarning(alarm_code);
-                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE);
+                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_TRIGGER);
             }
             else
             {
@@ -306,7 +306,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                     Task.Factory.StartNew(() =>
                     {
-                        AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_RECOVERY);
                     });
                 }
             }
@@ -333,7 +333,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!diState.State)
             {
                 LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP);
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddAlarm(alarm_code);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
@@ -345,7 +345,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (IsNoObstacleAroundAGV)
                 {
                     LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE);
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_RECOVERY);
                 }
             }
         }
@@ -370,13 +370,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmCodes alarm_code = isFrontLaser ? AlarmCodes.FrontProtection_Area3 : AlarmCodes.BackProtection_Area3;
             if (!di_state)
             {
+                LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddAlarm(alarm_code);
+                AGVStatusChangeToAlarmWhenLaserTrigger();
             }
             else
             {
                 IsLaserRecoveryHandled = false;
                 AlarmManager.ClearAlarm(alarm_code);
+                if (IsNoObstacleAroundAGV)
+                {
+                    LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
+                }
             }
         }
 
@@ -403,7 +411,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 $"\r\n 雷射輸入=> \r\n{LsrInputState}");
 
         }
-        private async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control)
+        private async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
         {
             await Task.Delay(1000);
 
@@ -430,7 +438,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
                 {
                     LOG.TRACE($"速度恢復-減速後加速");
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
                     while (!IsNoObstacleAroundAGV)
                     {
                         await Task.Delay(1);
@@ -439,7 +447,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (!IsNoObstacleAroundAGV)
                         return;
                 }
-                await AGVC.CarSpeedControl(speed_control);
+                await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
 
             }
         }

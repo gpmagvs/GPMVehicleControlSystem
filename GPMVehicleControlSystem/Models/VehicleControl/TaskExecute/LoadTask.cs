@@ -322,7 +322,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                                 ForkHomeProcess();
                             AGVCActionStatusChaged += HandleBackToHomeActionStatusChanged;
-                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery,false);
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
                         }
                         return (true, AlarmCodes.None);
                     }

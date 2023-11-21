@@ -70,9 +70,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                 return;
 
+
+            clsIOSignal diState = (clsIOSignal)sender;
             base.HandleLaserArea3SinalChange(sender, di_state);
             bool isLaserTrigger = !di_state;
-
+            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_3;
             if (isLaserTrigger && !Laser3rdTriggerHandlerFlag)
             {
                 Laser3rdTriggerHandlerFlag = true;
@@ -94,7 +96,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     result_success = await ResetMotor();
                     if (result_success)
                     {
-                        await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? CarController.SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : CarController.SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
                         LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
                         AlarmManager.ClearAlarm();
                     }

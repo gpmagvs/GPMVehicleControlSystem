@@ -31,6 +31,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             Not_Localized = 30,
             System_Error = 40
         }
+
+        /// <summary>
+        /// 速度控制請求的時機
+        /// </summary>
+        public enum SPEED_CONTROL_REQ_MOMENT
+        {
+            UNKNOWN,
+            FRONT_LASER_1_TRIGGER,
+            FRONT_LASER_2_TRIGGER,
+            FRONT_LASER_3_TRIGGER,
+            FRONT_LASER_1_RECOVERY,
+            FRONT_LASER_2_RECOVERY,
+            FRONT_LASER_3_RECOVERY,
+
+            BACK_LASER_1_TRIGGER,
+            BACK_LASER_2_TRIGGER,
+            BACK_LASER_3_TRIGGER,
+            BACK_LASER_1_RECOVERY,
+            BACK_LASER_2_RECOVERY,
+            BACK_LASER_3_RECOVERY,
+
+            RIGHT_LASER_TRIGGER,
+            RIGHT_LASER_RECOVERY,
+            LEFT_LASER_TRIGGER,
+            LEFT_LASER_RECOVERY,
+            IO_MODULE_DISCONNECTED,
+            IO_MODULE_RECOVERY,
+            CYCLE_STOP,
+            BACK_TO_SECONDARY_POINT,
+            NEW_TASK_START_EXECUTING,
+        }
         public enum ROBOT_CONTROL_CMD : byte
         {
             /// <summary>
@@ -318,7 +349,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.WARN($"AGV Is Navigating at working station, Cycle Stop is not nessary.");
                 return true;
             }
-            return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID);
+            return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID, SPEED_CONTROL_REQ_MOMENT.CYCLE_STOP);
         }
 
         /// <summary>
@@ -357,11 +388,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
 
-        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, bool CheckLaserStatus = true)
+        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
-            await CarSpeedControl(cmd, RunningTaskData.Task_Name, CheckLaserStatus);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name, moment, CheckLaserStatus);
         }
-        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, bool CheckLaserStatus = true)
+        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
 
             if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
@@ -385,7 +416,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd} 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id},)");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
             return res.confirm;
         }
 
