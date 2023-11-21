@@ -296,5 +296,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             await agv.AGVC.CarSpeedControl(cmd, SPEED_CONTROL_REQ_MOMENT.UNKNOWN);
             return Ok();
         }
+
+        [HttpGet("AGVStatusChangeToRunWhenLaserRecovery")]
+        public async Task<IActionResult> AGVStatusChangeToRunWhenLaserRecovery()
+        {
+            agv.AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UNKNOWN);
+            return Ok();
+        }
     }
 }

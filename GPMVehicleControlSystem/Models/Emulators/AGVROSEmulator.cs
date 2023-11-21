@@ -421,5 +421,14 @@ namespace GPMVehicleControlSystem.Models.Emulators
             }
             module_info.Action_Driver.errorCode = (byte)errorCode;
         }
+
+        internal async void ImpactingSimulation()
+        {
+            module_info.IMU.imuData.linear_acceleration.x = 0;
+            await Task.Delay(100);
+            module_info.IMU.imuData.linear_acceleration.x = 1;
+            await Task.Delay(100);
+            module_info.IMU.imuData.linear_acceleration.x = 0;
+        }
     }
 }

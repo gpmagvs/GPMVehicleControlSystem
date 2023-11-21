@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.Emulators;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +43,12 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             });
 
             return Ok();
+        }
+
+        [HttpGet("ImpactSimulation")]
+        public async Task ImpactSimulation()
+        {
+            StaEmuManager.agvRosEmu.ImpactingSimulation();
         }
     }
 }
