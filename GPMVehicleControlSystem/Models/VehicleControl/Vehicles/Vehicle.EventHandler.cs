@@ -26,6 +26,7 @@ using GPMVehicleControlSystem.Models.Emulators;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using GPMVehicleControlSystem.Models.NaviMap;
 using AGVSystemCommonNet6.Tools.Database;
+using AGVSystemCommonNet6;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -53,11 +54,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             DBhelper.OnDataBaseChanged += CopyDataBaseToLogFolder;
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
-            AGVC.OnSpeedRecoveryRequesting += IsAllLaserNoTrigger;
+            AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
+            IMU.OnImpactDetecting += IMU_OnImpactDetecting;
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;
@@ -86,6 +88,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 };
             }
+        }
+
+        private void IMU_OnImpactDetecting(object? sender, RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3 acc_data)
+        {
+            var locInfo = $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})";
+            var thetaInfo = $"當前角度={Navigation.Angle}";
+            LOG.WARN($"AGV Impacting.Location: ({locInfo},{thetaInfo}). Acc Data: {acc_data.ToJson()}");
+        }
+
+        private bool HandleSpeedReconveryRequesetRaised()
+        {
+            return IsAllLaserNoTrigger().Result;
         }
 
         private void CopyDataBaseToLogFolder(string database_file_name)
@@ -278,7 +292,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void HandleLaserArea1SinalChange(object? sender, bool e)
+        private async void HandleLaserArea1SinalChange(object? sender, bool e)
         {
             if (!IsLaserMonitorActived)
                 return;
@@ -301,7 +315,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 IsLaserRecoveryHandled = false;
                 AlarmManager.ClearAlarm(alarm_code);
-                if (IsAllLaserNoTrigger())
+                if (await IsAllLaserNoTrigger())
                 {
                     LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                     Task.Factory.StartNew(() =>
@@ -446,7 +460,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
                     await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
-                    while (! await IsAllLaserNoTrigger())
+                    while (!await IsAllLaserNoTrigger())
                     {
                         await Task.Delay(100);
                         if (waitNoObstacleCTS.IsCancellationRequested)

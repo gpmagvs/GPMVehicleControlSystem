@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using GPMVehicleControlSystem.Models.Emulators;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers.Emulator
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class RosBridgeEmuController : ControllerBase
+    public class AGVCROSEmuController : ControllerBase
     {
         [HttpGet("/ws/ros")]
         public async Task Conn()
@@ -18,6 +19,12 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             {
                 HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
+        }
+
+        [HttpGet("ImpactSimulation")]
+        public async Task ImpactSimulation()
+        {
+            StaEmuManager.agvRosEmu.ImpactingSimulation();
         }
     }
 }

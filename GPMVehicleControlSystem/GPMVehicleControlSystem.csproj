@@ -3,7 +3,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>11.21.11</AssemblyVersion>
+    <AssemblyVersion>11.21.15</AssemblyVersion>
     <InformationalVersion>23.7.7.1</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
   </PropertyGroup>
@@ -137,10 +137,14 @@
       <UserProperties appsettings_1json__JsonSchema="" />
     </VisualStudio>
   </ProjectExtensions>
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;AutoVersionModify.ps1&quot;&#xD;&#xA;call prebuild.bat" />
+  <Target Name="PostPublishScript" AfterTargets="Publish">
+  	<Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;AutoVersionModify.ps1&quot;&#xD;&#xA;call prebuild.bat" />
   </Target>
 </Project>
+
+
+
+
 
 
 

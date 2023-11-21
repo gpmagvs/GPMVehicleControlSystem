@@ -278,6 +278,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Parameters = LoadParameters();
+                IMU.Options = Parameters.ImpactDetection;
 
                 CIMConnectionInitialize();
                 LoadWorkStationConfigs();

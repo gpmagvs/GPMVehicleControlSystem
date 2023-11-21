@@ -424,11 +424,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
         internal async void ImpactingSimulation()
         {
-            module_info.IMU.imuData.linear_acceleration.x = 0;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y=0;
             await Task.Delay(100);
-            module_info.IMU.imuData.linear_acceleration.x = 1;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 1.1;
             await Task.Delay(100);
-            module_info.IMU.imuData.linear_acceleration.x = 0;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
         }
     }
 }

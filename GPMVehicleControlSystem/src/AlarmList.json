@@ -185,6 +185,21 @@
     "CN": "陀螺儀模組異常"
   },
   {
+    "Code": 511,
+    "Description": "Impacting_Detection_XDir",
+    "CN": "AGV[X方向]碰撞偵測"
+  },
+  {
+    "Code": 512,
+    "Description": "Impacting_Detection_YDir",
+    "CN": "AGV[Y方向]碰撞偵測"
+  },
+  {
+    "Code": 513,
+    "Description": "Impacting_Detection",
+    "CN": "AGV碰撞偵測"
+  },
+  {
     "Code": 520,
     "Description": "Guide Module Error",
     "CN": "磁條模組異常"

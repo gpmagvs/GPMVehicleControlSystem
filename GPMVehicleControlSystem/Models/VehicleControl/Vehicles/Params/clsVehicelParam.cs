@@ -144,6 +144,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public clsEmulatorParams Emulator { get; set; } = new clsEmulatorParams();
         public clsModbusDIOParams ModbusIO { get; set; } = new clsModbusDIOParams();
+
+        public clsImpactDetectionParams ImpactDetection { get; set; } = new clsImpactDetectionParams();
     }
 
     public class clsForkAGVParams
@@ -202,5 +204,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public ushort InputRegister_Read_Start { get; set; } = 0;
         public ushort InputRegister_Read_Num { get; set; } = 1;
         public ushort InputRegister_Write_Start { get; set; } = 0;
+    }
+
+
+    public class clsImpactDetectionParams
+    {
+        public bool Enabled { get; set; } = true;
+        public double ThresHold_XDir { get; set; } = 1;
+        public double ThresHold_YDir { get; set; } = 1;
     }
 }

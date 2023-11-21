@@ -45,10 +45,5 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             return Ok();
         }
 
-        [HttpGet("ImpactSimulation")]
-        public async Task ImpactSimulation()
-        {
-            StaEmuManager.agvRosEmu.ImpactingSimulation();
-        }
     }
 }
