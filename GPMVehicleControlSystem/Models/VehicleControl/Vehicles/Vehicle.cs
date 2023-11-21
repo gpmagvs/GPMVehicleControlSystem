@@ -498,8 +498,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        internal bool IsAllLaserNoTrigger()
+        internal async Task<bool> IsAllLaserNoTrigger()
         {
+            await Task.Delay(10);
             var FrontArea1 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
             var FrontArea2 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
             var FrontArea3 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
@@ -513,7 +514,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             LOG.INFO($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
                         $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
-                        $"Back_Area  1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
+                        $"Back_Area  1->3 ={BackArea1.ToSymbol("O", "X")}|{BackArea2.ToSymbol("O", "X")}|{BackArea3.ToSymbol("O", "X")}\r\n" +
                         $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
                         $"Left_Area       ={LeftArea.ToSymbol("O", "X")}");
 

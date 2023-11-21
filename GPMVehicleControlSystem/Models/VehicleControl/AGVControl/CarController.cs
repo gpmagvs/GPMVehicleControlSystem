@@ -109,7 +109,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<int> OnSickLaserModeSettingChanged;
         public event EventHandler OnAGVCCycleStopRequesting;
         public event EventHandler OnRosSocketReconnected;
-
+        public event EventHandler OnSTOPCmdRequesting;
         public delegate bool SpeedRecoveryRequestingDelegate();
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
 
@@ -395,7 +395,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
 
-            if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
+            if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery & OnSpeedRecoveryRequesting != null)
             {
 
                 var speed_recoverable = OnSpeedRecoveryRequesting();
@@ -417,6 +417,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 return false;
             }
             LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
+            if (cmd == ROBOT_CONTROL_CMD.STOP)
+            {
+                OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);
+            }
             return res.confirm;
         }
 

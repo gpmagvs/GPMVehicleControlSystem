@@ -411,12 +411,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 $"\r\n 雷射輸入=> \r\n{LsrInputState}");
 
         }
-        private async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
+        public async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
         {
             await Task.Delay(1000);
+            CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
 
             if (IsNoObstacleAroundAGV)
             {
+                if (Debugger.IsAttached)
+                {
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, false);
+                }
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                 {
                     IsLaserRecoveryHandled = true;
@@ -438,17 +443,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
                 {
                     LOG.TRACE($"速度恢復-減速後加速");
+
+                    AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
                     await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
-                    while (!IsNoObstacleAroundAGV)
+                    while (! await IsAllLaserNoTrigger())
                     {
-                        await Task.Delay(1);
+                        await Task.Delay(100);
+                        if (waitNoObstacleCTS.IsCancellationRequested)
+                        {
+                            AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
+                            LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
+                            return;
+                        }
                     }
+                    AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
                     await Task.Delay(1000);
-                    if (!IsNoObstacleAroundAGV)
+                    if (!await IsAllLaserNoTrigger())
                         return;
                 }
                 await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
 
+            }
+            void HandleSTOPCmdRequesting(object sender, EventArgs arg)
+            {
+                waitNoObstacleCTS.Cancel();
             }
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
