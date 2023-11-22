@@ -92,11 +92,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void IMU_OnImpactDetecting(object? sender, RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3 acc_data)
+        private void IMU_OnImpactDetecting(object? sender, clsIMU.ImpactingData impactingData)
         {
+            RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3 acc_data = impactingData.AccRaw;
             var locInfo = $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})";
             var thetaInfo = $"當前角度={Navigation.Angle}";
-            LOG.WARN($"AGV Impacting.Location: ({locInfo},{thetaInfo}). Acc Data: {acc_data.ToJson()}");
+            LOG.WARN($"AGV Impacting.Location: ({locInfo},{thetaInfo}).Magintude:{impactingData.Mag}, Acc Data: {acc_data.ToJson()}");
         }
 
         private bool HandleSpeedReconveryRequesetRaised()

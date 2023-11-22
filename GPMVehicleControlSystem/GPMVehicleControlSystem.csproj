@@ -24,7 +24,7 @@
     <_WebToolingArtifacts Remove="Properties\PublishProfiles\U007_Remote.pubxml" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="GitVersion.Core" Version="5.12.0" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NModbus4.Core" Version="1.0.2" />
     <PackageReference Include="sqlite-net-pcl" Version="1.8.116" />

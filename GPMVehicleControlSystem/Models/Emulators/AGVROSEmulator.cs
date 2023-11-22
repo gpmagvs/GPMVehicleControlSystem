@@ -47,6 +47,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
                      new DriverState{ errorCode=21},
                      new DriverState{ errorCode=21}
                  }
+            },
+            IMU = new GpmImuMsg
+            {
+                imuData = new RosSharp.RosBridgeClient.MessageTypes.Sensor.Imu
+                {
+                    linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3
+                    {
+                        z = 9.8
+                    }
+                }
             }
         };
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
@@ -424,9 +434,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
         internal async void ImpactingSimulation()
         {
-            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y=0;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
             await Task.Delay(100);
-            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 1.1;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 9.81;
             await Task.Delay(100);
             module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
         }

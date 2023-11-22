@@ -6,6 +6,11 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
+using MathNet.Numerics;
+using AGVSystemCommonNet6.Tools;
+using System.Runtime.CompilerServices;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -13,7 +18,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public clsImpactDetectionParams Options { get; set; } = new clsImpactDetectionParams();
 
-        public event EventHandler<Vector3> OnImpactDetecting;
+        public event EventHandler<ImpactingData> OnImpactDetecting;
 
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
 
@@ -33,33 +38,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 Current_Warning_Code = AlarmCodes.None;
             }
             if (Options.Enabled)
-                ImpactDetection(_imu_state);
+            {
+                var acc_raw = _imu_state.imuData.linear_acceleration;
+                bool Isdetected = ImpactDetection(acc_raw, out var mag);
+                if (Isdetected)
+                {
+                    OnImpactDetecting?.Invoke(this, new ImpactingData(acc_raw, mag));
+                }
+            }
             IMUData = _imu_state.imuData;
         }
 
-        private void ImpactDetection(GpmImuMsg _imu_state)
+        private bool ImpactDetection(Vector3 acc_raw, out double mag)
         {
-            var currentAccx = _imu_state.imuData.linear_acceleration.x;
-            var currentAccy = _imu_state.imuData.linear_acceleration.y;
+            double[] raw = new double[] { acc_raw.x, acc_raw.y, acc_raw.z };//9.8 m/s2
+            mag = Vector<double>.Build.DenseOfArray(raw).L2Norm() / 9.8;
+            return mag > Options.ThresHold;
+        }
 
-            var previousAccx = IMUData.linear_acceleration.x;
-            var previousAccy = IMUData.linear_acceleration.y;
 
-            bool impactXDir = currentAccx > previousAccx & Math.Abs(currentAccx - previousAccx) > Options.ThresHold_XDir;
-            bool impactYDir =  currentAccy > previousAccy & Math.Abs(currentAccy - previousAccy) > Options.ThresHold_YDir;
-            if (impactXDir || impactYDir)
+        public class ImpactingData
+        {
+            public Vector3 AccRaw { get; }
+            public double Mag { get; }
+
+            public ImpactingData(Vector3 acc_raw, double mag)
             {
-                if (impactXDir & impactYDir)
-                    Current_Warning_Code = AlarmCodes.IMU_Impacting;
-                else
-                    Current_Warning_Code = impactXDir ? AlarmCodes.IMU_Impacting_X_Dir : AlarmCodes.IMU_Impacting_Y_Dir;
-                OnImpactDetecting?.Invoke(this, _imu_state.imuData.linear_acceleration);
+                AccRaw = acc_raw;
+                Mag = mag;
             }
-            else
-            {
-                Current_Warning_Code = AlarmCodes.None;
-            }
-
         }
     }
 }
