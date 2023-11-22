@@ -342,6 +342,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         {
                             LOG.Critical($"DI Read inputs but null return, disconnect connection.");
                             Disconnect();
+                            Connected= false;
                             continue;
                         }
 
@@ -356,6 +357,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
                         LOG.Critical(ex.Message, ex);
                         Disconnect();
+                        Connected = false;
                     }
                 }
             });

@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6.Log;
-using GitVersion.Extensions;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Tools

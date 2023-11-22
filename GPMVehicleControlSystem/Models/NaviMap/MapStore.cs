@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
-using GitVersion.Logging;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Newtonsoft.Json;
 

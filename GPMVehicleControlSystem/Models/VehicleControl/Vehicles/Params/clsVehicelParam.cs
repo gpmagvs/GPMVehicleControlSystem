@@ -209,8 +209,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
     public class clsImpactDetectionParams
     {
-        public bool Enabled { get; set; } = true;
-        public double ThresHold_XDir { get; set; } = 1;
-        public double ThresHold_YDir { get; set; } = 1;
+        public bool Enabled { get; set; } = false;
+        /// <summary>
+        /// 碰撞偵測閥值(單位:G)
+        /// </summary>
+        public double ThresHold { get; set; } = 2;
     }
 }

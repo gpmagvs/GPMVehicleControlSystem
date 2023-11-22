@@ -1,7 +1,6 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.ViewModels;
 using Newtonsoft.Json;
-using Polly;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.WebSockets;
