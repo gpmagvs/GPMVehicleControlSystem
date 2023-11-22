@@ -27,6 +27,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using GPMVehicleControlSystem.Models.NaviMap;
 using AGVSystemCommonNet6.Tools.Database;
 using AGVSystemCommonNet6;
+using static AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -60,6 +61,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             IMU.OnImpactDetecting += IMU_OnImpactDetecting;
+            clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;

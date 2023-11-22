@@ -300,7 +300,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private bool IsActionFinishTaskFeedbackExecuting = false;
         private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
-        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel { get; internal set; } = new clsTaskDownloadData.clsOrderInfo();
+        private clsTaskDownloadData.clsOrderInfo _orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo();
+        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel
+        {
+            get => _orderInfoViewModel;
+            internal set
+            {
+                if (value.ActionName == ACTION_TYPE.Carry && _RunTaskData.Action_Type != ACTION_TYPE.None)//搬運任務但是當下的任務不是在移動
+                {
+                    _orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
+                    {
+                        DestineName = value.DestineName,
+                        SourceName = value.SourceName,
+                        ActionName = _RunTaskData.Action_Type
+                    };
+                }
+                else
+                    _orderInfoViewModel = value;
+            }
+        }
 
         /// <summary>
         /// 上報任務狀態

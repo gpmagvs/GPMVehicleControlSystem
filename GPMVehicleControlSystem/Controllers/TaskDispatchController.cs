@@ -78,7 +78,9 @@ namespace GPMVehicleControlSystem.Controllers
             {
                 LOG.INFO($"Get Order Information from CIM : {OrderInfo.ToJson()}");
                 if (Agv.Parameters.OrderInfoFetchSource == Vehicle.ORDER_INFO_FETCH_SOURCE.FROM_CIM_POST_IN)
+                {
                     Agv.orderInfoViewModel = OrderInfo;
+                }
             }
             catch (Exception ex)
             {

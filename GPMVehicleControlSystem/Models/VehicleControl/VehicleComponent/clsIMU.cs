@@ -46,7 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             var previousAccy = IMUData.linear_acceleration.y;
 
             bool impactXDir = currentAccx > previousAccx & Math.Abs(currentAccx - previousAccx) > Options.ThresHold_XDir;
-            bool impactYDir = currentAccy > previousAccy & Math.Abs(currentAccy - previousAccy) > Options.ThresHold_YDir;
+            bool impactYDir =  currentAccy > previousAccy & Math.Abs(currentAccy - previousAccy) > Options.ThresHold_YDir;
             if (impactXDir || impactYDir)
             {
                 if (impactXDir & impactYDir)
