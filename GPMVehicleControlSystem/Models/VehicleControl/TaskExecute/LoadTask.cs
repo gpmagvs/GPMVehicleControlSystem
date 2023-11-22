@@ -103,7 +103,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!modbusTcp.Start(Agv.AGVS, Agv.AGVHsSignalStates, Agv.EQHsSignalStates))
                         return (false, AlarmCodes.Waiting_EQ_Handshake);
                 }
-
+                Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimers();
                 await Task.Delay(700);
                 if (!Agv.Parameters.LDULD_Task_No_Entry)

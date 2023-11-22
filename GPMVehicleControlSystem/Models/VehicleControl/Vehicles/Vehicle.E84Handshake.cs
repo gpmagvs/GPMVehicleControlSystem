@@ -262,7 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return !IsEQBusyOn() && !IsEQReadyOn() && !IsULReqOn(ACTION_TYPE.Unload) && !IsULReqOn(ACTION_TYPE.Load);
         }
         public clsDynamicTrafficState DynamicTrafficState { get; internal set; } = new clsDynamicTrafficState();
-
+    
         internal void ResetHSTimers()
         {
             foreach (var timer_key in EQHSTimers.Keys)

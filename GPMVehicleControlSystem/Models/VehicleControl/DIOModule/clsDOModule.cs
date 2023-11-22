@@ -106,7 +106,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     {
                         var master = connresult.modbusMaster;
                         var startAddress = (ushort)(Start + DO.index);
-                        bool[] rollbacks = new bool[1] { false };
+                        bool[] rollbacks = new bool[1] { !state };
                         CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                         while (rollbacks[0] != state)
                         {
@@ -114,14 +114,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                             if (tim.IsCancellationRequested)
                             {
                                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-
                                 Disconnect(connresult.tcpclient, connresult.modbusMaster);
                                 return false;
                             }
                             master?.WriteSingleCoil(startAddress, state);
-                            rollbacks = master?.ReadCoils(startAddress, 1);
+                            await Task.Delay(30);
+                            rollbacks = await master?.ReadCoilsAsync(startAddress, 1);
+                            //LOG.TRACE($"Roll back= {string.Join(",", rollbacks)}");
                         }
                         DO.State = state;
+                        Disconnect(connresult.tcpclient, connresult.modbusMaster);
                         return true;
                     }
                     else
@@ -206,7 +208,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             if (!Connected)
             {
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-
                 return false;
             }
             try
@@ -215,7 +216,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO_Start == null)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-
                     return false;
                 }
 
@@ -223,7 +223,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (connresult.connected)
                 {
                     var startAddress = (ushort)(Start + DO_Start.index);
-                    bool[] rollback = new bool[writeStates.Length];
+                    bool[] rollback = writeStates.Select(s => !s).ToArray();
                     ushort count = (ushort)writeStates.Length;
                     IOBusy = true;
                     CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -233,12 +233,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         if (tim.IsCancellationRequested)
                         {
                             AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-
                             Disconnect(connresult.tcpclient, connresult.modbusMaster);
                             IOBusy = false;
                             return false;
                         }
                         connresult.modbusMaster?.WriteMultipleCoils(startAddress, writeStates);
+                        await Task.Delay(50);
                         rollback = connresult.modbusMaster?.ReadCoils(startAddress, count);
                     }
                     for (int i = 0; i < writeStates.Length; i++)

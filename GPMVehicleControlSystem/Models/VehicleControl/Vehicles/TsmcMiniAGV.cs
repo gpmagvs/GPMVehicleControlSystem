@@ -169,7 +169,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
 
         }
-        protected override async void ResetHandshakeSignals()
+        internal override async void ResetHandshakeSignals()
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);

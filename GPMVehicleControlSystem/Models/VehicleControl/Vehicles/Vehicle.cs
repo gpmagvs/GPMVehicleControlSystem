@@ -665,7 +665,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// Reset交握訊號
         /// </summary>
-        protected virtual async void ResetHandshakeSignals()
+        internal virtual async void ResetHandshakeSignals()
         {
 
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
