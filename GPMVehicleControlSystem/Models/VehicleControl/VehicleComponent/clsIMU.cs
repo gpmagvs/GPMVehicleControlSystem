@@ -16,10 +16,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsIMU : CarComponent
     {
-        public clsImpactDetectionParams Options { get; set; } = new clsImpactDetectionParams();
+        private clsImpactDetectionParams _Options = new clsImpactDetectionParams();
+        public clsImpactDetectionParams Options
+        {
+            get
+            {
+                return OnOptionsFetching == null ? _Options : OnOptionsFetching();
+            }
+            set
+            {
+                _Options = value;
+            }
+        }
 
         public event EventHandler<ImpactingData> OnImpactDetecting;
-
+        internal delegate clsImpactDetectionParams OptionsFetchDelegate();
+        internal OptionsFetchDelegate OnOptionsFetching;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
 
         public override string alarm_locate_in_name => component_name.ToString();

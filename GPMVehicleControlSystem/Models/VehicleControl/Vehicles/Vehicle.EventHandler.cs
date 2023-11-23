@@ -61,7 +61,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             IMU.OnImpactDetecting += IMU_OnImpactDetecting;
+            IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
+            OnParamEdited += (param) => { this.Parameters = param; };
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;

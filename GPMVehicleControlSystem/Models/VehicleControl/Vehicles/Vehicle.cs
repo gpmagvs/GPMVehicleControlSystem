@@ -277,7 +277,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                Parameters = LoadParameters();
+                Parameters = LoadParameters(watch_file_change: true);
                 IMU.Options = Parameters.ImpactDetection;
 
                 CIMConnectionInitialize();
@@ -353,7 +353,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
-
+                StartConfigChangedWatcher();
                 Task.Factory.StartNew(async () =>
                 {
                     ReloadLocalMap();
