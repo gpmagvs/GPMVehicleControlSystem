@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Log;
+using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -49,7 +50,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     _State = value;
                     Task.Factory.StartNew(() =>
                     {
-                        LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta, show_console: false);
+                        LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta, show_console: Debugger.IsAttached);
                         OnStateChanged?.Invoke(this, value);
                         if (_State)
                             OnSignalON?.Invoke(this, EventArgs.Empty);
