@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.MAP;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -215,7 +216,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = _RunTaskData.IsLocalTask ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
+                    Alarm_Code = _RunTaskData.IsLocalTask &!Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };

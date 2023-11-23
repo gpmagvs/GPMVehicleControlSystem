@@ -1,6 +1,8 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using AGVSystemCommonNet6.AGVDispatch;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -13,9 +15,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             set
             {
                 _Parameters = value;
+                TryChangeAGVSOptions(value);
+                ModifyAGVSMessageEncoder(value.AGVsMessageEncoding);
                 LOG.INFO($"Parameters updated");
             }
         }
+
+        private void TryChangeAGVSOptions(clsVehicelParam value)
+        {
+            if (AGVS == null)
+                return;
+            AGVS.UseWebAPI = value.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
+            AGVS.LocalIP = value.VMSParam.LocalIP;
+            AGVS.IP = value.Connections["AGVS"].IP;
+            AGVS.VMSPort = value.Connections["AGVS"].Port;
+        }
+
+        private static void ModifyAGVSMessageEncoder(string encoding)
+        {
+            try
+            {
+                var newEncoder = Encoding.GetEncoding(encoding);
+                if (AGVSMessageFactory.Encoder != newEncoder)
+                {
+                    AGVSMessageFactory.Encoder = newEncoder;
+                    LOG.INFO($"AGVS Message Encoder Changed to {AGVSMessageFactory.Encoder.EncodingName}");
+
+                }
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"Modify AGVS Message Encoder Fail..({ex.Message})");
+            }
+        }
+
         public const string ParamFileName = "VCS_Params.json";
         public static string ParametersFilePath
         {

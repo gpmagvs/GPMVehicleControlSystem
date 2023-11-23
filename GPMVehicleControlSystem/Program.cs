@@ -15,7 +15,7 @@ using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
-
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 LinuxTools.SaveCurrentProcessPID();
