@@ -78,17 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
-            #region 前方障礙物預檢
-            var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
-            bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
-
-            if (!isNoObstacle)
-                if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
-                    return (false, FrontendSecondarSensorTriggerAlarmCode);
-                else
-                    AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
-            #endregion
-
+            
             //(bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
 
             //if (!CstBarcodeCheckResult.confirm)
@@ -128,6 +118,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
+                #region 前方障礙物預檢
+
+                var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
+                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
+
+                if (!isNoObstacle)
+                    if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
+                        return (false, FrontendSecondarSensorTriggerAlarmCode);
+                    else
+                        AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+                #endregion
+
             }
             return await base.BeforeTaskExecuteActions();
         }
