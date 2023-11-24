@@ -227,10 +227,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.DirectionLighter.CloseAll();
                         return (false, HSResult.alarmCode);
                     }
-                    //檢查在席
-                    (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
-                    if (!CstExistCheckResult.confirm)
-                        return (false, CstExistCheckResult.alarmCode);
+
                 }
                 else
                 {
@@ -270,26 +267,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = "";
 
 
-
-            if (Agv.Parameters.SimulationMode)
-            {
-                if (action == ACTION_TYPE.Unload)
-                    HasCargoIOSimulation();
-                else
-                    NoCargoIOSimulation();
-            }
-
-
             //下Homing Trajectory 任務讓AGV退出
 
             try
             {
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
-                if ((checkstatus_alarm_code = CheckAGVStatus(false)) != AlarmCodes.None)
+                if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
                     Agv.SetAGV_TR_REQ(false);
                     return (false, checkstatus_alarm_code);
                 }
+
+                if (Agv.Parameters.SimulationMode)
+                {
+                    if (action == ACTION_TYPE.Unload)
+                        HasCargoIOSimulation();
+                    else
+                        NoCargoIOSimulation();
+                }
+
                 if (Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
@@ -440,10 +436,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        private AlarmCodes CheckAGVStatus(bool check_park_position = true)
+        private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)
         {
-
             LOG.INFO($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
+
+            //檢查在席
+            if (check_cargo_exist_state)
+            {
+
+                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
+                if (!CstExistCheckResult.confirm)
+                {
+                    return CstExistCheckResult.alarmCode;
+                }
+            }
             if (Agv.Parameters.LDULD_Task_No_Entry)
                 return AlarmCodes.None;
 
@@ -692,7 +698,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckBeforeHSStartInFrontOfEQ()
         {
-            if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.Before_In)
+            if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
             if (!Agv.HasAnyCargoOnAGV())

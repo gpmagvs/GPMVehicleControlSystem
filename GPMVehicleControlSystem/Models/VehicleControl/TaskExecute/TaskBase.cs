@@ -346,10 +346,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     if (!result.success)
                     {
-
                         var alarm_code = result.alarmCode;
                         if (alarm_code != AlarmCodes.None)
                         {
+                            Agv.AlarmCodeWhenHandshaking = alarm_code;
                             AlarmManager.AddAlarm(alarm_code, false);
                         }
                         Agv.Sub_Status = SUB_STATUS.DOWN;

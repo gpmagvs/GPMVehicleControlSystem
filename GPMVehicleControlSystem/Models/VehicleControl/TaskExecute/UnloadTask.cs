@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckBeforeHSStartInFrontOfEQ()
         {
-            if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.Before_In)
+            if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
             if (Agv.HasAnyCargoOnAGV())
@@ -51,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
-            if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
+            if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
             if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料

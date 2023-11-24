@@ -312,11 +312,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         DestineName = value.DestineName,
                         SourceName = value.SourceName,
-                        ActionName = _RunTaskData.Action_Type
+                        ActionName = _RunTaskData.Action_Type,
+                        IsTransferTask = true
                     };
                 }
                 else
+                {
+
                     _orderInfoViewModel = value;
+                    _orderInfoViewModel.IsTransferTask = false;
+                }
             }
         }
 

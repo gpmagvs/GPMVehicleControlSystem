@@ -91,13 +91,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected virtual CARGO_STATUS GetCargoStatus()
         {
-            bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
-            bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
-            if (existSensor_1 && existSensor_2)
+            bool cst_exist_check_Sensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
+            bool cst_exist_check_Sensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+
+            if (cst_exist_check_Sensor_1 && cst_exist_check_Sensor_2)
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
-            if (!existSensor_1 && !existSensor_2)
+            if (!cst_exist_check_Sensor_1 && !cst_exist_check_Sensor_2)
                 return CARGO_STATUS.NO_CARGO;
-            if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
+            if ((!cst_exist_check_Sensor_1 && cst_exist_check_Sensor_2) || (cst_exist_check_Sensor_1 && !cst_exist_check_Sensor_2))
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
             return CARGO_STATUS.NO_CARGO;
         }

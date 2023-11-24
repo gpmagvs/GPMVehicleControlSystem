@@ -1102,7 +1102,7 @@
   {
     "Code": 3235,
     "Description": "Handshake_Fail_EQ_BUSY_NOT_ON",
-    "CN": "交握失敗-設備_EQ_BUSY ON逾時"
+    "CN": "交握失敗-等待設備_EQ_BUSY ON逾時"
   },
   {
     "Code": 3236,
@@ -1112,37 +1112,42 @@
   {
     "Code": 3237,
     "Description": "Handshake_Fail_TA1_EQ_L_REQ",
-    "CN": "交握失敗-設備_EQ_L_REQ ON逾時(T1)"
+    "CN": "交握失敗-等待設備_EQ_L_REQ ON逾時(T1)"
   },
   {
     "Code": 3238,
     "Description": "Handshake_Fail_TA1_EQ_U_REQ",
-    "CN": "交握失敗-設備_EQ_U_REQ ON逾時(T1)"
+    "CN": "交握失敗-等待設備_EQ_U_REQ ON逾時(T1)"
   },
   {
     "Code": 3239,
     "Description": "Handshake_Fail_TA2_EQ_READY",
-    "CN": "交握失敗-設備_EQ_READY ON逾時(T2)"
+    "CN": "交握失敗-等待設備_EQ_READY ON逾時(T2)"
   },
   {
     "Code": 3240,
     "Description": "Handshake_Fail_TA3_EQ_BUSY_ON",
-    "CN": "交握失敗-設備EQ_BUSY ON逾時(T3)"
+    "CN": "交握失敗-等待設備EQ_BUSY ON逾時(T3)"
   },
   {
     "Code": 3241,
     "Description": "Handshake_Fail_TA4_EQ_BUSY_OFF",
-    "CN": "交握失敗-設備EQ_BUSY OFF逾時(T4)"
+    "CN": "交握失敗-等待設備EQ_BUSY OFF逾時(T4)"
   },
   {
     "Code": 3242,
     "Description": "Handshake_Fail_TA5_EQ_L_REQ",
-    "CN": "交握失敗-設備_EQ_L_REQ OFF逾時(T5)"
+    "CN": "交握失敗-等待設備_EQ_L_REQ OFF逾時(T5)"
   },
   {
     "Code": 3243,
     "Description": "Handshake_Fail_TA5_EQ_U_REQ",
-    "CN": "交握失敗-設備_EQ_U_REQ OFF逾時(T5)"
+    "CN": "交握失敗-等待設備_EQ_U_REQ OFF逾時(T5)"
+  },
+  {
+    "Code": 3244,
+    "Description": "Handshake_Fail_TA5_EQ_READY_NOT_OFF",
+    "CN": "交握失敗-等待設備_EQ_READY OFF逾時(T5)"
   },
   {
     "Code": 3245,

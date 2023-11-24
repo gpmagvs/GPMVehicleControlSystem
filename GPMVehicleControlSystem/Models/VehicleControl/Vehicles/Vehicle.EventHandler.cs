@@ -232,7 +232,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void WagoDI_OnDisonnected(object? sender, EventArgs e)
         {
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+            if (AGVC?.ActionStatus != ActionStatus.ACTIVE)
                 return;
             LOG.WARN("AGV Executing Task but Wago Module Disconnect,Send Complex Control STOP => AGV STOP");
             AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_DISCONNECTED);

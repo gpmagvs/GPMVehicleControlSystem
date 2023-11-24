@@ -773,6 +773,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsWaitForkNextSegmentTask = false;
             InitializeCancelTokenResourece.Cancel();
             IsInitialized = false;
+            StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
             AGVSTaskFeedBackReportAndOffline(alarmCode);
 
@@ -810,7 +811,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
                 {
                     if (IsHandshakeFailAlarmCode(alarmCode))
+                    {
+                        LOG.TRACE($"FeedbackTaskStatus Action Finish with alarm code-{alarmCode}");
                         FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
+                    }
 
                 }
             }
@@ -829,8 +833,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsHandshakeFailAlarmCode(AlarmCodes alarmCode)
         {
             string alarcode_str = ((int)alarmCode).ToString();
+
             if (alarcode_str.Length != 4)
                 return false;
+
+            bool isCargoExistStatusAlarmCode = alarcode_str.Substring(0, 2) == "17";
+            if (isCargoExistStatusAlarmCode)
+                return true;
 
             bool isHSAlarmCode = alarcode_str.Substring(0, 2) == "32";
             if (isHSAlarmCode)
