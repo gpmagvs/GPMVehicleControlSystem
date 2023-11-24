@@ -78,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
-            
+
             //(bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
 
             //if (!CstBarcodeCheckResult.confirm)
@@ -228,7 +228,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return (false, HSResult.alarmCode);
                     }
                     //檢查在席
-                    (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
+                    (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
                     if (!CstExistCheckResult.confirm)
                         return (false, CstExistCheckResult.alarmCode);
                 }
@@ -381,7 +381,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, fork_height_change_result.alarm_code);
 
                 //檢查在席
-                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQBusyOff();
+                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
                 if (!CstExistCheckResult.confirm)
                     return (false, CstExistCheckResult.alarmCode);
 
@@ -706,7 +706,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQBusyOff()
+        protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);

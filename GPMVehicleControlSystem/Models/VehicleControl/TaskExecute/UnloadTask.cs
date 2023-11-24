@@ -49,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         ///  Unload(取貨)完成後=>車上應該有貨
         /// </summary>
         /// <returns></returns>
-        protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQBusyOff()
+        protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
