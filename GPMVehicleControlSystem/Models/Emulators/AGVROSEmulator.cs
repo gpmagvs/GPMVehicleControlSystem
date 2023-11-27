@@ -71,6 +71,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
             string RosBridge_IP = param.Connections["RosBridge"].IP;
             int RosBridge_Port = param.Connections["RosBridge"].Port;
+            module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(param.LastVisitedTag);
 
             bool connected = Init(RosBridge_IP, RosBridge_Port);
             if (!connected)
