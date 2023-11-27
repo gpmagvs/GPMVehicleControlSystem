@@ -119,19 +119,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
-            _RunTaskData = new clsTaskDownloadData
-            {
-                Action_Type = taskDownloadData.Action_Type,
-                Task_Name = taskDownloadData.Task_Name,
-                Task_Sequence = taskDownloadData.Task_Sequence,
-                Trajectory = taskDownloadData.Trajectory,
-                Homing_Trajectory = taskDownloadData.Homing_Trajectory,
-                Destination = taskDownloadData.Destination,
-                IsLocalTask = taskDownloadData.IsLocalTask,
-                IsEQHandshake = false,
-                IsActionFinishReported = false,
-            };
+            _RunTaskData = taskDownloadData.Clone();
+            _RunTaskData.IsEQHandshake = false;
+            _RunTaskData.IsActionFinishReported = false;
 
+            //_RunTaskData = new clsTaskDownloadData
+            //{
+            //    Action_Type = taskDownloadData.Action_Type,
+            //    Task_Name = taskDownloadData.Task_Name,
+            //    Task_Sequence = taskDownloadData.Task_Sequence,
+            //    Trajectory = taskDownloadData.Trajectory,
+            //    Homing_Trajectory = taskDownloadData.Homing_Trajectory,
+            //    Destination = taskDownloadData.Destination,
+            //    IsLocalTask = taskDownloadData.IsLocalTask,
+            //    IsEQHandshake = false,
+            //    IsActionFinishReported = false,
+            //};
             LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
             {
@@ -360,8 +363,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsActionFinishTaskFeedbackExecuting = status == TASK_RUN_STATUS.ACTION_FINISH;
                 if (status == TASK_RUN_STATUS.ACTION_FINISH && !IsTaskCancel)
                 {
-
-                    IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && ExecutingTaskModel == null ? false : ExecutingTaskModel.isSegmentTask;
+                    try
+                    {
+                        IsWaitForkNextSegmentTask = !AGVSResetCmdFlag && _RunTaskData.IsSegmentTask;
+                    }
+                    catch (Exception ex)
+                    {
+                        IsWaitForkNextSegmentTask = false;
+                        LOG.WARN($"[FeedbackTaskStatus] Exception Occur when determine 'IsWaitForkNextSegmentTask' value. Forcing set as FALSE{ex.Message}");
+                    }
 
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
                     {
