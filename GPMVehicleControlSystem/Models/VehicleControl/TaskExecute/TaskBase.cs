@@ -334,7 +334,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     LOG.INFO($"AGVC Action Status is success,Do Work defined!");
                     DBhelper.InsertParkingAccuracy(new AGVSystemCommonNet6.Tools.clsParkingAccuracy
                     {
-                        ParkingLocation = Agv.lastVisitedMapPoint.Name,
+                        ParkingLocation = Agv.lastVisitedMapPoint.Graph.Display,
                         ParkingTag = Agv.BarcodeReader.CurrentTag,
                         X = Agv.BarcodeReader.CurrentX,
                         Y = Agv.BarcodeReader.CurrentY,
