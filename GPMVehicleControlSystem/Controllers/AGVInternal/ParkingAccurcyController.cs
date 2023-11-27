@@ -20,15 +20,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Query")]
         public async Task<IActionResult> GetAllParkLoc([FromBody] clsParkingAcqQueryOption option)
         {
-            List<clsParkingAccuracy> data_result = DBhelper.QueryParkingAccuracy(option.Tag, option.StartTimeStr, option.EndTimeStr);
-            return Ok(data_result);
+            List<clsParkingAccuracy> data_result = DBhelper.QueryParkingAccuracy(option.Tag, option.StartTimeStr, option.EndTimeStr,option.TaskName);
+            return Ok(data_result.OrderByDescending(d=>d.Time).ToList());
         }
 
         public class clsParkingAcqQueryOption
         {
-            public int Tag { get; set; }
+            public int Tag { get; set; } = -1;
             public string StartTimeStr { get; set; }
             public string EndTimeStr { get; set; }
+            public string TaskName { get; set; } = "";
 
         }
     }

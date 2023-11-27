@@ -601,6 +601,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.AbortFlash();
                     DirectionLighter.CloseAll();
                     Sub_Status = SUB_STATUS.IDLE;
+                    
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
@@ -633,6 +634,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 ExecutingTaskModel.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
+            await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
             ExecutingTaskModel = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
