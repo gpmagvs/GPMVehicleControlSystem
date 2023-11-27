@@ -336,6 +336,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         ParkingLocation = Agv.lastVisitedMapPoint.Graph.Display,
                         ParkingTag = Agv.BarcodeReader.CurrentTag,
+                        Slam_X = Agv.Navigation.Data.robotPose.pose.position.x,
+                        Slam_Y = Agv.Navigation.Data.robotPose.pose.position.y,
+                        Slam_Theta = Agv.Navigation.Angle,
                         X = Agv.BarcodeReader.CurrentX,
                         Y = Agv.BarcodeReader.CurrentY,
                         Time = DateTime.Now,
