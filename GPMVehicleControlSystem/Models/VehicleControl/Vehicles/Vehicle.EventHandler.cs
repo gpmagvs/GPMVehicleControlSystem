@@ -60,7 +60,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
-            IMU.OnImpactDetecting += IMU_OnImpactDetecting;
+            IMU.OnImuStatesError += HandleIMUStatesError;
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             OnParamEdited += (param) => { this.Parameters = param; };
@@ -94,12 +94,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void IMU_OnImpactDetecting(object? sender, clsIMU.ImpactingData impactingData)
+        private void HandleIMUStatesError(object? sender, clsIMU.IMUStateErrorEventData imu_event_data)
         {
-            RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3 acc_data = impactingData.AccRaw;
+            RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3 acc_data = imu_event_data.AccRaw;
             var locInfo = $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})";
             var thetaInfo = $"當前角度={Navigation.Angle}";
-            LOG.WARN($"AGV Impacting.Location: ({locInfo},{thetaInfo}).Magintude:{impactingData.Mag}, Acc Data: {acc_data.ToJson()}");
+            if (imu_event_data.Imu_AlarmCode == AlarmCodes.IMU_Pitch_State_Error)
+                AlarmManager.AddAlarm(AlarmCodes.IMU_Pitch_State_Error, false);
+            else
+                AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
+            LOG.WARN($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nAcc Data: {acc_data.ToJson()}\nMagintude:{imu_event_data.Mag}");
         }
 
         private bool HandleSpeedReconveryRequesetRaised()
@@ -520,7 +524,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             AlarmManager.AddWarning(alarmCode);
             #region 嘗試Reset馬達
-            _=Task.Factory.StartNew(async () =>
+            _ = Task.Factory.StartNew(async () =>
             {
                 LOG.WARN($"Horizon Motor IO Alarm, Try auto reset process start");
                 await Task.Delay(500);

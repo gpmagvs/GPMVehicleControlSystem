@@ -200,6 +200,11 @@
     "CN": "AGV碰撞偵測"
   },
   {
+    "Code": 514,
+    "Description": "AGV Pitch State Error",
+    "CN": "AGV俯仰角異常"
+  },
+  {
     "Code": 520,
     "Description": "Guide Module Error",
     "CN": "磁條模組異常"

@@ -11,6 +11,9 @@ using AGVSystemCommonNet6.Tools;
 using System.Runtime.CompilerServices;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
+using AGVSystemCommonNet6.MAP;
+using SQLitePCL;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -29,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public event EventHandler<ImpactingData> OnImpactDetecting;
+        public event EventHandler<IMUStateErrorEventData> OnImuStatesError;
         internal delegate clsImpactDetectionParams OptionsFetchDelegate();
         internal OptionsFetchDelegate OnOptionsFetching;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
@@ -49,15 +52,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 Current_Warning_Code = AlarmCodes.None;
             }
+            if (_imu_state.imuData.linear_acceleration.z < 9.4)
+            {
+                OnImuStatesError?.Invoke(this, new IMUStateErrorEventData(_imu_state.imuData.linear_acceleration, AlarmCodes.IMU_Pitch_State_Error));
+            }
             if (Options.Enabled)
             {
                 var acc_raw = _imu_state.imuData.linear_acceleration;
                 bool Isdetected = ImpactDetection(acc_raw, out var mag);
                 if (Isdetected)
                 {
-                    OnImpactDetecting?.Invoke(this, new ImpactingData(acc_raw, mag));
+                    OnImuStatesError?.Invoke(this, new IMUStateErrorEventData(acc_raw, AlarmCodes.IMU_Impacting));
                 }
             }
+
             IMUData = _imu_state.imuData;
         }
 
@@ -69,15 +77,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-        public class ImpactingData
+        public class IMUStateErrorEventData
         {
+            public AlarmCodes Imu_AlarmCode { get; }
             public Vector3 AccRaw { get; }
-            public double Mag { get; }
+            public double Mag => Vector<double>.Build.DenseOfArray(new double[] { AccRaw.x, AccRaw.y, AccRaw.z }).L2Norm() / 9.8;
 
-            public ImpactingData(Vector3 acc_raw, double mag)
+            public IMUStateErrorEventData(Vector3 acc_raw, AlarmCodes Imu_AlarmCode)
             {
                 AccRaw = acc_raw;
-                Mag = mag;
+                this.Imu_AlarmCode = Imu_AlarmCode;
             }
         }
     }
