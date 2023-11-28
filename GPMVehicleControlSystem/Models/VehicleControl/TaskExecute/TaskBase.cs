@@ -331,19 +331,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         return;
                     }
-                    LOG.INFO($"AGVC Action Status is success,Do Work defined!");
-                    DBhelper.InsertParkingAccuracy(new AGVSystemCommonNet6.Tools.clsParkingAccuracy
-                    {
-                        ParkingLocation = Agv.lastVisitedMapPoint.Graph.Display,
-                        ParkingTag = Agv.BarcodeReader.CurrentTag,
-                        Slam_X = Agv.Navigation.Data.robotPose.pose.position.x,
-                        Slam_Y = Agv.Navigation.Data.robotPose.pose.position.y,
-                        Slam_Theta = Agv.Navigation.Angle,
-                        X = Agv.BarcodeReader.CurrentX,
-                        Y = Agv.BarcodeReader.CurrentY,
-                        Time = DateTime.Now,
-                        TaskName = this.RunningTaskData.Task_Name
-                    });
+
+                    LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
+                    StoreParkingAccuracy();
                     Agv.DirectionLighter.CloseAll();
                     var result = await HandleAGVCActionSucceess();
 
@@ -357,8 +347,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                         Agv.Sub_Status = SUB_STATUS.DOWN;
                     }
+                    else
+                    {
+                    }
                 }
             });
+        }
+
+        /// <summary>
+        /// 儲存停車精度
+        /// </summary>
+        private void StoreParkingAccuracy()
+        {
+            var parkingAccqData = new AGVSystemCommonNet6.Tools.clsParkingAccuracy
+            {
+                ParkingLocation = Agv.lastVisitedMapPoint.Graph.Display,
+                ParkingTag = Agv.BarcodeReader.CurrentTag,
+                Slam_X = Agv.Navigation.Data.robotPose.pose.position.x,
+                Slam_Y = Agv.Navigation.Data.robotPose.pose.position.y,
+                Slam_Theta = Agv.Navigation.Angle,
+                X = Agv.BarcodeReader.CurrentX,
+                Y = Agv.BarcodeReader.CurrentY,
+                Time = DateTime.Now,
+                TaskName = this.RunningTaskData.Task_Name,
+                IsGoodParkingLoaction = false
+            };
+            DBhelper.InsertParkingAccuracy(parkingAccqData);
         }
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
