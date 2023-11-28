@@ -271,6 +271,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                                 break;
+
+                            if (tag == 18 & i == obj.planPath.poses.Length - 1 & Debugger.IsAttached)
+                            {
+                                module_info.nav_state.errorCode = 4;
+                                break;
+                            }
                             RobotStopMRE.WaitOne();
                         }
                         catch (Exception ex)
@@ -437,7 +443,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
             await Task.Delay(100);
-            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 9.81*1.5;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 9.81 * 1.5;
             await Task.Delay(100);
             module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
         }
@@ -447,6 +453,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
             module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(-0.81 * 9.8, 0.06 * 9.8, 0.45 * 9.8);
             await Task.Delay(100);
             module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(0, 0, 9.8);
+        }
+
+        internal async void ClearErrorCodes()
+        {
+            module_info.nav_state.errorCode = 0;
+            module_info.AlarmCode = new AlarmCodeMsg[0];
+            module_info.Battery.errorCode = 0;
         }
     }
 }
