@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
+using AGVSystemCommonNet6.Tools;
 using AGVSystemCommonNet6.Tools.Database;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -331,12 +332,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         return;
                     }
-
                     LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
-                    StoreParkingAccuracy();
                     Agv.DirectionLighter.CloseAll();
+                    Agv.lastParkingAccuracy = StoreParkingAccuracy();
                     var result = await HandleAGVCActionSucceess();
-
                     if (!result.success)
                     {
                         var alarm_code = result.alarmCode;
@@ -357,9 +356,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 儲存停車精度
         /// </summary>
-        private void StoreParkingAccuracy()
+        private clsParkingAccuracy StoreParkingAccuracy()
         {
-            var parkingAccqData = new AGVSystemCommonNet6.Tools.clsParkingAccuracy
+            var parkingAccqData = new clsParkingAccuracy
             {
                 ParkingLocation = Agv.lastVisitedMapPoint.Graph.Display,
                 ParkingTag = Agv.BarcodeReader.CurrentTag,
@@ -370,9 +369,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Y = Agv.BarcodeReader.CurrentY,
                 Time = DateTime.Now,
                 TaskName = this.RunningTaskData.Task_Name,
-                IsGoodParkingLoaction = false
+                IsGoodParkingLoaction = true
             };
             DBhelper.InsertParkingAccuracy(parkingAccqData);
+            return parkingAccqData;
         }
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()

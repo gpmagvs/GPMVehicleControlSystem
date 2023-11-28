@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Tools;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -21,7 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private string TaskName = "";
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
         internal bool AutoOnlineRaising = false;
-
+        internal clsParkingAccuracy lastParkingAccuracy;
         public enum EQ_HS_METHOD
         {
             PIO,
