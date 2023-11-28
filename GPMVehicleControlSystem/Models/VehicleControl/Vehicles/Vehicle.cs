@@ -571,6 +571,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             IsWaitForkNextSegmentTask = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
+
+            AlarmManager.ClearAlarm();
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();
