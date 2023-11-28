@@ -25,7 +25,7 @@ _ = Task.Run(() =>
     LOG.SetLogFolderName(param.LogFolder);
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
     DBhelper.Initialize();
-    Console.WriteLine(LinuxTools.GetMemUsedMB());
+    Console.WriteLine($"Memory when system start = {LinuxTools.GetMemUsedMB()} Mb");
     VehicheAndWagoIOConfiguraltion();
 });
 
