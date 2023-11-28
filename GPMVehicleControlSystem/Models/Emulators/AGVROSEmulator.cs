@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 driversState = new DriverState[2]
                  {
-                     new DriverState{ errorCode=21},
+                     new DriverState{ errorCode=21, },
                      new DriverState{ errorCode=21}
                  }
             },
@@ -437,9 +437,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
             await Task.Delay(100);
-            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 9.81;
+            module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 9.81*1.5;
             await Task.Delay(100);
             module_info.IMU.imuData.linear_acceleration.x = module_info.IMU.imuData.linear_acceleration.y = 0;
+        }
+
+        internal async void PitchErrorSimulation()
+        {
+            module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(-0.81 * 9.8, 0.06 * 9.8, 0.45 * 9.8);
+            await Task.Delay(100);
+            module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(0, 0, 9.8);
         }
     }
 }
