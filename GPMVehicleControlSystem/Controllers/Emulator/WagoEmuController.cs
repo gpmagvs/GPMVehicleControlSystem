@@ -181,6 +181,14 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             StaEmuManager.wagoEmu.SetState(DI_ITEM.BackProtection_Area_Sensor_4, true);
         }
 
+        [HttpGet("Horizon_Motor_Alarm")]
+        public async Task Horizon_Motor_Alarm()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
+        }
 
         [HttpGet("Submarine_Frontend_Obs_Control")]
         public async Task Submarine_Frontend_Obs_Control()

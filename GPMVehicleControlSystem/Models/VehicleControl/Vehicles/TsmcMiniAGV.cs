@@ -176,22 +176,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
         }
-        public override async Task<bool> ResetMotor()
+        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
         {
             try
             {
                 await WagoDO.ResetSaftyRelay();
-                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) |
-                    !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4))
-                {
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                    await Task.Delay(200);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                    await Task.Delay(200);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                    await Task.Delay(200);
-                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                }
+                bool anyDriverAlarm = !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) |
+                    !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
+
+                if (bypass_when_motor_busy_on & !anyDriverAlarm)
+                    return true;
+
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                await Task.Delay(200);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 return true;
             }
             catch (SocketException ex)

@@ -185,6 +185,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
+        protected bool IsResetAlarmWorking = false;
+        protected bool IsMotorReseting = false;
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
@@ -575,6 +577,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
                 {
+                    IsMotorReseting = false;
                     await ResetMotor();
                     (bool, string) result = await PreActionBeforeInitialize();
                     if (!result.Item1)
@@ -601,7 +604,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.AbortFlash();
                     DirectionLighter.CloseAll();
                     Sub_Status = SUB_STATUS.IDLE;
-                    
+
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
@@ -855,7 +858,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
-        protected bool IsResetAlarmWorking = false;
+
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
             if (IsResetAlarmWorking)
@@ -865,6 +868,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.Stop();
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
+            IsMotorReseting = false;
             await ResetMotor();
             _ = Task.Factory.StartNew(async () =>
             {
@@ -892,26 +896,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsResetAlarmWorking = false;
             return;
         }
-
-        public virtual async Task<bool> ResetMotor()
+        protected private async Task<bool> SetMotorStateAndDelay(DO_ITEM item, bool state, int delay = 10)
+        {
+            bool success = await WagoDO.SetState(item, state);
+            if (!success) return false;
+            await Task.Delay(delay);
+            return true;
+        }
+        public virtual async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
         {
             try
             {
-
+                var caller_class_name = new StackTrace().GetFrame(1).GetMethod().DeclaringType.Name;
+                if (IsMotorReseting)
+                {
+                    LOG.WARN($"Reset Motor Action is excuting by other process");
+                    return false;
+                }
+                IsMotorReseting = true;
                 await WagoDO.ResetSaftyRelay();
-                if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
+                if (bypass_when_motor_busy_on & WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                     return true;
 
-                LOG.TRACE("Reset Motor Process Start");
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+                LOG.TRACE($"Reset Motor Process Start (caller:{caller_class_name})");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, true, 100)) throw new Exception($"Horizon_Motor_Free set true fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, false, 100)) throw new Exception($"Horizon_Motor_Reset set false fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
                 LOG.TRACE("Reset Motor Process End");
 
                 if (Parameters.SimulationMode)
@@ -932,14 +945,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
                 }
 
+                IsMotorReseting = false;
                 return true;
             }
             catch (SocketException ex)
             {
+                IsMotorReseting = false;
+                LOG.ERROR(ex);
                 return false;
             }
             catch (Exception ex)
             {
+                IsMotorReseting = false;
+                LOG.ERROR(ex);
                 return false;
             }
 

@@ -196,8 +196,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
-            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleWheelDriverStatusError);
-            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleDriversStatusErrorAsync);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleDriversStatusErrorAsync);
 
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
@@ -495,24 +495,74 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StatusLighter.DOWN();
         }
 
-        protected async void HandleWheelDriverStatusError(object? sender, bool status)
+        protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
-            if (status)
-            {
-                await Task.Delay(1000);
-                if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
-                    return;
-                clsIOSignal signal = (clsIOSignal)sender;
-                var input = signal?.Input;
-                if (input == DI_ITEM.Horizon_Motor_Alarm_1)
-                    AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Left, false);
-                if (input == DI_ITEM.Horizon_Motor_Alarm_2)
-                    AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_IO_Error_Right, false);
-                if (input == DI_ITEM.Vertical_Motor_Alarm)
-                    AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
-            }
-        }
+            if (!status)
+                return;
 
+            await Task.Delay(1000);
+            if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
+                return;
+
+            clsIOSignal signal = (clsIOSignal)sender;
+            var input = signal?.Input;
+            var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
+            if (input == DI_ITEM.Horizon_Motor_Alarm_1)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
+            else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
+
+            if (Sub_Status != SUB_STATUS.IDLE & Sub_Status != SUB_STATUS.Charging)
+            {
+                AlarmManager.AddAlarm(alarmCode, false);
+                return;
+            }
+
+            AlarmManager.AddWarning(alarmCode);
+            #region 嘗試Reset馬達
+            _=Task.Factory.StartNew(async () =>
+            {
+                LOG.WARN($"Horizon Motor IO Alarm, Try auto reset process start");
+                await Task.Delay(500);
+                while (signal.State) //異常持續存在
+                {
+                    await Task.Delay(1000);
+                    IsMotorReseting = false;
+                    await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
+                }
+            });
+
+            #endregion
+        }
+        protected private async Task<bool> ResetMotorWithWait(TimeSpan timeout, clsIOSignal? signal, AlarmCodes alarmCode)
+        {
+            CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+            while (IsMotorReseting)
+            {
+                await Task.Delay(100);
+                if (!signal.State)
+                {
+                    AlarmManager.ClearAlarm(alarmCode);
+                    return true;
+                }
+
+                if (cancellation.IsCancellationRequested)
+                {
+                    LOG.WARN($"Reset Motor Fail:Waiting other motor reset process end TIMEOUT");
+                    return false;
+                }
+
+            }
+            if (!signal.State)
+            {
+                AlarmManager.ClearAlarm(alarmCode);
+                LOG.INFO($"{signal.Name} state {signal.State}, Alarm is reset");
+                return true;
+            }
+
+            AlarmManager.ClearAlarm(alarmCode);
+            return await ResetMotor(false);
+        }
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {

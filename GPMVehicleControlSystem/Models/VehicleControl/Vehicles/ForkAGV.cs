@@ -49,24 +49,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
             return CARGO_STATUS.NO_CARGO;
         }
-        public override async Task<bool> ResetMotor()
+        public async Task<bool> ResetVerticalDriver()
         {
             try
             {
-                await base.ResetMotor();
+                IsMotorReseting = true;
+                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Stop, true, 100)) throw new Exception($"Vertical_Motor_Stop set true fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Reset, true, 100)) throw new Exception($"Vertical_Motor_Reset set true fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Reset, false, 100)) throw new Exception($"Vertical_Motor_Reset set false fail");
+                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Stop, false, 100)) throw new Exception($"Vertical_Motor_Stop set false fail");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+                IsMotorReseting = false;
+                return false;
+            }
+        }
+        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
+        {
+            try
+            {
+                await base.ResetMotor(bypass_when_motor_busy_on);
 
                 if (WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy))
                     return true;
-
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
-                await Task.Delay(100);
-                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
-                return true;
+                return await ResetVerticalDriver();
             }
             catch (Exception ex)
             {
@@ -215,9 +224,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
-            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleWheelDriverStatusError);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleDriversStatusErrorAsync);
         }
+        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
+        {
+            if (!status)
+                return;
+            base.HandleDriversStatusErrorAsync(sender, status);
+            var signal = (sender as clsIOSignal);
+            if (signal.Input == DI_ITEM.Vertical_Motor_Alarm)
+            {
 
+                if (Sub_Status == SUB_STATUS.RUN)
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
+                    return;
+                }
+                AlarmManager.AddWarning(AlarmCodes.Vertical_Motor_IO_Error);
+                #region 嘗試Reset馬達
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    while (signal.State)
+                    {
+                        await Task.Delay(1000);
+                        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, AlarmCodes.Vertical_Motor_IO_Error);
+                    }
+                });
+                #endregion
+            }
+        }
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)
         {
             clsWorkStationModel? dat = JsonConvert.DeserializeObject<clsWorkStationModel>(json);
