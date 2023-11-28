@@ -663,7 +663,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             //if (lastVisitedMapPoint.StationType !=STATION_TYPE.Normal)
             //    return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
-
+            AlarmCodeWhenHandshaking = AlarmCodes.None;
             if (!WagoDI.Connected)
                 return (false, $"DIO 模組連線異常");
             return (true, "");
