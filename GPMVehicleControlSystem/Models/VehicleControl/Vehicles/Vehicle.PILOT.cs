@@ -105,6 +105,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 ExecutingTaskModel.Dispose();
             }
 
+            _RunTaskData = taskDownloadData.Clone();
+            _RunTaskData.IsEQHandshake = false;
+            _RunTaskData.IsActionFinishReported = false;
+
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
             await Laser.AllLaserActive();
@@ -113,22 +117,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
-            _RunTaskData = taskDownloadData.Clone();
-            _RunTaskData.IsEQHandshake = false;
-            _RunTaskData.IsActionFinishReported = false;
 
-            //_RunTaskData = new clsTaskDownloadData
-            //{
-            //    Action_Type = taskDownloadData.Action_Type,
-            //    Task_Name = taskDownloadData.Task_Name,
-            //    Task_Sequence = taskDownloadData.Task_Sequence,
-            //    Trajectory = taskDownloadData.Trajectory,
-            //    Homing_Trajectory = taskDownloadData.Homing_Trajectory,
-            //    Destination = taskDownloadData.Destination,
-            //    IsLocalTask = taskDownloadData.IsLocalTask,
-            //    IsEQHandshake = false,
-            //    IsActionFinishReported = false,
-            //};
             LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
             {

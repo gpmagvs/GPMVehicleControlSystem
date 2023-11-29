@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
@@ -6,7 +7,9 @@ using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control;
+using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
@@ -18,6 +21,7 @@ using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
@@ -270,8 +274,57 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     catch (Exception ex)
                     {
                     }
+
                     _Sub_Status = value;
+                    StoreStatusToDataBase();
                 }
+            }
+        }
+        private clsAGVStatusTrack status_data_store;
+        private async Task StoreStatusToDataBase()
+        {
+
+            await Task.Delay(1);
+            if (status_data_store == null)
+                status_data_store = new clsAGVStatusTrack { Status = SUB_STATUS.STOP };
+
+
+            try
+            {
+                List<clsBattery> batterys = Batteries.Values.ToList();
+                double _bat1_level = batterys.Count >= 1 ? batterys[0].Data.batteryLevel : -1;
+                double _bat2_level = batterys.Count >= 2 ? batterys[0].Data.batteryLevel : -1;
+                double _bat1_voltage = batterys.Count >= 1 ? batterys[0].Data.Voltage : -1;
+                double _bat2_voltage = batterys.Count >= 2 ? batterys[0].Data.Voltage : -1;
+
+
+                var _Task_Name = Sub_Status != SUB_STATUS.RUN ? "" : _RunTaskData.Task_Name;
+                var _Task_Simplex = Sub_Status != SUB_STATUS.RUN ? "" : _RunTaskData.Task_Simplex;
+                ACTION_TYPE _TaskAction = Sub_Status != SUB_STATUS.RUN ? ACTION_TYPE.NoAction : _RunTaskData.Action_Type;
+                clsAGVStatusTrack status_data = new clsAGVStatusTrack
+                {
+                    Time = DateTime.Now,
+                    Status = Sub_Status,
+                    BatteryLevel1 = _bat1_level,
+                    BatteryLevel2 = _bat2_level,
+                    BatteryVoltage1 = _bat1_voltage,
+                    BatteryVoltage2 = _bat2_voltage,
+                    ExecuteTaskName = _Task_Name,
+                    ExecuteTaskSimpleName = _Task_Simplex,
+                    TaskAction = _TaskAction,
+                    CargoID = CSTReader.ValidCSTID
+                };
+                if (status_data_store.Status == status_data.Status)
+                {
+                    return;
+                }
+                LOG.TRACE($"Try Write AGV Status to Database \n{status_data.ToJson()}");
+                status_data_store = status_data;
+                DBhelper.AddAgvStatusData(status_data);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
             }
         }
 
@@ -770,6 +823,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"Software EMO!!! {alarmCode}");
             AlarmManager.AddAlarm(alarmCode);
             _Sub_Status = SUB_STATUS.DOWN;
+            StoreStatusToDataBase();
             BuzzerPlayer.Alarm();
             SetAGV_TR_REQ(false);
             StatusLighter.CloseAll();

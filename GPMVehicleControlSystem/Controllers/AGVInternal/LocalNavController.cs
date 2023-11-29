@@ -309,6 +309,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Destination = toTag,
                 Task_Name = TaskName,
                 Station_Type = STATION_TYPE.Normal,
+                Task_Simplex = $"{TaskName}-{Task_Sequence}",
                 Task_Sequence = Task_Sequence,
                 Trajectory = PathFinder.GetTrajectory(mapData.Name, pathPlanDto.stations),
 
@@ -338,6 +339,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     IsLocalTask = true,
                     Task_Name = Task_Name,
+                    Task_Simplex =$"{Task_Name}-{seq}" ,
                     Task_Sequence = seq,
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
@@ -364,6 +366,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 IsLocalTask = true,
                 Task_Name = Task_Name,
+                Task_Simplex = $"{Task_Name}-{seq}",
                 Task_Sequence = seq,
                 Action_Type = ACTION_TYPE.None,
                 Destination = normal_move_final_tag,
@@ -385,6 +388,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     IsLocalTask = true,
                     Task_Name = Task_Name,
+                    Task_Simplex = $"{Task_Name}-{seq}",
                     Task_Sequence = seq,
                     Action_Type = actionType,
                     Destination = destineStation.TagNumber,

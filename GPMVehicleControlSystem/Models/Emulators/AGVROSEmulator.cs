@@ -26,7 +26,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 state = 1,
                 batteryLevel = 90,
-                batteryID = 0
+                batteryID = 0,
+                Voltage = 2323
             },
             CSTReader = new CSTReaderState
             {
@@ -297,12 +298,15 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             {
                                 await Task.Delay(1000);
                                 module_info.Battery.batteryLevel += 0x05;
+                                module_info.Battery.Voltage +=100;
                                 if (module_info.Battery.batteryLevel >= 100)
                                 {
                                     IsCharge = false;
                                     module_info.Battery.batteryLevel = 100;
                                     module_info.Battery.chargeCurrent = 500;
                                     module_info.Battery.dischargeCurrent = 0;
+                                    module_info.Battery.Voltage = 2800;
+
                                 }
                             }
                         });
@@ -337,10 +341,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     {
                         await Task.Delay(10);
 
-                        if (stopwatch.ElapsedMilliseconds > 30000)
+                        if (stopwatch.ElapsedMilliseconds > 5000)
                         {
                             module_info.Battery.batteryLevel -= 1;
+                            module_info.Battery.Voltage -=100;
                             module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
+                            module_info.Battery.Voltage = (ushort)(module_info.Battery.Voltage <= 2400 ? 2400  : module_info.Battery.Voltage);
                             stopwatch.Restart();
                         }
 
