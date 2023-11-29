@@ -2,7 +2,7 @@
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent

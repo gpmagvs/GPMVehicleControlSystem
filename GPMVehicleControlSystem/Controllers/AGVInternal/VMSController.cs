@@ -18,7 +18,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {

@@ -6,7 +6,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;

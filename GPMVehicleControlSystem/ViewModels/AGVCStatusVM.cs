@@ -5,7 +5,7 @@ using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.MAP;
-using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM.clsAlarmCode;
+using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.ViewModels
@@ -52,7 +52,7 @@ namespace GPMVehicleControlSystem.ViewModels
         {
             get
             {
-                List<clsAlarmCode> alarms = AlarmCodes.Where(alarm => alarm.EAlarmCode != AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM.AlarmCodes.None).ToList();
+                List<clsAlarmCode> alarms = AlarmCodes.Where(alarm => alarm.EAlarmCode != AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes.None).ToList();
                 if (alarms.Count > 0)
                 {
                     Dictionary<int, object> group = new Dictionary<int, object>();

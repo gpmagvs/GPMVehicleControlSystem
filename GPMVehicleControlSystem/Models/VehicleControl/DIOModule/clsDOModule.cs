@@ -1,6 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.RunMode;
 using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Tools;
 using Modbus.Device;
 using System.Net.Http;

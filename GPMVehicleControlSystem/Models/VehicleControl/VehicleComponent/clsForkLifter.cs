@@ -13,7 +13,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using System.ComponentModel;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using AGVSystemCommonNet6.Vehicle_Control;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {

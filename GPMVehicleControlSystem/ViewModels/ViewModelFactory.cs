@@ -12,7 +12,7 @@ using GPMVehicleControlSystem.Models.RDTEST;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
 using AGVSystemCommonNet6.Vehicle_Control;
-using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
