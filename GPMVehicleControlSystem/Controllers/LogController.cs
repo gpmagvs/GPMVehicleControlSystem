@@ -1,4 +1,7 @@
 ﻿using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.MAP;
+using AGVSystemCommonNet6.Vehicle_Control.Models;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Log;
 using Microsoft.AspNetCore.Http;
@@ -23,17 +26,18 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("GetTransferLogToday")]
         public async Task<IActionResult> GetTransferLogToday()
         {
-            clsAGVSLogAnaylsis analysiser = new clsAGVSLogAnaylsis()
+            Dictionary<int, AGVSystemCommonNet6.MAP.MapPoint>.ValueCollection mapPointsUsing = StaStored.CurrentVechicle.NavingMap.Points.Values;
+            List<clsAGVSLogAnaylsis.clsTransferResult> results = DBhelper.QueryTodayTransferRecord();
+            foreach (var item in results)
             {
-                logFolder = Debugger.IsAttached ? @"D:\AGVS_Message_Log1030_1106" : StaStored.CurrentVechicle.AGVS.Logger.LogFolder
-            };
-            var timerange = new DateTime[]
-            {
-                 Debugger.IsAttached ?new DateTime(2023,11,5,0,0,0):new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day,0,0,0),
-                 new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day,23,59,59)
-            };
+                var FromStation = mapPointsUsing.FirstOrDefault(pt => pt.TagNumber == item.From);
+                var ToStation = mapPointsUsing.FirstOrDefault(pt => pt.TagNumber == item.To);
+                var StartLocStation = mapPointsUsing.FirstOrDefault(pt => pt.TagNumber == item.StartLoc);
 
-            var results = analysiser.AnalysisTransferTasks(timerange);
+                item.FromName = FromStation == null ? item.From + "" : FromStation.Graph.Display;
+                item.ToName = FromStation == null ? item.To + "" : ToStation.Graph.Display;
+                item.StartLocName = FromStation == null ? item.StartLoc + "" : StartLocStation.Graph.Display;
+            }
             results = results.OrderByDescending(t => t.StartTime).ToList();
             return Ok(results);
         }

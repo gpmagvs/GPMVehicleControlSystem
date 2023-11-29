@@ -297,14 +297,14 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             while (IsCharge)
                             {
                                 await Task.Delay(1000);
-                                module_info.Battery.batteryLevel += 0x05;
+                                module_info.Battery.batteryLevel += 0x01;
                                 module_info.Battery.Voltage +=100;
                                 if (module_info.Battery.batteryLevel >= 100)
                                 {
                                     IsCharge = false;
                                     module_info.Battery.batteryLevel = 100;
                                     module_info.Battery.chargeCurrent = 500;
-                                    module_info.Battery.dischargeCurrent = 0;
+                                    module_info.Battery.dischargeCurrent = 12330;
                                     module_info.Battery.Voltage = 2800;
 
                                 }

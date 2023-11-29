@@ -298,9 +298,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double _bat2_voltage = batterys.Count >= 2 ? batterys[0].Data.Voltage : -1;
 
 
-                var _Task_Name = Sub_Status != SUB_STATUS.RUN ? "" : _RunTaskData.Task_Name;
-                var _Task_Simplex = Sub_Status != SUB_STATUS.RUN ? "" : _RunTaskData.Task_Simplex;
-                ACTION_TYPE _TaskAction = Sub_Status != SUB_STATUS.RUN ? ACTION_TYPE.NoAction : _RunTaskData.Action_Type;
+                string _Task_Name = "";
+                string _Task_Simplex = "";
+                ACTION_TYPE _TaskAction = ACTION_TYPE.NoAction;
+                int _DestineTag = Navigation.LastVisitedTag;
+                bool IsRunStatus = Sub_Status == SUB_STATUS.RUN;
+                if (IsRunStatus)
+                {
+                    _Task_Name = _RunTaskData.Task_Name;
+                    _Task_Simplex = _RunTaskData.Task_Simplex;
+                    _TaskAction = _RunTaskData.Action_Type;
+                    _DestineTag = _RunTaskData.Destination;
+                }
                 clsAGVStatusTrack status_data = new clsAGVStatusTrack
                 {
                     Time = DateTime.Now,
@@ -312,7 +321,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     ExecuteTaskName = _Task_Name,
                     ExecuteTaskSimpleName = _Task_Simplex,
                     TaskAction = _TaskAction,
-                    CargoID = CSTReader.ValidCSTID
+                    CargoID = CSTReader.ValidCSTID,
+                    Odometry = this.Odometry,
+                    DestineTag = _DestineTag
                 };
                 if (status_data_store.Status == status_data.Status)
                 {
