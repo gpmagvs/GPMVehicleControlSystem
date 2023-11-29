@@ -2,18 +2,11 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Tools;
+using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
-using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using RosSharp.RosBridgeClient.Actionlib;
-using static AGVSystemCommonNet6.AGVDispatch.Model.clsDynamicTrafficState;
 using static AGVSystemCommonNet6.clsEnums;
-using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using static GPMVehicleControlSystem.ViewModels.AGVCStatusVM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {

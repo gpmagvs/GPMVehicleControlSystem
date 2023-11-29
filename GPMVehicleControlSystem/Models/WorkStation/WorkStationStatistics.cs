@@ -1,5 +1,5 @@
-﻿using AGVSystemCommonNet6.Tools;
-using AGVSystemCommonNet6.Tools.Database;
+﻿using AGVSystemCommonNet6.Vehicle_Control.Models;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 
 namespace GPMVehicleControlSystem.Models.WorkStation
 {

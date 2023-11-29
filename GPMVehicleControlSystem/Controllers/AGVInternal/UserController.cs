@@ -1,10 +1,7 @@
-﻿using AGVSystemCommonNet6.Tools.Database;
-using AGVSystemCommonNet6.User;
-
+﻿using AGVSystemCommonNet6.User;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.ViewModels;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
