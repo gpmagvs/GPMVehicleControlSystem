@@ -15,10 +15,10 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static SQLite.SQLite3;
 using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {

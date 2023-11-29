@@ -1,7 +1,7 @@
-using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Vehicle_Control;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {

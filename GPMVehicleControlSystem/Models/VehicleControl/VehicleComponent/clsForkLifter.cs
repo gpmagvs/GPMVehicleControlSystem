@@ -1,6 +1,4 @@
-﻿using AGVSystemCommonNet6.Abstracts;
-using AGVSystemCommonNet6.Alarm.VMS_ALARM;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static AGVSystemCommonNet6.clsEnums;
@@ -14,6 +12,8 @@ using Newtonsoft.Json;
 using GPMVehicleControlSystem.Models.WorkStation;
 using System.ComponentModel;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
+using AGVSystemCommonNet6.Vehicle_Control;
+using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {

@@ -1,6 +1,6 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
-using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
 using GPMVehicleControlSystem.Tools;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;

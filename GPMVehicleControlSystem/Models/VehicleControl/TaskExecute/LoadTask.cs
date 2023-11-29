@@ -1,5 +1,4 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using static AGVSystemCommonNet6.clsEnums;
 using System.Diagnostics;
 using AGVSystemCommonNet6.Log;
@@ -18,6 +17,7 @@ using AGVSystemCommonNet6.Tools.Database;
 using GPMVehicleControlSystem.Models.Emulators;
 using AGVSystemCommonNet6.Alarm;
 using Microsoft.Extensions.Options;
+using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {

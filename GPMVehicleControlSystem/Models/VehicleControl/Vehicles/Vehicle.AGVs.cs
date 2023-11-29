@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch;
-using AGVSystemCommonNet6.Alarm.VMS_ALARM;
 using AGVSystemCommonNet6.Log;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.AGVDispatch.Model;
@@ -11,6 +10,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.MAP;
 using System.Diagnostics;
+using AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -183,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode
             {
                 Alarm_ID = alarm.Value.Code,
-                Alarm_Level = alarm.Value.ELevel == AGVSystemCommonNet6.Alarm.VMS_ALARM.clsAlarmCode.LEVEL.Alarm ? 1 : 0,
+                Alarm_Level = alarm.Value.ELevel == AGVSystemCommonNet6.Vehicle_Control.VMS_ALARM.clsAlarmCode.LEVEL.Alarm ? 1 : 0,
                 Alarm_Description = alarm.Value.CN,
                 Alarm_Description_EN = alarm.Value.Description,
                 Alarm_Category = alarm.Value.IsRecoverable ? 0 : 1,
