@@ -94,7 +94,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddAlarm(AlarmCodes.IMU_Pitch_State_Error, false);
             else
                 AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
-            LOG.WARN($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nAcc Data: {acc_data.ToJson()}\nMagintude:{imu_event_data.Mag}");
+            LOG.WARN($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nState={imu_event_data.ToJson()}");
         }
 
         private bool HandleSpeedReconveryRequesetRaised()

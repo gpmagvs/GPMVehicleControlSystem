@@ -790,6 +790,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 error_message = "解煞車旋鈕尚未復歸";
                 alarmo_code = AlarmCodes.Switch_Type_Error;
             }
+            if (IMU.PitchState != clsIMU.PITCH_STATES.NORMAL)
+            {
+                error_message = $"AGV姿態異常({(IMU.PitchState== clsIMU.PITCH_STATES.INCLINED?"傾斜":"側翻")})";
+                alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
+            }
             if (alarmo_code == AlarmCodes.None)
                 return (true, "");
             else

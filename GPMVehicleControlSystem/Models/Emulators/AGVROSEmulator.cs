@@ -458,7 +458,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal async void PitchErrorSimulation()
         {
             module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(-0.81 * 9.8, 0.06 * 9.8, 0.45 * 9.8);
-            await Task.Delay(100);
+        }
+        internal async void PitchNormalSimulation()
+        {
             module_info.IMU.imuData.linear_acceleration = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Vector3(0, 0, 9.8);
         }
 

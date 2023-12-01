@@ -33,5 +33,11 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         {
             StaEmuManager.agvRosEmu.PitchErrorSimulation();
         }
+
+        [HttpGet("PitchNormalSimulation")]
+        public async Task PitchNormalSimulation()
+        {
+            StaEmuManager.agvRosEmu.PitchNormalSimulation();
+        }
     }
 }
