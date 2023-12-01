@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 Current_Warning_Code = AlarmCodes.None;
             }
-            if (_imu_state.imuData.linear_acceleration.z < 9.4)
+            if (_imu_state.imuData.linear_acceleration.z < 9.4 && Options.PitchErrorDetection)
             {
                 OnImuStatesError?.Invoke(this, new IMUStateErrorEventData(_imu_state.imuData.linear_acceleration, AlarmCodes.IMU_Pitch_State_Error));
             }
