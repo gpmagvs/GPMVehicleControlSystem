@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
                 Task_Sequence = 1,
                 Destination = 7,
                 Action_Type = ACTION_TYPE.None,
-                Station_Type =STATION_TYPE.Normal,
+                Station_Type = STATION_TYPE.Normal,
                 Trajectory = new clsMapPoint[]
                     {
                          new clsMapPoint
@@ -45,5 +45,10 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             return Ok();
         }
 
+        [HttpGet("ReplanSimulation")]
+        public async void ReplanSimulation()
+        {
+            StaStored.CurrentVechicle.HandleAGVSTaskCancelRequest(RESET_MODE.CYCLE_STOP);
+        }
     }
 }
