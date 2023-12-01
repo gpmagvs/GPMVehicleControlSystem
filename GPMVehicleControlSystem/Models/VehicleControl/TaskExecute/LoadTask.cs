@@ -1,3 +1,4 @@
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Log;
@@ -295,10 +296,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
                     await Agv.Laser.FrontBackLasersEnable(false, true);
 
-                    (bool agvc_executing, string message) agvc_response = await TransferTaskToAGVC();
-                    if (!agvc_response.agvc_executing)
+                    SendActionCheckResult send_task_result = await TransferTaskToAGVC();
+                    if (!send_task_result.Accept)
                     {
-                        LOG.ERROR(agvc_response.message);
+                        LOG.ERROR($"{send_task_result.ToJson()}");
                         return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
                     }
                     else

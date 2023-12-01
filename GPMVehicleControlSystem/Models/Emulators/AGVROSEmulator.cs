@@ -92,6 +92,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     }
                     EmuLog("AGVC ROS Reconnected");
                     rosSocket.protocol.OnClosed += HandleRosDisconnected;
+                    PublishModuleInformation(rosSocket);
                 });
             }
             rosSocket.protocol.OnClosed += HandleRosDisconnected;
@@ -207,6 +208,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 //模擬走型
                 Task.Run(async () =>
                 {
+                    complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
                     var firstTag = obj.planPath.poses.First().header.seq;
                     IsCharge = false;
                     module_info.Battery.dischargeCurrent = 13200;
@@ -244,20 +246,17 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             double tag_pose_y = pose.pose.position.y;
                             double tag_theta = pose.pose.orientation.ToTheta();
                             var current_position = module_info.nav_state.robotPose.pose.position;
+                            var delay_time = 0.5;
                             //計算距離
                             if (current_position.x == 0 && current_position.y == 0)
                             {
-                                await Task.Delay(TimeSpan.FromSeconds(0.5));
+                                await Task.Delay(TimeSpan.FromSeconds(delay_time));
                             }
-                            else
+
+                            if (EmuParam.Move_Time_Mode == clsEmulatorParams.MOVE_TIME_EMULATION.DISTANCE)
                             {
-                                if (EmuParam.Move_Time_Mode == clsEmulatorParams.MOVE_TIME_EMULATION.DISTANCE)
-                                {
-                                    var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
-                                    await Task.Delay(TimeSpan.FromSeconds(distance / 0.8), cts.Token);
-                                }
-                                else
-                                    await Task.Delay(TimeSpan.FromSeconds(EmuParam.Move_Fixed_Time), cts.Token);
+                                var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
+                                delay_time = distance / 0.8;
                             }
                             //module_info.Battery.batteryLevel -= 0x01;
                             module_info.nav_state.lastVisitedNode.data = (int)tag;
@@ -269,6 +268,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.reader.xValue = tag_pose_x;
                             module_info.reader.yValue = tag_pose_y;
                             module_info.reader.theta = tag_theta;
+                            await Task.Delay(TimeSpan.FromSeconds(delay_time));
+
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                                 break;
@@ -298,7 +299,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             {
                                 await Task.Delay(1000);
                                 module_info.Battery.batteryLevel += 0x01;
-                                module_info.Battery.Voltage +=100;
+                                module_info.Battery.Voltage += 100;
                                 if (module_info.Battery.batteryLevel >= 100)
                                 {
                                     IsCharge = false;
@@ -344,9 +345,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
                             module_info.Battery.batteryLevel -= 1;
-                            module_info.Battery.Voltage -=100;
+                            module_info.Battery.Voltage -= 100;
                             module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
-                            module_info.Battery.Voltage = (ushort)(module_info.Battery.Voltage <= 2400 ? 2400  : module_info.Battery.Voltage);
+                            module_info.Battery.Voltage = (ushort)(module_info.Battery.Voltage <= 2400 ? 2400 : module_info.Battery.Voltage);
                             stopwatch.Restart();
                         }
 

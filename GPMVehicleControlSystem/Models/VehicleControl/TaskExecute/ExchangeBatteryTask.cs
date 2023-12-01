@@ -126,9 +126,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             BuzzerPlayer.Action();
             AGVCActionStatusChaged += OnAGVCBackToEntryPoint;
             var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
-            (bool confirm, string message) result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
+            AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
 
-            return (result.confirm, result.confirm ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
+            return (result.Accept, result.Accept? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
         }
 
         private async Task HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action)

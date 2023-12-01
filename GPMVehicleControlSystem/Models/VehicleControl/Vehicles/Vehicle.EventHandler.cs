@@ -46,6 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
+            AGVC.OnActionSendToAGVCRaising += HandleSendActionGoalToAGVCRaised;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
@@ -99,6 +100,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool HandleSpeedReconveryRequesetRaised()
         {
             return IsAllLaserNoTrigger().Result;
+        }
+
+        /// <summary>
+        /// 處理Action Goal發送給車控前的檢查
+        /// </summary>
+        /// <returns></returns>
+        private SendActionCheckResult HandleSendActionGoalToAGVCRaised()
+        {
+            var _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+            if (AGVSResetCmdFlag)
+            {
+                _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED);
+            }
+            LOG.TRACE($"Before Action Goal Send to AGVC Check Result = {_confirmResult.ToJson()}");
+            return _confirmResult;
         }
 
         private void CopyDataBaseToLogFolder(string database_file_name)

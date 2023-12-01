@@ -184,7 +184,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public bool AGV_Reset_Flag { get; internal set; }
 
-        internal bool AGVSResetCmdFlag = false;
+        /// <summary>
+        /// Replan訊號
+        /// </summary>
+        private bool _AGVSResetCmdFlag = false;
+        internal bool AGVSResetCmdFlag
+        {
+            get => _AGVSResetCmdFlag;
+            set
+            {
+                if (_AGVSResetCmdFlag != value)
+                {
+                    _AGVSResetCmdFlag = value;
+                    LOG.WARN($"AGVSResetCmdFlag changed to :{value}");
+                }
+            }
+        }
         public MoveControl ManualController => AGVC.ManualController;
 
         public bool IsInitialized { get; internal set; }
@@ -634,8 +649,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
             IsWaitForkNextSegmentTask = false;
+            AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
-
             AlarmManager.ClearAlarm();
             return await Task.Run(async () =>
             {

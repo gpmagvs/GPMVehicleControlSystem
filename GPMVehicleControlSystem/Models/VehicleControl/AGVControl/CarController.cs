@@ -10,6 +10,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
@@ -112,7 +113,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler OnSTOPCmdRequesting;
         public delegate bool SpeedRecoveryRequestingDelegate();
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
-
+        public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
+        public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
         public Action<ActionStatus> OnAGVCActionChanged;
 
         internal TaskCommandActionClient actionClient;
@@ -172,6 +174,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool TryConnecting = false;
 
+        public class SendActionCheckResult
+        {
+            public enum SEND_ACTION_GOAL_CONFIRM_RESULT
+            {
+                Accept,
+                AGVS_CANCEL_TASK_REQ_RAISED,
+                AGVC_CANNOT_EXECUTE_ACTION,
+                LD_ULD_SIMULATION,
+                Confirming = 499,
+                Others = 999,
+            }
+            public bool Accept => IsAcceptCase();
+
+            [JsonConverter(typeof(StringEnumConverter))]
+            public SEND_ACTION_GOAL_CONFIRM_RESULT ResultCode { get; } = SEND_ACTION_GOAL_CONFIRM_RESULT.Accept;
+            public SendActionCheckResult(SEND_ACTION_GOAL_CONFIRM_RESULT ResultCode)
+            {
+                this.ResultCode = ResultCode;
+            }
+            private bool IsAcceptCase()
+            {
+                return ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.Accept || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION;
+            }
+        }
         public CarController()
         {
         }
@@ -424,15 +450,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return res.confirm;
         }
 
-        internal async Task<(bool confirm, string message)> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
+        internal async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
             RunningTaskData = taskDownloadData;
             return await SendGoal(RunningTaskData.RosTaskCommandGoal, action_timeout);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
-        internal async Task<(bool confirm, string message)> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
+        internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
+
             return await Task.Run(async () =>
             {
                 bool isCancelTask = rosGoal.planPath.poses.Length == 0;
@@ -441,11 +468,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
                 else
                     LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+
+                SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+
+                if (!isCancelTask && OnActionSendToAGVCRaising != null)
+                    confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
+
+                if (!confirmResult.Accept)
+                {
+                    return confirmResult;
+                }
+                if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
+                {
+                    actionClient.goal = new TaskCommandGoal();
+                    actionClient.SendGoal();
+                    LOG.WARN($"AGVs已經發起任務取消請求,發送空的Action Goal並停在原地等待AGVs任務");
+                    return confirmResult;
+                }
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
                 if (isCancelTask)//取消任務
                 {
-                    return (true, "");
+                    return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
                 }
                 wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 await Task.Delay(500);
@@ -458,11 +502,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
                         LOG.Critical(error_msg);
                         AbortTask();
-                        return (false, error_msg);
+                        return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                     }
                 }
                 LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
-                return (true, "");
+                return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
             });
         }
 

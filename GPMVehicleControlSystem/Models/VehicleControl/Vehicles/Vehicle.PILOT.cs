@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -81,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
-
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
             if (IsActionFinishTaskFeedbackExecuting)
             {
                 LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
@@ -321,10 +322,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (status == TASK_RUN_STATUS.ACTION_FINISH && Sub_Status == SUB_STATUS.IDLE)
                 orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
+            int currentPosIndexInTrajectory = GetCurrentTagIndexOfTrajectory();
+
             try
             {
                 bool needReOnline = false;
-                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && !_RunTaskData.IsLocalTask)
+                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && (Debugger.IsAttached ? true : !_RunTaskData.IsLocalTask))
                 {
                     if (status != TASK_RUN_STATUS.ACTION_FINISH)
                     {
@@ -336,7 +339,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         LOG.ERROR($"Task Status-{status} need waiting AGVs connection restored..");
                         while (!AGVS.IsConnected())
                         {
-                            await Task.Delay(1000);
+                            await Task.Delay(10);
                         }
                         LOG.INFO($"Connection of AGVs is restored now !! . Task Status-{status} will reported out ");
                         needReOnline = true;
@@ -367,7 +370,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
-                if (!_RunTaskData.IsLocalTask)
+                if ((Debugger.IsAttached ? true : !_RunTaskData.IsLocalTask))
                 {
                     double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                     double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
@@ -377,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await WaitAlarmCodeReported(alarm_tracking);
                     }
-                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, GetCurrentTagIndexOfTrajectory(), status, Navigation.LastVisitedTag, coordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
+                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, coordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
                 }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {

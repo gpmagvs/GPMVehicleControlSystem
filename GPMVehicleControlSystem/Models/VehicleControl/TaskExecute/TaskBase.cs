@@ -205,21 +205,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return AlarmCodes.AGV_State_Cant_do_this_Action;
                 }
 
-                (bool agvc_executing, string message) agvc_response = (false, "");
+                SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
                 //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                 if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
-                    agvc_response = (true, "空取空放");
+                    agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
                     HandleAGVActionChanged(ActionStatus.SUCCEEDED);
                 }
                 else
                 {
+                    LOG.TRACE($"任務發送至車控前停等");
+                    await Task.Delay(Debugger.IsAttached ? 3000 : 100);
                     agvc_response = await TransferTaskToAGVC();
-                    if (!agvc_response.agvc_executing)
+                    if (!agvc_response.Accept)
                         return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
                     else
                     {
                         await Task.Delay(1000);
+                        if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
+                        {
+                            HandleAGVCActionSucceess();
+                            return AlarmCodes.None;
+                        }
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
@@ -263,7 +270,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
         public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;
-        protected virtual async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
+        protected virtual async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
         }
@@ -318,6 +325,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (Agv.AGVSResetCmdFlag)
                     {
                         Agv.AGV_Reset_Flag = true;
+                        //因為
                     }
                     AGVCActionStatusChaged = null;
 

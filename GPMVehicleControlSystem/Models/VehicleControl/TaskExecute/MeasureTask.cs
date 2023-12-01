@@ -6,6 +6,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
@@ -79,7 +80,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// 量測任務時，當AGV抵達Bay進入點 僅先下發進入點->第一個量測點任務
         /// </summary>
         /// <returns></returns>
-        protected override async Task<(bool agvc_executing, string message)> TransferTaskToAGVC()
+        protected override async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             clsTaskDownloadData taskData = RunningTaskData.Splice(0, 2, true);
             LOG.INFO($"AGV Reach InPoint, Go to first Pt: {taskData.Destination}");

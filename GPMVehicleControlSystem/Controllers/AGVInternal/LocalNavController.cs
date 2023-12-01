@@ -251,7 +251,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Destination = testVM.DestinPointID
             };
             var confirmed = await agv.AGVC.ExecuteTaskDownloaded(data);
-            return Ok(new { confirm = confirmed.confirm, message = confirmed.message });
+            return Ok(new { confirm = confirmed.Accept, message = confirmed.ResultCode.ToString() });
         }
         [HttpGet("MoveTo")]
         public async Task<IActionResult> MoveTo(double x, double y, double theta, int point_id)
@@ -339,7 +339,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     IsLocalTask = true,
                     Task_Name = Task_Name,
-                    Task_Simplex =$"{Task_Name}-{seq}" ,
+                    Task_Simplex = $"{Task_Name}-{seq}",
                     Task_Sequence = seq,
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
