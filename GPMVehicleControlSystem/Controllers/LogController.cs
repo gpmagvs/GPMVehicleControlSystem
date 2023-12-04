@@ -73,5 +73,15 @@ namespace GPMVehicleControlSystem.Controllers
             return File(fileBytes, "application/octet-stream", fileName);
         }
 
+        [HttpGet("QueryVibHistoryByTaskName")]
+        public async Task<IActionResult> QueryVibHistoryByTaskName(string taskName)
+        {
+            return Ok(DBhelper.Query.QueryVibrationRecordsByTaskName(taskName));
+        }
+        [HttpGet("QueryVibHistoryByTime")]
+        public async Task<IActionResult> QueryVibHistoryByTime(DateTime from, DateTime to)
+        {
+            return Ok(DBhelper.Query.QueryVibrationRecordsByTime(from, to));
+        }
     }
 }

@@ -47,6 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
             AGVC.OnActionSendToAGVCRaising += HandleSendActionGoalToAGVCRaised;
+            
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;

@@ -2,7 +2,9 @@ using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -484,6 +486,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (status == ActionStatus.SUCCEEDED)
                 {
+                   
+
                     if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                     {
                         AlarmManager.AddAlarm(AlarmCodes.AGV_Location_Not_Secondary, false);

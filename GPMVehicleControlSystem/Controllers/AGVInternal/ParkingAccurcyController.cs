@@ -12,7 +12,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("GetAllParkLoc")]
         public async Task<IActionResult> GetAllParkLoc()
         {
-            List<string>? locList = DBhelper.QueryAllParkLoc();
+            List<string>? locList = DBhelper.Query.QueryAllParkLoc();
             locList.Sort();
             return Ok(locList);
         }
@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Query")]
         public async Task<IActionResult> GetAllParkLoc([FromBody] clsParkingAcqQueryOption option)
         {
-            List<clsParkingAccuracy> data_result = DBhelper.QueryParkingAccuracy(option.Tag, option.StartTimeStr, option.EndTimeStr,option.TaskName);
+            List<clsParkingAccuracy> data_result = DBhelper.Query.QueryParkingAccuracy(option.Tag, option.StartTimeStr, option.EndTimeStr,option.TaskName);
             return Ok(data_result.OrderByDescending(d=>d.Time).ToList());
         }
 

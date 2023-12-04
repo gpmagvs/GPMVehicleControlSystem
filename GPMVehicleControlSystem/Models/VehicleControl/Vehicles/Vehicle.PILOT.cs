@@ -109,6 +109,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _RunTaskData = taskDownloadData.Clone();
             _RunTaskData.IsEQHandshake = false;
             _RunTaskData.IsActionFinishReported = false;
+            _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
 
             AlarmManager.ClearAlarm();
             Sub_Status = SUB_STATUS.RUN;
@@ -178,7 +179,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddAlarm(result, false);
                     AGVC.OnAGVCActionChanged = null;
                 }
-                //}
             });
         }
 

@@ -268,7 +268,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.reader.xValue = tag_pose_x;
                             module_info.reader.yValue = tag_pose_y;
                             module_info.reader.theta = tag_theta;
+
+                            module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
                             await Task.Delay(TimeSpan.FromSeconds(delay_time));
+                            module_info.IMU.imuData.linear_acceleration.x = 0.0001;
 
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)

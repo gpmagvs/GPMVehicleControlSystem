@@ -24,6 +24,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
@@ -283,6 +284,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
+                            IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
                         }
 
                     }
@@ -792,7 +794,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             if (IMU.PitchState != clsIMU.PITCH_STATES.NORMAL)
             {
-                error_message = $"AGV姿態異常({(IMU.PitchState== clsIMU.PITCH_STATES.INCLINED?"傾斜":"側翻")})";
+                error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})";
                 alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
             }
             if (alarmo_code == AlarmCodes.None)
@@ -880,8 +882,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.WARN($"[Software EMO] AGVC Status changed to {status}");
                 if (status == ActionStatus.SUCCEEDED)
                 {
+
                     Task.Factory.StartNew(async () =>
                     {
+
                         await Task.Delay(1000);
                         AGVC._ActionStatus = ActionStatus.NO_GOAL;
                         LOG.WARN($"[Software EMO] Set AGVC Status changed to {ActionStatus.NO_GOAL}");
@@ -893,6 +897,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private void RecordVibrationDataToDatabase()
+        {
+            try
+            {
+                DBhelper.AddVibrationStatusRecord(new clsVibrationStatusWhenAGVMoving(_RunTaskData.VibrationRecords)
+                {
+                    Time = DateTime.Now,
+                    TaskName = _RunTaskData.Task_Name,
+                    DestineTag = _RunTaskData.Destination
+                });
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
+        }
+
+        private void HandleIMUVibrationDataChanged(object? sender, Vector3 e)
+        {
+            if (Sub_Status != SUB_STATUS.RUN)
+            {
+                IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
+                RecordVibrationDataToDatabase();
+                return;
+            }
+            _RunTaskData.VibrationRecords.Add(new clsVibrationRecord
+            {
+                Time = DateTime.Now,
+                AccelermetorValue = e,
+                LocX = Navigation.Data.robotPose.pose.position.x,
+                LocY = Navigation.Data.robotPose.pose.position.y,
+                Theta = Navigation.Angle
+            });
+        }
 
         private async void AGVSTaskFeedBackReportAndOffline(AlarmCodes alarmCode)
         {

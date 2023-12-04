@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.WorkStation
             {
 
                 DateTime from = DateTime.Now.AddDays(-30);
-                List<clsParkingAccuracy> parkingHistory = DBhelper.QueryParkingAccuracy(tag, from.ToString(), DateTime.Now.ToString(), "");
+                List<clsParkingAccuracy> parkingHistory = DBhelper.Query.QueryParkingAccuracy(tag, from.ToString(), DateTime.Now.ToString(), "");
 
                 // 第一次計算平均值和標準差
                 var (avgX, stdDevX) = CalculateAverageAndStdDev(parkingHistory.Select(r => Math.Abs(r.X)).ToList());

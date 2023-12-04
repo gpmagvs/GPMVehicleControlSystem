@@ -17,6 +17,8 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsObstacleDetection;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
+using RosSharp.RosBridgeClient.MessageTypes.Sensor;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -29,7 +31,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         private bool disposedValue;
-
         public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
@@ -322,13 +323,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else if (status == ActionStatus.SUCCEEDED)
                 {
+
                     if (Agv.AGVSResetCmdFlag)
                     {
                         Agv.AGV_Reset_Flag = true;
                         //因為
                     }
                     AGVCActionStatusChaged = null;
-
 
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
@@ -379,6 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+
             Agv.Sub_Status = SUB_STATUS.IDLE;
             await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
@@ -626,5 +628,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
+       
     }
 }

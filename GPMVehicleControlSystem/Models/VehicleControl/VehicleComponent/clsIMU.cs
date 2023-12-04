@@ -45,8 +45,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public event EventHandler<IMUStateErrorEventData> OnImuStatesError;
         internal delegate clsImpactDetectionParams OptionsFetchDelegate();
         internal OptionsFetchDelegate OnOptionsFetching;
+        internal event EventHandler<Vector3> OnAccelermeterDataChanged;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
-        public Vector3 AccData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.linear_acceleration;
+        private Vector3 _AccData;
+        public Vector3 AccData
+        {
+            get => _AccData;
+            set
+            {
+                OnAccelermeterDataChanged?.Invoke(this, value);
+                _AccData = value;
+            }
+        }
         public Vector3 GyroData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.angular_velocity;
         public bool IsAccSensorError => AccData.x == 0 && AccData.y == 0 && AccData.z == 0;
 
@@ -96,7 +106,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 Current_Warning_Code = AlarmCodes.None;
             }
-            Vector3 gry_data = _imu_state.imuData.angular_velocity; //角速度數據(陀螺儀)
+            AccData = _imu_state == null ? new Vector3(0, 0, 0) : _imu_state.imuData.linear_acceleration;
             if (IsAccSensorError) //加速規異常
             {
 

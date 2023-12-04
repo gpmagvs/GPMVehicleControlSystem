@@ -12,7 +12,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserEntity user)
         {
-            var user_query_out = DBhelper.QueryUserByName(user.UserName);
+            var user_query_out = DBhelper.Query.QueryUserByName(user.UserName);
             if (user_query_out == null)
             {
 
