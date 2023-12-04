@@ -721,6 +721,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 ExecutingTaskModel.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
+            IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
             await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
             ExecutingTaskModel = null;
             BuzzerPlayer.Stop();
