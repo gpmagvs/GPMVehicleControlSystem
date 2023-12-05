@@ -1,0 +1,15 @@
+﻿namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
+{
+    public class clsBatteryParam
+    {
+        public string BatteryLogFolder { get; set; } = "C:\\Users\\jinwei\\Documents\\GPM LOG";
+        public bool Recharge_Circuit_Auto_Control_In_ManualMode { get; set; } = true;
+        /// <summary>
+        /// 切斷充電迴路的電壓閥值,當電壓大於此數值，將會切斷充電迴路，避免電池過度充電。
+        /// 單位: mV
+        /// </summary>
+        public int CutOffChargeRelayVoltageThreshodlval { get; set; } = 28800;
+
+
+    }
+}

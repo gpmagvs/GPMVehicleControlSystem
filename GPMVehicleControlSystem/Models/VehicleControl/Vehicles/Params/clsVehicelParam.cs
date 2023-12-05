@@ -47,7 +47,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool BuzzerOn { get; set; } = true;
         public bool EQHandshakeSimulationAutoRun { get; set; } = true;
 
-        public bool Recharge_Circuit_Auto_Control_In_ManualMode { get; set; } = true;
 
         public int LastVisitedTag { get; set; } = 8;
         public ORDER_INFO_FETCH_SOURCE OrderInfoFetchSource { get; set; } = ORDER_INFO_FETCH_SOURCE.FROM_CIM_POST_IN;
@@ -81,11 +80,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public List<int> CheckEQDOStatusWorkStationTags { get; set; } = new List<int>();
 
-        /// <summary>
-        /// 切斷充電迴路的電壓閥值,當電壓大於此數值，將會切斷充電迴路，避免電池過度充電。
-        /// 單位: mV
-        /// </summary>
-        public int CutOffChargeRelayVoltageThreshodlval { get; set; } = 28800;
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Turning;
         public List<int> StationNeedQueryVirtualID { get; set; } = new List<int>();
@@ -148,6 +142,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsModbusDIOParams ModbusIO { get; set; } = new clsModbusDIOParams();
 
         public clsImpactDetectionParams ImpactDetection { get; set; } = new clsImpactDetectionParams();
+
+        public clsBatteryParam BatteryModule { get; set; } = new clsBatteryParam();
     }
 
     public class clsForkAGVParams
@@ -217,6 +213,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public double ThresHold { get; set; } = 2;
 
-        public bool PitchErrorDetection { get; set; } = false;  
+        public bool PitchErrorDetection { get; set; } = false;
     }
 }

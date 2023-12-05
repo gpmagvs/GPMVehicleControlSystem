@@ -142,7 +142,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)
         {
-            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.BatteryModule.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
                 var previousPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == previousTag);
                 if (previousPoint != null)
@@ -163,7 +163,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
         {
-            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.Recharge_Circuit_Auto_Control_In_ManualMode)
+            if (IsAutoControlRechargeCircuitSuitabtion && Parameters.BatteryModule.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
                 var currentPt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == BarcodeReader.CurrentTag);
                 if (currentPt == null) return;
