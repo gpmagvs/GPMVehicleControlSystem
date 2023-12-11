@@ -56,7 +56,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
+
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_1, HandleDriversStatusErrorAsync);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_2, HandleDriversStatusErrorAsync);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_3, HandleDriversStatusErrorAsync);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_4, HandleDriversStatusErrorAsync);
+
             WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
+        }
+        protected async override Task DOSignalDefaultSetting()
+        {
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await WagoDO.SetState(DO_ITEM.Back_LsrBypass, false);
+            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, false);
+            await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
+            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
+            await Laser.ModeSwitch(0);
+            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, true);
+            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_2, true);
+            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
+            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
+            await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
+
         }
         protected virtual void EMOButtonPressedHandler(object? sender, EventArgs e)
         {
@@ -130,6 +151,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.SoftwareEMO();
         }
+
+        protected override bool CheckMotorIOError()
+        {
+            return WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_2) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_4);
+        }
+        protected override bool CheckEMOButtonNoRelease()
+        {
+            return WagoDI.GetState(DI_ITEM.EMO_Button);
+        }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             //初始化儀器
@@ -159,16 +189,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return (true, "");
         }
-        protected override void DOSignalDefaultSetting()
-        {
-            base.DOSignalDefaultSetting();
-            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, true);
-            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_2, true);
-            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
-            WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
-            WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-
-        }
+      
         internal override async void ResetHandshakeSignals()
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
@@ -182,27 +203,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await WagoDO.ResetSaftyRelay();
-                bool anyDriverAlarm = !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) |
-                        !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
-                StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
-                if (bypass_when_motor_busy_on & !anyDriverAlarm)
+                if (Parameters.SimulationMode)
+                    StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
+
+                if (!CheckMotorIOError())
                     return true;
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                bool io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+                if (!io_write_success)
+                    return false;
                 await Task.Delay(200);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                if (!io_write_success)
+                    return false;
                 await Task.Delay(200);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                if (!io_write_success)
+                    return false;
                 await Task.Delay(200);
-                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                if (!io_write_success)
+                    return false;
                 return true;
-            }
-            catch (SocketException ex)
-            {
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                return false;
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message + ex.StackTrace);
+                Environment.Exit(0);
                 AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
                 return false;
             }
@@ -372,6 +398,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
             }
             return result;
+        }
+        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
+        {
+            if (!status)
+                return;
+            await Task.Delay(1000);
+            if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
+                return;
+
+            clsIOSignal signal = (clsIOSignal)sender;
+            var input = signal?.Input;
+            var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_1)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_2)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Rear;
+            if (input == DI_ITEM.Horizon_Motor_Error_3)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_4)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
+            AlarmManager.AddAlarm(alarmCode, false);
+        }
+        protected override async void HandshakeIOOff()
+        {
+            //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
         }
     }
 }

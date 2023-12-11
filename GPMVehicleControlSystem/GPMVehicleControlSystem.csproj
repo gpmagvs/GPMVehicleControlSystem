@@ -83,6 +83,9 @@
     <None Update="src\IO_Wago_Inspection_AGV.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="src\IO_Wago_Inspection_AGV_V2.ini">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="src\IO_Wago_Submarine_AGV.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

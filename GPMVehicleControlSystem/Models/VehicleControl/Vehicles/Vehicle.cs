@@ -269,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
-                                SetAGV_TR_REQ(false);
+                                HandshakeIOOff();
                             if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
                                 BuzzerPlayer.Alarm();
                             DirectionLighter.CloseAll(1000);
@@ -284,7 +284,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
-                            if(!IMU.IsAccSensorError)
+                            if (!IMU.IsAccSensorError)
                                 IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
                         }
 
@@ -563,14 +563,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
-                    DIOStatusChangedEventRegist();
                     while (!await WagoDI.Connect())
                     {
                         await Task.Delay(1000);
                     }
                     WagoDI.StartAsync();
-                    DOSignalDefaultSetting();
-                    ResetMotor();
+                    await DOSignalDefaultSetting();
+                    await ResetMotor();
+                    DIOStatusChangedEventRegist();
                 }
                 catch (SocketException ex)
                 {
@@ -606,7 +606,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea | LeftArea;
         }
 
-        protected virtual async void DOSignalDefaultSetting()
+        protected virtual async Task DOSignalDefaultSetting()
         {
             WagoDO.AllOFF();
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
@@ -777,13 +777,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AlarmCodes alarmo_code = AlarmCodes.None;
             string error_message = "";
-            if (WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1))
+            if (CheckMotorIOError())
             {
                 error_message = "走行軸馬達IO異常";
                 alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
             }
-
-            if (!WagoDI.GetState(DI_ITEM.EMO))
+            
+            if (CheckEMOButtonNoRelease())
             {
                 error_message = "EMO 按鈕尚未復歸";
                 alarmo_code = AlarmCodes.EMO_Button;
@@ -807,6 +807,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 BuzzerPlayer.Alarm();
                 return (false, error_message);
             }
+        }
+
+        protected virtual bool CheckEMOButtonNoRelease()
+        {
+            return !WagoDI.GetState(DI_ITEM.EMO);
+        }
+
+        protected virtual bool CheckMotorIOError()
+        {
+            return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
         }
 
         protected abstract Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation);
@@ -859,8 +869,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.AddAlarm(alarmCode);
             _Sub_Status = SUB_STATUS.DOWN;
             StoreStatusToDataBase();
+            HandshakeIOOff();
             BuzzerPlayer.Alarm();
-            SetAGV_TR_REQ(false);
             StatusLighter.CloseAll();
             StatusLighter.DOWN();
             DirectionLighter.CloseAll();
@@ -898,7 +908,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+        protected virtual void HandshakeIOOff()
+        {
+            SetAGV_TR_REQ(false);
 
+        }
         private void RecordVibrationDataToDatabase()
         {
             try
@@ -1000,9 +1014,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _ = Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                 {
+                    bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+
                     if (isObstacle)
                     {
                         BuzzerPlayer.Alarm();

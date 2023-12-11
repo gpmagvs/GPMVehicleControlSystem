@@ -246,7 +246,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
+                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
             }
         }
 
@@ -326,23 +326,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                     try
                     {
-                        CancellationTokenSource cts = new CancellationTokenSource(3000);
-                        while (DoModuleRef.IOBusy)
-                        {
-                            Thread.Sleep(1);
-                            if (cts.IsCancellationRequested)
-                            {
-                                cts.Dispose();
-                                continue;
-                            }
-                        }
-                        cts.Dispose();
+                        //CancellationTokenSource cts = new CancellationTokenSource(3000);
+                        //while (DoModuleRef.IOBusy)
+                        //{
+                        //    Thread.Sleep(1);
+                        //    if (cts.IsCancellationRequested)
+                        //    {
+                        //        cts.Dispose();
+                        //        continue;
+                        //    }
+                        //}
+                        //cts.Dispose();
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {
                             LOG.Critical($"DI Read inputs but null return, disconnect connection.");
                             Disconnect();
-                            Connected= false;
+                            Connected = false;
                             continue;
                         }
 
