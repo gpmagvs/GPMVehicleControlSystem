@@ -563,6 +563,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
+                    DIOStatusChangedEventRegist();
                     while (!await WagoDI.Connect())
                     {
                         await Task.Delay(1000);
@@ -570,7 +571,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     WagoDI.StartAsync();
                     await DOSignalDefaultSetting();
                     await ResetMotor();
-                    DIOStatusChangedEventRegist();
                 }
                 catch (SocketException ex)
                 {

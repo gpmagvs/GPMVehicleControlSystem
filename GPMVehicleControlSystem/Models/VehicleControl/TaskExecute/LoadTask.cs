@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Load;
         private bool IsNeedQueryVirutalStation = false;
-
+        public LDULDRecord lduld_record = new LDULDRecord();
 
         internal bool back_to_secondary_flag = false;
         internal WORKSTATION_HS_METHOD _eqHandshakeMode;
@@ -82,6 +82,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //if (!CstBarcodeCheckResult.confirm)
             //    return (false, CstBarcodeCheckResult.alarmCode);
 
+            lduld_record.StartTime = DateTime.Now;
+            lduld_record.Action = this.action;
+            lduld_record.WorkStationTag = destineTag;
+            DBhelper.AddUDULDRecord(lduld_record);
 
             if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
@@ -194,6 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.DirectionLighter.CloseAll();
+            RecordParkLoction();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
             IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
@@ -225,6 +230,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         Agv.DirectionLighter.CloseAll();
                         return (false, HSResult.alarmCode);
                     }
+
+                    lduld_record.EQActionFinishTime = DateTime.Now;
+                    DBhelper.ModifyUDLUDRecord(lduld_record);
 
                 }
                 else
@@ -283,7 +291,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     else
                         NoCargoIOSimulation();
                 }
-
+                RecordExistSensorState();
                 if (Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
@@ -331,6 +339,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw;
             }
 
+        }
+
+        private void RecordParkLoction()
+        {
+            lduld_record.ParkLocX = Agv.Navigation.Data.robotPose.pose.position.x;
+            lduld_record.ParkLocY = Agv.Navigation.Data.robotPose.pose.position.y;
+            DBhelper.ModifyUDLUDRecord(lduld_record);
+        }
+
+        private void RecordExistSensorState()
+        {
+            if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+            {
+                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
+                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+            }
+            if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
+            {
+                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+            }
+
+            DBhelper.ModifyUDLUDRecord(lduld_record);
         }
 
         private async Task<(bool success, AlarmCodes alarmcode)> ForkActionsInWorkStation()
@@ -486,7 +517,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (status == ActionStatus.SUCCEEDED)
                 {
-                   
+
 
                     if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                     {
@@ -556,6 +587,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             await WaitCSTIDReported();
                         await base.HandleAGVCActionSucceess();
                     }
+                    lduld_record.CargoID_Reader = Agv.CSTReader.ValidCSTID;
+                    lduld_record.EndTime = DateTime.Now;
+                    DBhelper.ModifyUDLUDRecord(lduld_record);
                 }
 
             });

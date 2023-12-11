@@ -99,10 +99,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             master = null;
             if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
-
             try
             {
-                LOG.INFO($"[DOModule] Try Connect to DIO Module={IP}:{VMSPort}");
                 client = new TcpClient(IP, this.VMSPort);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.WriteTimeout = 300;

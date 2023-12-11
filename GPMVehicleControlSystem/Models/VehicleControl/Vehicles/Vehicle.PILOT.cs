@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using System.Diagnostics;
@@ -65,8 +66,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
 
-            if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
-                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
+            //if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
+            //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
+
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
 
@@ -136,9 +138,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else if (action == ACTION_TYPE.Discharge)
                         ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Load)
+                    {
                         ExecutingTaskModel = new LoadTask(this, taskDownloadData);
+                        (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+
+                        if (_RunTaskData.CST.Length > 0)
+                        {
+                            (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                        }
+
+                    }
                     else if (action == ACTION_TYPE.Unload)
-                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
+                    {
+                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData); 
+                        (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+
+                        if (_RunTaskData.CST.Length > 0)
+                        {
+                            (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                        }
+                    }
                     else if (action == ACTION_TYPE.Park)
                         ExecutingTaskModel = new ParkTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Unpark)
