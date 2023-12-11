@@ -135,7 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             if ((Xaxis_g_error < error_threshold | Yaxis_g_error < error_threshold) && Zaxis_g_error > (9.8 - error_threshold))
                 return PITCH_STATES.SIDE_FLIP;
-            else if (Zaxis_g_error > error_threshold)
+            else if (Zaxis_g_error > error_threshold && AccData.z < 9.8)
                 return PITCH_STATES.INCLINED;
             else
                 return PITCH_STATES.NORMAL;

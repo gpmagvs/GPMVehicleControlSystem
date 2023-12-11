@@ -8,8 +8,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public static WagoEmulator wagoEmu = new WagoEmulator();
         public static AGVROSEmulator agvRosEmu;
         public static MeasureServiceEmulator measureEmu;
-        public static async void StartWagoEmu(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule wagoDI)
+        public static async void StartWagoEmu(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule wagoDI, AGVSystemCommonNet6.clsEnums.AGV_TYPE agvType)
         {
+            wagoEmu.agvType = agvType;
             wagoEmu.WagoDI = wagoDI;
             bool emu_actived =await wagoEmu.Connect();
             if (emu_actived)
@@ -18,9 +19,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
             }
         }
 
-        public static void StartAGVROSEmu()
+        public static void StartAGVROSEmu(AGVSystemCommonNet6.clsEnums.AGV_TYPE agvType)
         {
-            agvRosEmu = new AGVROSEmulator();
+            agvRosEmu = new AGVROSEmulator(agvType);
             LOG.INFO("AGVC(ROS) EMU Start");
         }
 

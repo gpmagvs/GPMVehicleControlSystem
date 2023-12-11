@@ -85,6 +85,8 @@
             Battery_2_Unlock,
             Battery_1_Lock,
             Battery_1_Unlock,
+            Battery_1_Electricity_Interrupt,
+            Battery_2_Electricity_Interrupt,
             Infrared_Door_1,
             Infrared_PW_2,
             Infrared_PW_1,

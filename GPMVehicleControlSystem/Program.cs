@@ -35,7 +35,9 @@ void VehicheAndWagoIOConfiguraltion()
         if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
         if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
-            src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
+        {
+            src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
+        }
         File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
     }
 
@@ -49,7 +51,10 @@ void VehicheAndWagoIOConfiguraltion()
     }
     else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
     {
-        StaStored.CurrentVechicle = new TsmcMiniAGV();
+        if (param.Version == 1)
+            StaStored.CurrentVechicle = new TsmcMiniAGV();
+        else
+            StaStored.CurrentVechicle = new DemoMiniAGV();
     }
     LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
     LinuxTools.SysLoadingLogProcess();

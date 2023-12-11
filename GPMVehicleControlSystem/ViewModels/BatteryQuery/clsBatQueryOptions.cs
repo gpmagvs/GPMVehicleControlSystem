@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.ViewModels.BatteryQuery
                 DateTime.TryParseExact(time_range[0], "yyyy/MM/dd", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime start_time);
                 DateTime.TryParseExact(time_range[1], "yyyy/MM/dd", CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out DateTime end_time);
                 var _start_time = new DateTime(start_time.Year,start_time.Month,start_time.Day,0,0,0);
-                var _end_time = new DateTime(end_time.Year, end_time.Month, end_time.Day,23,59,59);
+                var _end_time =time_range[0]==time_range[1] ? new DateTime(end_time.Year, end_time.Month, end_time.Day, 23, 59, 59):  new DateTime(end_time.Year, end_time.Month, end_time.Day,0,0,0);
                 return new DateTime[2] { _start_time, _end_time };
             }
         }

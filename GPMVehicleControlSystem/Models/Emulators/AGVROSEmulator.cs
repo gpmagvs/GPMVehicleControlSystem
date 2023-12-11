@@ -27,7 +27,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 state = 1,
                 batteryLevel = 90,
                 batteryID = 0,
-                Voltage = 2323
+                Voltage = 2323,
+                maxCellTemperature = 28,
+                dischargeCurrent = 12444
             },
             CSTReader = new CSTReaderState
             {
@@ -67,8 +69,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
-        public AGVROSEmulator()
+        public AGVROSEmulator(clsEnums.AGV_TYPE agvType= clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
         {
+            this.agvType = agvType;
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
             string RosBridge_IP = param.Connections["RosBridge"].IP;
             int RosBridge_Port = param.Connections["RosBridge"].Port;
@@ -162,6 +165,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
         TaskCommandGoal previousTaskAction;
         bool _isPreviousMoveActionNotFinish = false;
         bool emergency_stop = false;
+        private readonly clsEnums.AGV_TYPE agvType;
+
         bool isPreviousMoveActionNotFinish
         {
             get => _isPreviousMoveActionNotFinish;
@@ -301,8 +306,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             while (IsCharge)
                             {
                                 await Task.Delay(1000);
-                                module_info.Battery.batteryLevel += 0x01;
-                                module_info.Battery.Voltage += 100;
+                                module_info.Battery.batteryLevel += 0x04;
+                                module_info.Battery.Voltage += 200;
                                 if (module_info.Battery.batteryLevel >= 100)
                                 {
                                     IsCharge = false;
@@ -345,12 +350,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     {
                         await Task.Delay(10);
 
-                        if (stopwatch.ElapsedMilliseconds > 5000)
+                        if (stopwatch.ElapsedMilliseconds > 1000)
                         {
                             module_info.Battery.batteryLevel -= 1;
                             module_info.Battery.Voltage -= 100;
                             module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
                             module_info.Battery.Voltage = (ushort)(module_info.Battery.Voltage <= 2400 ? 2400 : module_info.Battery.Voltage);
+                            LOGBatteryStatus(module_info.Battery);
                             stopwatch.Restart();
                         }
 
@@ -364,6 +370,17 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 EmuLog($"AGVC ROS Emu module-information publish process end.");
 
             });
+        }
+
+        private void LOGBatteryStatus(BatteryState battery)
+        {
+            //I1130 12:47:19.313843  2141 INNERS.h:512] 0, 99, 26653, 0, 4560, 28
+            //C:\Users\jinwei\Documents\GPM LOG\2023-12-04\batteryLog
+            string logFolder = Path.Combine(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder, $@"{DateTime.Now.ToString("yyyy-MM-dd")}\batteryLog");
+            Directory.CreateDirectory(logFolder);
+            string logFilePath = Path.Combine(logFolder, "batteryLog.INFO");
+            using StreamWriter writer = new StreamWriter(logFilePath, true);
+            writer.WriteLine($"I1130 {DateTime.Now.ToString("HH:mm:ss.ffffff")}  2141 INNERS.h:512] 0, {battery.batteryLevel}, {battery.Voltage}, {battery.chargeCurrent}, {battery.dischargeCurrent}, {battery.maxCellTemperature}");
         }
 
         private bool ComplexRobotControlCallBack(ComplexRobotControlCmdRequest req, out ComplexRobotControlCmdResponse res)

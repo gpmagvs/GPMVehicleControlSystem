@@ -339,7 +339,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     ExecuteTaskName = _Task_Name,
                     ExecuteTaskSimpleName = _Task_Simplex,
                     TaskAction = _TaskAction,
-                    CargoID = CSTReader.ValidCSTID,
+                    CargoID = CSTReader?.ValidCSTID,
                     Odometry = this.Odometry,
                     DestineTag = _DestineTag
                 };
@@ -468,7 +468,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
-                    StaEmuManager.StartAGVROSEmu();
+                    StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
                     StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
                 }
                 catch (SocketException)
@@ -498,7 +498,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (Parameters.WagoSimulation)
             {
-                StaEmuManager.StartWagoEmu(WagoDI);
+                StaEmuManager.StartWagoEmu(WagoDI, Parameters.AgvType);
             }
         }
 

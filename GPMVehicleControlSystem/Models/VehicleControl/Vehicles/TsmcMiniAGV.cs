@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -182,11 +183,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await WagoDO.ResetSaftyRelay();
                 bool anyDriverAlarm = !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) |
-                    !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
-
+                        !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) | !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
+                StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
                 if (bypass_when_motor_busy_on & !anyDriverAlarm)
                     return true;
-
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
                 await Task.Delay(200);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);

@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Abstracts;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Abstracts;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
 using System.Net;
@@ -12,6 +13,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         ModbusTcpSlave? slave;
 
         Dictionary<DI_ITEM, int> INPUT_INDEXS;
+        internal clsEnums.AGV_TYPE agvType;
 
         public clsDIModule WagoDI { get; internal set; }
 
@@ -47,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private void InitializeInputState()
         {
             SetState(DI_ITEM.EMO, true);
-            SetState(DI_ITEM.Bumper_Sensor, true);
+            SetState(DI_ITEM.Bumper_Sensor, agvType != clsEnums.AGV_TYPE.INSPECTION_AGV);
             SetState(DI_ITEM.Horizon_Motor_Switch, true);
             SetState(DI_ITEM.Vertical_Motor_Switch, true);
             SetState(DI_ITEM.FrontProtection_Area_Sensor_1, true);
