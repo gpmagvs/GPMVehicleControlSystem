@@ -18,35 +18,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.DIOStatusChangedEventRegist();
         }
-        protected override async Task DOSignalDefaultSetting()
-        {
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_B, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await WagoDO.SetState(DO_ITEM.Back_LsrBypass, false);
-            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, false);
-            await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
-            await WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
-            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, true);
-            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_2, true);
-            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
-            await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
-            await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-            await WagoDO.SetState(DO_ITEM.Battery_1_Electricity_Interrupt, false);
-            await WagoDO.SetState(DO_ITEM.Battery_2_Electricity_Interrupt, false);
-            await Laser.ModeSwitch(0);
-        }
         public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
         {
             try
             {
-                await WagoDO.ResetSaftyRelay();
+                //await WagoDO.ResetSaftyRelay();
 
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);

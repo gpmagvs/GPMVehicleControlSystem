@@ -66,18 +66,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected async override Task DOSignalDefaultSetting()
         {
+            WagoDO.AllOFF();
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            await WagoDO.SetState(DO_ITEM.Back_LsrBypass, false);
-            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, false);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
-            await Laser.ModeSwitch(0);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_2, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-
+            await Laser.ModeSwitch(0);
         }
         protected virtual void EMOButtonPressedHandler(object? sender, EventArgs e)
         {

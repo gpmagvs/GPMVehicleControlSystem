@@ -146,6 +146,7 @@
             /// 下層物料檢知
             /// </summary>
             Down_Cargo_Exist_Sernsor,
+            Safty_PLC_Output
 
 
         }

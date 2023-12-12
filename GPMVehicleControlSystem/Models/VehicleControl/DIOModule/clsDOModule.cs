@@ -22,12 +22,25 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public clsDOModule(string IP, int Port) : base(IP, Port)
         {
-
+            ReadCurrentDOStatus();
         }
         public clsDOModule(string IP, int Port, clsDOModule DoModuleRef) : base(IP, Port, DoModuleRef)
         {
+            ReadCurrentDOStatus();
         }
+        private async void ReadCurrentDOStatus()
+        {
+            var conn = await TryConnectAsync();
+            if (conn.connected)
+            {
+                var coils = conn.modbusMaster.ReadCoils(Start, Size);
 
+                for (int i = 0; i < coils.Length; i++)
+                {
+                    VCSOutputs[i].State = coils[i];
+                }
+            }
+        }
         public override bool Connected { get => _Connected; set => _Connected = value; }
         protected override void RegistSignalEvents()
         {
