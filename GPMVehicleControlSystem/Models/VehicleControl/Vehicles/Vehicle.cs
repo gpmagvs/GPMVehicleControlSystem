@@ -610,8 +610,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             WagoDO.AllOFF();
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            await WagoDO.SetState(DO_ITEM.Back_LsrBypass, false);
-            await WagoDO.SetState(DO_ITEM.Left_LsrBypass, false);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await Laser.ModeSwitch(0);
