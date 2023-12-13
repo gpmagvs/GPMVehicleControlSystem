@@ -150,7 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 switch (_Sub_Status)
                 {
                     case SUB_STATUS.IDLE:
-                        return MAIN_STATUS.IDLE;
+                            return MAIN_STATUS.IDLE;
                     case SUB_STATUS.RUN:
                         return MAIN_STATUS.RUN;
                     case SUB_STATUS.DOWN:
@@ -369,8 +369,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
-                string Wago_IP = Parameters.Connections["Wago"].IP;
-                int Wago_Port = Parameters.Connections["Wago"].Port;
+                string Wago_IP = Parameters.WagoSimulation ? "127.0.0.1" : Parameters.Connections["Wago"].IP;
+                int Wago_Port = Parameters.WagoSimulation ? 9999 : Parameters.Connections["Wago"].Port;
                 int Wago_Protocol_Interval_ms = Parameters.Connections["Wago"].Protocol_Interval_ms;
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
@@ -470,6 +470,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
                     StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
+                    StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
+                    {
+                        return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+                    };
                 }
                 catch (SocketException)
                 {
@@ -780,7 +784,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 error_message = "走行軸馬達IO異常";
                 alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
             }
-            
+
             if (CheckEMOButtonNoRelease())
             {
                 error_message = "EMO 按鈕尚未復歸";

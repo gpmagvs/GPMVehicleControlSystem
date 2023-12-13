@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 driversState = new DriverState[2]
                  {
-                     new DriverState{ errorCode=21, },
+                     new DriverState{ errorCode=21},
                      new DriverState{ errorCode=21}
                  }
             },
@@ -68,8 +68,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52, 6, 10 };
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
+        public delegate bool ChargeSimulateActiveCheckDelegate(int tag);
+        public ChargeSimulateActiveCheckDelegate OnChargeSimulationRequesting;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
-        public AGVROSEmulator(clsEnums.AGV_TYPE agvType= clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
+        public AGVROSEmulator(clsEnums.AGV_TYPE agvType = clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
         {
             this.agvType = agvType;
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
@@ -277,7 +279,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
                             await Task.Delay(TimeSpan.FromSeconds(delay_time));
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
-
+                            module_info.Battery.batteryLevel -= 3;
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                                 break;
@@ -296,29 +298,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         if (i == 0)
                             Task_Watch_StatusActive.Start();
                     }
-                    if (ChargeStationTags.Contains(obj.finalGoalID))
-                    {
-                        IsCharge = true;
-                        module_info.Battery.chargeCurrent = 23000;
-                        module_info.Battery.dischargeCurrent = 0;
-                        _ = Task.Factory.StartNew(async () =>
-                        {
-                            while (IsCharge)
-                            {
-                                await Task.Delay(1000);
-                                module_info.Battery.batteryLevel += 0x04;
-                                module_info.Battery.Voltage += 200;
-                                if (module_info.Battery.batteryLevel >= 100)
-                                {
-                                    IsCharge = false;
-                                    module_info.Battery.batteryLevel = 100;
-                                    module_info.Battery.chargeCurrent = 500;
-                                    module_info.Battery.dischargeCurrent = 12330;
-                                    module_info.Battery.Voltage = 2800;
 
-                                }
-                            }
-                        });
+                    if (OnChargeSimulationRequesting != null)
+                    {
+                        bool charging_simulation = OnChargeSimulationRequesting(obj.finalGoalID);
+                        if (charging_simulation)
+                            StartChargeSimulation();
                     }
                     previousTaskAction = obj;
                     EmuLog($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
@@ -338,6 +323,32 @@ namespace GPMVehicleControlSystem.Models.Emulators
             });
         }
 
+        private void StartChargeSimulation()
+        {
+            IsCharge = true;
+            module_info.Battery.chargeCurrent = 23000;
+            module_info.Battery.dischargeCurrent = 0;
+            _ = Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(2000);
+                while (IsCharge)
+                {
+                    await Task.Delay(1000);
+                    module_info.Battery.batteryLevel += 0x04;
+                    module_info.Battery.Voltage += 200;
+                    if (module_info.Battery.batteryLevel >= 100)
+                    {
+                        IsCharge = false;
+                        module_info.Battery.batteryLevel = 100;
+                        module_info.Battery.chargeCurrent = 500;
+                        module_info.Battery.dischargeCurrent = 12330;
+                        module_info.Battery.Voltage = 2800;
+
+                    }
+                }
+            });
+        }
+
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);
@@ -350,11 +361,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     {
                         await Task.Delay(10);
 
-                        if (stopwatch.ElapsedMilliseconds > 1000)
+                        if (stopwatch.ElapsedMilliseconds > 5000)
                         {
                             module_info.Battery.batteryLevel -= 1;
                             module_info.Battery.Voltage -= 100;
-                            module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 1 ? 1 : module_info.Battery.batteryLevel);
+                            module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel <= 5 ? 5 : module_info.Battery.batteryLevel);
+                            module_info.Battery.batteryLevel = (byte)(module_info.Battery.batteryLevel > 100 ? 100 : module_info.Battery.batteryLevel);
                             module_info.Battery.Voltage = (ushort)(module_info.Battery.Voltage <= 2400 ? 2400 : module_info.Battery.Voltage);
                             LOGBatteryStatus(module_info.Battery);
                             stopwatch.Restart();
@@ -489,6 +501,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
             module_info.nav_state.errorCode = 0;
             module_info.AlarmCode = new AlarmCodeMsg[0];
             module_info.Battery.errorCode = 0;
+        }
+
+        internal void SetBatteryLevel(byte level, int batIndex)
+        {
+            module_info.Battery.batteryLevel = level;
         }
     }
 }

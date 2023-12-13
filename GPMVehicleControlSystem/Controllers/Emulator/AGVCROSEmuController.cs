@@ -39,5 +39,11 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         {
             StaEmuManager.agvRosEmu.PitchNormalSimulation();
         }
+
+        [HttpGet("SetBatteryLevel")]
+        public async Task SetBatteryLevel(int level, int batIndex = 0)
+        {
+            StaEmuManager.agvRosEmu.SetBatteryLevel((byte)level, batIndex);
+        }
     }
 }
