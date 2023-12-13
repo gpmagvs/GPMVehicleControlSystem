@@ -2,6 +2,7 @@
 {
     public partial class clsDOModule
     {
+        public int Version { get; internal set; }
 
         public enum DO_ITEM : byte
         {

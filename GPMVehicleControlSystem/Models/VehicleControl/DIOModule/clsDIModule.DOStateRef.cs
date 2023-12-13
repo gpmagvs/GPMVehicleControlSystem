@@ -13,5 +13,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public bool IsLeftLsrBypass => DoModuleRef.GetState(DO_ITEM.Left_LsrBypass);
         public bool IsFrontLsrBypass => DoModuleRef.GetState(DO_ITEM.Front_LsrBypass);
         public bool IsBackLsrBypass => DoModuleRef.GetState(DO_ITEM.Back_LsrBypass);
+
     }
 }

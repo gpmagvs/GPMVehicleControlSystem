@@ -380,12 +380,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
                 WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
                 {
-                    AgvType = Parameters.AgvType
+                    AgvType = Parameters.AgvType,
+                    Version = Parameters.Version,
                 };
                 WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO, Wago_Protocol_Interval_ms)
                 {
-                    AgvType = Parameters.AgvType
+                    AgvType = Parameters.AgvType,
+                    Version = Parameters.Version
                 };
+                
                 DirectionLighter.DOModule = WagoDO;
 
                 StatusLighter = new clsStatusLighter(WagoDO);
@@ -570,6 +573,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
+                    WagoDI.RegistSignalEvents();
                     DIOStatusChangedEventRegist();
                     while (!await WagoDI.Connect())
                     {

@@ -7,6 +7,7 @@
             Unknown,
             EMO,
             EMO_Button,
+            EMO_Button_2,
             Bumper_Sensor,
             Panel_Reset_PB,
             Horizon_Motor_Switch,
@@ -146,9 +147,9 @@
             /// 下層物料檢知
             /// </summary>
             Down_Cargo_Exist_Sernsor,
-            Safty_PLC_Output
-
-
+            Safty_PLC_Output,
+            Front_Right_Ultrasound_Sensor,
+            Back_Left_Ultrasound_Sensor,
         }
 
     }

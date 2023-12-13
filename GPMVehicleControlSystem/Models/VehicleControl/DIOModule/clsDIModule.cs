@@ -25,24 +25,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             set
             {
                 _AgvType = value;
-                RegistSignalEvents();
-            }
+            }                                                                           
         }
+        public int Version { get; internal set; }
+
         public ManualResetEvent PauseSignal = new ManualResetEvent(true);
-
-        bool isFrontLaserA1Trigger => !GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
-        bool isFrontLaserA2Trigger => !GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
-        bool isFrontLaserA3Trigger => !GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
-        bool isFrontLaserA4Trigger => !GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
-
-        bool isBackLaserA1Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_1);
-        bool isBackLaserA2Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_2);
-        bool isBackLaserA3Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_3);
-        bool isBackLaserA4Trigger => !GetState(DI_ITEM.BackProtection_Area_Sensor_4);
-
-        bool isRightLaserTrigger => !GetState(DI_ITEM.RightProtection_Area_Sensor_3);
-        bool isLeftLaserTrigger => !GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-
 
         public event EventHandler OnDisonnected;
         public event EventHandler OnReConnected;
@@ -262,18 +249,30 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        protected virtual void RegistSignalEvents()
+        internal virtual void RegistSignalEvents()
         {
-            VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
 
             VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
 
             if (AgvType != AGV_TYPE.INSPECTION_AGV)
+            {
+                VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
                 VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+            }
             else
             {
                 VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
                 VCSInputs[Indexs[DI_ITEM.EMO_Button]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
+
+                if (Version == 2)
+                {
+                    VCSInputs[Indexs[DI_ITEM.EMO_Button_2]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
+                    VCSInputs[Indexs[DI_ITEM.Safty_PLC_Output]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
+                }
+                else
+                {
+
+                }
             }
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)

@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
         public override bool Connected { get => _Connected; set => _Connected = value; }
-        protected override void RegistSignalEvents()
+        internal override void RegistSignalEvents()
         {
         }
         public override void ReadIOSettingsFromIniFile()
