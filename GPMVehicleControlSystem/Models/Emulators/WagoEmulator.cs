@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Abstracts;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
 using Modbus.Device;
 using System.Net;
 using System.Net.Sockets;
@@ -65,10 +66,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor, true);
             SetState(DI_ITEM.Cst_Sensor_1, true);
             SetState(DI_ITEM.Cst_Sensor_2, true);
-
             SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, true);
             SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, true);
             SetState(DI_ITEM.EQ_GO, true);
+            SetState(DI_ITEM.Safty_PLC_Output, true);
         }
         public void SetState(DI_ITEM item, bool state)
         {
