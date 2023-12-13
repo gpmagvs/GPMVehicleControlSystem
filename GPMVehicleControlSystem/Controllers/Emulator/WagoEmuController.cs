@@ -47,6 +47,43 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             return Ok();
         }
 
+        [HttpGet("EmoButton1_Push")]
+        public async Task<IActionResult> EmoButton1Push()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button, true);
+            return Ok();
+        }
+
+        [HttpGet("EmoButton2_Push")]
+        public async Task<IActionResult> EmoButton2_Push()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button_2, true);
+            return Ok();
+        }
+
+
+        [HttpGet("EmoButtonsRelease")]
+        public async Task<IActionResult> EmoButtonsRelease()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button, false);
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button_2, false);
+            return Ok();
+        }
+
+        [HttpGet("EmoButton1Release")]
+        public async Task<IActionResult> EmoButton1Release()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button, false);
+            return Ok();
+        }
+
+        [HttpGet("EmoButton2Release")]
+        public async Task<IActionResult> EmoButton2Release()
+        {
+            StaEmuManager.wagoEmu.SetState(DI_ITEM.EMO_Button_2, false);
+            return Ok();
+        }
+
 
 
         [HttpGet("Horizon_Moto_Switch")]
