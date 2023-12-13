@@ -590,18 +590,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.SimulationMode)
             {
                 StaEmuManager.agvRosEmu.SetDriversAlarm(errorCode: 10);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
 
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
                 if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
                 {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, false);
-
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
                     StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, true);
                     StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, true);
+
+                    if (Parameters.Version == 1)
+                    {
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, false);
+                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, false);
+                    }
+                }
+                else
+                {
+
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
+                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
                 }
             }
             SoftwareEMO(AlarmCodes.EMS);
@@ -613,7 +624,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
         }
 
-        private void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
+        protected virtual void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
         {
             AlarmManager.AddAlarm(AlarmCodes.Bumper, false);
         }
