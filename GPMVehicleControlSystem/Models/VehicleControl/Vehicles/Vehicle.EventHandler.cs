@@ -183,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     if (previousPoint.IsCharge)
                     {
-                        if (!WagoDO.GetState(DO_ITEM.Recharge_Circuit))
+                        if (!IsChargeCircuitOpened)
                             return;
 
                         Task.Factory.StartNew(async () =>
@@ -204,7 +204,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (currentPt.IsCharge)
                 {
-                    if (WagoDO.GetState(DO_ITEM.Recharge_Circuit))
+                    if (IsChargeCircuitOpened)
                         return;
                     Task.Factory.StartNew(async () =>
                     {
@@ -658,6 +658,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
+                //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
+                if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
+                    Sub_Status = Sub_Status == SUB_STATUS.Charging ? SUB_STATUS.IDLE : Sub_Status;
             }
 
             stopwatch.Stop();

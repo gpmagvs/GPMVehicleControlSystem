@@ -135,7 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return ls;
             }
         }
-
+        
         /// <summary>
         /// 手動/自動模式
         /// </summary>
@@ -150,7 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 switch (_Sub_Status)
                 {
                     case SUB_STATUS.IDLE:
-                            return MAIN_STATUS.IDLE;
+                        return MAIN_STATUS.IDLE;
                     case SUB_STATUS.RUN:
                         return MAIN_STATUS.RUN;
                     case SUB_STATUS.DOWN:
@@ -215,8 +215,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             get => _IsCharging;
             set
             {
-                bool isRechargeCircuitOpened = WagoDO.GetState(DO_ITEM.Recharge_Circuit);
-                if (isRechargeCircuitOpened && Batteries.Any(bat => bat.Value.Data.Voltage >= Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval))
+                if (IsChargeCircuitOpened && Batteries.Any(bat => bat.Value.Data.Voltage >= Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval))
                 {
                     LOG.WARN($"Battery voltage  lower than threshold ({Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval}) mV, cut off recharge circuit ! ");
                     WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
@@ -256,7 +255,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private SUB_STATUS BeforeChargingSubStatus;
-
+        /// <summary>
+        /// 充電迴路是否已開啟
+        /// </summary>
+        public  virtual bool IsChargeCircuitOpened => WagoDO.GetState(DO_ITEM.Recharge_Circuit);
         public SUB_STATUS Sub_Status
         {
             get => _Sub_Status;
@@ -298,6 +300,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+
         private clsAGVStatusTrack status_data_store;
         private async Task StoreStatusToDataBase()
         {
@@ -472,7 +475,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
                     StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
                     {
-                        return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+                        return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
                     };
                 }
                 catch (SocketException)

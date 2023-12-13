@@ -53,6 +53,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             } },
             {2,new clsBattery{ } },
         };
+
+        /// <summary>
+        /// 巡檢AGV沒有充電迴路
+        /// </summary>
+        public override bool IsChargeCircuitOpened => false;
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
@@ -187,7 +192,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return (true, "");
         }
-      
+
         internal override async void ResetHandshakeSignals()
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);

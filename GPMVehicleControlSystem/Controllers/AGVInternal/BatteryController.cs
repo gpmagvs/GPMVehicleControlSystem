@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("ChargeCicuitState")]
         public async Task<IActionResult> ChargeCicuitState()
         {
-            bool result = StaStored.CurrentVechicle.WagoDO.GetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.Recharge_Circuit);
+            bool result = StaStored.CurrentVechicle.IsChargeCircuitOpened;
             return Ok(result);
         }
     }

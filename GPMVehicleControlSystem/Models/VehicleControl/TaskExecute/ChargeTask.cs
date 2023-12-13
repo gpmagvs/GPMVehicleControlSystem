@@ -35,15 +35,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
-        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             bool open_charge_circuit = true;
             if (OnChargeCircuitOpening != null)
                 open_charge_circuit = OnChargeCircuitOpening();
-
-            if (open_charge_circuit)
-                Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
-            return base.BeforeTaskExecuteActions();
+            await Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open_charge_circuit);
+            return await base.BeforeTaskExecuteActions();
         }
 
         public override void DirectionLighterSwitchBeforeTaskExecute()
@@ -54,7 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             var result = base.HandleAGVCActionSucceess();
-            if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.WagoDO.GetState(DO_ITEM.Recharge_Circuit))
+            if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.IsChargeCircuitOpened)
             {
                 Task.Run(async () =>
                 {

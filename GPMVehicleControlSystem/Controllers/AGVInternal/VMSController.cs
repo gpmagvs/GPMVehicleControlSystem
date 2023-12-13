@@ -255,7 +255,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("RechargeCircuit")]
         public async Task<IActionResult> RechargeCircuit()
         {
-            bool open = !agv.WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+            bool open = !agv.IsChargeCircuitOpened;
             bool success = await agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open);
             return Ok(success);
         }

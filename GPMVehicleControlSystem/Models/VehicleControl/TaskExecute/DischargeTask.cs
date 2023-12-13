@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -61,7 +62,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, ForkGoHomeResultAlarmCode);
                 }
             }
-            return await base.HandleAGVCActionSucceess();
+            Agv.Sub_Status = SUB_STATUS.IDLE;
+            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+            return (true, AlarmCodes.None);
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
