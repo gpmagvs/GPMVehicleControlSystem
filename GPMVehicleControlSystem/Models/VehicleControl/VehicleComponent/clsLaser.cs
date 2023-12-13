@@ -39,6 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private LASER_MODE _Mode = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         internal int CurrentLaserModeOfSick = -1;
+        internal int CurrentLaserModeOfDO = -1;
         private int _AgvsLsrSetting = 1;
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
@@ -67,7 +68,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
+                    if (CurrentLaserModeOfSick == -1)
+                    {
+                        return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfDO);
+                    }
+                    else
+                        return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
                 }
                 catch (Exception)
                 {
@@ -166,7 +172,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             try
             {
-                await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
+                bool do_write_success=await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
+                if (!do_write_success)
+                {
+                    AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail);
+                    return false;
+                }
+                CurrentLaserModeOfDO = mode_int;
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
                 if (CurrentLaserModeOfSick != -1)
                 {
