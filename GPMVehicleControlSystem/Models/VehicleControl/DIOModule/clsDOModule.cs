@@ -237,12 +237,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            if (!Connected)
-            {
-                LOG.ERROR($"Connected:{Connected} DO-" + start_signal + "Wago_IO_Write_Fail Error.");
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                return false;
-            }
             try
             {
                 clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
@@ -261,9 +255,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     ushort count = (ushort)writeStates.Length;
                     IOBusy = true;
                     CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    while (string.Join(",", rollback) != string.Join(",", writeStates))
+                    while (!rollback.SequenceEqual(writeStates))
                     {
-
                         await Task.Delay(50);
                         if (tim.IsCancellationRequested)
                         {
