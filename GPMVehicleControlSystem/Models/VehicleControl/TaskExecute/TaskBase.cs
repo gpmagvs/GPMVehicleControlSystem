@@ -480,7 +480,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
             await RegisterSideLaserTriggerEvent();
-            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, position, 1).Result;
+             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
             await UnRegisterSideLaserTriggerEvent();
             return result;
         }

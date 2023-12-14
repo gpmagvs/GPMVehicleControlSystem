@@ -497,19 +497,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 
         /// </summary>
         /// <param name="tag">工位的TAG</param>
-        /// <param name="layer">第N層(Zero-base)</param>
+        /// <param name="height">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int layer, FORK_HEIGHT_POSITION position, double speed)
+        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed)
         {
-           
+
             try
             {
                 fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
-                if (!workStation.LayerDatas.TryGetValue(layer, out clsStationLayerData? teach))
+                if (!workStation.LayerDatas.TryGetValue(height, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
 
                 if (IsSimulationMode)
@@ -528,7 +528,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 double positionError = 0;
                 double errorTorlence = 0.5;
 
-                LOG.WARN($"Fork Start Goto {position_to_reach} at Tag:{tag}.[{position}]");
+                LOG.WARN($"Fork Start Goto Height={height},Position={position_to_reach} at Tag:{tag}.[{position}]");
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
                 while ((positionError = Math.Abs(Driver.CurrentPosition - position_to_reach)) > errorTorlence)
                 {
@@ -538,7 +538,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                     if (forkAGV.Sub_Status == SUB_STATUS.DOWN | forkAGV.Sub_Status == SUB_STATUS.Initializing)
                     {
-                        LOG.ERROR($"Tag:{tag},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
+                        LOG.ERROR($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
                         return (false, AlarmCodes.None);
                     }
                     tryCnt++;
@@ -546,7 +546,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
                         return (false, AlarmCodes.Fork_Action_Aborted);
 
-                    LOG.WARN($"[Tag={tag}] Fork pose error to {position_to_reach} is {positionError}。Try change pose-{tryCnt}");
+                    LOG.WARN($"[Tag={tag}] Fork pose error to Height-{height} {position_to_reach} is {positionError}。Try change pose-{tryCnt}");
                     forkMoveResult = await ForkPose(position_to_reach, speed);
 
                     if (!forkMoveResult.confirm)

@@ -640,7 +640,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, 0, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
             return result;
 
         }
