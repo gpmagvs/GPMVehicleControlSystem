@@ -116,7 +116,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
         public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
         public Action<ActionStatus> OnAGVCActionChanged;
-
+        internal bool CycleStopActionExecuting = false;
         internal TaskCommandActionClient actionClient;
 
         internal ActionStatus _ActionStatus = ActionStatus.PENDING;
@@ -375,7 +375,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.WARN($"AGV Is Navigating at working station, Cycle Stop is not nessary.");
                 return true;
             }
-            return await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID, SPEED_CONTROL_REQ_MOMENT.CYCLE_STOP);
+            bool cycleStopAccept = CycleStopActionExecuting = await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID, SPEED_CONTROL_REQ_MOMENT.CYCLE_STOP);
+            return cycleStopAccept;
         }
 
         /// <summary>
@@ -462,16 +463,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             return await Task.Run(async () =>
             {
-                bool isCancelTask = rosGoal.planPath.poses.Length == 0;
-                string new_path = isCancelTask ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-                if (isCancelTask)
+                bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
+                string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
+                if (isEmptyPathPlan)
                     LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
-                else
-                    LOG.TRACE("Action Goal To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-
                 SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
 
-                if (!isCancelTask && OnActionSendToAGVCRaising != null)
+                if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
                     confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
 
                 if (!confirmResult.Accept)
@@ -480,14 +478,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
                 {
-                    actionClient.goal = new TaskCommandGoal();
-                    actionClient.SendGoal();
-                    LOG.WARN($"AGVs已經發起任務取消請求,發送空的Action Goal並停在原地等待AGVs任務");
-                    return confirmResult;
+                    //如果當下AGV正在移動，
+                    if (ActionStatus != ActionStatus.ACTIVE)
+                    {
+                        actionClient.goal = new TaskCommandGoal();
+                        actionClient.SendGoal();
+                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
+                        return confirmResult;
+                    }
+                    else
+                    {
+                        if (CycleStopActionExecuting)
+                        {
+                            LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
+                            return confirmResult;
+                        }
+                    }
+
                 }
+
+                CycleStopActionExecuting = false;
+                LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
                 actionClient.goal = rosGoal;
                 actionClient.SendGoal();
-                if (isCancelTask)//取消任務
+                if (isEmptyPathPlan)
                 {
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
                 }
