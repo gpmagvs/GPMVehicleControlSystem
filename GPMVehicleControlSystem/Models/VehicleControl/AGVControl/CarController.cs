@@ -489,10 +489,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     else
                     {
                         if (CycleStopActionExecuting)
-                        {
                             LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
-                            return confirmResult;
-                        }
+                        else
+                            await CycleStop();
+                        return confirmResult;
                     }
 
                 }
