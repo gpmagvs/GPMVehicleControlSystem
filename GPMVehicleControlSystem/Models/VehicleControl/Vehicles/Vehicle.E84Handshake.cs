@@ -364,6 +364,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
 
             SetAGVBUSY(false, true);
+            await Task.Delay(300);
             SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
             Task wait_eq_busy_ON = new Task(() =>
@@ -671,7 +672,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return;
                     }
 
-                    if ((isEQReadyOff | isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])//AGV作動中發生EQ異常
+                    if ((isEQReadyOff | isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && !AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY])//AGV作動中發生EQ異常
                     {
                         EQAlarmWhenAGVBusyFlag = true;
                         AGVC.AbortTask();
