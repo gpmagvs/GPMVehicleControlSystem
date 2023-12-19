@@ -636,47 +636,58 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="_ModuleInformation"></param>
         protected virtual void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            Odometry = _ModuleInformation.Mileage;
-            Navigation.StateData = _ModuleInformation.nav_state;
-            IMU.StateData = _ModuleInformation.IMU;
-            GuideSensor.StateData = _ModuleInformation.GuideSensor;
-            BarcodeReader.StateData = _ModuleInformation.reader;
-            VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
-            for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
-                WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
+            try
+            {
 
-            var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
-            {
-                Name = Navigation.LastVisitedTag.ToString(),
-                TagNumber = Navigation.LastVisitedTag
-            } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
-            lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Odometry = _ModuleInformation.Mileage;
+                Navigation.StateData = _ModuleInformation.nav_state;
+                IMU.StateData = _ModuleInformation.IMU;
+                GuideSensor.StateData = _ModuleInformation.GuideSensor;
+                BarcodeReader.StateData = _ModuleInformation.reader;
+                VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
+                for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
+                    WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 
-            ushort battery_id = _ModuleInformation.Battery.batteryID;
-            if (Batteries.TryGetValue(battery_id, out var battery))
-            {
-                battery.StateData = _ModuleInformation.Battery;
-            }
-            else
-            {
-                Batteries.Add(battery_id, new clsBattery()
+                var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
                 {
-                    StateData = _ModuleInformation.Battery,
-                });
-            }
-            Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
-            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
-            {
-                IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
-                //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
-                if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
-                    Sub_Status = Sub_Status == SUB_STATUS.Charging ? SUB_STATUS.IDLE : Sub_Status;
-            }
+                    Name = Navigation.LastVisitedTag.ToString(),
+                    TagNumber = Navigation.LastVisitedTag
+                } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
+                lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
 
-            stopwatch.Stop();
-            if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
-                LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
+                ushort battery_id = _ModuleInformation.Battery.batteryID;
+                if (Batteries.TryGetValue(battery_id, out var battery))
+                {
+                    battery.StateData = _ModuleInformation.Battery;
+                }
+                else
+                {
+                    Batteries.Add(battery_id, new clsBattery()
+                    {
+                        StateData = _ModuleInformation.Battery,
+                    });
+                }
+                Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
+
+
+                if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                {
+                    IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
+                    //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
+                    if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
+                        Sub_Status = Sub_Status == SUB_STATUS.Charging ? SUB_STATUS.IDLE : Sub_Status;
+                }
+
+                stopwatch.Stop();
+                if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
+                    LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
+
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+            }
         }
 
         private MapPoint GetLastVisitedMapPoint()
