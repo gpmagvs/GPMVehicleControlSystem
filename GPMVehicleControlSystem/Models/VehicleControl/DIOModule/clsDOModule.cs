@@ -22,11 +22,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public clsDOModule(string IP, int Port) : base(IP, Port)
         {
-            ReadCurrentDOStatus();
+            //ReadCurrentDOStatus();
         }
         public clsDOModule(string IP, int Port, clsDOModule DoModuleRef) : base(IP, Port, DoModuleRef)
         {
-            ReadCurrentDOStatus();
+            //ReadCurrentDOStatus();
         }
         private async void ReadCurrentDOStatus()
         {
