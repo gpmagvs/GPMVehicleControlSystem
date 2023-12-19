@@ -135,7 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return ls;
             }
         }
-        
+
         /// <summary>
         /// 手動/自動模式
         /// </summary>
@@ -258,7 +258,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 充電迴路是否已開啟
         /// </summary>
-        public  virtual bool IsChargeCircuitOpened => WagoDO.GetState(DO_ITEM.Recharge_Circuit);
+        public virtual bool IsChargeCircuitOpened => WagoDO.GetState(DO_ITEM.Recharge_Circuit);
         public SUB_STATUS Sub_Status
         {
             get => _Sub_Status;
@@ -388,7 +388,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version
                 };
-                
+
                 DirectionLighter.DOModule = WagoDO;
 
                 StatusLighter = new clsStatusLighter(WagoDO);

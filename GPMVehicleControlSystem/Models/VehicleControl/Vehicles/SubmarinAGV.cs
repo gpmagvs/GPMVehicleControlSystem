@@ -75,6 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //向AGVS請求移除卡匣
             CSTReader.ValidCSTID = "";
+            simulation_cargo_status = CARGO_STATUS.NO_CARGO;
             return RETURN_CODE.OK;
         }
 
@@ -118,8 +119,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.TRACE($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
 
         }
+        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
         protected virtual CARGO_STATUS GetCargoStatus()
         {
+            if (Parameters.LDULD_Task_No_Entry)
+            {
+                return simulation_cargo_status;
+            }
+
             bool cst_exist_check_Sensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
             bool cst_exist_check_Sensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
 

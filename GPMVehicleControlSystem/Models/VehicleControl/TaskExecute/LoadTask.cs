@@ -295,6 +295,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
+                    if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD || Agv.Parameters.AgvType == AGV_TYPE.FORK)
+                    {
+                        (Agv as SubmarinAGV).simulation_cargo_status = action == ACTION_TYPE.Load ? Vehicle.CARGO_STATUS.NO_CARGO : Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL;
+                    }
                     return (true, AlarmCodes.None);
                 }
                 else
