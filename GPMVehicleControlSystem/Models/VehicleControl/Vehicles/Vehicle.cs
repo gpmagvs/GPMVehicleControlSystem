@@ -575,7 +575,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     WagoDI.RegistSignalEvents();
                     DIOStatusChangedEventRegist();
+                    LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
                     while (!await WagoDI.Connect())
+                    {
+                        await Task.Delay(1000);
+                    }
+                    while (!await WagoDO.Connect())
                     {
                         await Task.Delay(1000);
                     }

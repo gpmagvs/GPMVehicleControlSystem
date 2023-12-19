@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -158,11 +159,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
-            if (Connected)
-                return true;
             try
             {
                 client = new TcpClient(IP, VMSPort);
+                EnableKeepAlive(ref client);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.ReadTimeout = 500;
                 master.Transport.WriteTimeout = 5000;
@@ -170,7 +170,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 Connected = true;
-                DoModuleRef.Connected = true;
                 return true;
             }
             catch (Exception ex)
@@ -185,7 +184,24 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
+        protected void EnableKeepAlive(ref TcpClient _client)
+        {
+            // 设置 keepalive 选项
+            int size = Marshal.SizeOf(new uint());
+            byte[] inOptionValues = new byte[size * 3];
 
+            // 是否启用 Keep-Alive
+            BitConverter.GetBytes((uint)1).CopyTo(inOptionValues, 0);
+
+            // Keep-Alive 检测间隔（单位：毫秒）
+            BitConverter.GetBytes((uint)5000).CopyTo(inOptionValues, size);
+
+            // 如果没有响应，则再次检测的间隔（单位：毫秒）
+            BitConverter.GetBytes((uint)5000).CopyTo(inOptionValues, size * 2);
+
+            //_client.Client.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+
+        }
         public override void Disconnect()
         {
             Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
