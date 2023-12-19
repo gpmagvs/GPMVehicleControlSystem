@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             set
             {
                 _AgvType = value;
-            }                                                                           
+            }
         }
         public int Version { get; internal set; }
 
@@ -165,8 +165,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 EnableKeepAlive(ref client);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.ReadTimeout = 500;
-                master.Transport.WriteTimeout = 5000;
-                master.Transport.Retries = 2;
+                master.Transport.WriteTimeout = 500;
+                master.Transport.Retries = 4;
                 Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 Connected = true;
@@ -198,13 +198,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
             // 如果没有响应，则再次检测的间隔（单位：毫秒）
             BitConverter.GetBytes((uint)5000).CopyTo(inOptionValues, size * 2);
-
-            //_client.Client.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+            _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
         }
         public override void Disconnect()
         {
-            Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
             try
             {
                 client?.Close();

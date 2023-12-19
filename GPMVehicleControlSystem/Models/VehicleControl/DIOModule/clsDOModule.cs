@@ -107,53 +107,60 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 OutputWriteWorkTask = OutputWriteWorker();
             return connected;
         }
+
         private async Task OutputWriteWorker()
         {
             await Task.Run(async () =>
             {
+                int reconnect_cnt = 0;
+                DateTime lastWriteTime = DateTime.MinValue;
+                bool testFlag = false;
                 while (true)
                 {
                     await Task.Delay(1);
-                    if (OutputWriteRequestQueue.Count == 0)
-                        continue;
+
                     if (_Connected)
                     {
+                        while (OutputWriteRequestFailQueue.Count != 0)
+                        {
+                            if (OutputWriteRequestFailQueue.TryDequeue(out var to_retry_obj))
+                            {
+                                try
+                                {
+                                    await WriteToDevice(to_retry_obj);
+                                    testFlag = true;
+                                }
+                                catch (Exception ex)
+                                {
+                                    LOG.ERROR(ex.Message, ex);
+                                    OutputWriteRequestFailQueue.Enqueue(to_retry_obj);
+                                    _Connected = false;
+                                    break;
+                                }
+                            }
+                            await Task.Delay(1);
+                        }
+                        if (OutputWriteRequestFailQueue.Count != 0)
+                            continue;
+                        if (OutputWriteRequestQueue.Count == 0)
+                            continue;
+
+                        reconnect_cnt = 0;
                         if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
                         {
                             try
                             {
-                                var startAddress = (ushort)(Start + to_handle_obj.signal.index);
-                                var writeStates = to_handle_obj.writeStates;
-                                bool[] rollback = writeStates.Select(s => !s).ToArray();
-                                ushort count = (ushort)writeStates.Length;
-                                IOBusy = true;
-                                CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                                while (!rollback.SequenceEqual(writeStates))
+                                if (to_handle_obj.signal.Address== "Y0002"&& !testFlag)
                                 {
-                                    await Task.Delay(10);
-                                    if (tim.IsCancellationRequested)
-                                    {
-                                        LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
-                                        AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-                                        Disconnect();
-                                        IOBusy = false;
-                                        continue;
-                                    }
-                                    master?.WriteMultipleCoils(startAddress, writeStates);
-                                    await Task.Delay(50);
-                                    rollback = master?.ReadCoils(startAddress, count);
+                                    throw new Exception();
                                 }
-                                for (int i = 0; i < writeStates.Length; i++)
-                                {
-                                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == to_handle_obj.signal.index + i);
-                                    if (_DO != null)
-                                        _DO.State = writeStates[i];
-                                }
+                                await WriteToDevice(to_handle_obj);
+                                lastWriteTime = DateTime.Now;
                             }
                             catch (Exception ex)
                             {
-                                Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
-                                OutputWriteRequestQueue.Enqueue(to_handle_obj);
+                                LOG.ERROR(ex.Message, ex);
+                                OutputWriteRequestFailQueue.Enqueue(to_handle_obj);
                                 _Connected = false;
                                 continue;
                             }
@@ -161,12 +168,51 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                     else
                     {
+                        if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
+                        {
+                            Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
+                            await Task.Delay(100);
+                            Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
+                        }
+                        LOG.WARN($"DO Module try reconnecting..");
+                        Disconnect();
                         _Connected = await Connect();
                         continue;
                     }
                 }
             });
         }
+        private async Task WriteToDevice(clsWriteRequest to_handle_obj)
+        {
+            ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
+            bool[] writeStates = to_handle_obj.writeStates;
+            bool[] rollback = writeStates.Select(s => !s).ToArray();
+            ushort count = (ushort)writeStates.Length;
+            IOBusy = true;
+            CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (!rollback.SequenceEqual(writeStates))
+            {
+                await Task.Delay(10);
+                if (tim.IsCancellationRequested)
+                {
+                    LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
+                    IOBusy = false;
+                    _Connected = false;
+                    continue;
+                }
+                master?.WriteMultipleCoils(startAddress, writeStates);
+                await Task.Delay(50);
+                rollback = master?.ReadCoils(startAddress, count);
+            }
+            for (int i = 0; i < writeStates.Length; i++)
+            {
+                clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == to_handle_obj.signal.index + i);
+                if (_DO != null)
+                    _DO.State = writeStates[i];
+            }
+
+        }
+
         public async Task<bool> SetState(string address, bool state)
         {
             try
@@ -230,6 +276,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
 
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
+        private ConcurrentQueue<clsWriteRequest> OutputWriteRequestFailQueue = new ConcurrentQueue<clsWriteRequest>();
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             try
