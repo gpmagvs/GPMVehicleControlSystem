@@ -28,6 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             DriverState _driverState = (DriverState)StateData;
             AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
             if (_Current_Alarm_Code == Current_Alarm_Code)

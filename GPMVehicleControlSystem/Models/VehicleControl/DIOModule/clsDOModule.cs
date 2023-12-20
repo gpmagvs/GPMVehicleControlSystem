@@ -30,17 +30,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             //ReadCurrentDOStatus();
         }
-        private async void ReadCurrentDOStatus()
-        {
-            if (_Connected)
-            {
-                var coils = master.ReadCoils(Start, Size);
-                for (int i = 0; i < coils.Length; i++)
-                {
-                    VCSOutputs[i].State = coils[i];
-                }
-            }
-        }
+     
         public override bool Connected { get => _Connected; set => _Connected = value; }
         internal override void RegistSignalEvents()
         {
@@ -192,16 +182,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (!rollback.SequenceEqual(writeStates))
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 if (tim.IsCancellationRequested)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
                     IOBusy = false;
-                    _Connected = false;
-                    continue;
+                    throw new Exception($"DO Write Timeout.");
                 }
                 master?.WriteMultipleCoils(startAddress, writeStates);
-                await Task.Delay(50);
                 rollback = master?.ReadCoils(startAddress, count);
             }
             for (int i = 0; i < writeStates.Length; i++)

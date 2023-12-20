@@ -179,6 +179,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
         }
         public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = true)
         {

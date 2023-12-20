@@ -33,6 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             var error_code = Data.errorCode;
             Current_Warning_Code = error_code.ToBatteryAlarmCode();
         }

@@ -37,6 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private uint PreviousTag = 0;
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;
             var currentTag = _brState.tagID;
             if (currentTag != PreviousTag)

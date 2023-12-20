@@ -67,6 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             LastVisitedTag = Data.lastVisitedNode.data;
             LinearSpeed = CalculateLinearSpeed(Data.robotPose.pose.position);
             AngularSpeed = CalculateAngularSpeed(Angle);

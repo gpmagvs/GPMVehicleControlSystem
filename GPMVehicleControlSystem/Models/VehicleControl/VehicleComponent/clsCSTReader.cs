@@ -46,6 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             State = Data.state;
         }
 

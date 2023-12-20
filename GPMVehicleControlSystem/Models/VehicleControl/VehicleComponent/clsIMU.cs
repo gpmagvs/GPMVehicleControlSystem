@@ -97,7 +97,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override void CheckStateDataContent()
         {
-            GpmImuMsg _imu_state = (GpmImuMsg)base.StateData;
+            base.CheckStateDataContent();
+            GpmImuMsg _imu_state = (GpmImuMsg)StateData;
             if (_imu_state.state != 0)
             {
                 Current_Warning_Code = AlarmCodes.IMU_Module_Error;

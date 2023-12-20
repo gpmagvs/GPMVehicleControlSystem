@@ -63,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public override void CheckStateDataContent()
         {
+            base.CheckStateDataContent();
             if (LocalizationStatus != Data.loc_status)
             {
                 LocalizationStatus = Data.loc_status;
