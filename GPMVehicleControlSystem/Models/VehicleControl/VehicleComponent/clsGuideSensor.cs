@@ -8,8 +8,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override void CheckStateDataContent()
-        {
-        }
     }
 }

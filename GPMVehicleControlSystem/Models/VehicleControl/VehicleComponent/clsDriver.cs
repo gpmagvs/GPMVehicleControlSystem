@@ -26,13 +26,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override async void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+            if (!await base.CheckStateDataContent())
+                return false;
             DriverState _driverState = (DriverState)StateData;
             AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
             if (_Current_Alarm_Code == Current_Alarm_Code)
-                return;
+                return true;
 
 
             if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
@@ -58,6 +59,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return;
                 Current_Alarm_Code = _Current_Alarm_Code;
             });
+            return true;
         }
     }
 }

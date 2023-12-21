@@ -31,11 +31,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             return Data.chargeCurrent > 650;
         }
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+
+            if (!await base.CheckStateDataContent())
+                return false;
+
             var error_code = Data.errorCode;
             Current_Warning_Code = error_code.ToBatteryAlarmCode();
+            return true;
         }
     }
 

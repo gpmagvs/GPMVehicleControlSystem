@@ -65,9 +65,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+
+            if (!await base.CheckStateDataContent())
+                return false;
+
             LastVisitedTag = Data.lastVisitedNode.data;
             LinearSpeed = CalculateLinearSpeed(Data.robotPose.pose.position);
             AngularSpeed = CalculateAngularSpeed(Angle);
@@ -78,6 +81,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 Current_Alarm_Code = Data.errorCode.ToMotionAlarmCode();
             else
                 Current_Alarm_Code = AlarmCodes.None;
+            return true;
         }
         //180d 3.14  
         private double CalculateAngularSpeed(double angle)

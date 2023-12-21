@@ -44,10 +44,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+
+            if (! await base.CheckStateDataContent())
+                return false;
             State = Data.state;
+            return true;
         }
 
         internal void UpdateCSTIDDataHandler(object? sender, string cst_id)

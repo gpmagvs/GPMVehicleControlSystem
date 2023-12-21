@@ -95,10 +95,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public Imu IMUData { get; private set; } = new Imu();
 
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
-            GpmImuMsg _imu_state = (GpmImuMsg)StateData;
+
+            if (!await base.CheckStateDataContent())
+                return false;
+
+            GpmImuMsg _imu_state = null;
+            try
+            {
+                _imu_state = (GpmImuMsg)StateData;
+            }
+            catch (Exception ex)
+            {
+                _AccData = new Vector3(0, 0, 0);
+                return false;
+            }
             if (_imu_state.state != 0)
             {
                 Current_Warning_Code = AlarmCodes.IMU_Module_Error;
@@ -118,6 +130,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 IsImpacting = ImpactDetection(AccData, out var mag);
             }
             IMUData = _imu_state.imuData;
+            return true;
         }
 
         private bool ImpactDetection(Vector3 acc_raw, out double mag)

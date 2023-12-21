@@ -35,9 +35,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override string alarm_locate_in_name => component_name.ToString();
 
         private uint PreviousTag = 0;
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+            if (!await base.CheckStateDataContent())
+                return false;
+
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;
             var currentTag = _brState.tagID;
             if (currentTag != PreviousTag)
@@ -64,6 +66,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 Current_Warning_Code = AlarmCodes.None;
             }
+
+            return true;
         }
     }
 }

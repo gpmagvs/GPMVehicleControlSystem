@@ -61,9 +61,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             _LaserModeSettingError = _SickConnectionError = false;
         }
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+
+            if (! await base.CheckStateDataContent())
+                return false;
             if (LocalizationStatus != Data.loc_status)
             {
                 LocalizationStatus = Data.loc_status;
@@ -72,6 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.WARN($"Map Compare Rate Too Low [From Sick Data]");
                 }
             }
+            return true;
         }
 
         private void LogSickRawData(RawMicroScanDataMsg sick_scanner_raw_data)

@@ -177,9 +177,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         internal ForkAGVController fork_ros_controller => forkAGV.AGVC as ForkAGVController;
         private ForkAGV forkAGV;
 
-        public override void CheckStateDataContent()
+        public override async Task<bool> CheckStateDataContent()
         {
-            base.CheckStateDataContent();
+            return await base.CheckStateDataContent();
         }
         public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = true)
         {
