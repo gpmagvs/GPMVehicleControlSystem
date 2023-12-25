@@ -253,7 +253,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             double tag_pose_y = pose.pose.position.y;
                             double tag_theta = pose.pose.orientation.ToTheta();
                             var current_position = module_info.nav_state.robotPose.pose.position;
-                            var delay_time = 0.5;
+                            var delay_time = 1.0;
                             //計算距離
                             if (current_position.x == 0 && current_position.y == 0)
                             {
@@ -279,7 +279,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
                             await Task.Delay(TimeSpan.FromSeconds(delay_time));
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
-                            module_info.Battery.batteryLevel -= 3;
+                            module_info.Battery.batteryLevel -= 1;
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
                             if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
                                 break;
@@ -359,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 {
                     try
                     {
-                        await Task.Delay(10);
+                        await Task.Delay(50);
 
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
