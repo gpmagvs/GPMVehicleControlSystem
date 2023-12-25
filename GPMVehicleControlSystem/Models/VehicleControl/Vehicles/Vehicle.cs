@@ -422,15 +422,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.None);
 
 
-                            if (AGVS.UseWebAPI)
-                            {
-                                var eqinfomations = await GetWorkStationEQInformation();
-                                if (eqinfomations != null)
-                                {
-                                    WorkStations.SyncInfo(eqinfomations);
-                                    SaveTeachDAtaSettings();
-                                }
-                            }
+                           
 
                         }
                     }
@@ -438,6 +430,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 AGVSInit();
+               
                 EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();

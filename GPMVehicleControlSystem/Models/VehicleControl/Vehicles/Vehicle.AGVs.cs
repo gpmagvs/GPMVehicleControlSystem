@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
-        private void AGVSInit()
+        private async void AGVSInit()
         {
             string vms_ip = Parameters.Connections["AGVS"].IP;
             int vms_port = Parameters.Connections["AGVS"].Port;
@@ -45,6 +45,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             };
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
+            if (AGVS.UseWebAPI)
+            {
+                var eqinfomations = await GetWorkStationEQInformation();
+                if (eqinfomations != null)
+                {
+                    WorkStations.SyncInfo(eqinfomations);
+                    SaveTeachDAtaSettings();
+                }
+            }
 
         }
         private void ReloadLocalMap()
