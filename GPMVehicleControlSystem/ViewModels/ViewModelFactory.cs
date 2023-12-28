@@ -42,6 +42,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     OnlineMode = AGV.Remote_Mode,
                     IsInitialized = AGV.IsInitialized,
                     IsSystemIniting = !AGV.IsSystemInitialized,
+                    IsLDULD_No_Entry = AGV.Parameters.LDULD_Task_No_Entry,
                     AGVC_ID = AGV.Parameters.SID,
                     CarName = AGV.Parameters.VehicleName,
                     MainState = AGV.Main_Status.ToString(),
@@ -66,7 +67,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     NavInfo = new NavStateVM
                     {
                         Destination = AGV.ExecutingTaskModel == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
-                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "" } : AGV.DestinationMapPoint,
+                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph=new Graph { Display="" } } : AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
                         PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
