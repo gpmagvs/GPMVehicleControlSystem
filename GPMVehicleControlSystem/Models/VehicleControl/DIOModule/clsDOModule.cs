@@ -30,7 +30,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             //ReadCurrentDOStatus();
         }
-     
+
         public override bool Connected { get => _Connected; set => _Connected = value; }
         internal override void RegistSignalEvents()
         {
@@ -100,38 +100,28 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         private async Task OutputWriteWorker()
         {
-            await Task.Run(async () =>
+            _ = Task.Factory.StartNew(async () =>
             {
                 int reconnect_cnt = 0;
                 DateTime lastWriteTime = DateTime.MinValue;
                 bool testFlag = false;
                 while (true)
                 {
-                    await Task.Delay(1);
+                    Thread.Sleep(50);
 
                     if (_Connected)
                     {
-                        while (OutputWriteRequestFailQueue.Count != 0)
+                        try
                         {
-                            if (OutputWriteRequestFailQueue.TryDequeue(out var to_retry_obj))
-                            {
-                                try
-                                {
-                                    await WriteToDevice(to_retry_obj);
-                                    testFlag = true;
-                                }
-                                catch (Exception ex)
-                                {
-                                    LOG.ERROR(ex.Message, ex);
-                                    OutputWriteRequestFailQueue.Enqueue(to_retry_obj);
-                                    _Connected = false;
-                                    break;
-                                }
-                            }
-                            await Task.Delay(1);
+                            master?.ReadCoils(0, 1);//just keep tcp connection 
                         }
-                        if (OutputWriteRequestFailQueue.Count != 0)
+                        catch (Exception ex)
+                        {
+                            LOG.ERROR($"DO Read Coils Fail.");
+                            _Connected = false;
                             continue;
+                        }
+
                         if (OutputWriteRequestQueue.Count == 0)
                             continue;
 
@@ -140,17 +130,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         {
                             try
                             {
-                                if (to_handle_obj.signal.Address== "Y0002"&& !testFlag)
-                                {
-                                    throw new Exception();
-                                }
-                                await WriteToDevice(to_handle_obj);
+                                WriteToDevice(to_handle_obj);
                                 lastWriteTime = DateTime.Now;
                             }
                             catch (Exception ex)
                             {
+                                OutputWriteRequestQueue.Enqueue(to_handle_obj);
                                 LOG.ERROR(ex.Message, ex);
-                                OutputWriteRequestFailQueue.Enqueue(to_handle_obj);
                                 _Connected = false;
                                 continue;
                             }
@@ -161,7 +147,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
                         {
                             Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            await Task.Delay(100);
+                            Thread.Sleep(100);
                             Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
                         }
                         LOG.WARN($"DO Module try reconnecting..");
@@ -172,7 +158,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 }
             });
         }
-        private async Task WriteToDevice(clsWriteRequest to_handle_obj)
+        private void WriteToDevice(clsWriteRequest to_handle_obj)
         {
             ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
             bool[] writeStates = to_handle_obj.writeStates;
@@ -182,7 +168,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (!rollback.SequenceEqual(writeStates))
             {
-                await Task.Delay(1);
+                Thread.Sleep(1);
                 if (tim.IsCancellationRequested)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
@@ -264,7 +250,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
 
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
-        private ConcurrentQueue<clsWriteRequest> OutputWriteRequestFailQueue = new ConcurrentQueue<clsWriteRequest>();
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             try
