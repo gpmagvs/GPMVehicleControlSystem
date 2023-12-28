@@ -146,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-                
+
                 await Task.Delay(10);
                 BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
@@ -308,7 +308,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
 
-                if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     AGVCActionStatusChaged = null;
                     LOG.ERROR($"存在貨物傾倒異常");
@@ -480,7 +480,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
             await RegisterSideLaserTriggerEvent();
-             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
+            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
             await UnRegisterSideLaserTriggerEvent();
             return result;
         }
@@ -630,6 +630,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             GC.SuppressFinalize(this);
         }
 
-       
+
     }
 }

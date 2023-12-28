@@ -51,6 +51,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             await Task.Delay(1).ContinueWith(async (Task) =>
             {
+                if (Agv.Parameters.LDULD_Task_No_Entry)
+                {
+                    IsCargoBiasTrigger = false;
+                    return;
+                }
+
                 LOG.INFO($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
                 CancellationTokenSource cts = new CancellationTokenSource();
                 cts.CancelAfter(10000);
