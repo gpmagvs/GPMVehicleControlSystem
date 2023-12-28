@@ -1156,31 +1156,36 @@
   },
   {
     "Code": 3245,
+    "Description": "Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_EADY",
+    "CN": "交握失敗-等待設備 EQ_READY的過程中 LU_REQ訊號丟失"
+  },
+  {
+    "Code": 3280,
     "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON",
     "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON"
   },
   {
-    "Code": 3246,
+    "Code": 3281,
     "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF",
     "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF"
   },
   {
-    "Code": 3247,
+    "Code": 3282,
     "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON",
     "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON"
   },
   {
-    "Code": 3248,
+    "Code": 3283,
     "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF",
     "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF"
   },
   {
-    "Code": 3249,
+    "Code": 3284,
     "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON",
     "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON"
   },
   {
-    "Code": 3250,
+    "Code": 3285,
     "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF",
     "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF"
   },

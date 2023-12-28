@@ -276,6 +276,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
             CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
+            bool IsEQDown = false;
             Task wait_eq_UL_req_ON = new Task(() =>
             {
                 while (!IsULReqOn(action) && !isEQGoOff)
@@ -285,13 +286,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Thread.Sleep(1);
                 }
             });
-            Task wait_eq_ready = new Task(() =>
+            var wait_eq_ready = new Task(() =>
             {
                 while (!IsEQReadyOn() && !isEQGoOff)
                 {
+                    Thread.Sleep(1);
                     if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
-                    Thread.Sleep(1);
+
+                    if (!IsULReqOn(action))
+                    {
+                        IsEQDown = true;
+                        throw new OperationCanceledException();
+                    }
                 }
             });
 
@@ -340,6 +347,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                if (IsEQDown)
+                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_EADY);
                 return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
             }
 
