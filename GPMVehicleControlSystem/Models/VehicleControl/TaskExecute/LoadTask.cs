@@ -382,6 +382,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 LOG.INFO($"FORK ARM Extend Out");
                 var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
+                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                {
+                    Thread.Sleep(1);
+                    if(cts.IsCancellationRequested)
+                    {
+                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
+                }
                 arm_move_Done = _arm_move_result.confirm;
                 if (!arm_move_Done)
                 {
@@ -420,6 +429,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     var FormArmShortenTask = Task.Run(async () =>
                     {
                         var arm_move_result = await ForkLifter.ForkShortenInAsync();
+                        CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                        while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                        {
+                            Thread.Sleep(1);
+                            if (cts.IsCancellationRequested)
+                            {
+                                return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                            }
+                        }
+
                         if (!arm_move_result.confirm)
                         {
                             return (false, AlarmCodes.Action_Timeout);

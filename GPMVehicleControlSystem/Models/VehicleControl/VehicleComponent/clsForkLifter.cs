@@ -276,7 +276,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     cts.CancelAfter(TimeSpan.FromSeconds(30));
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                     {
-                        await Task.Delay(1);
+                        Thread.Sleep(1);
                         bool isStopState = !DOModule.GetState(DO_ITEM.Fork_Extend) && !DOModule.GetState(DO_ITEM.Fork_Shortend);
                         if (isStopState)
                             return (true, "");
@@ -305,7 +305,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if (IsSimulationMode)
                 return (true, "");
-            await ForkARMStop();
+            ForkARMStop();
+            Thread.Sleep(400);
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
                 return (true, "");
 
