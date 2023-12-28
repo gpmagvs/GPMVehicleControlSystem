@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
         protected virtual void CommonEventsRegist()
         {
-            DBhelper.OnDataBaseChanged += CopyDataBaseToLogFolder;
+            //DBhelper.OnDataBaseChanged += CopyDataBaseToLogFolder;
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
@@ -648,6 +648,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
                 for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                     WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
+
 
                 var _lastVisitedMapPoint = NavingMap == null ? new AGVSystemCommonNet6.MAP.MapPoint
                 {
