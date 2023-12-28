@@ -303,5 +303,21 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             agv.AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UNKNOWN);
             return Ok();
         }
+
+        [HttpGet("LDULDWithoutEntryControl")]
+        public async Task<IActionResult> LDULDWithoutEntryControl(bool actived)
+        {
+            LOG.TRACE($"Remote user try change LDULD_Task_No_Entry to {actived}");
+            if (!actived)
+            {
+                if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                {
+                    var retcode = await (agv as SubmarinAGV).RemoveCstData();
+                }
+            }
+            agv.Parameters.LDULD_Task_No_Entry = actived;
+            LOG.TRACE($"Remote user change LDULD_Task_No_Entry to {actived}!!");
+            return Ok(0);
+        }
     }
 }
