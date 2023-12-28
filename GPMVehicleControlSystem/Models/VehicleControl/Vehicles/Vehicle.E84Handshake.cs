@@ -348,7 +348,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
                 if (IsEQDown)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_EADY);
+                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
                 return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
             }
 
