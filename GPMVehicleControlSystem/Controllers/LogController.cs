@@ -26,8 +26,24 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("GetTransferLogToday")]
         public async Task<IActionResult> GetTransferLogToday()
         {
-            Dictionary<int, AGVSystemCommonNet6.MAP.MapPoint>.ValueCollection mapPointsUsing = StaStored.CurrentVechicle.NavingMap.Points.Values;
             List<clsAGVSLogAnaylsis.clsTransferResult> results = DBhelper.QueryTodayTransferRecord();
+            results = QueryTransferHistory(results);
+            return Ok(results);
+        }
+
+
+        [HttpGet("GetTransferLog")]
+        public async Task<IActionResult> GetTransferLog(DateTime from, DateTime to)
+        {
+            List<clsAGVSLogAnaylsis.clsTransferResult> results = DBhelper.QueryTransferRecord(from, to);
+            results = QueryTransferHistory(results);
+            return Ok(results);
+        }
+
+        private static List<clsAGVSLogAnaylsis.clsTransferResult> QueryTransferHistory( List<clsAGVSLogAnaylsis.clsTransferResult> results)
+        {
+            Dictionary<int, AGVSystemCommonNet6.MAP.MapPoint>.ValueCollection mapPointsUsing = StaStored.CurrentVechicle.NavingMap.Points.Values;
+
             foreach (var item in results)
             {
                 var FromStation = mapPointsUsing.FirstOrDefault(pt => pt.TagNumber == item.From);
@@ -36,10 +52,10 @@ namespace GPMVehicleControlSystem.Controllers
 
                 item.FromName = FromStation == null ? item.From + "" : FromStation.Graph.Display;
                 item.ToName = FromStation == null ? item.To + "" : ToStation.Graph.Display;
-                item.StartLocName = FromStation == null ? item.StartLoc + "" : StartLocStation.Graph.Display;
+                item.StartLocName = StartLocStation == null ? item.StartLoc + "" : StartLocStation.Graph.Display;
             }
             results = results.OrderByDescending(t => t.StartTime).ToList();
-            return Ok(results);
+            return results;
         }
 
         [HttpGet("DownloadLog")]
