@@ -271,6 +271,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             Task.Factory.StartNew(async () =>
             {
+
+                UpdateLastVisitedTagOfParam(newVisitedNodeTag);
+
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
                     return;
                 if (ExecutingTaskModel == null)
@@ -289,6 +292,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
             });
+        }
+
+        private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
+        {
+            Parameters.LastVisitedTag = newVisitedNodeTag;
+            configFileChangedWatcher.EnableRaisingEvents = false;
+            SaveParameters(Parameters);
+            configFileChangedWatcher.EnableRaisingEvents = true;
         }
 
         internal async Task ReportMeasureResult(clsMeasureResult measure_result)
