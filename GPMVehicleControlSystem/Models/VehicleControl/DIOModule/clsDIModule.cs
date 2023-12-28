@@ -164,9 +164,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 client = new TcpClient(IP, VMSPort);
                 EnableKeepAlive(ref client);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 500;
-                master.Transport.WriteTimeout = 500;
-                master.Transport.Retries = 4;
+                master.Transport.ReadTimeout = 300;
+                master.Transport.WriteTimeout = 300;
+                master.Transport.Retries = 3;
                 Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 Connected = true;
