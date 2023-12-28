@@ -242,14 +242,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
+                var _mapPoint_default = new MapPoint { Name = _RunTaskData.Destination.ToString(), TagNumber = _RunTaskData.Destination, Graph = new Graph() { Display = _RunTaskData.Destination + "" } };
                 try
                 {
                     var _point = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == _RunTaskData.Destination);
-                    return _point == null ? new MapPoint { Name = _RunTaskData.Destination.ToString(), TagNumber = _RunTaskData.Destination } : _point;
+                    return _point == null ? _mapPoint_default : _point;
                 }
                 catch (Exception)
                 {
-                    return new MapPoint { Name = _RunTaskData.Destination.ToString(), TagNumber = _RunTaskData.Destination };
+                    return _mapPoint_default;
                 }
             }
         }
@@ -286,8 +287,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
-                            if (!IMU.IsAccSensorError)
-                                IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
+
+                            //if (!IMU.IsAccSensorError)
+                            //    IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
                         }
 
                     }
@@ -422,7 +424,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             AlarmManager.AddAlarm(AlarmCodes.None);
 
 
-                           
+
 
                         }
                     }
@@ -430,7 +432,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 AGVSInit();
-               
+
                 EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();
@@ -945,6 +947,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 RecordVibrationDataToDatabase();
                 return;
             }
+            if (IMU.IsAccSensorError)
+                return;
             _RunTaskData.VibrationRecords.Add(new clsVibrationRecord
             {
                 Time = DateTime.Now,
