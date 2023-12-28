@@ -53,7 +53,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             get => _AccData;
             set
             {
-                OnAccelermeterDataChanged?.Invoke(this, value);
+                if (!IsAccSensorError)
+                    OnAccelermeterDataChanged?.Invoke(this, value);
                 _AccData = value;
             }
         }
