@@ -97,7 +97,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleDriversStatusErrorAsync);
 
-            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { IsHandshaking = state; AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = state; });

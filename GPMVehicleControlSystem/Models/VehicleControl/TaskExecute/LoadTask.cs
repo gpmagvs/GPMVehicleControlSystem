@@ -86,8 +86,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             lduld_record.Action = this.action;
             lduld_record.WorkStationTag = destineTag;
             DBhelper.AddUDULDRecord(lduld_record);
+            bool _needHandshake = eqHandshakeMode == WORKSTATION_HS_METHOD.HS;
 
-            if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+            if (_needHandshake)
             {
                 if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
                 {
@@ -98,6 +99,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimers();
                 await Task.Delay(700);
+                Agv.HandshakeStatusText = "確認光IO EQ GO訊號...";
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     if (!Agv.IsEQGOOn())

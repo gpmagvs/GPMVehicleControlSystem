@@ -110,6 +110,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         };
         public bool IsHasCSTReader => CSTReader != null;
         internal bool IsWaitForkNextSegmentTask = false;
+        internal bool IsHandshaking = false;
+        internal string HandshakeStatusText = "";
         /// <summary>
         /// 里程數
         /// </summary>
@@ -766,13 +768,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal virtual async void ResetHandshakeSignals()
         {
-
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
-
+            HandshakeStatusText = "AGV交握訊號重置...";
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
@@ -891,6 +892,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
             AGVSTaskFeedBackReportAndOffline(alarmCode);
+
+            HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"交握失敗-{alarmCode}" : HandshakeStatusText;
 
             if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
             {

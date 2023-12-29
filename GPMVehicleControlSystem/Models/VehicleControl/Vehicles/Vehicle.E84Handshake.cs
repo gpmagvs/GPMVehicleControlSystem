@@ -306,6 +306,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 LOG.Critical("[EQ Handshake] 等待EQ LU_REQ ON");
+                HandshakeStatusText = "等待EQ 取放請求訊號ON";
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
                 waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
                 wait_eq_UL_req_ON.Start();
@@ -330,6 +331,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
                 waitEQReadyOnCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON]));
                 LOG.Critical("[EQ Handshake] 等待EQ Ready ON...");
+                HandshakeStatusText = "等待EQ Ready..";
                 wait_eq_ready.Start();
                 wait_eq_ready.Wait(waitEQReadyOnCST.Token);
                 if (isEQGoOff)
@@ -337,6 +339,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SetAGVBUSY(true);
                 WatchE84AlarmWhenAGVBUSY();
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
+                HandshakeStatusText = "AGV動作中..";
                 return (true, AlarmCodes.None);
             }
             catch (Exception ex)
@@ -397,7 +400,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task wait_eq_busy_OFF = new Task(() =>
             {
                 LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
-
                 if (waitEQ_BUSY_OFF_CTS.IsCancellationRequested)
                 {
                     alarm_code = AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_OFF;
@@ -422,6 +424,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
             try
             {
+                HandshakeStatusText = "等待EQ開始動作..";
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
                 waitEQ_BUSY_ON_CTS.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON]));
                 wait_eq_busy_ON.Start();
@@ -429,6 +432,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+                HandshakeStatusText = "等待EQ完成動作..";
+
             }
             catch (Exception ex)
             {
@@ -467,9 +472,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
                 }
 
+                HandshakeStatusText = "EQ完成動作";
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
                 SetAGVREADY(false); //AGV BUSY 開始退出
                 SetAGVBUSY(true);
+
+                HandshakeStatusText = "AGV動作中..";
                 WatchE84AlarmWhenAGVBUSY();
                 return (true, AlarmCodes.None);
             }
@@ -507,7 +515,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CancellationTokenSource wait_eq_l_u_req_off_cts = new CancellationTokenSource();
             Task wait_eq_UL_req_OFF = new Task(() =>
             {
-                LOG.WARN("[EQ Handshake] 等待 EQ_L_U_REQ OFF");
                 while (IsULReqOn(action) && !isEQGoOff)
                 {
                     if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
@@ -529,6 +536,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SetAGVBUSY(false, false);
             await Task.Delay(200);
             SetAGV_COMPT(true);
+            HandshakeStatusText = "等待EQ取放請求訊號OFF..";
+            LOG.WARN("[EQ Handshake] 等待取放請求訊號OFF");
             try
             {
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
@@ -577,6 +586,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SetAGVVALID(false);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
+                _ = Task.Run(async () =>
+                {
+                    HandshakeStatusText = "交握結束";
+                    await Task.Delay(1000);
+                });
                 return (true, AlarmCodes.None);
             }
             catch (Exception ex)

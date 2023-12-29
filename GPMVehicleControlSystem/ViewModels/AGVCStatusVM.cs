@@ -122,6 +122,10 @@ namespace GPMVehicleControlSystem.ViewModels
             public EQ_HS_METHOD ConnectionType { get; set; }
             public bool Connected { get; set; }
 
+            public bool IsHandshaking { get; set; }
+
+            public string HandshakingInfoText { get; set; } = "Non-Handshake";
+
         }
     }
 }
