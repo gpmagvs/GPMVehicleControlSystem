@@ -164,19 +164,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
+                double[] batteryTemperatures = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.maxCellTemperature).ToArray();
                 var status = new clsRunningStatus
                 {
                     Cargo_Status = CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
                     CargoType = GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
+                    Electric_Temperatures = batteryTemperatures,
                     Last_Visited_Node = lastVisitedNode,
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
-                    IsCharging = IsCharging
+                    IsCharging = IsCharging,
                 };
                 return status;
             }
@@ -225,7 +227,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = _RunTaskData.IsLocalTask &!Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
+                    Alarm_Code = _RunTaskData.IsLocalTask & !Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };

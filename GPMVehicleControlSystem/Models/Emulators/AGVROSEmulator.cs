@@ -360,7 +360,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     try
                     {
                         await Task.Delay(50);
-
+                        module_info.Battery.maxCellTemperature = (byte)(24 + DateTime.Now.Second / 10.0);
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
                             module_info.Battery.batteryLevel -= 1;
