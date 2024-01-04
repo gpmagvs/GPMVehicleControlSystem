@@ -72,18 +72,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         private async void IOSignalExchangeProcess()
         {
-            await Task.Factory.StartNew(async () =>
+            await Task.Run(async () =>
             {
                 HandshakingModbusTcpProcessCancel = new CancellationTokenSource();
                 LOG.WARN($"Handshake Signal excahge via ModbusTcp Process START");
                 while (true)
                 {
-                    await Task.Delay(100);
+                    Thread.Sleep(100);
                     if (HandshakingModbusTcpProcessCancel.IsCancellationRequested)
+                    {
+                        if (Connected)
+                            WriteAGVOutputs(new bool[5]);
                         break;
+                    }
                     if (!Connected)
                     {
-                        await Task.Delay(1000);
+                        Thread.Sleep(1000);
                         Connected = Connect();
                         continue;
                     }
@@ -131,8 +135,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         private void Disconnect()
         {
-            master.Transport.Dispose();
-            master.Dispose();
+            try
+            {
+                master?.Transport.Dispose();
+                master?.Dispose();
+            }
+            catch (Exception)
+            {
+                //Nothing
+            }
             Connected = false;
         }
         private void WriteAGVOutputs(bool[] outputs)

@@ -47,6 +47,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal bool back_to_secondary_flag = false;
         internal WORKSTATION_HS_METHOD _eqHandshakeMode;
+        
+
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
@@ -86,8 +88,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             lduld_record.Action = this.action;
             lduld_record.WorkStationTag = destineTag;
             DBhelper.AddUDULDRecord(lduld_record);
-            bool _needHandshake = eqHandshakeMode == WORKSTATION_HS_METHOD.HS;
 
+            DetermineHandShakeSetting(out bool _needHandshake);
             if (_needHandshake)
             {
                 if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
@@ -138,6 +140,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await base.BeforeTaskExecuteActions();
         }
 
+        private void DetermineHandShakeSetting(out bool IsNeedHandshake)
+        {
+            IsNeedHandshake = true;
+            if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+            {
+                WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
+                eqHandshakeMode = mode;
+                Agv.Parameters.EQHandshakeMethod = data.HandShakeConnectionMode;
+                IsNeedHandshake = mode == WORKSTATION_HS_METHOD.HS;
+                LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
+            }
+            else
+            {
+                LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
+                eqHandshakeMode = WORKSTATION_HS_METHOD.HS;
+            }
+        }
+        private void RestoreEQHandshakeConnectionMode()
+        {
+            Agv.Parameters.EQHandshakeMethod = Agv.Parameters._EQHandshakeMethodStore;
+        }
         private void CheckEQDIOStates()
         {
             if (Agv.EQDIOStates == null)
@@ -388,7 +411,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                 {
                     Thread.Sleep(1);
-                    if(cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested)
                     {
                         return (false, AlarmCodes.Fork_Arm_Pose_Error);
                     }
@@ -565,7 +588,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
 
                     var HSResult = await AGVCOMPTHandshake();
-
+                    RestoreEQHandshakeConnectionMode();
                     if (!HSResult.confirm)
                     {
                         AlarmManager.AddAlarm(HSResult.alarmCode, false);

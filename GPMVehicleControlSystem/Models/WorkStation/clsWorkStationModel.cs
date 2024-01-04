@@ -1,6 +1,7 @@
 ﻿
 
 using AGVSystemCommonNet6.AGVDispatch;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.WorkStation
 {
@@ -51,6 +52,7 @@ namespace GPMVehicleControlSystem.Models.WorkStation
         /// 工位交握方式
         /// </summary>
         public WORKSTATION_HS_METHOD HandShakeModeHandShakeMode { get; set; } = WORKSTATION_HS_METHOD.NO_HS;
+        public EQ_HS_METHOD HandShakeConnectionMode { get; set; } = EQ_HS_METHOD.MODBUS;
         /// <summary>
         /// 貨物轉移給設備時,主動端設定
         /// </summary>

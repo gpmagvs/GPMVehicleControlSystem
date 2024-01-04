@@ -369,8 +369,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Parameters = LoadParameters(watch_file_change: true);
+                Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
                 IMU.Options = Parameters.ImpactDetection;
-
                 CIMConnectionInitialize();
                 LoadWorkStationConfigs();
                 LOG.INFO($"{GetType().Name} Start create instance...");
@@ -666,6 +666,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
+            clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+            Parameters.EQHandshakeMethod = Parameters._EQHandshakeMethodStore;
+            SaveParameters(Parameters);
+
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();

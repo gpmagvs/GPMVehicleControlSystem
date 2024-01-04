@@ -23,6 +23,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool FrontLighterFlashWhenNormalMove { get; set; } = false;
         public bool CheckObstacleWhenForkInit { get; set; } = true;
         public bool LocalTaskCheckCargoExist { get; set; } = false;
+        public bool SyncEQInfoFromAGVS { get; set; } = false;
+
         /// <summary>
         /// 一搬走行時偵測貨物傾倒
         /// </summary>
@@ -114,6 +116,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
         public clsMapParam MapParam { get; set; } = new clsMapParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.PIO;
+
+        internal EQ_HS_METHOD _EQHandshakeMethodStore = EQ_HS_METHOD.PIO;
 
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
         public clsCstExistDetection CST_EXIST_DETECTION { get; set; } = new clsCstExistDetection();

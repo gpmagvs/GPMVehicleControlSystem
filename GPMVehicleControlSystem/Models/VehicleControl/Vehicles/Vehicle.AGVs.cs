@@ -45,7 +45,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             };
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
-            if (AGVS.UseWebAPI)
+
+            if (Parameters.SyncEQInfoFromAGVS)
             {
                 var eqinfomations = await GetWorkStationEQInformation();
                 if (eqinfomations != null)

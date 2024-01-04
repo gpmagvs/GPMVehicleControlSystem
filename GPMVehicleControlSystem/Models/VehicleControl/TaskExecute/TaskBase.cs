@@ -19,6 +19,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsOb
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -110,23 +111,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
         }
-        public WORKSTATION_HS_METHOD eqHandshakeMode
-        {
-            get
-            {
-                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
-                {
-                    WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
-                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
-                    return mode;
-                }
-                else
-                {
-                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
-                    return WORKSTATION_HS_METHOD.HS;
-                }
-            }
-        }
+        public WORKSTATION_HS_METHOD eqHandshakeMode { get; set; }
         public CARGO_TRANSFER_MODE CargoTransferMode
         {
             get
