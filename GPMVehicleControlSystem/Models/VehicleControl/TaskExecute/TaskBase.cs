@@ -262,8 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
         }
 
-        internal bool IsCargoBiasDetecting = false;
-        internal bool IsCargoBiasTrigger = false;
+        
 
         protected bool IsAGVCActionNoOperate(ActionStatus status, Action<ActionStatus> actionStatusChangedCallback)
         {
@@ -293,11 +292,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
 
-                if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
+                if (Agv.IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     AGVCActionStatusChaged = null;
                     LOG.ERROR($"存在貨物傾倒異常");
-                    IsCargoBiasTrigger = IsCargoBiasDetecting = false;
+                    Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
                     AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error, false);
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     return;

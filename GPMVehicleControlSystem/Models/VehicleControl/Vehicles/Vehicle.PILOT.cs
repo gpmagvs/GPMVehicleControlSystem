@@ -18,6 +18,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
         internal bool AutoOnlineRaising = false;
         internal clsParkingAccuracy lastParkingAccuracy;
+        private bool _IsCargoBiasDetecting = false;
+        internal bool IsCargoBiasDetecting
+        {
+            get => _IsCargoBiasDetecting;
+            set
+            {
+                if (_IsCargoBiasDetecting != value)
+                {
+                    _IsCargoBiasDetecting = value;
+                    if (!_IsCargoBiasDetecting)
+                        LOG.WARN($"貨物傾倒偵測結束-AGV Move Finish");
+                    else
+                        LOG.WARN($"貨物傾倒偵測開始");
+                }
+            }
+        }
+        internal bool IsCargoBiasTrigger = false;
+
         public enum EQ_HS_METHOD
         {
             PIO,
@@ -150,7 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else if (action == ACTION_TYPE.Unload)
                     {
-                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData); 
+                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
                         (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
                         if (_RunTaskData.CST.Length > 0)
