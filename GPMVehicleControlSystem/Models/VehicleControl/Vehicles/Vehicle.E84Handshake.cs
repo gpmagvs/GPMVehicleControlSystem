@@ -698,9 +698,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         EQAlarmWhenAGVBusyFlag = true;
                         AGVC.AbortTask();
+                        var alarm_code = AlarmCodeWhenHandshaking = !IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : (isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
+                        Thread.Sleep(100);
                         Sub_Status = SUB_STATUS.DOWN;
-                        await Task.Delay(100);
-                        var alarm_code = !IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : (isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
                         AlarmManager.AddAlarm(alarm_code, false);
                         LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end.[isEQReadyOff/isEQBusyOn]");
                         return;
@@ -745,6 +745,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         SetAGV_TR_REQ(false);
                         if (!isEQReadyOFF & IsEQGOOn() & AlarmCodeWhenHandshaking == AlarmCodes.None)
                         {
+                            AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_AGV_DOWN;
                             AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
                         }
                         LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[AGVSub_Status DOWN]");
@@ -757,7 +758,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         waitEQSignalCST.Cancel();
                         AGVC.AbortTask();
                         Sub_Status = SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(!IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : AlarmCodes.Handshake_Fail_EQ_READY_OFF, false);
+                        AlarmCodeWhenHandshaking = !IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+                        AlarmManager.AddAlarm(AlarmCodeWhenHandshaking, false);
                         LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[EQ_READY OFF]");
                         return;
                     }

@@ -186,6 +186,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
 
 
+
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
                     LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");

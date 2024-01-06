@@ -212,8 +212,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (result != AlarmCodes.None)
                 {
                     Sub_Status = SUB_STATUS.DOWN;
-                    LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                    AlarmManager.AddAlarm(result, false);
+                    var alarmCode = AlarmCodeWhenHandshaking == AlarmCodes.None ? result : AlarmCodeWhenHandshaking;
+                    LOG.Critical($"{action} 任務失敗:Alarm:{alarmCode}");
+                    AlarmManager.AddAlarm(alarmCode, false);
                     AGVC.OnAGVCActionChanged = null;
                 }
             });
@@ -274,7 +275,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void WriteTaskNameToFile(string task_Name)
         {
             TaskName = task_Name;
-            File.WriteAllText("task_name.txt", task_Name);
+            try
+            {
+                File.WriteAllText("task_name.txt", task_Name);
+                LOG.TRACE($"任務ID站存寫入檔案成功({task_Name})");
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"任務ID站存寫入檔案失敗.", ex);
+                Task.Run(() => WriteTaskNameToFile(task_Name));
+            }
         }
 
         private void ReadTaskNameFromFile()
