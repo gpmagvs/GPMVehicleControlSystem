@@ -277,7 +277,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.reader.theta = tag_theta;
 
                             module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
-                            await Task.Delay(TimeSpan.FromSeconds(delay_time));
+
+                            Thread.Sleep(TimeSpan.FromSeconds(delay_time));
+
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
                             module_info.Battery.batteryLevel -= 1;
                             EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
@@ -316,7 +318,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                         isPreviousMoveActionNotFinish = false;
                         previousTaskAction = null;
                     }
-                    await Task.Delay(1000);
                     actionServer.SucceedInvoke();
                 });
 
@@ -328,12 +329,12 @@ namespace GPMVehicleControlSystem.Models.Emulators
             IsCharge = true;
             module_info.Battery.chargeCurrent = 23000;
             module_info.Battery.dischargeCurrent = 0;
-            _ = Task.Factory.StartNew(async () =>
+            _ = Task.Run(async () =>
             {
                 await Task.Delay(2000);
                 while (IsCharge)
                 {
-                    await Task.Delay(1000);
+                    Thread.Sleep(1000);
                     module_info.Battery.batteryLevel += 0x04;
                     module_info.Battery.Voltage += 200;
                     if (module_info.Battery.batteryLevel >= 100)
@@ -359,7 +360,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 {
                     try
                     {
-                        await Task.Delay(50);
+                        Thread.Sleep(50);
                         module_info.Battery.maxCellTemperature = (byte)(24 + DateTime.Now.Second / 10.0);
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
