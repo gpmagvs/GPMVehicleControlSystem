@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public clsAGVSConnection AGVs { get; private set; }
 
         private Dictionary<Vehicle.AGV_HSSIGNAL, bool> aGVHsSignalStates;
-        private Dictionary<Vehicle.EQ_HSSIGNAL, bool> eQHsSignalStates;
+        private Dictionary<Vehicle.EQ_HSSIGNAL, clsHandshakeSignalState> eQHsSignalStates;
         public bool Connected { get; private set; } = false;
         public clsEQHandshakeModbusTcp()
         {
@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.Port = ModbusPort;
             StaStored.ConnectingEQHSModbus = this;
         }
-        public bool Start(clsAGVSConnection AGVS, Dictionary<AGV_HSSIGNAL, bool> aGVHsSignalStates, Dictionary<EQ_HSSIGNAL, bool> eQHsSignalStates)
+        public bool Start(clsAGVSConnection AGVS, Dictionary<AGV_HSSIGNAL, bool> aGVHsSignalStates, Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState> eQHsSignalStates)
         {
             try
             {
@@ -101,10 +101,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         outputs[4] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
                         WriteAGVOutputs(outputs);
                         var inputs = ReadEQOutputs();
-                        eQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ] = inputs[0];
-                        eQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ] = inputs[1];
-                        eQHsSignalStates[EQ_HSSIGNAL.EQ_READY] = inputs[2];
-                        eQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY] = inputs[3];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ].State = inputs[0];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ].State = inputs[1];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = inputs[2];
+                        eQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = inputs[3];
                     }
                     catch (Exception ex)
                     {

@@ -256,20 +256,27 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         [HttpGet("EQ_GO_Flick")]
         public async Task EQ_GO_Flick()
         {
+            var EQ_GO_oriState = StaStored.CurrentVechicle.EQHsSignalStates[Vehicle.EQ_HSSIGNAL.EQ_GO].State;
 
-            var EQ_GO_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_GO);
-            var EQ_BUSY_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_BUSY);
-            var EQ_READY_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_READY);
-            var EQ_L_REQ_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_L_REQ);
-            var EQ_U_REQ_oriState = StaStored.CurrentVechicle.WagoDI.GetState(DI_ITEM.EQ_U_REQ);
+            if (!EQ_GO_oriState)
+                return;
+
+            var EQ_BUSY_oriState = StaStored.CurrentVechicle.EQHsSignalStates[Vehicle.EQ_HSSIGNAL.EQ_BUSY].State;
+            var EQ_READY_oriState = StaStored.CurrentVechicle.EQHsSignalStates[Vehicle.EQ_HSSIGNAL.EQ_READY].State;
+            var EQ_L_REQ_oriState = StaStored.CurrentVechicle.EQHsSignalStates[Vehicle.EQ_HSSIGNAL.EQ_L_REQ].State;
+            var EQ_U_REQ_oriState = StaStored.CurrentVechicle.EQHsSignalStates[Vehicle.EQ_HSSIGNAL.EQ_U_REQ].State;
 
 
             StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_GO, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, false);
-            await Task.Delay(300);
+            if (EQ_BUSY_oriState)
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, !EQ_BUSY_oriState);
+            if (EQ_READY_oriState)
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, !EQ_READY_oriState);
+            if (EQ_L_REQ_oriState)
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, !EQ_L_REQ_oriState);
+            if (EQ_U_REQ_oriState)
+                StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, !EQ_U_REQ_oriState);
+            await Task.Delay(100);
 
             StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_GO, EQ_GO_oriState);
             StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, EQ_BUSY_oriState);

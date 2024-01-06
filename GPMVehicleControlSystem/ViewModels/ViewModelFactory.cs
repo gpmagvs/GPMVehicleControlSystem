@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     NavInfo = new NavStateVM
                     {
                         Destination = AGV.ExecutingTaskModel == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
-                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph=new Graph { Display="" } } : AGV.DestinationMapPoint,
+                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph = new Graph { Display = "" } } : AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
                         PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
@@ -80,7 +80,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     CargoExist = AGV.HasAnyCargoOnAGV(),
                     HandShakeSignals = new
                     {
-                        EQ = AGV.EQHsSignalStates,
+                        EQ = AGV.EQHsSignalStates.ToDictionary(kp => kp.Key, kp => kp.Value.State),
                         AGV = AGV.AGVHsSignalStates
                     },
                     HandShakeTimers = AGV.EQHSTimers,
