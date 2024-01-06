@@ -375,7 +375,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 bool needReOnline = false;
-                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && (Debugger.IsAttached ? true : !_RunTaskData.IsLocalTask))
+                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && !_RunTaskData.IsLocalTask)
                 {
                     if (status != TASK_RUN_STATUS.ACTION_FINISH)
                     {
@@ -418,7 +418,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
-                if ((Debugger.IsAttached ? true : !_RunTaskData.IsLocalTask))
+                if (!_RunTaskData.IsLocalTask)
                 {
                     double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                     double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);

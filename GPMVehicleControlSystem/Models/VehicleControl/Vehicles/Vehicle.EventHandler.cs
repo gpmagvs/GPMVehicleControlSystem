@@ -26,6 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class Vehicle
     {
         private bool IsLaserRecoveryHandled = false;
+        internal bool WaitingForChargeStatusChangeFlag = false;
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
             get
@@ -671,18 +672,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
 
-
-                if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
-                {
-                    IsCharging = Batteries.Values.Any(battery => battery.IsCharging());
-                    //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
-                    if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
-                        Sub_Status = Sub_Status == SUB_STATUS.Charging ? SUB_STATUS.IDLE : Sub_Status;
-                }
+                if (!WaitingForChargeStatusChangeFlag)
+                    JudgeIsBatteryCharging();
 
                 stopwatch.Stop();
-                if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
-                    LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
+                //if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
+                //    LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
 
             }
             catch (Exception ex)
@@ -690,6 +685,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.Critical(ex);
             }
         }
+
 
         private MapPoint GetLastVisitedMapPoint()
         {

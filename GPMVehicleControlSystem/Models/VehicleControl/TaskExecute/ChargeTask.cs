@@ -49,20 +49,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.Forward();
         }
 
-        protected override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            var result = base.HandleAGVCActionSucceess();
-            if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.IsChargeCircuitOpened)
+            Agv.WaitingForChargeStatusChangeFlag = true;
+            await Task.Delay(1000);
+            Agv._IsCharging = true;
+            Agv.Sub_Status = SUB_STATUS.Charging;
+            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+
+            //將狀態設為充電中後 ,開始等待電池真正開始充電
+
+            _ = Task.Run(async () =>
             {
-                Task.Run(async () =>
-                {
-                    await Task.Delay(2000);
-                    Agv.Sub_Status = SUB_STATUS.Charging;
-                });
-            }
-            if (Agv.IsCharging)
-                Agv.Sub_Status = SUB_STATUS.Charging;
-            return result;
+                Thread.Sleep(10000);
+                Agv.WaitingForChargeStatusChangeFlag = false;
+                //if (!Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold)
+                //{
+                //    LOG.TRACE($"充電站任務完成後10sec, 判斷是否充電中");
+                //    Agv.JudgeIsBatteryCharging();
+                //}
+            });
+
+            //if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.IsChargeCircuitOpened)
+            //{
+            //    Task.Run(async () =>
+            //    {
+            //        await Task.Delay(2000);
+            //        Agv.Sub_Status = SUB_STATUS.Charging;
+            //    });
+            //}
+            //if (Agv.IsCharging)
+            //    Agv.Sub_Status = SUB_STATUS.Charging;
+
+            return (true, AlarmCodes.None);
         }
     }
 }
