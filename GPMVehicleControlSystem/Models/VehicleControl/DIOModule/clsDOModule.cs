@@ -108,53 +108,60 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 while (true)
                 {
                     Thread.Sleep(50);
-
-                    if (_Connected)
+                    try
                     {
-                        try
-                        {
-                            master?.ReadCoils(0, 1);//just keep tcp connection 
-                        }
-                        catch (Exception ex)
-                        {
-                            LOG.ERROR($"DO Read Coils Fail.");
-                            _Connected = false;
-                            continue;
-                        }
-
-                        if (OutputWriteRequestQueue.Count == 0)
-                            continue;
-
-                        reconnect_cnt = 0;
-                        if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
+                        if (_Connected)
                         {
                             try
                             {
-                                WriteToDevice(to_handle_obj);
-                                lastWriteTime = DateTime.Now;
+                                master?.ReadCoils(0, 1);//just keep tcp connection 
                             }
                             catch (Exception ex)
                             {
-                                OutputWriteRequestQueue.Enqueue(to_handle_obj);
-                                LOG.ERROR(ex.Message, ex);
+                                LOG.ERROR($"DO Read Coils Fail.");
                                 _Connected = false;
                                 continue;
                             }
+
+                            if (OutputWriteRequestQueue.Count == 0)
+                                continue;
+
+                            reconnect_cnt = 0;
+                            if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
+                            {
+                                try
+                                {
+                                    WriteToDevice(to_handle_obj);
+                                    lastWriteTime = DateTime.Now;
+                                }
+                                catch (Exception ex)
+                                {
+                                    OutputWriteRequestQueue.Enqueue(to_handle_obj);
+                                    LOG.ERROR(ex.Message, ex);
+                                    _Connected = false;
+                                    continue;
+                                }
+                            }
                         }
-                    }
-                    else
-                    {
-                        if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
+                        else
                         {
-                            Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            Thread.Sleep(100);
-                            Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
+                            if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
+                            {
+                                Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
+                                Thread.Sleep(100);
+                                Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
+                            }
+                            LOG.WARN($"DO Module try reconnecting..");
+                            Disconnect();
+                            _Connected = await Connect();
+                            continue;
                         }
-                        LOG.WARN($"DO Module try reconnecting..");
-                        Disconnect();
-                        _Connected = await Connect();
-                        continue;
                     }
+                    catch (Exception ex)
+                    {
+
+                    }
+
                 }
             });
         }
@@ -306,7 +313,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             if (_Connected)
             {
-                master?.WriteMultipleCoils(Start, new bool[Size]);
+                try
+                {
+                    master?.WriteMultipleCoils(Start, new bool[Size]);
+                }
+                catch (Exception ex)
+                {
+                }
                 LOG.INFO($"Wago DO All OFF Done.");
             }
         }
