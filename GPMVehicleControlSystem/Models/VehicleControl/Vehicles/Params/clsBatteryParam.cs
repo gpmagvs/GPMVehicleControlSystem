@@ -15,6 +15,10 @@
         /// 單位: mV
         /// </summary>
         public int CutOffChargeRelayVoltageThreshodlval { get; set; } = 28800;
+        /// <summary>
+        /// 當充電任務完成後 等待此秒數後 變更車子狀態
+        /// </summary>
+        public int WaitChargeStartDelayTimeWhenReachChargeTaskFinish { get; set; } = 10;
 
     }
 }

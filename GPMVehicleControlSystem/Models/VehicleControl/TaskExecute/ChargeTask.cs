@@ -61,25 +61,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             _ = Task.Run(async () =>
             {
-                Thread.Sleep(10000);
+                var _delayTime = Agv.Parameters.BatteryModule.WaitChargeStartDelayTimeWhenReachChargeTaskFinish;
+                LOG.INFO($"AGV Sub Status Will Changed by charge state after {_delayTime } second ");
+                Thread.Sleep(TimeSpan.FromSeconds(_delayTime));
                 Agv.WaitingForChargeStatusChangeFlag = false;
-                //if (!Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold)
-                //{
-                //    LOG.TRACE($"充電站任務完成後10sec, 判斷是否充電中");
-                //    Agv.JudgeIsBatteryCharging();
-                //}
+                LOG.INFO($"AGV Sub Status Will Changed by charge state");
             });
-
-            //if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.IsChargeCircuitOpened)
-            //{
-            //    Task.Run(async () =>
-            //    {
-            //        await Task.Delay(2000);
-            //        Agv.Sub_Status = SUB_STATUS.Charging;
-            //    });
-            //}
-            //if (Agv.IsCharging)
-            //    Agv.Sub_Status = SUB_STATUS.Charging;
 
             return (true, AlarmCodes.None);
         }
