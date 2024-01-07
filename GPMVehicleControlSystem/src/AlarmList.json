@@ -340,6 +340,11 @@
     "CN": "牙叉高度參數異常"
   },
   {
+    "Code": 715,
+    "Description": "Fork Action Fail When Reach Secondary Point",
+    "CN": "抵達二次定位點時牙叉動作失敗"
+  },
+  {
     "Code": 800,
     "Description": "Ground Hole Sensor Error",
     "CN": "地洞Sensor異常"
@@ -1205,6 +1210,21 @@
     "CN": "派車取消任務即停"
   },
   {
+    "Code": 3501,
+    "Description": "AGVS_ALIVE_CHECK_TIMEOUT",
+    "CN": "與派車Alive Check 逾時"
+  },
+  {
+    "Code": 3502,
+    "Description": "AGVs_Disconnected",
+    "CN": "與派車系統斷線"
+  },
+  {
+    "Code": 3503,
+    "Description": "AGVS_PING_FAIL",
+    "CN": "與派車系統通訊Ping失敗"
+  },
+  {
     "Code": 4010,
     "Description": "Under-voltage protection",
     "CN": "馬達低電壓保護"
@@ -1915,9 +1935,29 @@
     "CN": "ROS Bridge Server 斷線"
   },
   {
+    "Code": 860021,
+    "Description": "Fork_WorkStation_Teach_Data_Not_Found_Tag",
+    "CN": "此設備尚未設定牙叉高度參數"
+  },
+  {
+    "Code": 860022,
+    "Description": "Fork_WorkStation_Teach_Data_Not_Found_Tag",
+    "CN": "此設備尚未設定多層牙叉高度參數"
+  },
+  {
+    "Code": 860023,
+    "Description": "Fork_Arm_Pose_Error",
+    "CN": "牙叉手臂水平位置異常"
+  },
+  {
+    "Code": 860025,
+    "Description": "Fork_Frontend_has_Obstacle",
+    "CN": "牙叉前端障礙物"
+  },
+  {
     "Code": 860026,
     "Description": "Fork Has Cargo But Initialize Action Running",
-    "CN": "牙叉上有貨物但初始化執行中警告"
+    "CN": "始化執行中時AGV車上有貨物警告"
   },
   {
     "Code": 860027,
