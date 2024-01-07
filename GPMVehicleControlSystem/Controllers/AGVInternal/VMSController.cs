@@ -94,6 +94,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     _message = "AGV必須停在TAG上";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online)
                     _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
+                else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online_In_Equipment)
+                    _message = $"AGV位於設備內(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
                 else if (result.return_code == RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing)
                     _message = "AGV執行任務中不可切換Online/Offline Mode";
                 else if (result.return_code == RETURN_CODE.AGV_Not_Initialized)

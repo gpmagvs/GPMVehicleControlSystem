@@ -85,6 +85,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
+                if (lastVisitedMapPoint.StationType!= STATION_TYPE.Normal && !lastVisitedMapPoint.IsCharge)
+                {
+                    AlarmManager.AddWarning(AlarmCodes.Cant_Online_In_Equipment);
+                    return (false, RETURN_CODE.Current_Tag_Cannot_Online_In_Equipment);
+                }
                 if (!bypassStatusCheck && Parameters.ForbidToOnlineTags.Contains(currentTag))
                 {
                     AlarmManager.AddWarning(AlarmCodes.Cant_Online_With_Forbid_Tag);
