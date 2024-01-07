@@ -17,7 +17,7 @@ using System.Diagnostics;
 namespace GPMVehicleControlSystem.Models.Emulators
 {
 
-    public class AGVROSEmulator
+    public partial class AGVROSEmulator
     {
         protected RosSocket? rosSocket;
         private ModuleInformation module_info = new ModuleInformation()
@@ -152,7 +152,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
             rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
+            rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/command_action", VerticalActionCallback);
         }
+
 
         /// <summary>
         /// 建立 barcodemovebase server
@@ -353,7 +355,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);
-            await Task.Factory.StartNew(async () =>
+            await Task.Run(async () =>
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (rosSocket.protocol.IsAlive())
@@ -372,7 +374,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             LOGBatteryStatus(module_info.Battery);
                             stopwatch.Restart();
                         }
-
+                        module_info.Action_Driver.position = (float)currentVerticalPosition;
                         rosSocket.Publish("AGVC_Emu", module_info);
                     }
                     catch (Exception ex)
@@ -449,7 +451,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
             return true;
         }
-        private void EmuLog(string msg, bool show_console = true)
+        internal void  EmuLog(string msg, bool show_console = true)
         {
             LOG.TRACE($"[車控模擬] {msg}", show_console);
         }
