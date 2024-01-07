@@ -196,16 +196,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
                 {
-                    if (taskDownloadData.Action_Type == ACTION_TYPE.None)
-                        orderInfoViewModel = taskDownloadData.OrderInfo;
-                    else
-                    {
-                        orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
-                        {
-                            ActionName = taskDownloadData.Action_Type,
-                            DestineName = DestinationMapPoint == null ? taskDownloadData.Destination.ToString() : DestinationMapPoint.Name
-                        };
-                    }
+                    orderInfoViewModel = taskDownloadData.OrderInfo;
+                   
                 }
 
                 var result = await ExecutingTaskModel.Execute();

@@ -109,8 +109,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             var _OrderInfo = new clsTaskDownloadData.clsOrderInfo
             {
                 ActionName = action,
-                SourceName = fromStationFound?.Name,
-                DestineName = toStationFound?.Name,
+                SourceName = fromStationFound?.Graph.Display,
+                DestineName = toStationFound?.Graph.Display,
                 SourceTag = fromStationFound.TagNumber,
                 DestineTag = toStationFound.TagNumber
             };
