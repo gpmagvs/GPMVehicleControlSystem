@@ -424,10 +424,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             IsSystemInitialized = true;
                             AlarmManager.Active = true;
                             AlarmManager.AddAlarm(AlarmCodes.None);
-
-
-
-
+                            if (HasAnyCargoOnAGV() && CSTReader != null)
+                            {
+                                CSTReader.ReadCSTIDFromLocalStorage();
+                            }
                         }
                     }
                     );

@@ -37,6 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return;
                     }
                     LOG.TRACE($"CST ID CHANGED TO {value} (Old= {_ValidCSTID})");
+                    SaveCSTIDToLocalStorage(value);
                     _ValidCSTID = value;
                 }
             }
@@ -47,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override async Task<bool> CheckStateDataContent()
         {
 
-            if (! await base.CheckStateDataContent())
+            if (!await base.CheckStateDataContent())
                 return false;
             State = Data.state;
             return true;
@@ -56,6 +57,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         internal void UpdateCSTIDDataHandler(object? sender, string cst_id)
         {
             ValidCSTID = cst_id;
+        }
+        private string CstIDStoreFileFullName => Path.Combine(Environment.CurrentDirectory, "cst_read_id.txt");
+        private void SaveCSTIDToLocalStorage(string cst_id)
+        {
+            try
+            {
+                File.WriteAllText(CstIDStoreFileFullName, cst_id);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
+        }
+        internal void ReadCSTIDFromLocalStorage()
+        {
+            try
+            {
+                if (!File.Exists(CstIDStoreFileFullName))
+                    return;
+                ValidCSTID = File.ReadAllText(CstIDStoreFileFullName);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
+
         }
     }
 
