@@ -110,7 +110,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 ActionName = action,
                 SourceName = fromStationFound?.Name,
-                DestineName = toStationFound?.Name
+                DestineName = toStationFound?.Name,
+                SourceTag = fromStationFound.TagNumber,
+                DestineTag = toStationFound.TagNumber
             };
             if (fromStationFound == null)
             {
@@ -167,7 +169,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           await Task.Delay(10);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
-                          while (agv.AGVC._ActionStatus !=  RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
+                          while (agv.AGVC._ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               {
