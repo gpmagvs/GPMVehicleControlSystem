@@ -1,6 +1,7 @@
 ﻿using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
@@ -165,6 +166,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary { get; set; } = true;
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = true;
+        public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
+        public double SaftyPositionHeight { get; set; } = 20;
     }
     public class clsInspectionAGVParams
     {

@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using SQLitePCL;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 
@@ -16,6 +17,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     {
 
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.None;
+        private bool ForkActionStartWhenReachSecondartPTFlag = false;
+        private static int NextSecondartPointTag = 0;
+        private static int NextWorkStationPointTag = 0;
         public NormalMoveTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             var destine = taskDownloadData.Destination;
@@ -25,8 +29,109 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
             }
+
+            Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+            ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(taskDownloadData, out NextSecondartPointTag, out NextWorkStationPointTag);
+            LOG.INFO($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
+            if (ForkActionStartWhenReachSecondartPTFlag)
+            {
+                Agv.BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+            }
         }
 
+        private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
+        {
+            DoActionTag = nextWorkStationPointTag = -1;
+
+            if (Agv.Parameters.AgvType != AGV_TYPE.FORK || Agv.Parameters.ForkAGV.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION)
+                return false;
+
+            var _next_action = taskDownloadData.OrderInfo.ActionName;
+            bool _need = _next_action == ACTION_TYPE.Load || _next_action == ACTION_TYPE.Unload || _next_action == ACTION_TYPE.Charge || _next_action == ACTION_TYPE.LoadAndPark;
+            if (_need)
+            {
+                var workstation_tag = !taskDownloadData.OrderInfo.IsTransferTask ? taskDownloadData.OrderInfo.DestineTag :
+                                        _next_action == ACTION_TYPE.Unload ? taskDownloadData.OrderInfo.SourceTag : taskDownloadData.OrderInfo.DestineTag;
+
+                if (!Agv.NavingMap.GetStationTags().Contains(workstation_tag))
+                {
+                    LOG.WARN($"圖資中不存在 Tag {workstation_tag}");
+                    return false;
+                }
+
+                var workstation_point = Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == workstation_tag);
+                if (workstation_point == null)
+                {
+                    LOG.WARN($"圖資中不存在站點 {workstation_tag}");
+                    return false;
+                }
+                if (workstation_point.StationType == STATION_TYPE.Normal)
+                {
+                    LOG.WARN($"工作站點的類型錯誤 {workstation_point.StationType}");
+                    return false;
+                }
+
+                nextWorkStationPointTag = workstation_point.TagNumber;
+                var _secondary_pt_index = workstation_point.Target.First().Key;
+                if (Agv.NavingMap.Points.TryGetValue(_secondary_pt_index, out MapPoint secondaryPoint))
+                {
+                    DoActionTag = secondaryPoint.TagNumber;
+                    return true;
+                }
+                else
+                {
+                    LOG.WARN($"找不到工作點位的二次定位點 TAG ({_next_action})");
+                    return false;
+                }
+
+            }
+            else
+            {
+                LOG.WARN($"訂單任務下一個動作不需要升降牙叉({_next_action})");
+
+                return false;
+            }
+        }
+
+        internal static void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+        {
+            ForkAGV? forkAGV = (StaStored.CurrentVechicle as ForkAGV);
+            var _currentTag = forkAGV.BarcodeReader.CurrentTag;
+            if (_currentTag == null)
+                return;
+            if (NextSecondartPointTag == _currentTag)
+            {
+                try
+                {
+                    forkAGV.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+                    var isunLoad = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
+                    var ischarge = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
+
+                    double _position_aim = 0;
+                    var forkHeightSetting = forkAGV.WorkStations.Stations[NextWorkStationPointTag].LayerDatas[forkAGV._RunTaskData.Height];
+                    _position_aim = isunLoad || ischarge ? forkHeightSetting.Down_Pose : forkHeightSetting.Up_Pose;
+
+                    var _Height_PreAction = forkAGV.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? forkAGV.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
+                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至({_Height_PreAction}cm)");
+
+                    Task.Run(async () =>
+                    {
+                        var result = await forkAGV.ForkLifter.ForkPose(_Height_PreAction, 1);
+                        if (!result.confirm)
+                        {
+                            forkAGV.SoftwareEMO(AlarmCodes.Fork_Action_Aborted);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LOG.Critical(ex.Message, ex);
+                    forkAGV.SoftwareEMO(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                }
+
+            }
+
+        }
 
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
@@ -72,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(1);
                     if (cts.IsCancellationRequested)
                     {
-                        Agv.IsCargoBiasDetecting =  false;
+                        Agv.IsCargoBiasDetecting = false;
                         LOG.ERROR($"Wait AGV Move(Active) Timeout, cargo Bias Detection not start.");
                         return;
                     }

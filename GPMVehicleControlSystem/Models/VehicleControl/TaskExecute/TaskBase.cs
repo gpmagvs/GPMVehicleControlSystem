@@ -20,6 +20,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using AGVSystemCommonNet6;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -94,7 +95,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             this.Agv = Agv;
             RunningTaskData = taskDownloadData;
-            LOG.INFO($"New Task : \r\nTask Name:{taskDownloadData.Task_Name}\r\n Task_Simplex:{taskDownloadData.Task_Simplex}\r\nTask_Sequence:{taskDownloadData.Task_Sequence}");
+            LOG.INFO($"New Task : " +
+                $"\r\nTask Name:{taskDownloadData.Task_Name}" +
+                $"\r\nTask_Simplex:{taskDownloadData.Task_Simplex}" +
+                $"\r\nTask_Sequence:{taskDownloadData.Task_Sequence}" +
+                $"\r\nTrajecory :{(taskDownloadData.ExecutingTrajecory.Length == 0 ? "empty" : string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID)))}" +
+                $"\r\nOrder Info : {taskDownloadData.OrderInfo.ToJson()}");
 
         }
         public int ModBusTcpPort
@@ -160,7 +166,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
-                        var forkGoHomeResult = await ForkLifter.ForkGoHome();
+                        Vehicles.Params.clsForkAGVParams _forkAGVOption = Agv.Parameters.ForkAGV;
+
+                        bool _isNeedToForkHome = _forkAGVOption.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION ||
+                            _forkAGVOption.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION && ForkLifter.Driver.CurrentPosition > _forkAGVOption.SaftyPositionHeight;
+
+                        (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = _isNeedToForkHome ? await ForkLifter.ForkGoHome() : new(true, AlarmCodes.None);
                         if (!forkGoHomeResult.confirm)
                         {
                             return AlarmCodes.Fork_Arm_Pose_Error;
@@ -173,7 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         if (!Agv.Parameters.LDULD_Task_No_Entry | action == ACTION_TYPE.Charge)
                         {
-
+                            
                             var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_);
                             if (!forkGoTeachPositionResult.success)
                             {
@@ -263,7 +274,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
         }
 
-        
+
 
         protected bool IsAGVCActionNoOperate(ActionStatus status, Action<ActionStatus> actionStatusChangedCallback)
         {
@@ -463,7 +474,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(FORK_HEIGHT_POSITION position)
         {
-            LOG.WARN($"Before In Work Station, Fork Pose Change ,Tag:{destineTag},{position}");
+            LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position== FORK_HEIGHT_POSITION.UP_? "Load Pose":"Unload Pose")}");
             await RegisterSideLaserTriggerEvent();
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
             await UnRegisterSideLaserTriggerEvent();

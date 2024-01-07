@@ -20,7 +20,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class ForkAGV : SubmarinAGV
     {
+
+        public enum FORK_SAFE_STRATEGY
+        {
+            AT_HOME_POSITION,
+            UNDER_SAFTY_POSITION
+        }
         public bool IsForkInitialized => ForkLifter.IsInitialized;
+        public bool IsForkWorking => (AGVC as ForkAGVController).WaitActionDoneFlag;
+
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
         public ForkAGV() : base()
@@ -141,6 +149,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
             (bool confirm, string message) baseInitize = await base.InitializeActions(cancellation);
+            ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+
             if (!baseInitize.confirm)
                 return baseInitize;
             if (ForkLifter.Enable)
@@ -152,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+                bool isForkAllowNoDoInitializeAction = Parameters.SimulationMode || Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
                 (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
                 if (isForkAllowNoDoInitializeAction)
                 {
@@ -174,6 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (!Parameters.SensorBypass.BeltSensorBypass)
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+
                 AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
             }
@@ -221,7 +232,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
         }
 
-      
+
         protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
             if (!status)

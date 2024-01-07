@@ -130,10 +130,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
 
-            bool isForkWorking = (forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag;
-            string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkAction;
+            string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkActionRequesting.command;
 
-            if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag && action != "stop")
+            if (forkAgv.IsForkWorking && action != "stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
             if (action == "home" | action == "orig")

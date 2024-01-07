@@ -27,7 +27,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
         public bool WaitActionDoneFlag { get; private set; } = false;
-        public string CurrentForkAction { get; private set; } = "";
+        
+        public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
         public double InitForkSpeed = 1;
         public ForkAGVController()
         {
@@ -45,7 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
         {
-            LOG.INFO($"{CurrentForkAction} command action ack. AGVC Reply command =  {tin.command}");
+            LOG.INFO($"{CurrentForkActionRequesting.command} command action ack. AGVC Reply command =  {tin.command}");
             IsZAxisActionDone = true;
             response = new VerticalCommandResponse()
             {
@@ -54,8 +55,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool command_reply_done = tin.command == "done";
             if (!command_reply_done)
             {
-                LOG.INFO($"{CurrentForkAction} command   action not done.. AGVC Reply command =  {tin.command}");
+                LOG.INFO($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
             }
+            CurrentForkActionRequesting=new VerticalCommandRequest();
             return IsZAxisActionDone;
         }
         public async Task<(bool confirm, string message)> ZAxisInit()
@@ -234,7 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             try
             {
-                CurrentForkAction = request.command;
+                CurrentForkActionRequesting = request;
 
                 LOG.INFO($"Try rosservice call /command_action : {request.ToJson()}");
 

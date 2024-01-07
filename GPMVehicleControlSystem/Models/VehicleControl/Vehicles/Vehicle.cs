@@ -668,6 +668,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.ClearAlarm();
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             Parameters.EQHandshakeMethod = Parameters._EQHandshakeMethodStore;
+            BarcodeReader.OnAGVReachingTag -= NormalMoveTask.BarcodeReader_OnAGVReachingTag;
             SaveParameters(Parameters);
 
             return await Task.Run(async () =>
@@ -879,6 +880,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            BarcodeReader.OnAGVReachingTag -= NormalMoveTask.BarcodeReader_OnAGVReachingTag;
             LOG.WARN($"Software EMO!!! {alarmCode}");
             AlarmManager.AddAlarm(alarmCode);
             _Sub_Status = SUB_STATUS.DOWN;

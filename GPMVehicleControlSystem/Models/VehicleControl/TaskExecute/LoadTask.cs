@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal bool back_to_secondary_flag = false;
         internal WORKSTATION_HS_METHOD _eqHandshakeMode;
-        
+
 
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
@@ -582,9 +582,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     if (IsNeedWaitForkHome)
                     {
-                        LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
-                        Task.WaitAll(new Task[] { forkGoHomeTask });
-                        LOG.TRACE($"[Async Action] Fork is Home Now");
+
+                        if (Agv.Parameters.ForkAGV.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION)
+                        {
+                            LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                            Task.WaitAll(new Task[] { forkGoHomeTask });
+                            LOG.TRACE($"[Async Action] Fork is Home Now");
+                        }
+                        else
+                        {
+                            WaitForkPositionUnderSaftyHeight();
+                            LOG.TRACE($"[Async Action] Fork is at safe height Now");
+                        }
                     }
 
                     var HSResult = await AGVCOMPTHandshake();
@@ -643,6 +652,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
         }
 
+        private void WaitForkPositionUnderSaftyHeight()
+        {
+            var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
+
+            LOG.INFO($"Start Wait Fork Position({ForkLifter.Driver.CurrentPosition}) Under Safty Setting({_safty_height})");
+            while (ForkLifter.Driver.CurrentPosition >= _safty_height)
+            {
+                Thread.Sleep(1);
+            }
+            LOG.INFO($"Fork Position({ForkLifter.Driver.CurrentPosition}) Under Safty Setting({_safty_height})");
+        }
 
         private async Task<(bool confirm, AlarmCodes alarmCode)> AGVCOMPTHandshake()
         {
