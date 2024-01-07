@@ -36,5 +36,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             bool response = await http.GetAsync<bool>(url);
             return Ok(response);
         }
+        [HttpGet("GetNormalStations")]
+        public async Task<IActionResult> GetNormalStations()
+        {
+            var datas = StaStored.CurrentVechicle.NavingMap.Points.Values.Where(pt => pt.StationType == AGVSystemCommonNet6.AGVDispatch.Messages.STATION_TYPE.Normal)
+                                                             .Where(pt => !pt.IsVirtualPoint)
+                                                             .Select(pt => new { tag = pt.TagNumber, name = pt.Graph.Display }).ToList();
+            datas = datas.OrderBy(pt => pt.tag).ToList();
+            return Ok(datas);
+        }
     }
 }
