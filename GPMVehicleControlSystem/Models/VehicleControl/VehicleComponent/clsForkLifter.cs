@@ -102,6 +102,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 是否啟用牙叉功能
         /// </summary>
         internal bool Enable => forkAGV.Parameters.ForkLifer_Enable;
+        internal double HSafe => forkAGV.Parameters.ForkAGV.SaftyPositionHeight;
         public Dictionary<int, clsWorkStationData> StationDatas
         {
             get
@@ -208,10 +209,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             if (!response.confirm)
                 return (false, AlarmCodes.Action_Timeout);
-            if (!DIModule.GetState(DI_ITEM.Vertical_Home_Pos))
-                return (false, AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
-            else
-                return (true, AlarmCodes.None);
+            return (true, AlarmCodes.None);
+            //if (!DIModule.GetState(DI_ITEM.Vertical_Home_Pos))
+            //    return (false, AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+            //else
         }
         public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
         {

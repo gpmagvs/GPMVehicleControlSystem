@@ -9,6 +9,7 @@ using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -94,6 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CommonEventsRegist()
         {
             base.CommonEventsRegist();
+            (AGVC as ForkAGVController).OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)

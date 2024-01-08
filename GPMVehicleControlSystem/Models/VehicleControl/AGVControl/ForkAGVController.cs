@@ -27,7 +27,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
         public bool WaitActionDoneFlag { get; private set; } = false;
-        
+        public double HSafeSetting { get; private set; }
+
+        public double CurrentPosition { get; set; }
+
+        public delegate double OnForkStartGoHomeDelage();
+        public OnForkStartGoHomeDelage OnForkStartGoHome;
+
         public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
         public double InitForkSpeed = 1;
         public ForkAGVController()
@@ -57,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 LOG.INFO($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
             }
-            CurrentForkActionRequesting=new VerticalCommandRequest();
+            CurrentForkActionRequesting = new VerticalCommandRequest();
             return IsZAxisActionDone;
         }
         public async Task<(bool confirm, string message)> ZAxisInit()
@@ -115,6 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 while (!IsZAxisActionDone)
                 {
                     Thread.Sleep(1);
+
                     if (wait_action_down_cts.IsCancellationRequested)
                     {
                         sw.Stop();
@@ -122,6 +129,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         string log_ = $"Fork Lifter Wait Action Done Fail- {reason}";
                         LOG.Critical(log_);
                         return (false, log_);
+                    }
+                    if (CurrentForkActionRequesting.command == "orig" && CurrentPosition < HSafeSetting)
+                    {
+                        WaitActionDoneFlag = false;
+                        return (true, "Position under safety height.");
                     }
                 }
                 WaitActionDoneFlag = false;
@@ -185,6 +197,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             IsZAxisActionDone = false;
             WaitActionDoneFlag = wait_done;
+            HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
+            LOG.INFO($"Fork ready Go Home Position,HSafe={HSafeSetting}");
             VerticalCommandRequest request = new VerticalCommandRequest
             {
                 model = "FORK",

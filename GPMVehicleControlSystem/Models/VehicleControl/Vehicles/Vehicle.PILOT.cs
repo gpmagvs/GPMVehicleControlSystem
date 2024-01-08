@@ -197,16 +197,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
                 {
                     orderInfoViewModel = taskDownloadData.OrderInfo;
-                   
+
                 }
 
-                var result = await ExecutingTaskModel.Execute();
-                if (result != AlarmCodes.None)
+                List<AlarmCodes> alarmCodes = await ExecutingTaskModel.Execute();
+                if (alarmCodes.Count != 0)
                 {
                     Sub_Status = SUB_STATUS.DOWN;
-                    var alarmCode = AlarmCodeWhenHandshaking == AlarmCodes.None ? result : AlarmCodeWhenHandshaking;
-                    LOG.Critical($"{action} 任務失敗:Alarm:{alarmCode}");
-                    AlarmManager.AddAlarm(alarmCode, false);
+                    if (AlarmCodeWhenHandshaking != AlarmCodes.None)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodeWhenHandshaking, false);
+                        LOG.Critical($"{action} 任務失敗:Alarm:{AlarmCodeWhenHandshaking}");
+                    }
+                    else
+                    {
+                        alarmCodes.ForEach(alarm =>
+                        {
+                            AlarmManager.AddAlarm(alarm, false);
+                        });
+                        LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", alarmCodes)}");
+                    }
                     AGVC.OnAGVCActionChanged = null;
                 }
             });

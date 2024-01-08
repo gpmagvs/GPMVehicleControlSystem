@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             DoActionTag = nextWorkStationPointTag = -1;
 
-            if (Agv.Parameters.AgvType != AGV_TYPE.FORK || Agv.Parameters.ForkAGV.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION)
+            if (Agv.Parameters.AgvType != AGV_TYPE.FORK)
                 return false;
 
             var _next_action = taskDownloadData.OrderInfo.ActionName;

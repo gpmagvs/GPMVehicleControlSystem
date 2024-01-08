@@ -133,75 +133,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <summary>
         /// 執行任務
         /// </summary>
-        public async Task<AlarmCodes> Execute()
+        public async Task<List<AlarmCodes>> Execute()
         {
             try
             {
-
                 await Task.Delay(10);
                 BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
                 {
-                    return AlarmCodes.Laser_Mode_value_fail;
+                    return new List<AlarmCodes> { AlarmCodes.Laser_Mode_value_fail };
                 }
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
-                    return checkResult.alarm_code;
+                    return new List<AlarmCodes> { checkResult.alarm_code };
                 }
                 await Task.Delay(10);
                 LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:Action:{action}\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}");
 
                 if (ForkLifter != null)
                 {
-                    if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
+                    (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(action);
+                    if (!forkActionsResult.success)
                     {
-                        await ForkLifter.ForkShortenInAsync();
-                    }
-                }
-
-                if (action == ACTION_TYPE.None)
-                {
-                    if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
-                    {
-                        Vehicles.Params.clsForkAGVParams _forkAGVOption = Agv.Parameters.ForkAGV;
-
-                        bool _isNeedToForkHome = _forkAGVOption.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION ||
-                            _forkAGVOption.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION && ForkLifter.Driver.CurrentPosition > _forkAGVOption.SaftyPositionHeight;
-
-                        (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = _isNeedToForkHome ? await ForkLifter.ForkGoHome() : new(true, AlarmCodes.None);
-                        if (!forkGoHomeResult.confirm)
-                        {
-                            return AlarmCodes.Fork_Arm_Pose_Error;
-                        }
-                    }
-                }
-                else
-                {
-                    if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
-                    {
-                        if (!Agv.Parameters.LDULD_Task_No_Entry | action == ACTION_TYPE.Charge)
-                        {
-                            
-                            var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_);
-                            if (!forkGoTeachPositionResult.success)
-                            {
-                                return forkGoTeachPositionResult.alarm_code;
-                            }
-                        }
+                        return forkActionsResult.alarm_codes;
                     }
                 }
                 if (AGVCActionStatusChaged != null)
                     AGVCActionStatusChaged = null;
 
-
-
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
                     LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
-                    return AlarmCodes.AGV_State_Cant_do_this_Action;
+                    return new List<AlarmCodes> { AlarmCodes.AGV_State_Cant_do_this_Action };
                 }
 
                 SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
@@ -217,14 +183,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(Debugger.IsAttached ? 3000 : 100);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
-                        return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
+                        return new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
                     else
                     {
                         await Task.Delay(1000);
                         if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
                         {
                             HandleAGVCActionSucceess();
-                            return AlarmCodes.None;
+                            return new List<AlarmCodes>();
                         }
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
@@ -237,7 +203,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
                                 if (!isNoObstacle)
                                     if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
-                                        return FrontendSecondarSensorTriggerAlarmCode;
+                                        return new List<AlarmCodes> { FrontendSecondarSensorTriggerAlarmCode };
                                     else
                                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                                 #endregion
@@ -248,13 +214,61 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
-                return AlarmCodes.None;
+                return new List<AlarmCodes>();
             }
             catch (Exception ex)
             {
                 throw ex;
             }
 
+        }
+
+        private async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(ACTION_TYPE action)
+        {
+            List<Task> tasks = new List<Task>();
+            List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
+            if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    await ForkLifter.ForkShortenInAsync();
+                }));
+
+            }
+
+            if (action == ACTION_TYPE.None) //一般走行任務
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    LOG.WARN($"一般走行任務-牙叉回HOME");
+                    (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = await ForkLifter.ForkGoHome();
+                    if (!forkGoHomeResult.confirm)
+                        alarmCodes.Add(forkGoHomeResult.alarm_code);
+                    else
+                        LOG.WARN($"一般走行任務-牙叉回HOME-牙叉已位於安全位置({ForkLifter.fork_ros_controller.CurrentPosition} cm)");
+                }));
+            }
+            else if (action == ACTION_TYPE.Charge
+                        || action == ACTION_TYPE.Load
+                        || action == ACTION_TYPE.Unload
+                        || action == ACTION_TYPE.LoadAndPark)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度");
+                    var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_);
+                    if (!forkGoTeachPositionResult.success)
+                        alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
+                    else
+                        LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度-牙叉已升至{ForkLifter.fork_ros_controller.CurrentPosition} cm");
+                }));
+            }
+
+            LOG.INFO($"等待牙叉動作(動作數:{tasks.Count})...", color: ConsoleColor.Green);
+            Task.WaitAll(tasks.ToArray());
+            LOG.INFO($"牙叉動作完成(動作數:{tasks.Count}),異常:{alarmCodes.Count}", color: ConsoleColor.Green);
+
+            return (alarmCodes.Count == 0, alarmCodes);
         }
 
         private void BuzzerPlayMusic(ACTION_TYPE action)
@@ -440,7 +454,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (Agv.ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME, AlarmCodes.None);
                     await Agv.Laser.SideLasersEnable(true);
                     await RegisterSideLaserTriggerEvent();
-                    while (Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                    while (Agv.ForkLifter.Driver.CurrentPosition > Agv.Parameters.ForkAGV.SaftyPositionHeight)
                     {
                         await Task.Delay(1);
                         if (Agv.Sub_Status == SUB_STATUS.DOWN)
@@ -450,12 +464,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                         ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
                         LOG.TRACE($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
-                        if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
-                        {
-                            AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
-                            break;
-                        }
+                        //if (ForkGoHomeActionResult.confirm && Agv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
+                        //{
+                        //    AlarmManager.AddWarning(AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
+                        //    break;
+                        //}
                     }
+                    ForkGoHomeActionResult.confirm = true;
                     await UnRegisterSideLaserTriggerEvent();
                     await Task.Delay(500);
                     await Agv.Laser.SideLasersEnable(false);
@@ -474,7 +489,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(FORK_HEIGHT_POSITION position)
         {
-            LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position== FORK_HEIGHT_POSITION.UP_? "Load Pose":"Unload Pose")}");
+            LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
             await RegisterSideLaserTriggerEvent();
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
             await UnRegisterSideLaserTriggerEvent();

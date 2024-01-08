@@ -582,18 +582,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     if (IsNeedWaitForkHome)
                     {
-
-                        if (Agv.Parameters.ForkAGV.ForkSaftyStratrgy == ForkAGV.FORK_SAFE_STRATEGY.AT_HOME_POSITION)
-                        {
-                            LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
-                            Task.WaitAll(new Task[] { forkGoHomeTask });
-                            LOG.TRACE($"[Async Action] Fork is Home Now");
-                        }
-                        else
-                        {
-                            WaitForkPositionUnderSaftyHeight();
-                            LOG.TRACE($"[Async Action] Fork is at safe height Now");
-                        }
+                        LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                        Task.WaitAll(new Task[] { forkGoHomeTask });
+                        LOG.TRACE($"[Async Action] Fork is at safe height Now");
                     }
 
                     var HSResult = await AGVCOMPTHandshake();

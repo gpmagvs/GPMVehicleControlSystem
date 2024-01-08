@@ -138,6 +138,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (action == "home" | action == "orig")
             {
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
+                CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                while (forkAgv.ForkLifter.CurrentForkLocation != Models.VehicleControl.VehicleComponent.clsForkLifter.FORK_LOCATIONS.HOME)
+                {
+                    await Task.Delay(1);
+                    if (_wait.IsCancellationRequested)
+                    {
+                        return Ok(new { confirm = false, message = "Go Home Timeout" });
+                    }
+                }
                 return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
             }
             else if (action == "init")
