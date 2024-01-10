@@ -196,8 +196,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
                 {
-                    orderInfoViewModel = taskDownloadData.OrderInfo;
-
+                    _orderInfoViewModel = taskDownloadData.OrderInfo;
                 }
 
                 List<AlarmCodes> alarmCodes = await ExecutingTaskModel.Execute();
@@ -380,8 +379,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
-            if (status == TASK_RUN_STATUS.ACTION_FINISH && Sub_Status == SUB_STATUS.IDLE)
-                orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
+
+            if (status == TASK_RUN_STATUS.ACTION_FINISH)
+                _orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
             int currentPosIndexInTrajectory = GetCurrentTagIndexOfTrajectory();
 
             try

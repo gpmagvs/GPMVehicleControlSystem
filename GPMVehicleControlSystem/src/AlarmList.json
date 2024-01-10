@@ -1890,6 +1890,11 @@
     "CN": "電池低溫_2"
   },
   {
+    "Code": 7000,
+    "Description": "EQP_PORT_HAS_OBSTACLE_BY_LSR",
+    "CN": "雷射偵測到設備Port內有障礙物"
+  },
+  {
     "Code": 9990,
     "Description": "License Error",
     "CN": "授權碼錯誤"

@@ -101,11 +101,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return;
             if (NextSecondartPointTag == _currentTag)
             {
+                var isunLoad = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
+                var ischarge = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
+
+                LOG.WARN($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({forkAGV._RunTaskData.OrderInfo.ActionName})");
                 try
                 {
                     forkAGV.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
-                    var isunLoad = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
-                    var ischarge = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
+
+                    
 
                     double _position_aim = 0;
                     var forkHeightSetting = forkAGV.WorkStations.Stations[NextWorkStationPointTag].LayerDatas[forkAGV._RunTaskData.Height];

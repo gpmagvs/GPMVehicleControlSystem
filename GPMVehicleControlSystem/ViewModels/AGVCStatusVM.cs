@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public string SubState { get; set; } = "";
         public bool IsInitialized { get; set; }
         public bool IsSystemIniting { get; set; }
+        public bool IsForkHeightAboveSafty { get; set; }
         public REMOTE_MODE OnlineMode { get; set; } = REMOTE_MODE.OFFLINE;
         public OPERATOR_MODE AutoMode { get; set; } = OPERATOR_MODE.MANUAL;
         public string CarName { get; set; } = "";

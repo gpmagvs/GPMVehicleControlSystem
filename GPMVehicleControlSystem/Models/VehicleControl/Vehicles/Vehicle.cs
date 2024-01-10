@@ -667,7 +667,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-            Parameters.EQHandshakeMethod = Parameters._EQHandshakeMethodStore;
+            //Parameters.EQHandshakeMethod = Parameters._EQHandshakeMethodStore;
             BarcodeReader.OnAGVReachingTag -= NormalMoveTask.BarcodeReader_OnAGVReachingTag;
             SaveParameters(Parameters);
 

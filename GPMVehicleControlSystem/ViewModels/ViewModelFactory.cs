@@ -95,7 +95,8 @@ namespace GPMVehicleControlSystem.ViewModels
                         ConnectionType = AGV.Parameters.EQHandshakeMethod,
                         Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
                     },
-                    OrderInfo = AGV.orderInfoViewModel
+                    OrderInfo = AGV.orderInfoViewModel,
+                    IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight
 
                 };
                 return data_view_model;

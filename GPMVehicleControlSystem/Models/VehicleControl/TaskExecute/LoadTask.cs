@@ -16,6 +16,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -79,15 +80,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, CstExistCheckResult.alarmCode);
 
 
-            //(bool confirm, AlarmCodes alarmCode) CstBarcodeCheckResult = await CSTBarcodeReadBeforeAction();
+            if (Agv.Parameters.LDULDParams.LsrObstacleDetectionEnable)
+            {
+                Agv.IsHandshaking= true;
+                Agv.HandshakeStatusText = "設備內障礙物檢查..";
+                LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
+                bool _HasObstacle = await CheckPortObstacleViaLaser();
+                if (_HasObstacle)
+                {
+                    if (Agv.Parameters.LDULDParams.LsrObsDetectedAlarmLevel == ALARM_LEVEL.ALARM)
+                    {
+                        LOG.ERROR($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
+                        Agv.IsHandshaking = false;
+                        return (false, AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                    }
+                    else
+                    {
+                        LOG.WARN($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
+                        Agv.IsHandshaking = false;
+                        AlarmManager.AddWarning(AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                    }
+                }
+                else
+                {
+                    LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
+                    Agv.IsHandshaking = false;
+                }
+            }
 
-            //if (!CstBarcodeCheckResult.confirm)
-            //    return (false, CstBarcodeCheckResult.alarmCode);
-
-            lduld_record.StartTime = DateTime.Now;
-            lduld_record.Action = this.action;
-            lduld_record.WorkStationTag = destineTag;
-            DBhelper.AddUDULDRecord(lduld_record);
+            RecordLDULDStateToDB();
 
             DetermineHandShakeSetting(out bool _needHandshake);
             if (_needHandshake)
@@ -140,6 +161,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return await base.BeforeTaskExecuteActions();
         }
 
+        private async Task<bool> CheckPortObstacleViaLaser()
+        {
+            var _laserModeNumber = Agv.Parameters.LDULDParams.LsrObsLaserModeNumber;
+            await Agv.Laser.ModeSwitch(_laserModeNumber);
+            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, false);
+            await Task.Delay(800);
+
+            bool _front_area_1_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+            bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+            bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
+
+            await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
+
+            return _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
+        }
+
+        private void RecordLDULDStateToDB()
+        {
+            lduld_record.StartTime = DateTime.Now;
+            lduld_record.Action = this.action;
+            lduld_record.WorkStationTag = destineTag;
+            DBhelper.AddUDULDRecord(lduld_record);
+        }
+
         private void DetermineHandShakeSetting(out bool IsNeedHandshake)
         {
             IsNeedHandshake = true;
@@ -147,7 +194,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
                 eqHandshakeMode = mode;
-                Agv.Parameters.EQHandshakeMethod = data.HandShakeConnectionMode;
+                //Agv.Parameters.EQHandshakeMethod = data.HandShakeConnectionMode;
                 IsNeedHandshake = mode == WORKSTATION_HS_METHOD.HS;
                 LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
             }
@@ -156,10 +203,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
                 eqHandshakeMode = WORKSTATION_HS_METHOD.HS;
             }
-        }
-        private void RestoreEQHandshakeConnectionMode()
-        {
-            Agv.Parameters.EQHandshakeMethod = Agv.Parameters._EQHandshakeMethodStore;
         }
         private void CheckEQDIOStates()
         {
@@ -588,7 +631,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
 
                     var HSResult = await AGVCOMPTHandshake();
-                    RestoreEQHandshakeConnectionMode();
+                    //RestoreEQHandshakeConnectionMode();
                     if (!HSResult.confirm)
                     {
                         AlarmManager.AddAlarm(HSResult.alarmCode, false);

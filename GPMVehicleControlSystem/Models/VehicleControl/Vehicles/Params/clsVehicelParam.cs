@@ -8,6 +8,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
     public class clsVehicelParam
     {
+        public Dictionary<string, string> Descrption { get; set; } = new Dictionary<string, string>() {
+            { "AgvType(車款)","0:叉車AGV, 1:潛盾AGV, 2:巡檢AGV" },
+            { "OrderInfoFetchSource(任務訂單訊息來源)","0:從派車任務內容, 1:接收CIM呼叫API" },
+            { "LDULD_Task_No_Entry(空取空放)","true:啟用 , false:禁用" },
+            { "EQHandshakeMethod(設備交握預設方式)","0:光IO , 1:Modbus , 2:模擬器" },
+            { "CstReadFailAction(CST ID讀取失敗後車載狀態)","0:正常,1:當機" },
+            { "Cst_ID_Not_Match_Action(CST ID讀取結果與任務不符)","0:上報拍到的ID ,1:向派車查詢虛擬ID" },
+            { "LsrObsDetectedAlarmLevel(雷射偵測到設備內有障礙物警報等級)","0:Warning,1:Alarm" },
+            { "IO_VAL_TYPE(Modbus交握時使用的IO種類)","0:使用INPUT讀寫,1:使用 InputRegist 讀/SingleRegister寫(歐迪爾模組)" },
+        };
         public string LogFolder { get; set; } = "GPM_AGV_LOG";
         public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
         public int Version { get; set; } = 1;
@@ -150,6 +160,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsImpactDetectionParams ImpactDetection { get; set; } = new clsImpactDetectionParams();
 
         public clsBatteryParam BatteryModule { get; set; } = new clsBatteryParam();
+        public clsLDULDParams LDULDParams { get; set; } = new clsLDULDParams();
     }
 
     public class clsForkAGVParams

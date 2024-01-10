@@ -117,15 +117,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
             }
             if (isconnected)
             {
-
-                Task.Factory.StartNew(async () =>
+                Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
+                    Thread.Sleep(100);
                     TopicsAdvertise();
                     AdvertiseServices();
                     InitNewTaskCommandActionServer();
                     TopicsPublish();
-                    // _ = PublishLocalizeResult(rosSocket);
                 });
             }
             return isconnected;
