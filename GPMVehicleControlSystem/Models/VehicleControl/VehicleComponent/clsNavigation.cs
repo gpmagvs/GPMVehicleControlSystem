@@ -1,8 +1,10 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
@@ -64,6 +66,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public double Angle => Data.robotPose.pose.orientation.ToTheta();
 
         public override string alarm_locate_in_name => component_name.ToString();
+
+        public clsCoordination CurrentCoordination
+        {
+            get
+            {
+                double X = Math.Round(Data.robotPose.pose.position.x, 3);
+                double Y = Math.Round(Data.robotPose.pose.position.y, 3);
+                double Theta = Math.Round(Angle, 3);
+                clsCoordination coordination = new clsCoordination(X, Y, Theta);
+                return coordination;
+            }
+        }
 
         public override async Task<bool> CheckStateDataContent()
         {

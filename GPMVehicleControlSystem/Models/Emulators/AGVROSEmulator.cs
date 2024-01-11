@@ -65,6 +65,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
         private ROBOT_CONTROL_CMD complex_cmd;
+        private bool _CycleStopFlag = false;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52, 6, 10 };
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
@@ -215,6 +216,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 //模擬走型
                 Task.Run(async () =>
                 {
+                    _CycleStopFlag = false;
                     complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
                     var firstTag = obj.planPath.poses.First().header.seq;
                     IsCharge = false;
@@ -282,9 +284,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
                             module_info.Battery.batteryLevel -= 1;
-                            EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
-                            if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
+                            //EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
+
+                            if (_CycleStopFlag)
+                            {
+                                EmuLog("Cycle Stop Flag ON, Stop move.");
                                 break;
+                            }
 
                             if (tag == 18 & i == obj.planPath.poses.Length - 1 & Debugger.IsAttached)
                             {
@@ -416,6 +422,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             else if (req.reqsrv == 100)
             {
                 isPreviousMoveActionNotFinish = false;
+                _CycleStopFlag = true;
                 complex_cmd = ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL;
             }
             res = new ComplexRobotControlCmdResponse
@@ -449,9 +456,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
             return true;
         }
-        internal void  EmuLog(string msg, bool show_console = true)
+        internal void EmuLog(string msg, bool show_console = true)
         {
-            LOG.TRACE($"[車控模擬] {msg}", show_console);
+            LOG.TRACE($"[車控模擬] {msg}", show_console,color: ConsoleColor.Magenta);
         }
 
         internal void SetInitTag(int lastVisitedTag)

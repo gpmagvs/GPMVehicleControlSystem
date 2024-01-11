@@ -298,9 +298,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private clsMapPoint? previousTagPoint;
         private void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
-            Task.Factory.StartNew(async () =>
+            Task.Run(async () =>
             {
-
                 UpdateLastVisitedTagOfParam(newVisitedNodeTag);
 
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
@@ -308,15 +307,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTaskModel == null)
                     return;
 
-                previousTagPoint = ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+                var _newTagPoint = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
 
-                if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                if (_RunTaskData.Action_Type == ACTION_TYPE.None && _newTagPoint != null)
                 {
-                    var laser_mode = ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag).Laser;
+                    var laser_mode = _newTagPoint.Laser;
                     await Laser.ModeSwitch(laser_mode, true);
                 }
 
-                if (ExecutingTaskModel.RunningTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
+                if (_RunTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
                 {
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
@@ -379,31 +378,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
         {
-
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 _orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
+
+            if (_RunTaskData.IsLocalTask)
+            {
+                LOG.WARN($"{_RunTaskData.Task_Name}-本地任務不需要向派車系統回報任務狀態!({status})");
+                return;
+            }
             int currentPosIndexInTrajectory = GetCurrentTagIndexOfTrajectory();
 
             try
             {
                 bool needReOnline = false;
-                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying) && !_RunTaskData.IsLocalTask)
+                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying))
                 {
-                    if (status != TASK_RUN_STATUS.ACTION_FINISH)
-                    {
-                        LOG.ERROR($"AGVs {(AGVS.IsGetOnlineModeTrying ? "Trying Get OnlineMode Now" : "disconnected")}, Task Status-{status} Feedback Bypass");
-                        return;
-                    }
-                    else
-                    {
-                        LOG.ERROR($"Task Status-{status} need waiting AGVs connection restored..");
-                        while (!AGVS.IsConnected())
-                        {
-                            await Task.Delay(10);
-                        }
-                        LOG.INFO($"Connection of AGVs is restored now !! . Task Status-{status} will reported out ");
-                        needReOnline = true;
-                    }
+                    needReOnline = status == TASK_RUN_STATUS.ACTION_FINISH;
                 }
 
                 IsActionFinishTaskFeedbackExecuting = status == TASK_RUN_STATUS.ACTION_FINISH;
@@ -427,21 +417,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                         _RunTaskData.IsActionFinishReported = true;
                 }
+                taskfeedbackCanceTokenSoruce?.Cancel(); //Raise取消請求,若前一次回報請求還沒完成則會取消回報
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
-                if (!_RunTaskData.IsLocalTask)
+
+
+                if (alarm_tracking != AlarmCodes.None)
                 {
-                    double X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
-                    double Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);
-                    double Theta = Math.Round(Navigation.Angle, 3);
-                    clsCoordination coordination = new clsCoordination(X, Y, Theta);
-                    if (alarm_tracking != AlarmCodes.None)
-                    {
-                        await WaitAlarmCodeReported(alarm_tracking);
-                    }
-                    await AGVS.TryTaskFeedBackAsync(_RunTaskData, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, coordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
+                    await WaitAlarmCodeReported(alarm_tracking);
                 }
+                await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
+
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;

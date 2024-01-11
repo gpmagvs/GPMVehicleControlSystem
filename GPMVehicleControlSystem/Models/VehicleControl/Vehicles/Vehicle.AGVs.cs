@@ -11,11 +11,14 @@ using RosSharp.RosBridgeClient.Actionlib;
 using AGVSystemCommonNet6.MAP;
 using System.Diagnostics;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using System.Threading.Tasks;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+
+        private Queue<FeedbackData> ActionFinishReportFailQueue = new Queue<FeedbackData>();
         private async void AGVSInit()
         {
             string vms_ip = Parameters.Connections["AGVS"].IP;
@@ -33,6 +36,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
             AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
             AGVS.OnDisconnected += AGVS_OnDisconnected;
+            AGVS.OnTaskFeedBack_T1Timeout += Handle_AGVS_TaskFeedBackT1Timeout;
+            AGVS.OnOnlineModeQuery_T1Timeout += Handle_AGVS_OnlineModeQuery_T1Timeout;
+            AGVS.OnRunningStatusReport_T1Timeout += Handle_AGVS_RunningStatusReport_T1Timeout;
             AGVS.OnPingFail += (sender, arg) =>
             {
                 LOG.TRACE($"AGVS Network Ping Fail.... ");
@@ -57,6 +63,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
+        private void Handle_AGVS_RunningStatusReport_T1Timeout(object? sender, EventArgs e)
+        {
+            AlarmManager.AddWarning(AlarmCodes.RunningStatusReport_T1_Timeout);
+
+        }
+
+        private void Handle_AGVS_OnlineModeQuery_T1Timeout(object? sender, EventArgs e)
+        {
+            AlarmManager.AddWarning(AlarmCodes.OnlineModeQuery_T1_Timeout);
+        }
+
+        private void Handle_AGVS_TaskFeedBackT1Timeout(object? sender, FeedbackData feedbackData)
+        {
+            LOG.WARN($"Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})=> Canceled because T1 Timeout");
+            if (feedbackData.TaskStatus == TASK_RUN_STATUS.ACTION_FINISH)
+            {
+                LOG.WARN($"Retry Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})");
+                _=AGVS.TryTaskFeedBackAsync(feedbackData.TaskName,
+                                                     feedbackData.TaskSimplex,
+                                                     feedbackData.TaskSequence,
+                                                     feedbackData.PointIndex,
+                                                     TASK_RUN_STATUS.ACTION_FINISH,
+                                                     Navigation.LastVisitedTag,
+                                                     Navigation.CurrentCoordination);
+            }
+            AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
+        }
+
         private void ReloadLocalMap()
         {
             if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
@@ -249,21 +284,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
+            LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}", color: ConsoleColor.Red);
+
             if (AGVSResetCmdFlag)
+            {
+                LOG.INFO($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}", color: ConsoleColor.Yellow);
                 return true;
+            }
 
             AGVSResetCmdFlag = true;
             IsWaitForkNextSegmentTask = false;
 
             try
             {
-                LOG.WARN($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
 
                 if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
                 {
                     AGVC.OnAGVCActionChanged = null;
                     AGV_Reset_Flag = false;
-                    LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
+                    LOG.WARN($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;

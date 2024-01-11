@@ -168,11 +168,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
             if (CurrentLaserModeOfSick == mode_int)
+            {
+                LOG.WARN($"Laser Mode Already Set as {mode_int}");
                 return true;
+            }
 
             try
             {
-                bool do_write_success=await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
+                bool do_write_success = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
                 if (!do_write_success)
                 {
                     AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail);

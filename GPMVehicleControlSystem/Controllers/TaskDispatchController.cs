@@ -60,6 +60,7 @@ namespace GPMVehicleControlSystem.Controllers
             };
             try
             {
+                LOG.INFO($"[任務取消] 從派車系統接收到任務取消請求(API)", color: ConsoleColor.Red);
                 Agv.HandleAGVSTaskCancelRequest(cancelCmd.ResetMode);
             }
             catch (Exception ex)

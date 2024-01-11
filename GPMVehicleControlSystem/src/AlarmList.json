@@ -1225,6 +1225,21 @@
     "CN": "與派車系統通訊Ping失敗"
   },
   {
+    "Code": 3504,
+    "Description": "Task Status Feedback To AGVS T1 Timeout",
+    "CN": "向派車上報任務狀態逾時(T1)"
+  },
+  {
+    "Code": 3505,
+    "Description": "Online Mode Query From AGVS T1 Timeout",
+    "CN": "向派車查詢上線狀態逾時(T1)"
+  },
+  {
+    "Code": 3506,
+    "Description": "Running Status Report To AGVS T1 Timeout",
+    "CN": "AGV狀態上報派車逾時(T1)"
+  },
+  {
     "Code": 4010,
     "Description": "Under-voltage protection",
     "CN": "馬達低電壓保護"

@@ -30,21 +30,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
             }
 
-            Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
-            ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(taskDownloadData, out NextSecondartPointTag, out NextWorkStationPointTag);
-            LOG.INFO($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
-            if (ForkActionStartWhenReachSecondartPTFlag)
+            if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
-                Agv.BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+                Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+                ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(taskDownloadData, out NextSecondartPointTag, out NextWorkStationPointTag);
+                LOG.INFO($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
+                if (ForkActionStartWhenReachSecondartPTFlag)
+                {
+                    Agv.BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+                }
             }
         }
 
         private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
         {
             DoActionTag = nextWorkStationPointTag = -1;
-
-            if (Agv.Parameters.AgvType != AGV_TYPE.FORK)
-                return false;
 
             var _next_action = taskDownloadData.OrderInfo.ActionName;
             bool _need = _next_action == ACTION_TYPE.Load || _next_action == ACTION_TYPE.Unload || _next_action == ACTION_TYPE.Charge || _next_action == ACTION_TYPE.LoadAndPark;
@@ -109,7 +109,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     forkAGV.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
 
-                    
+
 
                     double _position_aim = 0;
                     var forkHeightSetting = forkAGV.WorkStations.Stations[NextWorkStationPointTag].LayerDatas[forkAGV._RunTaskData.Height];
