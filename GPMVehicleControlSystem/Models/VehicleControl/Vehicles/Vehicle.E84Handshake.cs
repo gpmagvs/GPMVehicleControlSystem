@@ -35,21 +35,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             TA2_Wait_EQ_READY_ON,
             TA3_Wait_EQ_BUSY_ON,
             TA4_Wait_EQ_BUSY_OFF,
-            TA5_Wait_L_U_REQ_OFF
+            TA5_Wait_L_U_REQ_OFF,
+            TP_3_Wait_AGV_BUSY_OFF,
+            TP_5_Wait_AGV_BUSY_OFF,
         }
         private Dictionary<HANDSHAKE_EQ_TIMEOUT, Stopwatch> EQHSTimersStopwatches = new Dictionary<HANDSHAKE_EQ_TIMEOUT, Stopwatch>() {
             {  HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON , new Stopwatch()},
             {  HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON , new Stopwatch()},
             {  HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON , new Stopwatch()},
             {  HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF ,new Stopwatch()},
-            {  HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , new Stopwatch()}
+            {  HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , new Stopwatch()},
+            {  HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF, new Stopwatch()},
+            {  HANDSHAKE_EQ_TIMEOUT.TP_5_Wait_AGV_BUSY_OFF , new Stopwatch()}
         };
         public Dictionary<HANDSHAKE_EQ_TIMEOUT, double> EQHSTimers = new Dictionary<HANDSHAKE_EQ_TIMEOUT, double>() {
             {  HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON , 0},
             {  HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON , 0},
             {  HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON , 0},
             {  HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF , 0},
-            {  HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 0}
+            {  HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 0},
+            {  HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF, 0},
+            {  HANDSHAKE_EQ_TIMEOUT.TP_5_Wait_AGV_BUSY_OFF , 0}
         };
 
         public enum EQ_HSSIGNAL
@@ -79,8 +85,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             public bool lastNewInput = false;
             private Stopwatch stopwatch = new Stopwatch();
             private readonly EQ_HSSIGNAL signal_name;
+            public event EventHandler OnSignalOFF;
+            public event EventHandler OnSignalON;
             CancellationTokenSource cts = null;
             Task _change_wait_task = null;
+
             public bool State
             {
                 get => _state;
@@ -102,7 +111,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 bool is_changed = _state != lastNewInput;
                                 _state = lastNewInput;
                                 if (is_changed)
+                                {
                                     LOG.INFO($"[EQ交握訊號監視] {signal_name} Change to {(_state ? 1 : 0)}");
+                                    if (!_state)
+                                        OnSignalOFF?.Invoke(this, EventArgs.Empty);
+                                    else
+                                        OnSignalON?.Invoke(this, EventArgs.Empty);
+                                }
                                 _change_wait_task = null;
                             }
                             catch (Exception)
@@ -113,12 +128,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         });
 
                         lastNewInput = value;
+
                     }
                 }
+            }
+
+            public void ClearEventRegist()
+            {
+                OnSignalOFF = OnSignalON = null;
             }
         }
 
         private bool IsHandShakeBypass => Parameters.EQHandshakeBypass;
+
+        internal AlarmCodes AlarmCodeWhenHandshaking = AlarmCodes.None;
 
         public Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState> EQHsSignalStates = new Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState>()
         {
@@ -136,21 +159,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             { AGV_HSSIGNAL.AGV_READY, false },
             { AGV_HSSIGNAL.AGV_COMPT, false },
         };
-        private int EqModbusTcpPort
-        {
-            get
-            {
-                if (WorkStations.Stations.TryGetValue(ExecutingTaskModel.destineTag, out var data))
-                {
-                    return data.ModbusTcpPort;
-                }
-                else
-                {
-                    return -1;
-                }
-            }
-        }
 
+        private CancellationTokenSource hs_abnormal_happen_cts = new CancellationTokenSource();
+        private bool _IsEQGoOFF_When_Handshaking = false;
+        private bool _IsAGVAbnormal_when_handshaking = false;
+        private bool _IsEQAbnormal_when_handshaking = false;
+        private bool _IsEQBusy_when_AGV_Busy = false;
+        private bool _IsEQREQOFF_when_wait_EQREADY_when_handshaking = false;
         private bool IsULReqOn(ACTION_TYPE action)
         {
             if (action == ACTION_TYPE.Load)
@@ -279,255 +294,284 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public clsDynamicTrafficState DynamicTrafficState { get; internal set; } = new clsDynamicTrafficState();
 
-        internal void ResetHSTimers()
+        internal void ResetHSTimersAndEvents()
         {
             foreach (var timer_key in EQHSTimers.Keys)
             {
                 EQHSTimers[timer_key] = 0;
                 EQHSTimersStopwatches[timer_key].Reset();
             }
+
+            foreach (var item in EQHsSignalStates.Values)
+            {
+                item.ClearEventRegist();
+            }
         }
+        internal async Task<(bool done, AlarmCodes alarmCode)> Handshake_AGV_BUSY_ON(ACTION_TYPE action, bool isBackToHome)
+        {
+            if (isBackToHome)
+            {
+                SetAGVREADY(false);
+            }
+            SetAGVBUSY(true);
+            _ = Task.Factory.StartNew(async () =>
+            {
+                LOG.TRACE($"Start watch EQ BUSY when AGV BUsy ON");
+                EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON += HandleEQBusyONAfterAGVBUSY;
+                await HandshakeWith(AGV_HSSIGNAL.AGV_BUSY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF, AlarmCodes.Handshake_Fail_AGV_DOWN);
+                EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON -= HandleEQBusyONAfterAGVBUSY;
+            });
+            return (true, AlarmCodes.None);
+        }
+
+        private void HandleEQBusyONAfterAGVBUSY(object? sender, EventArgs e)
+        {
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON -= HandleEQBusyONAfterAGVBUSY;
+            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
+            {
+                LOG.Critical("EQ Busy ON when AGV Busy!!");
+                _IsEQBusy_when_AGV_Busy = true;
+                hs_abnormal_happen_cts.Cancel();
+                SoftwareEMO(AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
+            }
+        }
+
         /// <summary>
         /// 開始與EQ進行交握;
         /// - AGV VALID ON => 等待L/U_REQ ON => TR_REQ ON => 等待EQ READY ON
         /// </summary>
         internal async Task<(bool eqready, AlarmCodes alarmCode)> WaitEQReadyON(ACTION_TYPE action)
         {
+            hs_abnormal_happen_cts = new CancellationTokenSource();
+            _IsEQGoOFF_When_Handshaking = _IsEQREQOFF_when_wait_EQREADY_when_handshaking = _IsAGVAbnormal_when_handshaking = _IsEQAbnormal_when_handshaking = _IsEQBusy_when_AGV_Busy = false;
+
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
 
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.PIO)
                 WatchE84EQGOSignalWhenHSStart();
 
-            CancellationTokenSource waitEQSignalCST = new CancellationTokenSource();
-            CancellationTokenSource waitEQReadyOnCST = new CancellationTokenSource();
-            bool IsEQDown = false;
-            Task wait_eq_UL_req_ON = new Task(() =>
-            {
-                while (!IsULReqOn(action) && IsEQGOOn())
-                {
-                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
-                        throw new OperationCanceledException();
-                    Thread.Sleep(1);
-                }
-            });
-            var wait_eq_ready = new Task(() =>
-            {
-                while (!IsEQReadyOn() && IsEQGOOn())
-                {
-                    Thread.Sleep(1);
-                    if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
-                        throw new OperationCanceledException();
 
-                    if (!IsULReqOn(action))
+            EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
+            SetAGVVALID(true);
+            StartWatchAGVStatusAsync();
+            try
+            {
+                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
+                if (!_result.success)
+                    return _result;
+                SetAGV_TR_REQ(true);
+                EQHsSignalStates[_LU_SIGNAL].OnSignalOFF += HandleEQ_LUREQ_OFF;
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
+                EQHsSignalStates[_LU_SIGNAL].OnSignalOFF -= HandleEQ_LUREQ_OFF;
+                if (!_result.success)
+                    return _result;
+                StartWatchEQ_READYOFF();
+
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+                return (false, AlarmCodes.Handshake_Fail);
+            }
+
+            return (true, AlarmCodes.None);
+        }
+
+        private void HandleEQ_LUREQ_OFF(object sender, EventArgs e)
+        {
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ].OnSignalOFF -= HandleEQ_LUREQ_OFF;
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ].OnSignalOFF -= HandleEQ_LUREQ_OFF;
+            _IsEQREQOFF_when_wait_EQREADY_when_handshaking = true;
+            hs_abnormal_happen_cts.Cancel();
+        }
+
+        private async void StartWatchAGVStatusAsync()
+        {
+            LOG.TRACE($"Start Watch AGV Status");
+            await Task.Run(() =>
+            {
+                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
+                {
+                    Thread.Sleep(1);
+                    if (Sub_Status == SUB_STATUS.DOWN)
                     {
-                        IsEQDown = true;
-                        throw new OperationCanceledException();
+                        _IsAGVAbnormal_when_handshaking = true;
+                        hs_abnormal_happen_cts.Cancel();
+                        LOG.TRACE($"Watch AGV Status Finish(AGV DOWN)");
+                        return;
                     }
                 }
+                LOG.TRACE($"Watch AGV Status Finish(Handshake Finish)");
             });
+        }
 
-            SetAGVVALID(true);
-            try
-            {
-                LOG.Critical("[EQ Handshake] 等待EQ LU_REQ ON");
-                HandshakeStatusText = "等待EQ 取放請求訊號ON";
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
-                bool _success = WaitHSSignalStateChanged(action== ACTION_TYPE.Load? EQ_HSSIGNAL.EQ_L_REQ: EQ_HSSIGNAL.EQ_U_REQ , HS_SIGNAL_STATE.ON, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]);
-                //waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
-                //wait_eq_UL_req_ON.Start();
-                //wait_eq_UL_req_ON.Wait(waitEQSignalCST.Token);
-                if (!_success)
-                    return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
-            }
-            catch (Exception ex)
-            {
-                LOG.Critical(ex);
-                StopAllHandshakeTimer();
-                if (Sub_Status == SUB_STATUS.DOWN)
-                    return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
-            }
-            SetAGV_TR_REQ(true);
-            try
-            {
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
-                waitEQReadyOnCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON]));
-                LOG.Critical("[EQ Handshake] 等待EQ Ready ON...");
-                HandshakeStatusText = "等待EQ Ready..";
-                wait_eq_ready.Start();
-                wait_eq_ready.Wait(waitEQReadyOnCST.Token);
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                SetAGVBUSY(true);
-                WatchE84AlarmWhenAGVBUSY();
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
-                HandshakeStatusText = "AGV動作中..";
-                return (true, AlarmCodes.None);
-            }
-            catch (Exception ex)
-            {
-                LOG.Critical(ex);
-                StopAllHandshakeTimer();
-                if (Sub_Status == SUB_STATUS.DOWN)
-                    return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                if (IsEQDown)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
-                return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
-            }
+        private void StartWatchEQ_READYOFF()
+        {
+            LOG.TRACE($"Start Watch EQ_READY OFF");
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF += HandleEQReadOFF;
 
         }
-        internal bool EQAlarmWhenEQBusyFlag = false;
-        internal bool AGVAlarmWhenEQBusyFlag = false;
 
+        private void HandleEQReadOFF(object? sender, EventArgs e)
+        {
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF -= HandleEQReadOFF;
+            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT])
+            {
+                //normal
+                LOG.TRACE($"EQ READY OFF When AGV_COMPT ON");
+            }
+            else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State) //EQ GO ON著
+            {
+                _IsEQAbnormal_when_handshaking = true;
+                hs_abnormal_happen_cts.Cancel();
+            }
+        }
 
-        internal bool EQAlarmWhenAGVBusyFlag = false;
-        internal bool AGVAlarmWhenAGVBusyFlag = false;
-
-        internal AlarmCodes AlarmCodeWhenHandshaking = AlarmCodes.None;
         /// <summary>
         /// 等待EQ交握訊號 BUSY OFF＝＞表示ＡＧＶ可以退出了(模擬模式下:用CST在席有無表示是否BUSY結束 LOAD=>貨被拿走. Unload=>貨被放上來)
         /// </summary>
-        internal async Task<(bool eq_busy_off, AlarmCodes alarmCode)> WaitEQBusyOFF(ACTION_TYPE action)
+        internal async Task<(bool eq_busy_off, AlarmCodes alarmCode)> WaitEQBusyOnAndOFF(ACTION_TYPE action)
         {
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
             DirectionLighter.WaitPassLights();
-            CancellationTokenSource waitEQ_BUSY_ON_CTS = new CancellationTokenSource();
-            CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
-
             SetAGVBUSY(false, true);
             SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
-            Task wait_eq_busy_ON = new Task(() =>
-            {
-                LOG.Critical("[EQ Handshake] 等待EQ BUSY ON ");
-                while (!IsEQBusyOn() && IsEQGOOn() && IsEQReadyOn())
-                {
-                    if (Sub_Status == SUB_STATUS.DOWN)
-                    {
-                        alarm_code = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                        throw new OperationCanceledException();
-                    }
-                    if (waitEQ_BUSY_ON_CTS.IsCancellationRequested)
-                    {
-                        alarm_code = AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_ON;
-                        throw new OperationCanceledException();
-                    }
-                    Thread.Sleep(1);
-                }
-            });
-            Task wait_eq_busy_OFF = new Task(() =>
-            {
-                LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
-                if (waitEQ_BUSY_OFF_CTS.IsCancellationRequested)
-                {
-                    alarm_code = AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_OFF;
-                    throw new OperationCanceledException();
-                }
-                bool IsEQBusyOFF = !IsEQBusyOn();
-                while (!IsEQBusyOFF && IsEQGOOn())
-                {
-                    IsEQBusyOFF = !IsEQBusyOn();
 
-                    if (IsEQBusyOFF && !waitEQ_BUSY_OFF_CTS.IsCancellationRequested) //偵測到OFF 訊號後，再等1秒再檢查一次
-                    {
-                        Thread.Sleep(1000);
-                        IsEQBusyOFF = !IsEQBusyOn() && IsEQGOOn();
-                        if (!IsEQBusyOFF)
-                        {
-                            LOG.Critical($"EQ Busy Signal Flick!!!!!!!!!!");
-                        }
-                    }
-                    Thread.Sleep(1);
-                }
-            });
             try
             {
-                HandshakeStatusText = "等待EQ開始動作..";
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
-                waitEQ_BUSY_ON_CTS.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON]));
-                wait_eq_busy_ON.Start();
-                wait_eq_busy_ON.Wait(waitEQ_BUSY_ON_CTS.Token);
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
-                HandshakeStatusText = "等待EQ完成動作..";
+                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
+                if (!_result.success)
+                    return _result;
+
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
+                if (!_result.success)
+                    return _result;
 
             }
             catch (Exception ex)
             {
-                if (!IsEQGOOn())
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                LOG.ERROR($"[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON] {ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
                 LOG.Critical(ex);
-                StopAllHandshakeTimer();
-                var _alarm = AlarmCodes.None;
-                if (!IsEQGOOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
-                else if (!IsEQReadyOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
-                else if (Sub_Status == SUB_STATUS.DOWN)
-                    _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                else
-                    _alarm = AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON;
-                AlarmCodeWhenHandshaking = _alarm;
-                return (false, _alarm);
+                return (false, AlarmCodes.Handshake_Fail);
             }
-            try
-            {
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
-                waitEQ_BUSY_OFF_CTS.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF]));
-                WatchE84EQAlarmWhenEQBUSY(waitEQ_BUSY_OFF_CTS);
-                wait_eq_busy_OFF.Start();
-                wait_eq_busy_OFF.Wait(waitEQ_BUSY_OFF_CTS.Token);
-                if (!IsEQGOOn())
-                {
-                    AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                }
-                if (!IsEQReadyOn())
-                {
-                    AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
-                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
-                }
+            return (true, AlarmCodes.None);
+            //try
+            //{
+            //    HandshakeStatusText = "等待EQ開始動作..";
+            //    StartTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+            //    bool _eq_busy_on = WaitHSSignalStateChanged(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.ON, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON]);
+            //    if (!_eq_busy_on)
+            //    {
+            //        return (false, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
+            //    }
+            //    if (!IsEQGOOn())
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+            //    EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
+            //    HandshakeStatusText = "等待EQ完成動作..";
+            //}
+            //catch (Exception ex)
+            //{
+            //    if (!IsEQGOOn())
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+            //    LOG.ERROR($"[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON] {ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
+            //    LOG.Critical(ex);
+            //    StopAllHandshakeTimer();
+            //    var _alarm = AlarmCodes.None;
+            //    if (!IsEQGOOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
+            //    else if (!IsEQReadyOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+            //    else if (Sub_Status == SUB_STATUS.DOWN)
+            //        _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
+            //    else
+            //        _alarm = AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON;
+            //    AlarmCodeWhenHandshaking = _alarm;
+            //    return (false, _alarm);
+            //}
+            //try
+            //{
+            //    StartTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
 
-                HandshakeStatusText = "EQ完成動作";
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
-                SetAGVREADY(false); //AGV BUSY 開始退出
-                SetAGVBUSY(true);
+            //    bool is_agv_abnormal = false;
+            //    bool is_eq_abnormal = false;
 
-                HandshakeStatusText = "AGV動作中..";
-                WatchE84AlarmWhenAGVBUSY();
-                return (true, AlarmCodes.None);
-            }
-            catch (Exception ex)
-            {
-                StopAllHandshakeTimer();
-                bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag | AGVAlarmWhenEQBusyFlag;
-                LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
-                LOG.Critical(ex);
-                AlarmCodes _alarm = AlarmCodes.None;
-                if (!IsEQGOOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
-                else if (!IsEQReadyOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
-                else if (!IsEQOrAGVAlarmWhenEQBUSY)
-                    _alarm = AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF;
-                else if (Sub_Status == SUB_STATUS.DOWN)
-                    _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                else
-                    _alarm = AlarmCodes.None;
-                AlarmCodeWhenHandshaking = _alarm;
-                return (_alarm == AlarmCodes.None, _alarm);
-            }
+
+            //    //EQ READY OFF監視 ,表示設備異常
+            //    void HandleEQReadyOff(object sneder, EventArgs e)
+            //    {
+            //        LOG.ERROR($"EQ Ready Off When EQ BUSY");
+            //        is_eq_abnormal = true;
+            //        hs_abnormal_happen_cts.Cancel();
+            //        EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF -= HandleEQReadyOff;
+            //    }
+
+            //    EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF += HandleEQReadyOff;
+            //    //AGV 異常監視
+            //    _ = Task.Run(() =>
+            //    {
+            //        while (EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
+            //        {
+            //            Thread.Sleep(1);
+            //            if (!AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ])
+            //            {
+            //                LOG.ERROR($"AGV TR_REQ Off When EQ BUSY");
+            //                is_agv_abnormal = true;
+            //                hs_abnormal_happen_cts.Cancel();
+            //                break;
+            //            }
+            //        }
+            //        LOG.TRACE("AGV異常監視結束[EQ_BUSY OFF]");
+            //    });
+
+            //    bool _eq_busy_off = WaitHSSignalStateChanged(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.OFF, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF], hs_abnormal_happen_cts);
+            //    if (!_eq_busy_off)
+            //    {
+            //        if (is_eq_abnormal)
+            //            return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+            //        else if (is_agv_abnormal)
+            //            return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
+            //        else
+            //            return (false, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
+            //    }
+
+            //    if (!IsEQGOOn())
+            //    {
+            //        AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+            //    }
+            //    if (!IsEQReadyOn())
+            //    {
+            //        AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+            //    }
+
+            //    HandshakeStatusText = "EQ完成動作";
+            //    EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
+
+            //    return (true, AlarmCodes.None);
+            //}
+            //catch (Exception ex)
+            //{
+            //    StopAllHandshakeTimer();
+            //    bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag | AGVAlarmWhenEQBusyFlag;
+            //    LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
+            //    LOG.Critical(ex);
+            //    AlarmCodes _alarm = AlarmCodes.None;
+            //    if (!IsEQGOOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
+            //    else if (!IsEQReadyOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+            //    else if (!IsEQOrAGVAlarmWhenEQBUSY)
+            //        _alarm = AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF;
+            //    else if (Sub_Status == SUB_STATUS.DOWN)
+            //        _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
+            //    else
+            //        _alarm = AlarmCodes.None;
+            //    AlarmCodeWhenHandshaking = _alarm;
+            //    return (_alarm == AlarmCodes.None, _alarm);
+            //}
 
         }
 
@@ -539,242 +583,130 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
-            CancellationTokenSource wait_eq_l_u_req_off_cts = new CancellationTokenSource();
-            Task wait_eq_UL_req_OFF = new Task(() =>
-            {
-                while (IsULReqOn(action) && IsEQGOOn())
-                {
-                    if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
-                        return;
-                    Thread.Sleep(1);
-                }
-            });
-            Task wait_eq_ready_off = new Task(() =>
-            {
-                LOG.WARN("[EQ Handshake] 等待 EQ READY OFF");
-                while (IsEQReadyOn() && IsEQGOOn())
-                {
-                    if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
-                        return;
-                    Thread.Sleep(1);
-                }
-            });
-
+            EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
+            AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ;
             SetAGVBUSY(false, false);
             await Task.Delay(200);
             SetAGV_COMPT(true);
-            HandshakeStatusText = "等待EQ取放請求訊號OFF..";
-            LOG.WARN("[EQ Handshake] 等待取放請求訊號OFF");
-            try
-            {
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-                wait_eq_l_u_req_off_cts.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]));
-                wait_eq_UL_req_OFF.Start();
-                wait_eq_UL_req_OFF.Wait(wait_eq_l_u_req_off_cts.Token);
-                if (!IsEQGOOn())
-                {
-                    AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                }
 
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-            }
-            catch (Exception ex)
-            {
-                LOG.Critical(ex);
-                StopAllHandshakeTimer();
-                AlarmCodes _alarm = AlarmCodes.None;
-                if (!IsEQGOOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
-                else if (Sub_Status == SUB_STATUS.DOWN)
-                    _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                else
-                {
-                    _alarm = action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ;
-                }
-                AlarmCodeWhenHandshaking = _alarm;
-                return (false, _alarm);
-            }
             try
             {
-                StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
-                wait_eq_l_u_req_off_cts = new CancellationTokenSource();
-                wait_eq_l_u_req_off_cts.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]));
-                wait_eq_ready_off.Start();
-                wait_eq_ready_off.Wait(wait_eq_l_u_req_off_cts.Token);
-                await Task.Delay(300);
-                if (!IsEQGOOn())
-                {
-                    AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
-                }
+                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, _TimeoutAlarmCode);
+                if (!_result.success)
+                    return _result;
+
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF);
+                if (!_result.success)
+                    return _result;
+
                 SetAGV_COMPT(false);
                 SetAGV_TR_REQ(false);
                 SetAGVVALID(false);
-                EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
                 LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
                 _ = Task.Run(async () =>
                 {
                     HandshakeStatusText = "交握結束";
                     await Task.Delay(1000);
                 });
-                return (true, AlarmCodes.None);
             }
             catch (Exception ex)
             {
                 LOG.Critical(ex);
-                StopAllHandshakeTimer();
-
-                AlarmCodes _alarm = AlarmCodes.None;
-                if (!IsEQGOOn())
-                    _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
-                else if (Sub_Status == SUB_STATUS.DOWN)
-                    _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                else
-                    _alarm = AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF;
-                AlarmCodeWhenHandshaking = _alarm;
-                return (false, _alarm);
+                return (false, AlarmCodes.Handshake_Fail);
             }
+            return (true, AlarmCodes.None);
+
+
+            //HandshakeStatusText = "等待EQ取放請求訊號OFF..";
+            //LOG.WARN("[EQ Handshake] 等待取放請求訊號OFF");
+            //try
+            //{
+            //    StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+            //    bool _LU_REQ_OFF = WaitHSSignalStateChanged(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]);
+            //    if (!_LU_REQ_OFF)
+            //        return (false, _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ);
+            //    if (!IsEQGOOn())
+            //    {
+            //        AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+            //    }
+
+            //    EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+            //}
+            //catch (Exception ex)
+            //{
+            //    LOG.Critical(ex);
+            //    StopAllHandshakeTimer();
+            //    AlarmCodes _alarm = AlarmCodes.None;
+            //    if (!IsEQGOOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
+            //    else if (Sub_Status == SUB_STATUS.DOWN)
+            //        _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
+            //    else
+            //    {
+            //        _alarm = action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ;
+            //    }
+            //    AlarmCodeWhenHandshaking = _alarm;
+            //    return (false, _alarm);
+            //}
+            //try
+            //{
+            //    StartTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+            //    bool _eq_ready_off = WaitHSSignalStateChanged(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF]);
+            //    if (!_eq_ready_off)
+            //        return (false, AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF);
+            //    await Task.Delay(300);
+            //    if (!IsEQGOOn())
+            //    {
+            //        AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_EQ_GO;
+            //        return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+            //    }
+            //    SetAGV_COMPT(false);
+            //    SetAGV_TR_REQ(false);
+            //    SetAGVVALID(false);
+            //    EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+            //    LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
+            //    _ = Task.Run(async () =>
+            //    {
+            //        HandshakeStatusText = "交握結束";
+            //        await Task.Delay(1000);
+            //    });
+            //    return (true, AlarmCodes.None);
+            //}
+            //catch (Exception ex)
+            //{
+            //    LOG.Critical(ex);
+            //    StopAllHandshakeTimer();
+
+            //    AlarmCodes _alarm = AlarmCodes.None;
+            //    if (!IsEQGOOn())
+            //        _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
+            //    else if (Sub_Status == SUB_STATUS.DOWN)
+            //        _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
+            //    else
+            //        _alarm = AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF;
+            //    AlarmCodeWhenHandshaking = _alarm;
+            //    return (false, _alarm);
+            //}
 
         }
 
         #endregion
         private async Task WatchE84EQGOSignalWhenHSStart()
         {
-            _ = Task.Run(async () =>
-            {
-                LOG.WARN("Start Watch EQ_GO State..");
-                while (true)
-                {
-                    try
-                    {
-                        Thread.Sleep(10);
-                        if (ExecutingTaskModel == null)
-                            break;
-                        if (ExecutingTaskModel != null && ExecutingTaskModel.action != ACTION_TYPE.Load && ExecutingTaskModel.action != ACTION_TYPE.Unload)
-                            break;
-
-                        if (!IsEQGOOn())
-                        {
-                            LOG.ERROR("EQ_GO State OFF!");
-                            SetAGV_TR_REQ(false);
-                            if (Sub_Status == SUB_STATUS.DOWN)
-                                break;
-                            if (Sub_Status == SUB_STATUS.RUN)
-                            {
-                                AGVC.AbortTask();
-                                Sub_Status = SUB_STATUS.DOWN;
-                                AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_EQ_GO, false);
-                                StopAllHandshakeTimer();
-                                break;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR($"WatchE84EQGOSignalWhenHS Process end[{ex.Message}]");
-                        break;
-                    }
-                }
-                LOG.TRACE($"WatchE84EQGOSignalWhenHS Process end");
-            });
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF += HandleEQGOOff;
         }
 
-        private async Task WatchE84AlarmWhenAGVBUSY()
+        private void HandleEQGOOff(object? sender, EventArgs e)
         {
-            await Task.Delay(200);
-            AGVAlarmWhenAGVBusyFlag = false;
-            EQAlarmWhenAGVBusyFlag = false;
-            await Task.Delay(1);
-            _ = Task.Run(async () =>
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF -= HandleEQGOOff;
+            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
             {
-                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ])
-                {
-                    Thread.Sleep(10);
-                    bool isEQReadyOff = !IsEQReadyOn();
-                    bool isEQBusyOn = IsEQBusyOn();
-                    ////AGV作動中發生AGV異常
-                    if (Sub_Status == SUB_STATUS.DOWN && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
-                    {
-                        if (isEQReadyOff | isEQBusyOn | !IsEQGOOn())
-                            return;
-                        RaiseAGVAlarmWhenHS();
-                        return;
-                    }
-
-                    if ((isEQReadyOff | isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && !AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY])//AGV作動中發生EQ異常
-                    {
-                        EQAlarmWhenAGVBusyFlag = true;
-                        AGVC.AbortTask();
-                        var alarm_code = AlarmCodeWhenHandshaking = !IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : (isEQReadyOff ? AlarmCodes.Handshake_Fail_EQ_READY_OFF : AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
-                        Thread.Sleep(100);
-                        Sub_Status = SUB_STATUS.DOWN;
-                        AlarmManager.AddAlarm(alarm_code, false);
-                        LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end.[isEQReadyOff/isEQBusyOn]");
-                        return;
-                    }
-                } ////AGV作動中發生AGV異常
-                if (Sub_Status == SUB_STATUS.DOWN && IsEQGOOn())
-                {
-                    RaiseAGVAlarmWhenHS();
-                }
-                LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end[AGV_BUSY OFF/AGV_TR_REQ OFF]");
-            });
+                _IsEQGoOFF_When_Handshaking = true;
+                hs_abnormal_happen_cts.Cancel();
+            }
         }
 
-        private void RaiseAGVAlarmWhenHS()
-        {
-            AGVAlarmWhenAGVBusyFlag = true;
-            AGVC.AbortTask();
-            SetAGV_TR_REQ(false);
-            LOG.Critical($"AGV作動中發生AGV異常，須將AGV移動至安全位置後進行賦歸方可將Busy 訊號 OFF.");
-
-            if (AlarmCodeWhenHandshaking != AlarmCodes.Has_Job_Without_Cst & AlarmCodeWhenHandshaking != AlarmCodes.Has_Cst_Without_Job)
-                AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-            LOG.TRACE($"WatchE84AlarmWhenAGVBUSY Process end.[Handshake_Fail_AGV_DOWN]");
-        }
-
-        private async Task WatchE84EQAlarmWhenEQBUSY(CancellationTokenSource waitEQSignalCST)
-        {
-            await Task.Delay(200);
-            AGVAlarmWhenEQBusyFlag = false;
-            EQAlarmWhenEQBusyFlag = false;
-            await Task.Delay(1);
-            _ = Task.Run(async () =>
-            {
-                while (IsEQBusyOn())
-                {
-                    Thread.Sleep(10);
-                    var isEQReadyOFF = !IsEQReadyOn();
-                    if (Sub_Status == SUB_STATUS.DOWN)
-                    {
-                        AGVAlarmWhenEQBusyFlag = true;
-                        waitEQSignalCST.Cancel();
-                        SetAGV_TR_REQ(false);
-                        if (!isEQReadyOFF & IsEQGOOn() & AlarmCodeWhenHandshaking == AlarmCodes.None)
-                        {
-                            AlarmCodeWhenHandshaking = AlarmCodes.Handshake_Fail_AGV_DOWN;
-                            AlarmManager.AddAlarm(AlarmCodes.Handshake_Fail_AGV_DOWN, false);
-                        }
-                        LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[AGVSub_Status DOWN]");
-                        return;
-                    }
-
-                    if (isEQReadyOFF && Sub_Status == SUB_STATUS.RUN)//異常發生
-                    {
-                        EQAlarmWhenEQBusyFlag = true;
-                        waitEQSignalCST.Cancel();
-                        AGVC.AbortTask();
-                        Sub_Status = SUB_STATUS.DOWN;
-                        AlarmCodeWhenHandshaking = !IsEQGOOn() ? AlarmCodes.Handshake_Fail_EQ_GO : AlarmCodes.Handshake_Fail_EQ_READY_OFF;
-                        AlarmManager.AddAlarm(AlarmCodeWhenHandshaking, false);
-                        LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[EQ_READY OFF]");
-                        return;
-                    }
-                }
-                LOG.TRACE($"WatchE84EQAlarmWhenEQBUSY Process end[EQ_BUSY OFF]");
-            });
-        }
         internal void StopAllHandshakeTimer()
         {
             EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
@@ -782,7 +714,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EndTimer(HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON);
             EndTimer(HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF);
             EndTimer(HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF);
+            EndTimer(HANDSHAKE_EQ_TIMEOUT.TP_5_Wait_AGV_BUSY_OFF);
+
         }
+
+
 
         private void StartTimer(HANDSHAKE_EQ_TIMEOUT timer)
         {
@@ -820,20 +757,132 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ON, OFF
         }
 
-        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State,int timeout=50)
+
+        private async Task<(bool success, AlarmCodes alarm_code)> HandshakeWith(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, HANDSHAKE_EQ_TIMEOUT Timer, AlarmCodes alarm_code_timeout)
         {
-            LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
+            int timeout = Parameters.EQHSTimeouts[Timer];
+            LOG.Critical($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
+            HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
+            StartTimer(Timer);
+            bool changed_done = WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts);
+            EndTimer(Timer);
+            if (!changed_done)
+            {
+                if (_IsAGVAbnormal_when_handshaking)
+                    return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
+                else if (_IsEQGoOFF_When_Handshaking)
+                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                else if (_IsEQREQOFF_when_wait_EQREADY_when_handshaking)
+                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
+                else if (_IsEQBusy_when_AGV_Busy)
+                    return (false, AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
+                else if (_IsEQAbnormal_when_handshaking)
+                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+                else
+                    return (false, alarm_code_timeout);
+            }
+            return (true, AlarmCodes.None);
+        }
+
+        private string CreateHandshakeStatusDisplayText(Enum signal, HS_SIGNAL_STATE eXPECTED_State)
+        {
+            if (signal.GetType().Name == "EQ_HSSIGNAL")
+            {
+                EQ_HSSIGNAL eq_hs = (EQ_HSSIGNAL)signal;
+                if (eq_hs == EQ_HSSIGNAL.EQ_L_REQ)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待設備[載入]需求訊號開啟";
+                    else
+                        return "等待設備[載入]需求訊號關閉";
+                }
+                else if (eq_hs == EQ_HSSIGNAL.EQ_U_REQ)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待設備[載出]需求訊號開啟";
+                    else
+                        return "等待設備[載出]需求訊號關閉";
+                }
+                else if (eq_hs == EQ_HSSIGNAL.EQ_READY)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待設備READY";
+                    else
+                        return "等待設備READY OFF";
+                }
+                else if (eq_hs == EQ_HSSIGNAL.EQ_BUSY)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待設備開始動作";
+                    else
+                        return "等待設備完成動作";
+                }
+                else
+                    return $"等待 {signal} 訊號 {eXPECTED_State}";
+            }
+            else
+            {
+                AGV_HSSIGNAL AGV_hs = (AGV_HSSIGNAL)signal;
+                if (AGV_hs == AGV_HSSIGNAL.AGV_VALID)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待AGV VALID 訊號 ON";
+                    else
+                        return "等待AGV VALID 訊號 OFF";
+                }
+                else if (AGV_hs == AGV_HSSIGNAL.AGV_TR_REQ)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待AGV[移載需求]訊號 ON";
+                    else
+                        return "等待AGV[移載需求]訊號 OFF";
+                }
+                else if (AGV_hs == AGV_HSSIGNAL.AGV_BUSY)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待AGV動作開始";
+                    else
+                        return "等待AGV動作完成";
+                }
+                else if (AGV_hs == AGV_HSSIGNAL.AGV_READY)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待AGV READY";
+                    else
+                        return "等待AGV READY OFF";
+                }
+                else if (AGV_hs == AGV_HSSIGNAL.AGV_COMPT)
+                {
+                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                        return "等待AGV 完成訊號";
+                    else
+                        return "等待AGV 完成訊號 OFF";
+                }
+                else
+                    return $"等待 {signal} 訊號 {eXPECTED_State}";
+            }
+
+        }
+
+        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null)
+        {
+            // LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
             CancellationTokenSource _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             while (_GetState(Signal) != (EXPECTED_State == HS_SIGNAL_STATE.ON) ? true : false)
             {
                 Thread.Sleep(1);
+                if (cancellation != null && cancellation.IsCancellationRequested)
+                {
+                    //LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Interupt!!!!!");
+                    return false;
+                }
                 if (_cts.IsCancellationRequested)
                 {
-                    LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Timeout!!!!!");
+                    //LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Timeout!!!!!");
                     return false;
                 }
             }
-            LOG.TRACE($"[交握訊號變化等待] {Signal} changed to {EXPECTED_State}!");
+            //LOG.TRACE($"[交握訊號變化等待] {Signal} changed to {EXPECTED_State}!");
             return true;
 
             ///private local function

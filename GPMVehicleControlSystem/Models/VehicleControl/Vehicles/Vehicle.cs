@@ -742,13 +742,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ExecutingTaskModel = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
-            if (EQAlarmWhenEQBusyFlag && WagoDI.GetState(DI_ITEM.EQ_BUSY))
+            if ((_IsEQAbnormal_when_handshaking || _IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
             {
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
             }
 
-            AGVAlarmWhenEQBusyFlag = false;
-            EQAlarmWhenEQBusyFlag = false;
             ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             var hardware_status_check_reuslt = CheckHardwareStatus();

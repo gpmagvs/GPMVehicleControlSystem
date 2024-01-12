@@ -23,7 +23,6 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, true);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, true);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, true);
-            agv.EQAlarmWhenEQBusyFlag = true;
             AlarmManager.AddAlarm( AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
             agv.Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
             return Ok();
@@ -41,7 +40,6 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
-            agv.EQAlarmWhenEQBusyFlag = false;
             return Ok();
         }
     }

@@ -145,6 +145,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             {   HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON , 5  },
             {   HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF , 90  },
             {   HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF , 5  },
+            {   HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF , 90  },
+            {   HANDSHAKE_EQ_TIMEOUT.TP_5_Wait_AGV_BUSY_OFF , 90 },
         };
 
         public EQ_INTERACTION_FAIL_ACTION CstReadFailAction { get; set; } = EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS;

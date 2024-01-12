@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Threading.Tasks;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
@@ -82,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (Agv.Parameters.LDULDParams.LsrObstacleDetectionEnable)
             {
-                Agv.IsHandshaking= true;
+                Agv.IsHandshaking = true;
                 Agv.HandshakeStatusText = "設備內障礙物檢查..";
                 LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
                 bool _HasObstacle = await CheckPortObstacleViaLaser();
@@ -120,7 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return (false, AlarmCodes.Waiting_EQ_Handshake);
                 }
                 Agv.ResetHandshakeSignals();
-                Agv.ResetHSTimers();
+                Agv.ResetHSTimersAndEvents();
                 await Task.Delay(700);
                 Agv.HandshakeStatusText = "確認光IO EQ GO訊號...";
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
@@ -145,6 +146,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
+                _ = Task.Factory.StartNew(() =>
+                {
+                    _ = Agv.Handshake_AGV_BUSY_ON(action, isBackToHome: false).ContinueWith((tk) =>
+                    {
+                        if (!tk.Result.done)
+                        {
+                            Agv.SoftwareEMO(tk.Result.alarmCode);
+                        }
+                    });
+                });
                 #region 前方障礙物預檢
 
                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
@@ -292,16 +303,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
                 {
-                    HSResult = await Agv.WaitEQBusyOFF(action);
-                    if (!HSResult.hs_success)
+                    HSResult = await Agv.WaitEQBusyOnAndOFF(action);
+                    if (HSResult.hs_success)
                     {
-                        Agv.DirectionLighter.CloseAll();
+                        _ = Task.Factory.StartNew(() =>
+                        {
+                            _ = Agv.Handshake_AGV_BUSY_ON(action, isBackToHome: true).ContinueWith(tsk =>
+                            {
+                                if (!tsk.Result.done)
+                                {
+                                    Agv.SoftwareEMO(tsk.Result.alarmCode);
+                                }
+                            });
+                        });
+                        lduld_record.EQActionFinishTime = DateTime.Now;
+                        DBhelper.ModifyUDLUDRecord(lduld_record);
+                    }
+                    else
+                    {
                         return (false, HSResult.alarmCode);
                     }
-
-                    lduld_record.EQActionFinishTime = DateTime.Now;
-                    DBhelper.ModifyUDLUDRecord(lduld_record);
-
                 }
                 else
                 {
