@@ -458,7 +458,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         }
         internal void EmuLog(string msg, bool show_console = true)
         {
-            LOG.TRACE($"[車控模擬] {msg}", show_console,color: ConsoleColor.Magenta);
+            LOG.TRACE($"[車控模擬] {msg}", show_console, color: ConsoleColor.Magenta);
         }
 
         internal void SetInitTag(int lastVisitedTag)
@@ -514,6 +514,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal void SetBatteryLevel(byte level, int batIndex)
         {
             module_info.Battery.batteryLevel = level;
+        }
+
+        internal void SetImuData(RosSharp.RosBridgeClient.MessageTypes.Sensor.Imu imu)
+        {
+            module_info.IMU.imuData = imu;
         }
     }
 }

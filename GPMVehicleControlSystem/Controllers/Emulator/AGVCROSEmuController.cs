@@ -1,6 +1,7 @@
 ﻿using GPMVehicleControlSystem.Models.Emulators;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RosSharp.RosBridgeClient.MessageTypes.Sensor;
 
 namespace GPMVehicleControlSystem.Controllers.Emulator
 {
@@ -45,5 +46,14 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         {
             StaEmuManager.agvRosEmu.SetBatteryLevel((byte)level, batIndex);
         }
+
+
+        [HttpPost("IMU_Data")]
+        public async Task IMU_Data(Imu imu)
+        {
+            StaEmuManager.agvRosEmu.SetImuData(imu);
+        }
+
+
     }
 }

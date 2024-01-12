@@ -23,6 +23,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public int Version { get; set; } = 1;
         public string SID { get; set; } = "SID";
         public string VehicleName { get; set; } = "EQName";
+
+        public Dictionary<string, clsConnectionParam> Connections { get; set; } = new Dictionary<string, clsConnectionParam>()
+        {
+            { "RosBridge" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 9090
+                }
+            },
+            { "Wago" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 9999,
+                     Protocol_Interval_ms =50
+                }
+            },
+            { "AGVS" , new clsConnectionParam
+                {
+                     IP = "127.0.0.1",
+                     Port = 5036,
+                }
+            }
+        };
+        public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
         public bool SimulationMode { get; set; } = false;
         public bool WagoSimulation { get; set; } = true;
         public bool ActiveTrafficControl { get; set; } = false;
@@ -102,29 +126,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LDULD_FrontBackLaser_Bypass { get; set; } = true;
 
-        public Dictionary<string, clsConnectionParam> Connections { get; set; } = new Dictionary<string, clsConnectionParam>()
-        {
-            { "RosBridge" , new clsConnectionParam
-                {
-                     IP = "127.0.0.1",
-                     Port = 9090
-                }
-            },
-            { "Wago" , new clsConnectionParam
-                {
-                     IP = "127.0.0.1",
-                     Port = 9999,
-                     Protocol_Interval_ms =50
-                }
-            },
-            { "AGVS" , new clsConnectionParam
-                {
-                     IP = "127.0.0.1",
-                     Port = 5036,
-                }
-            }
-        };
-        public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
         public clsMapParam MapParam { get; set; } = new clsMapParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.PIO;
 
