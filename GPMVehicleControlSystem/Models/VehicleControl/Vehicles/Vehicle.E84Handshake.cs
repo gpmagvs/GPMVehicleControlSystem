@@ -102,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 bool is_changed = _state != lastNewInput;
                                 _state = lastNewInput;
                                 if (is_changed)
-                                    LOG.INFO($"EQ 交握訊號-{signal_name} Change to {(_state ? 1 : 0)}");
+                                    LOG.INFO($"[EQ交握訊號監視] {signal_name} Change to {(_state ? 1 : 0)}");
                                 _change_wait_task = null;
                             }
                             catch (Exception)
@@ -191,6 +191,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async void SetAGVBUSY(bool value, bool isInEQ = true)
         {
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, value);
+            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_BUSY, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
+
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && !value) //AGV_BUSY OFF
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -208,13 +210,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
                         await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
                     }
-
                 });
             }
         }
         private async void SetAGVREADY(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_READY, value);
+            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_READY, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
+
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -228,6 +231,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async void SetAGVVALID(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, value);
+            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_VALID, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -242,6 +246,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async void SetAGV_TR_REQ(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, value);
+            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_TR_REQ, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -256,6 +261,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async void SetAGV_COMPT(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, value);
+            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_COMPT, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -327,9 +333,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.Critical("[EQ Handshake] 等待EQ LU_REQ ON");
                 HandshakeStatusText = "等待EQ 取放請求訊號ON";
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
-                waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
-                wait_eq_UL_req_ON.Start();
-                wait_eq_UL_req_ON.Wait(waitEQSignalCST.Token);
+                bool _success = WaitHSSignalStateChanged(action== ACTION_TYPE.Load? EQ_HSSIGNAL.EQ_L_REQ: EQ_HSSIGNAL.EQ_U_REQ , HS_SIGNAL_STATE.ON, Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]);
+                //waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
+                //wait_eq_UL_req_ON.Start();
+                //wait_eq_UL_req_ON.Wait(waitEQSignalCST.Token);
+                if (!_success)
+                    return (false, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
                 if (!IsEQGOOn())
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
@@ -395,7 +404,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CancellationTokenSource waitEQ_BUSY_OFF_CTS = new CancellationTokenSource();
 
             SetAGVBUSY(false, true);
-            await Task.Delay(300);
             SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
             Task wait_eq_busy_ON = new Task(() =>
@@ -807,6 +815,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             });
         }
+        private enum HS_SIGNAL_STATE
+        {
+            ON, OFF
+        }
 
+        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State,int timeout=50)
+        {
+            LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
+            CancellationTokenSource _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+            while (_GetState(Signal) != (EXPECTED_State == HS_SIGNAL_STATE.ON) ? true : false)
+            {
+                Thread.Sleep(1);
+                if (_cts.IsCancellationRequested)
+                {
+                    LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Timeout!!!!!");
+                    return false;
+                }
+            }
+            LOG.TRACE($"[交握訊號變化等待] {Signal} changed to {EXPECTED_State}!");
+            return true;
+
+            ///private local function
+            bool _GetState(Enum _Signal)
+            {
+                if (_Signal.GetType().Name == "EQ_HSSIGNAL")
+                {
+                    return EQHsSignalStates[(EQ_HSSIGNAL)Signal].State;
+                }
+                else if (_Signal.GetType().Name == "AGV_HSSIGNAL")
+                {
+                    return AGVHsSignalStates[(AGV_HSSIGNAL)Signal];
+                }
+                else
+                    return false;
+            }
+        }
     }
 }
