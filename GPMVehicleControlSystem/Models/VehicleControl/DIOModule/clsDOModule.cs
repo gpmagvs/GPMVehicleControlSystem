@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Modbus.Device;
+using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
@@ -228,6 +229,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO != null)
                 {
                     OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
+                    while (GetState(signal) != state)
+                    {
+                        Thread.Sleep(1);
+                    }
                     return true;
                 }
                 else

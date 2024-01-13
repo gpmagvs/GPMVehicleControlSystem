@@ -732,14 +732,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            if (ExecutingTaskModel != null)
+            if (ExecutingTaskEntity != null)
             {
-                ExecutingTaskModel.AGVCActionStatusChaged = null;
+                ExecutingTaskEntity.AGVCActionStatusChaged = null;
             }
             AGVC.OnAGVCActionChanged = null;
             IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
             await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
-            ExecutingTaskModel = null;
+            ExecutingTaskEntity = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
             if ((_IsEQAbnormal_when_handshaking || _IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
@@ -895,8 +895,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsInitialized = false;
             StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
-            AGVSTaskFeedBackReportAndOffline(alarmCode);
-
+            //AGVSTaskFeedBackReportAndOffline(alarmCode);
+            if (Remote_Mode == REMOTE_MODE.ONLINE)
+            {
+                LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+            }
             HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"交握失敗-{alarmCode}" : HandshakeStatusText;
 
             if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
@@ -918,8 +922,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AGVC._ActionStatus = ActionStatus.NO_GOAL;
                         LOG.WARN($"[Software EMO] Set AGVC Status changed to {ActionStatus.NO_GOAL}");
                         AGVC.OnAGVCActionChanged -= RaiseActionStatusNoGoal;
-                        ExecutingTaskModel?.Dispose();
-                        ExecutingTaskModel = null;
+                        ExecutingTaskEntity?.Dispose();
+                        ExecutingTaskEntity = null;
                     });
                 }
             }
@@ -965,29 +969,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Theta = Navigation.Angle
             });
         }
-
-        private async void AGVSTaskFeedBackReportAndOffline(AlarmCodes alarmCode)
-        {
-            if (!_RunTaskData.IsLocalTask && !_RunTaskData.IsActionFinishReported)
-            {
-                if ((_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) | !_RunTaskData.IsEQHandshake) //非取放貨任務 一律上報任務完成
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
-                else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
-                {
-                    if (IsHandshakeFailAlarmCode(alarmCode))
-                    {
-                        LOG.TRACE($"FeedbackTaskStatus Action Finish with alarm code-{alarmCode}");
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
-                    }
-
-                }
-            }
-            if (Remote_Mode == REMOTE_MODE.ONLINE)
-            {
-                LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
-                await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
-            }
-        }
+        private bool IsCurrentTaskIsHandshaking => _RunTaskData.IsEQHandshake;
 
         /// <summary>
         /// 是否為交握異常碼
@@ -1043,7 +1025,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                        if (ExecutingTaskEntity.action == ACTION_TYPE.None)
                             BuzzerPlayer.Move();
                         else
                             BuzzerPlayer.Action();

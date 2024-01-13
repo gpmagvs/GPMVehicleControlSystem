@@ -63,7 +63,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             Agv.Sub_Status = SUB_STATUS.IDLE;
-            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

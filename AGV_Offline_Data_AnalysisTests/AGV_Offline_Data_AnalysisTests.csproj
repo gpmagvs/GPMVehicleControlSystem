@@ -62,12 +62,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AGV_Offline_Data_Analysis\AGV_Offline_Data_Analysis.csproj">
-      <Project>{9415F4CF-284B-4725-BB50-E7932A9301A2}</Project>
-      <Name>AGV_Offline_Data_Analysis</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

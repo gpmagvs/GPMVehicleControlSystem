@@ -33,6 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
         private bool disposedValue;
+        protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
@@ -69,6 +70,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public clsForkLifter ForkLifter { get; internal set; }
         public int destineTag => _RunningTaskData == null ? -1 : _RunningTaskData.Destination;
         public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
+        public bool IsNeedHandshake = false;
 
         protected bool IsNeedWaitForkHome = false;
         protected Task forkGoHomeTask = null;
@@ -137,6 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
+                task_abort_alarmcode = AlarmCodes.None;
                 await Task.Delay(10);
                 BuzzerPlayMusic(action);
                 TaskCancelCTS = new CancellationTokenSource();
@@ -167,7 +170,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
                     LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
-                    return new List<AlarmCodes> { AlarmCodes.AGV_State_Cant_do_this_Action };
+                    var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN :  AlarmCodes.AGV_State_Cant_do_this_Action;
+
+                    return new List<AlarmCodes> { IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode };
                 }
 
                 SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
@@ -176,6 +181,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
                     HandleAGVActionChanged(ActionStatus.SUCCEEDED);
+                    return new List<AlarmCodes>();
+
                 }
                 else
                 {
@@ -189,9 +196,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         await Task.Delay(1000);
                         if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
                         {
-                            HandleAGVCActionSucceess();
-                            return new List<AlarmCodes>();
+                            var _result = await HandleAGVCActionSucceess();
+                            return _result.success ? new List<AlarmCodes>() : new List<AlarmCodes>() { _result.alarmCode };
                         }
+
+                        _wait_agvc_action_done_pause.Reset();
+
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
@@ -208,13 +218,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                                 #endregion
                             }
-
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
+
+
                         }
+                        LOG.TRACE($"等待 AGV完成任務---[{action}.]");
+                        _wait_agvc_action_done_pause.WaitOne();
+                        return new List<AlarmCodes>() { task_abort_alarmcode };
                     }
                 }
-                return new List<AlarmCodes>();
             }
             catch (Exception ex)
             {
@@ -290,81 +303,76 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
 
 
-        protected bool IsAGVCActionNoOperate(ActionStatus status, Action<ActionStatus> actionStatusChangedCallback)
+        protected bool IsAGVCActionNoOperate(ActionStatus status)
         {
             bool isNoOperate = status == ActionStatus.RECALLING | status == ActionStatus.REJECTED | status == ActionStatus.PREEMPTING | status == ActionStatus.PREEMPTED | status == ActionStatus.ABORTED;
-            if (isNoOperate)
-            {
-                AGVCActionStatusChaged -= actionStatusChangedCallback;
-                LOG.WARN($"Task Action狀態錯誤:{status}");
-                Agv.SoftwareEMO(AlarmCodes.AGV_State_Cant_do_this_Action);
-            }
             return isNoOperate;
         }
+        protected ManualResetEvent _wait_agvc_action_done_pause = new ManualResetEvent(false);
         protected async void HandleAGVActionChanged(ActionStatus status)
         {
-            _ = Task.Factory.StartNew(async () =>
+            try
             {
-                LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
-                if (IsAGVCActionNoOperate(status, HandleAGVActionChanged))
-                    return;
-                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                _ = Task.Factory.StartNew(async () =>
                 {
-                    if (Agv.AGVSResetCmdFlag)
+                    LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+                    if (IsAGVCActionNoOperate(status) || Agv.Sub_Status == SUB_STATUS.DOWN)
                     {
-                        Agv.AGV_Reset_Flag = true;
-                    }
-                    AGVCActionStatusChaged = null;
-                    return;
-                }
-
-                if (Agv.IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
-                {
-                    AGVCActionStatusChaged = null;
-                    LOG.ERROR($"存在貨物傾倒異常");
-                    Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
-                    AlarmManager.AddAlarm(AlarmCodes.Cst_Slope_Error, false);
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
-                    return;
-                }
-
-                if (status == ActionStatus.ACTIVE)
-                {
-                    //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
-                }
-                else if (status == ActionStatus.SUCCEEDED)
-                {
-
-                    if (Agv.AGVSResetCmdFlag)
-                    {
-                        Agv.AGV_Reset_Flag = true;
-                        //因為
-                    }
-                    AGVCActionStatusChaged = null;
-
-                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                    {
+                        if (Agv.AGVSResetCmdFlag)
+                        {
+                            Agv.AGV_Reset_Flag = true;
+                        }
+                        AGVCActionStatusChaged = null;
+                        task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
+                        _wait_agvc_action_done_pause.Set();
                         return;
                     }
-                    LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
-                    Agv.DirectionLighter.CloseAll();
-                    Agv.lastParkingAccuracy = StoreParkingAccuracy();
-                    var result = await HandleAGVCActionSucceess();
-                    if (!result.success)
+                    if (Agv.IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
                     {
-                        var alarm_code = result.alarmCode;
-                        if (alarm_code != AlarmCodes.None)
-                        {
-                            Agv.AlarmCodeWhenHandshaking = alarm_code;
-                            AlarmManager.AddAlarm(alarm_code, false);
-                        }
+                        AGVCActionStatusChaged = null;
+                        LOG.ERROR($"存在貨物傾倒異常");
+                        Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
                         Agv.Sub_Status = SUB_STATUS.DOWN;
+                        task_abort_alarmcode = AlarmCodes.Cst_Slope_Error;
+                        _wait_agvc_action_done_pause.Set();
+                        return;
                     }
-                    else
+
+                    if (status == ActionStatus.ACTIVE)
                     {
+                        //Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
                     }
-                }
-            });
+                    else if (status == ActionStatus.SUCCEEDED)
+                    {
+
+                        if (Agv.AGVSResetCmdFlag)
+                        {
+                            Agv.AGV_Reset_Flag = true;
+                            //因為
+                        }
+                        AGVCActionStatusChaged = null;
+
+                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        {
+                            var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
+                            task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
+                            _wait_agvc_action_done_pause.Set();
+                            return;
+                        }
+                        LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
+                        Agv.DirectionLighter.CloseAll();
+                        Agv.lastParkingAccuracy = StoreParkingAccuracy();
+                        (bool success, AlarmCodes alarmCode) result = await HandleAGVCActionSucceess();
+                        task_abort_alarmcode = result.success ? AlarmCodes.None : result.alarmCode;
+                        _wait_agvc_action_done_pause.Set();
+                    }
+                }, TaskCancelCTS.Token);
+
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical("HandleAGVActionChanged exception", ex);
+            }
         }
 
         /// <summary>
@@ -391,9 +399,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-
             Agv.Sub_Status = SUB_STATUS.IDLE;
-            await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }
 
@@ -418,8 +424,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         public abstract Task<bool> LaserSettingBeforeTaskExecute();
 
-        internal virtual void Abort()
+        internal virtual void Abort(AlarmCodes alarm_code = AlarmCodes.None)
         {
+            task_abort_alarmcode = alarm_code;
             AGVCActionStatusChaged = null;
             TaskCancelCTS.Cancel();
         }
@@ -600,7 +607,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 try
                 {
                     Agv.AGVC.EMOHandler(this, EventArgs.Empty);
-                    Agv.ExecutingTaskModel.Abort();
+                    Agv.ExecutingTaskEntity.Abort();
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
                 }

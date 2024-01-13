@@ -66,10 +66,10 @@ namespace GPMVehicleControlSystem.ViewModels
                     Laser_Mode = (int)AGV.Laser.Mode,
                     NavInfo = new NavStateVM
                     {
-                        Destination = AGV.ExecutingTaskModel == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
+                        Destination = AGV.ExecutingTaskEntity == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
                         DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph = new Graph { Display = "" } } : AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
-                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskModel == null ? new int[0] : AGV.ExecutingTaskModel.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
+                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskEntity == null ? new int[0] : AGV.ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
 
                     },

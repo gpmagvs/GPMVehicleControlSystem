@@ -187,7 +187,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 LOG.INFO($"Start Cargo Bias Detection.");
-                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskModel.action == ACTION_TYPE.None)
+                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
                     if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
@@ -209,32 +209,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 Agv.IsCargoBiasDetecting = false;
             });
-        }
-
-        private async void WatchVirtualPtAndStopWorker()
-        {
-            if (lastPt == null)
-                return;
-
-            if (!lastPt.IsVirtualPoint)
-                return;
-            LOG.WARN("終點站為虛擬點 Start Monitor .");
-            double distance = 0;
-            Stopwatch sw = Stopwatch.StartNew();
-
-            while ((distance = lastPt.CalculateDistance(Agv.Navigation.Data.robotPose.pose.position.x, Agv.Navigation.Data.robotPose.pose.position.y)) > 0.05)
-            {
-                if (sw.ElapsedMilliseconds > 3000)
-                {
-                    sw.Restart();
-                    LOG.WARN($"與虛擬點終點站距離:{distance} m");
-                }
-                await Task.Delay(1);
-            }
-            LOG.WARN("抵達虛擬點終點站 Stop Monitor .");
-            AlarmManager.AddAlarm(AlarmCodes.Destine_Point_Is_Virtual_Point);
-            Agv.HandleAGVSTaskCancelRequest(RESET_MODE.ABORT);
-
         }
 
         public override async Task<bool> LaserSettingBeforeTaskExecute()

@@ -146,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 BuzzerPlayer.Move();
                 LOG.INFO($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                Agv.ExecutingTaskModel.RunningTaskData = RunningTaskData;
+                Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
                 AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
@@ -174,8 +174,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 AGVCActionStatusChaged = null;
                 Agv.Sub_Status = SUB_STATUS.IDLE;
-                await Task.Delay(500);
-                await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             }
         }
         private async void HandleAGVCReachMeasurePoint(ActionStatus status)

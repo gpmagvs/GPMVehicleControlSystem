@@ -213,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
-                    Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging,
                 };
                 return status;
@@ -264,7 +264,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = _RunTaskData.IsLocalTask & !Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
-                    Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
+                    Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };
                 return status;
@@ -322,7 +322,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
                                 Sub_Status = SUB_STATUS.DOWN;
                             }
-                            ExecutingTaskModel.Abort();
+                            ExecutingTaskEntity.Abort();
                         });
                     }
                     return result;

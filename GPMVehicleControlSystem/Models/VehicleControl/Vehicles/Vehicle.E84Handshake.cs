@@ -203,11 +203,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         #region 交握
 
-        private async void SetAGVBUSY(bool value, bool isInEQ = true)
+        private async Task SetAGVBUSY(bool value, bool isInEQ = true)
         {
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, value);
-            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_BUSY, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
-
+            HandshakeStatusText = value ? "AGV動作中" : "AGV動作完成";
+            if (value)
+                EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON += HandleEQBusyONAfterAGVBUSY;
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && !value) //AGV_BUSY OFF
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -228,10 +229,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
             }
         }
-        private async void SetAGVREADY(bool value)
+        private async Task SetAGVREADY(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_READY, value);
-            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_READY, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
 
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
@@ -243,10 +243,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-        private async void SetAGVVALID(bool value)
+        private async Task SetAGVVALID(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, value);
-            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_VALID, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -258,10 +257,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-        internal async void SetAGV_TR_REQ(bool value)
+        internal async Task SetAGV_TR_REQ(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, value);
-            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_TR_REQ, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
+            if (value)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    (bool success, AlarmCodes alarm_code) result = await HandshakeWith(AGV_HSSIGNAL.AGV_TR_REQ, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF, AlarmCodes.Handshake_Fail_AGV_DOWN);
+                });
+            }
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -273,10 +278,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
         }
-        private async void SetAGV_COMPT(bool value)
+        private async Task SetAGV_COMPT(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, value);
-            WaitHSSignalStateChanged(AGV_HSSIGNAL.AGV_COMPT, value ? HS_SIGNAL_STATE.ON : HS_SIGNAL_STATE.OFF);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
@@ -311,16 +315,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (isBackToHome)
             {
-                SetAGVREADY(false);
+                await SetAGVREADY(false);
             }
-            SetAGVBUSY(true);
-            _ = Task.Factory.StartNew(async () =>
-            {
-                LOG.TRACE($"Start watch EQ BUSY when AGV BUsy ON");
-                EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON += HandleEQBusyONAfterAGVBUSY;
-                await HandshakeWith(AGV_HSSIGNAL.AGV_BUSY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TP_3_Wait_AGV_BUSY_OFF, AlarmCodes.Handshake_Fail_AGV_DOWN);
-                EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON -= HandleEQBusyONAfterAGVBUSY;
-            });
+            await SetAGVBUSY(true);
+
             return (true, AlarmCodes.None);
         }
 
@@ -332,7 +330,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.Critical("EQ Busy ON when AGV Busy!!");
                 _IsEQBusy_when_AGV_Busy = true;
                 hs_abnormal_happen_cts.Cancel();
-                SoftwareEMO(AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
             }
         }
 
@@ -353,14 +350,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
             EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
-            SetAGVVALID(true);
+            await SetAGVVALID(true);
             StartWatchAGVStatusAsync();
             try
             {
                 (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
                 if (!_result.success)
                     return _result;
-                SetAGV_TR_REQ(true);
+                await SetAGV_TR_REQ(true);
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF += HandleEQ_LUREQ_OFF;
                 _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF -= HandleEQ_LUREQ_OFF;
@@ -410,7 +407,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             LOG.TRACE($"Start Watch EQ_READY OFF");
             EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF += HandleEQReadOFF;
-
         }
 
         private void HandleEQReadOFF(object? sender, EventArgs e)
@@ -436,8 +432,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
             DirectionLighter.WaitPassLights();
-            SetAGVBUSY(false, true);
-            SetAGVREADY(true);
+            await SetAGVBUSY(false, true);
+            await SetAGVREADY(true);
             AlarmCodes alarm_code = AlarmCodes.None;
 
             try
@@ -585,9 +581,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (true, AlarmCodes.None);
             EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
             AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ;
-            SetAGVBUSY(false, false);
+            await SetAGVBUSY(false, false);
             await Task.Delay(200);
-            SetAGV_COMPT(true);
+            await SetAGV_COMPT(true);
 
             try
             {
@@ -599,9 +595,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!_result.success)
                     return _result;
 
-                SetAGV_COMPT(false);
-                SetAGV_TR_REQ(false);
-                SetAGVVALID(false);
+                await SetAGV_COMPT(false);
+                await SetAGV_TR_REQ(false);
+                await SetAGVVALID(false);
                 LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
                 _ = Task.Run(async () =>
                 {
@@ -761,107 +757,66 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task<(bool success, AlarmCodes alarm_code)> HandshakeWith(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, HANDSHAKE_EQ_TIMEOUT Timer, AlarmCodes alarm_code_timeout)
         {
             int timeout = Parameters.EQHSTimeouts[Timer];
-            LOG.Critical($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
-            HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
+            LOG.WARN($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
+            if (Signal.GetType().Name == "EQ_HSSIGNAL")
+                HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
             StartTimer(Timer);
             bool changed_done = WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts);
+            LOG.WARN($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
-            if (!changed_done)
+            AlarmCodes _alarmcode = AlarmCodes.None;
+            if (!changed_done || Sub_Status == SUB_STATUS.DOWN)
             {
                 if (_IsAGVAbnormal_when_handshaking)
-                    return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
+                    _alarmcode = AlarmCodes.Handshake_Fail_AGV_DOWN;
                 else if (_IsEQGoOFF_When_Handshaking)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_GO;
                 else if (_IsEQREQOFF_when_wait_EQREADY_when_handshaking)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY;
                 else if (_IsEQBusy_when_AGV_Busy)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
                 else if (_IsEQAbnormal_when_handshaking)
-                    return (false, AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
                 else
-                    return (false, alarm_code_timeout);
+                    _alarmcode = alarm_code_timeout;
+                ExecutingTaskEntity.Abort(_alarmcode);
             }
-            return (true, AlarmCodes.None);
+            return (_alarmcode == AlarmCodes.None, _alarmcode);
         }
 
         private string CreateHandshakeStatusDisplayText(Enum signal, HS_SIGNAL_STATE eXPECTED_State)
         {
-            if (signal.GetType().Name == "EQ_HSSIGNAL")
+            EQ_HSSIGNAL eq_hs = (EQ_HSSIGNAL)signal;
+            if (eq_hs == EQ_HSSIGNAL.EQ_L_REQ)
             {
-                EQ_HSSIGNAL eq_hs = (EQ_HSSIGNAL)signal;
-                if (eq_hs == EQ_HSSIGNAL.EQ_L_REQ)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待設備[載入]需求訊號開啟";
-                    else
-                        return "等待設備[載入]需求訊號關閉";
-                }
-                else if (eq_hs == EQ_HSSIGNAL.EQ_U_REQ)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待設備[載出]需求訊號開啟";
-                    else
-                        return "等待設備[載出]需求訊號關閉";
-                }
-                else if (eq_hs == EQ_HSSIGNAL.EQ_READY)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待設備READY";
-                    else
-                        return "等待設備READY OFF";
-                }
-                else if (eq_hs == EQ_HSSIGNAL.EQ_BUSY)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待設備開始動作";
-                    else
-                        return "等待設備完成動作";
-                }
+                if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                    return "等待設備[載入]需求訊號開啟";
                 else
-                    return $"等待 {signal} 訊號 {eXPECTED_State}";
+                    return "等待設備[載入]需求訊號關閉";
+            }
+            else if (eq_hs == EQ_HSSIGNAL.EQ_U_REQ)
+            {
+                if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                    return "等待設備[載出]需求訊號開啟";
+                else
+                    return "等待設備[載出]需求訊號關閉";
+            }
+            else if (eq_hs == EQ_HSSIGNAL.EQ_READY)
+            {
+                if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                    return "等待設備READY";
+                else
+                    return "等待設備READY OFF";
+            }
+            else if (eq_hs == EQ_HSSIGNAL.EQ_BUSY)
+            {
+                if (eXPECTED_State == HS_SIGNAL_STATE.ON)
+                    return "等待設備開始動作";
+                else
+                    return "等待設備完成動作";
             }
             else
-            {
-                AGV_HSSIGNAL AGV_hs = (AGV_HSSIGNAL)signal;
-                if (AGV_hs == AGV_HSSIGNAL.AGV_VALID)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待AGV VALID 訊號 ON";
-                    else
-                        return "等待AGV VALID 訊號 OFF";
-                }
-                else if (AGV_hs == AGV_HSSIGNAL.AGV_TR_REQ)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待AGV[移載需求]訊號 ON";
-                    else
-                        return "等待AGV[移載需求]訊號 OFF";
-                }
-                else if (AGV_hs == AGV_HSSIGNAL.AGV_BUSY)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待AGV動作開始";
-                    else
-                        return "等待AGV動作完成";
-                }
-                else if (AGV_hs == AGV_HSSIGNAL.AGV_READY)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待AGV READY";
-                    else
-                        return "等待AGV READY OFF";
-                }
-                else if (AGV_hs == AGV_HSSIGNAL.AGV_COMPT)
-                {
-                    if (eXPECTED_State == HS_SIGNAL_STATE.ON)
-                        return "等待AGV 完成訊號";
-                    else
-                        return "等待AGV 完成訊號 OFF";
-                }
-                else
-                    return $"等待 {signal} 訊號 {eXPECTED_State}";
-            }
-
+                return $"等待 {signal} 訊號 {eXPECTED_State}";
         }
 
         private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null)

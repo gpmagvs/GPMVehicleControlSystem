@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
@@ -47,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private TaskBase _ExecutingTask;
-        public TaskBase ExecutingTaskModel
+        public TaskBase ExecutingTaskEntity
         {
             get => _ExecutingTask;
             set
@@ -121,9 +122,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             AGVC.OnAGVCActionChanged = null;
-            if (ExecutingTaskModel != null)
+            if (ExecutingTaskEntity != null)
             {
-                ExecutingTaskModel.Dispose();
+                ExecutingTaskEntity.Dispose();
             }
 
             _RunTaskData = taskDownloadData.Clone();
@@ -139,85 +140,89 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
-
             LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
             {
                 if (action == ACTION_TYPE.None)
                 {
-                    ExecutingTaskModel = new NormalMoveTask(this, taskDownloadData);
+                    ExecutingTaskEntity = new NormalMoveTask(this, taskDownloadData);
                 }
                 else
                 {
                     if (taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
                         taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
                     if (action == ACTION_TYPE.Charge)
-                        ExecutingTaskModel = new ChargeTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new ChargeTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Discharge)
-                        ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new DischargeTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Load)
                     {
-                        ExecutingTaskModel = new LoadTask(this, taskDownloadData);
-                        (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+                        ExecutingTaskEntity = new LoadTask(this, taskDownloadData);
+                        (ExecutingTaskEntity as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
                         if (_RunTaskData.CST.Length > 0)
                         {
-                            (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                            (ExecutingTaskEntity as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
                         }
 
                     }
                     else if (action == ACTION_TYPE.Unload)
                     {
-                        ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
-                        (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+                        ExecutingTaskEntity = new UnloadTask(this, taskDownloadData);
+                        (ExecutingTaskEntity as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
                         if (_RunTaskData.CST.Length > 0)
                         {
-                            (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                            (ExecutingTaskEntity as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
                         }
                     }
                     else if (action == ACTION_TYPE.Park)
-                        ExecutingTaskModel = new ParkTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new ParkTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Unpark)
-                        ExecutingTaskModel = new UnParkTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new UnParkTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.Measure)
-                        ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new MeasureTask(this, taskDownloadData);
                     else if (action == ACTION_TYPE.ExchangeBattery)
-                        ExecutingTaskModel = new ExchangeBatteryTask(this, taskDownloadData);
+                        ExecutingTaskEntity = new ExchangeBatteryTask(this, taskDownloadData);
                     else
                     {
                         throw new NotImplementedException();
                     }
                 }
-                previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
-                ExecutingTaskModel.ForkLifter = ForkLifter;
-                IsLaserRecoveryHandled = false;
-                _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
 
+                previousTagPoint = ExecutingTaskEntity?.RunningTaskData.ExecutingTrajecory[0];
+                ExecutingTaskEntity.ForkLifter = ForkLifter;
+                IsLaserRecoveryHandled = false;
+                _RunTaskData.IsEQHandshake = ExecutingTaskEntity.IsNeedHandshake;
                 if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
                 {
                     _orderInfoViewModel = taskDownloadData.OrderInfo;
                 }
 
-                List<AlarmCodes> alarmCodes = await ExecutingTaskModel.Execute();
-                if (alarmCodes.Count != 0)
+                LOG.TRACE("Start Execute Task");
+                List<AlarmCodes> alarmCodes = await ExecutingTaskEntity.Execute();
+                LOG.TRACE("Execute Task Done");
+
+                alarmCodes = alarmCodes.FindAll(al => al != AlarmCodes.None);
+                bool _agv_alarm = alarmCodes.Count != 0;
+                IEnumerable<AlarmCodes> _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
+                {
+                    alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
+                    await Task.Delay(200);
+                }
+                if (_agv_alarm)
                 {
                     Sub_Status = SUB_STATUS.DOWN;
-                    if (AlarmCodeWhenHandshaking != AlarmCodes.None)
+                    alarmCodes.ForEach(alarm =>
                     {
-                        AlarmManager.AddAlarm(AlarmCodeWhenHandshaking, false);
-                        LOG.Critical($"{action} 任務失敗:Alarm:{AlarmCodeWhenHandshaking}");
-                    }
-                    else
-                    {
-                        alarmCodes.ForEach(alarm =>
-                        {
-                            AlarmManager.AddAlarm(alarm, false);
-                        });
-                        LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", alarmCodes)}");
-                    }
-                    AGVC.OnAGVCActionChanged = null;
+                        AlarmManager.AddAlarm(alarm, false);
+                    });
+                    _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                    LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
                 }
+                AGVC.OnAGVCActionChanged = null;
+                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
             });
         }
 
@@ -304,7 +309,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (Operation_Mode == OPERATOR_MODE.MANUAL)
                     return;
-                if (ExecutingTaskModel == null)
+                if (ExecutingTaskEntity == null)
                     return;
 
                 var _newTagPoint = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
@@ -376,8 +381,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, AlarmCodes alarm_tracking = AlarmCodes.None, bool IsTaskCancel = false)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, List<AlarmCodes> alarms_tracking = null, bool IsTaskCancel = false)
         {
+            LOG.WARN($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
+
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 _orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
@@ -387,7 +394,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
             int currentPosIndexInTrajectory = GetCurrentTagIndexOfTrajectory();
-
             try
             {
                 bool needReOnline = false;
@@ -419,24 +425,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 taskfeedbackCanceTokenSoruce?.Cancel(); //Raise取消請求,若前一次回報請求還沒完成則會取消回報
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                await Task.Delay(alarm_tracking == AlarmCodes.None && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
+                await Task.Delay(alarms_tracking == null && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
                 CurrentTaskRunStatus = status;
 
 
-                if (alarm_tracking != AlarmCodes.None)
+                if (alarms_tracking != null)
                 {
-                    await WaitAlarmCodeReported(alarm_tracking);
+                    await WaitAlarmCodeReported(alarms_tracking);
                 }
                 await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
 
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
-                    if (ExecutingTaskModel != null)
+                    if (ExecutingTaskEntity != null)
                     {
-                        ExecutingTaskModel?.Abort();
-                        ExecutingTaskModel?.Dispose();
-                        ExecutingTaskModel = null;
+                        ExecutingTaskEntity?.Abort();
+                        ExecutingTaskEntity?.Dispose();
+                        ExecutingTaskEntity = null;
                     }
                     if (needReOnline | (!_RunTaskData.IsLocalTask && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE))
                     {
@@ -463,27 +469,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsActionFinishTaskFeedbackExecuting = false;
         }
 
-        private async Task WaitAlarmCodeReported(AlarmCodes alarm_tracking)
+        private async Task WaitAlarmCodeReported(List<AlarmCodes> alarms_tracking)
         {
-            LOG.WARN($"Before TaskFeedback, AlarmCodes({alarm_tracking}) reported tracking ");
+            string _alarm_codes_str = string.Join(",", alarms_tracking);
+            LOG.WARN($"Before TaskFeedback, AlarmCodes({_alarm_codes_str}) reported tracking ");
             bool alarm_reported()
             {
+                List<int> alarm_codes_reported = new List<int>();
                 if (AGVS.UseWebAPI)
-                    return AGVS.previousRunningStatusReport_via_WEBAPI.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
+                    alarm_codes_reported = AGVS.previousRunningStatusReport_via_WEBAPI.Alarm_Code.Select(al => al.Alarm_ID).ToList();
                 else
-                    return AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Any(al => al.Alarm_ID == (int)alarm_tracking);
+                    alarm_codes_reported = AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Select(al => al.Alarm_ID).ToList();
+                return alarms_tracking.All(alarm => alarm_codes_reported.Contains((int)alarm));
             }
+
             CancellationTokenSource cancel_wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             while (!alarm_reported())
             {
                 await Task.Delay(1);
                 if (cancel_wait.IsCancellationRequested)
                 {
-                    LOG.TRACE($"AlarmCodes({alarm_tracking}) not_reported ,, timeout(10 sec) ");
+                    LOG.TRACE($"AlarmCodes({alarms_tracking}) not_reported ,, timeout(10 sec) ");
                     return;
                 }
             }
-            LOG.WARN($"AlarmCodes({alarm_tracking}) reported ! ");
+            LOG.WARN($"All AlarmCodes ({_alarm_codes_str}) are reported to AGVS ! ");
 
         }
 
