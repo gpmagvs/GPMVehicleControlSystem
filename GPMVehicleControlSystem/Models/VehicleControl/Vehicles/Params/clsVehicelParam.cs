@@ -1,4 +1,5 @@
-﻿using static AGVSystemCommonNet6.clsEnums;
+﻿using AGVSystemCommonNet6.Log;
+using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
@@ -47,6 +48,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             }
         };
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
+
+        public clsLog Log { get; set; } = new clsLog();
+
         public bool SimulationMode { get; set; } = false;
         public bool WagoSimulation { get; set; } = true;
         public bool ActiveTrafficControl { get; set; } = false;
@@ -236,5 +240,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public double ThresHold { get; set; } = 2;
 
         public bool PitchErrorDetection { get; set; } = false;
+    }
+
+    public class clsLog
+    {
+        public bool ConsoleInfoShow
+        {
+            get=> LOG.InfoShow; set=> LOG.InfoShow = value;
+        }
+        public bool ConsoleTraceShow
+        {
+            get => LOG.TraceShow; set => LOG.TraceShow = value;
+        }
+        public bool ConsoleWarningShow
+        {
+            get => LOG.WarningShow; set => LOG.WarningShow= value;
+        }
+        public bool ConsoleErrorShow
+        {
+            get => LOG.ErrorShow; set => LOG.ErrorShow= value;
+        }
+        public bool ConsoleCriticalShow
+        {
+            get => LOG.CriticalShow; set => LOG.CriticalShow= value;
+        }
+
     }
 }
