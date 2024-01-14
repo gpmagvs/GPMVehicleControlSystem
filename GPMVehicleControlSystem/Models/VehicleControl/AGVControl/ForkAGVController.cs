@@ -85,7 +85,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             PoseTarget = target;
             Speed = speed;
-            IsZAxisActionDone = false;
             WaitActionDoneFlag = wait_done;
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -96,6 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             };
             try
             {
+                IsZAxisActionDone = false;
                 (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
                 if (!wait_done)
                     return callSerivceResult;
@@ -195,7 +195,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<(bool confirm, string message)> ZAxisGoHome(double speed = 1.0, bool wait_done = true)
         {
-            IsZAxisActionDone = false;
             WaitActionDoneFlag = wait_done;
             HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
             LOG.INFO($"Fork ready Go Home Position,HSafe={HSafeSetting}");
@@ -207,6 +206,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             };
             try
             {
+                IsZAxisActionDone = false;
                 (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
                 if (!wait_done)
                     return callSerivceResult;

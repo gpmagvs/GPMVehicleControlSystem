@@ -127,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    LOG.TRACE($"Action Status Changed To : {value}");
+                    LOG.TRACE($"Action Status Changed To : {value}",false);
                     Task.Factory.StartNew(() =>
                     {
                         if (OnAGVCActionChanged != null)

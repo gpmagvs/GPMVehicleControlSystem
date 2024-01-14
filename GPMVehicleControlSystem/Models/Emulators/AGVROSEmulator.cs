@@ -13,6 +13,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -71,13 +72,16 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private bool IsCSTTriggering = false;
         public delegate bool ChargeSimulateActiveCheckDelegate(int tag);
         public ChargeSimulateActiveCheckDelegate OnChargeSimulationRequesting;
+
+        public delegate PointF OnLastVisitedTagChangedDelegate(int tag);
+        public OnLastVisitedTagChangedDelegate OnLastVisitedTagChanged;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
         public AGVROSEmulator(clsEnums.AGV_TYPE agvType = clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
         {
             this.agvType = agvType;
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
-            string RosBridge_IP = param.Connections["RosBridge"].IP;
-            int RosBridge_Port = param.Connections["RosBridge"].Port;
+            string RosBridge_IP = param.Connections[ clsConnectionParam.CONNECTION_ITEM.RosBridge].IP;
+            int RosBridge_Port = param.Connections[clsConnectionParam.CONNECTION_ITEM.RosBridge].Port;
             module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(param.LastVisitedTag);
 
             bool connected = Init(RosBridge_IP, RosBridge_Port);
@@ -168,6 +172,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         TaskCommandGoal previousTaskAction;
         bool _isPreviousMoveActionNotFinish = false;
         bool emergency_stop = false;
+        CancellationTokenSource emergency_stop_canceltoken_source = new CancellationTokenSource();
         private readonly clsEnums.AGV_TYPE agvType;
 
         bool isPreviousMoveActionNotFinish
@@ -176,7 +181,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
             set
             {
                 _isPreviousMoveActionNotFinish = value;
-                LOG.TRACE($"isPreviousMoveActionNotFinish={value}");
             }
         }
         private void NavGaolHandle(object sender, TaskCommandGoal obj)
@@ -185,11 +189,11 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
 
-                emergency_stop = false;
                 if (obj.planPath.poses.Length == 0) //急停效果
                 {
                     actionServer.AcceptedInvoke();
                     emergency_stop = true;
+                    emergency_stop_canceltoken_source?.Cancel();
                     EmuLog($"[ROS 車控模擬器] 空任務-緊急停止!!");
                     isPreviousMoveActionNotFinish = false;
                     previousTaskAction = null;
@@ -197,6 +201,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     return;
                 }
                 CancellationTokenSource cts = new CancellationTokenSource();
+                emergency_stop_canceltoken_source = new CancellationTokenSource();
+                emergency_stop = false;
+
                 var Task_Watch_StatusActive = new Task(async () =>
                 {
                     while (true)
@@ -255,7 +262,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             double tag_pose_y = pose.pose.position.y;
                             double tag_theta = pose.pose.orientation.ToTheta();
                             var current_position = module_info.nav_state.robotPose.pose.position;
-                            var delay_time = 1.0;
+                            var delay_time = EmuParam.Move_Fixed_Time;
                             //計算距離
                             if (current_position.x == 0 && current_position.y == 0)
                             {
@@ -277,16 +284,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.reader.xValue = tag_pose_x;
                             module_info.reader.yValue = tag_pose_y;
                             module_info.reader.theta = tag_theta;
-
                             module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
-
-                            Thread.Sleep(TimeSpan.FromSeconds(delay_time));
 
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
                             module_info.Battery.batteryLevel -= 1;
                             //EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
-
-                            if (_CycleStopFlag)
+                            await Task.Delay(TimeSpan.FromSeconds(delay_time), emergency_stop_canceltoken_source.Token);
+                            if (_CycleStopFlag || emergency_stop)
                             {
                                 EmuLog("Cycle Stop Flag ON, Stop move.");
                                 break;
@@ -519,6 +523,17 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal void SetImuData(RosSharp.RosBridgeClient.MessageTypes.Sensor.Imu imu)
         {
             module_info.IMU.imuData = imu;
+        }
+
+        internal void SetLastVisitedTag(int tag)
+        {
+            module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(tag);
+            module_info.reader.tagID = (uint)tag;
+            if (OnLastVisitedTagChanged != null)
+            {
+                var _pt_coordination = OnLastVisitedTagChanged(tag);
+                module_info.nav_state.robotPose.pose.position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(_pt_coordination.X, _pt_coordination.Y, 0);
+            }
         }
     }
 }

@@ -108,7 +108,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 if (rossocket == null)
                     return;
                 await Task.Delay(10);
-
                 PlayMusicResponse response = await rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
                 {
                     file_path = sound.ToString().ToLower()

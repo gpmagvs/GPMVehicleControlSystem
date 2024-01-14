@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override async Task<bool> Connect()
         {
-            if (IP == null | VMSPort <= 0)
+            if (IP == null || VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
             try
             {

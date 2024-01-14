@@ -1,8 +1,8 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
@@ -25,31 +25,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string SID { get; set; } = "SID";
         public string VehicleName { get; set; } = "EQName";
 
-        public Dictionary<string, clsConnectionParam> Connections { get; set; } = new Dictionary<string, clsConnectionParam>()
+
+        public Dictionary<clsConnectionParam.CONNECTION_ITEM, clsConnectionParam> Connections { get; set; } = new Dictionary<clsConnectionParam.CONNECTION_ITEM, clsConnectionParam>()
         {
-            { "RosBridge" , new clsConnectionParam
+            {  clsConnectionParam.CONNECTION_ITEM.RosBridge, new clsConnectionParam
                 {
                      IP = "127.0.0.1",
                      Port = 9090
                 }
             },
-            { "Wago" , new clsConnectionParam
+            {  clsConnectionParam.CONNECTION_ITEM.Wago , new clsConnectionParam
                 {
                      IP = "127.0.0.1",
                      Port = 9999,
                      Protocol_Interval_ms =50
                 }
             },
-            { "AGVS" , new clsConnectionParam
+            {  clsConnectionParam.CONNECTION_ITEM.AGVS, new clsConnectionParam
                 {
                      IP = "127.0.0.1",
-                     Port = 5036,
+                     Port = 5500,
                 }
             }
         };
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
 
-        public clsLog Log { get; set; } = new clsLog();
+        public clsLogParams Log { get; set; } = new clsLogParams();
 
         public bool SimulationMode { get; set; } = false;
         public bool WagoSimulation { get; set; } = true;
@@ -168,102 +169,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsBatteryParam BatteryModule { get; set; } = new clsBatteryParam();
         public clsLDULDParams LDULDParams { get; set; } = new clsLDULDParams();
-    }
-
-    public class clsForkAGVParams
-    {
-        /// <summary>
-        /// 牙叉伸出後總車長(cm)
-        /// </summary>
-        public double VehielLengthWitchForkArmExtend { get; set; } = 160.0;
-        public double UplimitPose { get; set; } = 35;
-        public double DownlimitPose { get; set; } = 0;
-        public bool NoWaitForkArmFinishAndMoveOutInWorkStation { get; set; } = true;
-        /// <summary>
-        /// 退至二次定位點不等待就定位牙叉即開始回HOME
-        /// </summary>
-        public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary { get; set; } = true;
-        public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = true;
-        public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
-        public double SaftyPositionHeight { get; set; } = 20;
-    }
-    public class clsInspectionAGVParams
-    {
-        public bool CheckBatteryLockStateWhenInit { get; set; } = false;
-        /// <summary>
-        /// 低於此電量不換電池
-        /// </summary>
-        public byte ExchangeBatLevelThresholdVal { get; set; } = 100;
-    }
-    public class clsEmulatorParams
-    {
-        public enum MOVE_TIME_EMULATION
-        {
-            DISTANCE,
-            FIXED_TIME
-        }
-        public MOVE_TIME_EMULATION Move_Time_Mode { get; set; } = MOVE_TIME_EMULATION.FIXED_TIME;
-        public double Move_Fixed_Time { get; set; } = 0.5;
-    }
-
-    public class clsModbusDIOParams
-    {
-        public enum IO_VALUE_TYPE
-        {
-            /// <summary>
-            /// Inputs 讀 / CoilS 寫 
-            /// </summary>
-            INPUT,
-            /// <summary>
-            /// 歐迪爾,使用 InputRegist 讀/ SingleRegister 寫 
-            /// </summary>
-            INPUT_REGISTER
-
-        }
-        public IO_VALUE_TYPE IO_VAL_TYPE { get; set; } = IO_VALUE_TYPE.INPUT;
-        public ushort Input_Read_Start { get; set; } = 0;
-        public ushort Input_Read_Num { get; set; } = 8;
-        public ushort Input_Write_Start { get; set; } = 1;
-
-        public ushort InputRegister_Read_Start { get; set; } = 0;
-        public ushort InputRegister_Read_Num { get; set; } = 1;
-        public ushort InputRegister_Write_Start { get; set; } = 0;
-    }
-
-
-    public class clsImpactDetectionParams
-    {
-        public bool Enabled { get; set; } = false;
-        /// <summary>
-        /// 碰撞偵測閥值(單位:G)
-        /// </summary>
-        public double ThresHold { get; set; } = 2;
-
-        public bool PitchErrorDetection { get; set; } = false;
-    }
-
-    public class clsLog
-    {
-        public bool ConsoleInfoShow
-        {
-            get=> LOG.InfoShow; set=> LOG.InfoShow = value;
-        }
-        public bool ConsoleTraceShow
-        {
-            get => LOG.TraceShow; set => LOG.TraceShow = value;
-        }
-        public bool ConsoleWarningShow
-        {
-            get => LOG.WarningShow; set => LOG.WarningShow= value;
-        }
-        public bool ConsoleErrorShow
-        {
-            get => LOG.ErrorShow; set => LOG.ErrorShow= value;
-        }
-        public bool ConsoleCriticalShow
-        {
-            get => LOG.CriticalShow; set => LOG.CriticalShow= value;
-        }
-
     }
 }

@@ -119,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 await Task.Delay(1);
             }
-            LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
+            //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             AGVC.OnAGVCActionChanged = null;
             if (ExecutingTaskEntity != null)
@@ -140,7 +140,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
-            LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
             await Task.Run(async () =>
             {
                 if (action == ACTION_TYPE.None)
@@ -210,6 +209,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
                     await Task.Delay(200);
+                }
+                if (ExecutingTaskEntity.IsNeedHandshake && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
+                {
+                    alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
                 }
                 if (_agv_alarm)
                 {
@@ -381,7 +384,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="status"></param>
         /// <param name="delay">延遲毫秒數</param>
         /// <returns></returns>
-        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, int delay = 1000, List<AlarmCodes> alarms_tracking = null, bool IsTaskCancel = false)
+        internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, List<AlarmCodes> alarms_tracking = null, bool IsTaskCancel = false)
         {
             LOG.WARN($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
 
@@ -397,7 +400,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 bool needReOnline = false;
-                if ((!AGVS.IsConnected() | AGVS.IsGetOnlineModeTrying))
+                if ((!AGVS.IsConnected() || AGVS.IsGetOnlineModeTrying))
                 {
                     needReOnline = status == TASK_RUN_STATUS.ACTION_FINISH;
                 }
@@ -420,23 +423,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         IsActionFinishTaskFeedbackExecuting = false;
                         return;
                     }
-                    else
-                        _RunTaskData.IsActionFinishReported = true;
                 }
                 taskfeedbackCanceTokenSoruce?.Cancel(); //Raise取消請求,若前一次回報請求還沒完成則會取消回報
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                await Task.Delay(alarms_tracking == null && status == TASK_RUN_STATUS.ACTION_FINISH ? delay : 10);
+                await Task.Delay(10);
                 CurrentTaskRunStatus = status;
-
-
                 if (alarms_tracking != null)
                 {
                     await WaitAlarmCodeReported(alarms_tracking);
                 }
-                await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
+                bool feedback_success = await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
 
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
+                    _RunTaskData.IsActionFinishReported = feedback_success;
                     CurrentTaskRunStatus = TASK_RUN_STATUS.WAIT;
                     if (ExecutingTaskEntity != null)
                     {
@@ -444,7 +444,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTaskEntity?.Dispose();
                         ExecutingTaskEntity = null;
                     }
-                    if (needReOnline | (!_RunTaskData.IsLocalTask && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE))
+                    if (needReOnline || (!_RunTaskData.IsLocalTask && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE))
                     {
                         //到這AGVs連線已恢復
                         _ = Task.Factory.StartNew(async () =>

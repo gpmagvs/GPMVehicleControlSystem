@@ -133,7 +133,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
 
-            bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 | pt.Y > 100));
+            bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 || pt.Y > 100));
             if (isPointCoordinationNotDefined)
             {
                 return Ok(new TaskActionResult
@@ -142,7 +142,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     error_message = "圖資中有尚未踩點的點位，禁止派送任務!"
                 });
             }
-            LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
+            //LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
             if (agv.Operation_Mode != clsEnums.OPERATOR_MODE.AUTO)
                 await agv.Auto_Mode_Siwtch(clsEnums.OPERATOR_MODE.AUTO);
 
@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           _taskDataDto.OrderInfo = _OrderInfo;
                           agv.ExecuteAGVSTask(this, _taskDataDto);
                           await Task.Delay(200);
-                          LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
+                          //LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
                           while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
@@ -165,9 +165,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                               await Task.Delay(1);
                           }
 
-                          LOG.WARN($"[Local Task Dispather]  AGVC Active");
+                          //LOG.WARN($"[Local Task Dispather]  AGVC Active");
                           await Task.Delay(10);
-                          LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
+                          //LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
                           while (agv.AGVC._ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
                           {
@@ -177,8 +177,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                               }
                               await Task.Delay(200);
                           }
-                          LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
-                          LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
+                          //LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
+                          //LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
                       }
                   });
                 return Ok(new TaskActionResult
@@ -378,7 +378,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 normal_move_task.Trajectory.Last().Theta = destineStation.Direction; //移動的終點要與機台同向
             }
-            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag | CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
+            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag || CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
                 taskList.Add(normal_move_task);
             seq += 1;
 

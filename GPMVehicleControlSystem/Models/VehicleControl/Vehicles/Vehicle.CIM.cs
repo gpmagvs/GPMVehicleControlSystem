@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private Socket CreateSocketCIM()
         {
-            var cimIP = Parameters.Connections["AGVS"].IP;
+            var cimIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
             try
             {
                 var CIMSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -68,7 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private Socket CreateAGVsDataBaseSocket()
         {
-            var cimIP = Parameters.Connections["AGVS"].IP;
+            var cimIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
             try
             {
                 var _CIMSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);

@@ -54,6 +54,10 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             StaEmuManager.agvRosEmu.SetImuData(imu);
         }
 
-
+        [HttpGet("SetAGVTag")]
+        public async Task SetAGVTag(int tag)
+        {
+            StaEmuManager.agvRosEmu.SetLastVisitedTag(tag);
+        }
     }
 }

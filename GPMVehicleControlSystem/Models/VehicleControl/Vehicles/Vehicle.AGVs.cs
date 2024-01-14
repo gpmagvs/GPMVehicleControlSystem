@@ -21,8 +21,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private Queue<FeedbackData> ActionFinishReportFailQueue = new Queue<FeedbackData>();
         private async void AGVSInit()
         {
-            string vms_ip = Parameters.Connections["AGVS"].IP;
-            int vms_port = Parameters.Connections["AGVS"].Port;
+            string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
+            int vms_port = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].Port;
             //AGVS
             AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP);
             AGVS.Setup(Parameters.SID, Parameters.VehicleName);
@@ -81,13 +81,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (feedbackData.TaskStatus == TASK_RUN_STATUS.ACTION_FINISH)
             {
                 LOG.WARN($"Retry Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})");
-                _=AGVS.TryTaskFeedBackAsync(feedbackData.TaskName,
-                                                     feedbackData.TaskSimplex,
-                                                     feedbackData.TaskSequence,
-                                                     feedbackData.PointIndex,
-                                                     TASK_RUN_STATUS.ACTION_FINISH,
-                                                     Navigation.LastVisitedTag,
-                                                     Navigation.CurrentCoordination);
+                Task.Factory.StartNew(async () =>
+                {
+                    _RunTaskData.IsActionFinishReported = await AGVS.TryTaskFeedBackAsync(feedbackData.TaskName,
+                                                         feedbackData.TaskSimplex,
+                                                         feedbackData.TaskSequence,
+                                                         feedbackData.PointIndex,
+                                                         TASK_RUN_STATUS.ACTION_FINISH,
+                                                         Navigation.LastVisitedTag,
+                                                         Navigation.CurrentCoordination);
+                });
             }
             AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
         }
@@ -173,7 +176,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (Sub_Status == SUB_STATUS.IDLE | Sub_Status == SUB_STATUS.Charging))
+                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (Sub_Status == SUB_STATUS.IDLE || Sub_Status == SUB_STATUS.Charging))
                 {
                     HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
                 }
@@ -263,7 +266,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = _RunTaskData.IsLocalTask & !Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
+                    Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };

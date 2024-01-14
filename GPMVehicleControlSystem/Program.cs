@@ -74,6 +74,24 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.WriteIndented = true;
 });
 AlarmManager.AddAlarm(AlarmCodes.None, true);
+
+_ = Task.Run(() =>
+{
+    while (true)
+    {
+        Thread.Sleep(1);
+        var _input = Console.ReadLine()?.ToLower();
+        Console.WriteLine(_input);
+        if (_input == "clear" || _input == "clc")
+        {
+            Console.Clear();
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("=======================GPM AGV Console=======================");
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+    }
+});
+
 var app = builder.Build();
 
 app.UseSwagger();
@@ -106,6 +124,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
 
 static void KillRunningVCSProcesses()
 {

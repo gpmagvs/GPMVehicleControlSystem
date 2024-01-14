@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using Newtonsoft.Json;
 using System.Text;
@@ -27,8 +28,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             AGVS.UseWebAPI = value.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.LocalIP = value.VMSParam.LocalIP;
-            AGVS.IP = value.Connections["AGVS"].IP;
-            AGVS.VMSPort = value.Connections["AGVS"].Port;
+            AGVS.IP = value.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
+            AGVS.VMSPort = value.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].Port;
         }
 
         private static void ModifyAGVSMessageEncoder(string encoding)

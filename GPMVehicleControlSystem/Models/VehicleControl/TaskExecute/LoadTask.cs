@@ -56,7 +56,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             DetermineHandShakeSetting();
-            LOG.TRACE($"取放貨任務站點需要交握 : {IsNeedHandshake}");
         }
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
@@ -149,16 +148,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
-                _ = Task.Factory.StartNew(() =>
+
+                if (IsNeedHandshake)
                 {
-                    _ = Agv.Handshake_AGV_BUSY_ON(action, isBackToHome: false).ContinueWith((tk) =>
-                    {
-                        if (!tk.Result.done)
-                        {
-                            Agv.SoftwareEMO(tk.Result.alarmCode);
-                        }
-                    });
-                });
+                    _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: false);
+                }
                 #region 前方障礙物預檢
 
                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
@@ -207,7 +201,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
                 eqHandshakeMode = mode;
-                //Agv.Parameters.EQHandshakeMethod = data.HandShakeConnectionMode;
                 IsNeedHandshake = mode == WORKSTATION_HS_METHOD.HS;
                 LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
             }
@@ -277,6 +270,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             base.Abort(alarm_code);
             _WaitBackToHomeDonePause.Set();
+            _wait_agvc_action_done_pause.Set();
         }
         /// <summary>
         /// AGV停車停好在設備後的動作
@@ -289,8 +283,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
             IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
-            LOG.TRACE($"TAG= {destineTag} is need query virtual station? {IsNeedQueryVirutalStation}");
-            LOG.TRACE($"TAG= {destineTag} Cargo Transfer Mode? {CargoTransferMode}");
+            LOG.TRACE($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}");
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null)
@@ -312,21 +305,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     HSResult = await Agv.WaitEQBusyOnAndOFF(action);
                     if (HSResult.hs_success)
                     {
-                        _ = Task.Factory.StartNew(() =>
-                        {
-                            _ = Agv.Handshake_AGV_BUSY_ON(action, isBackToHome: true).ContinueWith(tsk =>
-                            {
-                                if (!tsk.Result.done)
-                                {
-                                    Agv.SoftwareEMO(tsk.Result.alarmCode);
-                                }
-                            });
-                        });
+                        _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: true);
                         lduld_record.EQActionFinishTime = DateTime.Now;
                         DBhelper.ModifyUDLUDRecord(lduld_record);
                     }
                     else
                     {
+
+                        LOG.ERROR($"Wait EQ Busy On/Off result Fail({HSResult.alarmCode})");
                         return (false, HSResult.alarmCode);
                     }
                 }
@@ -356,10 +342,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             }
 
-
-            if (TaskCancelCTS.IsCancellationRequested)
-                return (false, AlarmCodes.None);
-
             if (action == ACTION_TYPE.Unload && Agv.HasAnyCargoOnAGV())
             {
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
@@ -368,8 +350,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.CSTReader.ValidCSTID = "";
 
 
-            //下Homing Trajectory 任務讓AGV退出
+            return await StartBackToHome();
 
+        }
+
+        private async Task<(bool success, AlarmCodes alarmCode)> StartBackToHome()
+        {
             try
             {
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
@@ -408,7 +394,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!send_task_result.Accept)
                     {
                         LOG.ERROR($"{send_task_result.ToJson()}");
-                        Agv.Sub_Status =  SUB_STATUS.DOWN;
+                        Agv.Sub_Status = SUB_STATUS.DOWN;
                         return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
                     }
                     else
@@ -422,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                             _alarmcode = await AfterBackHomeActions(ActionStatus.SUCCEEDED);
                         }
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                                 ForkHomeProcess();
@@ -454,8 +440,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Console.WriteLine(ex.Message + ex.StackTrace);
                 throw;
             }
-
         }
+
         private void BackToHomeActionDoneCallback(ActionStatus status)
         {
             _BackHomeActionDoneStatus = status;
@@ -468,7 +454,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (IsAGVCActionNoOperate(status) || Agv.Sub_Status == SUB_STATUS.DOWN)
             {
                 LOG.WARN($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.Sub_Status})");
-                var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action ;
+                var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
                 return IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
             }
 
@@ -578,7 +564,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async Task<(bool success, AlarmCodes alarmcode)> ForkActionsInWorkStation()
         {
-            if (ForkLifter == null | Agv.Parameters.LDULD_Task_No_Entry)
+            if (ForkLifter == null || Agv.Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
 
 
@@ -588,39 +574,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (isNeedArmExtend)
             {
-                LOG.INFO($"FORK ARM Extend Out");
+                Agv.HandshakeStatusText = "AGV牙叉伸出中";
+                LOG.TRACE($"FORK ARM Extend Out");
                 var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
-                {
-                    Thread.Sleep(1);
-                    if (cts.IsCancellationRequested)
-                    {
-                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
-                    }
-                }
+                //CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                //while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                //{
+                //    Thread.Sleep(1);
+                //    if (cts.IsCancellationRequested)
+                //    {
+                //        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                //    }
+                //}
                 arm_move_Done = _arm_move_result.confirm;
                 if (!arm_move_Done)
                 {
-                    return (false, AlarmCodes.Action_Timeout);
+                    LOG.TRACE($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
+                    return (false, _arm_move_result.Item2);
                 }
-                if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                else if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                 {
                     return (false, AlarmCodes.Fork_Arm_Pose_Error);
                 }
                 LOG.INFO($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
                 await Task.Delay(1000);
-            }
-            else
-            {
-                arm_move_Done = true;
-            }
-            if (!arm_move_Done)
-            {
-                return (true, AlarmCodes.None);
-            }
-            if (arm_move_Done)
-            {
+
                 //check arm position 
                 (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
                 if (!fork_height_change_result.success)
@@ -632,40 +610,42 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, CstExistCheckResult.alarmCode);
 
                 await Task.Delay(1000);
-                if (isNeedArmExtend)
+                var FormArmShortenTask = Task.Run(async () =>
                 {
-                    var FormArmShortenTask = Task.Run(async () =>
+                    Agv.HandshakeStatusText = "AGV牙叉縮回中";
+                    var arm_move_result = await ForkLifter.ForkShortenInAsync();
+                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     {
-                        var arm_move_result = await ForkLifter.ForkShortenInAsync();
-                        CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                        while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
-                        {
-                            Thread.Sleep(1);
-                            if (cts.IsCancellationRequested)
-                            {
-                                return (false, AlarmCodes.Fork_Arm_Pose_Error);
-                            }
-                        }
-
-                        if (!arm_move_result.confirm)
-                        {
-                            return (false, AlarmCodes.Action_Timeout);
-                        }
-                        if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                        Thread.Sleep(1);
+                        if (cts.IsCancellationRequested)
                         {
                             return (false, AlarmCodes.Fork_Arm_Pose_Error);
                         }
-                        return (true, AlarmCodes.None);
-                    });
-
-                    if (!Agv.Parameters.ForkAGV.NoWaitForkArmFinishAndMoveOutInWorkStation)
-                    {
-                        await FormArmShortenTask;
-                        await Task.Delay(1000);
                     }
+
+                    if (!arm_move_result.confirm)
+                    {
+                        return (false, AlarmCodes.Action_Timeout);
+                    }
+                    if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                    {
+                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    }
+                    return (true, AlarmCodes.None);
+                });
+
+                if (!Agv.Parameters.ForkAGV.NoWaitForkArmFinishAndMoveOutInWorkStation)
+                {
+                    await FormArmShortenTask;
+                    await Task.Delay(1000);
                 }
+                return (true, AlarmCodes.None);
             }
-            return (true, AlarmCodes.None);
+            else
+            {
+                return (true, AlarmCodes.None);
+            }
         }
 
         private void HasCargoIOSimulation()
@@ -774,25 +754,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
+            CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
+            _ = Task.Factory.StartNew(() =>
+            {
+                while (!_wait_fork_reach_position_cst.IsCancellationRequested)
+                {
+                    Thread.Sleep(1);
+                    Agv.HandshakeStatusText = $"AGV牙叉動作中({ForkLifter.CurrentHeightPosition} cm)";
+                }
+            });
             var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            _wait_fork_reach_position_cst.Cancel();
             return result;
 
-        }
-        private bool WaitForkArmMoveDone(FORK_ARM_LOCATIONS locationExpect)
-        {
-            CancellationTokenSource timeout_check = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            while (ForkLifter.CurrentForkARMLocation != locationExpect)
-            {
-                if (TaskCancelCTS.IsCancellationRequested)
-                    return false;
-                if (Agv.Sub_Status != SUB_STATUS.RUN)
-                    return false;
-                Thread.Sleep(1);
-                if (timeout_check.IsCancellationRequested)
-                    return false;
-
-            }
-            return true;
         }
 
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
@@ -813,7 +787,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
         {
             (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader();
-            if (!result.request_success | !result.action_done)
+            if (!result.request_success || !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
@@ -843,7 +817,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            if (reader_valid_id == "ERROR" | reader_actual_read_id == "ERROR" | reader_valid_id == "TrayUnknow")
+            if (reader_valid_id == "ERROR" || reader_actual_read_id == "ERROR" || reader_actual_read_id == "ERROR")
             {
                 LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

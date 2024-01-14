@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -30,6 +31,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.OFFLINE();
             }
         }
+
+        
 
         private bool OnlineModeChangingFlag = false;
 
@@ -85,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
-                if (lastVisitedMapPoint.StationType!= STATION_TYPE.Normal && !lastVisitedMapPoint.IsCharge)
+                if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal && !lastVisitedMapPoint.IsCharge)
                 {
                     AlarmManager.AddWarning(AlarmCodes.Cant_Online_In_Equipment);
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online_In_Equipment);
@@ -96,11 +99,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //檢查是否停在禁止上線的TAG位置
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online);
                 }
+                if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && !bypassStatusCheck && lastVisitedMapPoint.IsVirtualPoint)
+                {
+                    AlarmManager.AddWarning(AlarmCodes.Cant_Online_At_Virtual_Point);
+                    //檢查是否停在禁止上線的TAG位置
+                    return (false, RETURN_CODE.Current_Tag_Cannot_Online_At_Virtual_Point);
+                }
             }
             await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             var _oriMode = Remote_Mode;
             (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
-    
+
             if (!result.success)
             {
                 if (mode == REMOTE_MODE.OFFLINE && result.return_code == RETURN_CODE.System_Error)

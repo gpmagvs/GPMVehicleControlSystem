@@ -26,6 +26,7 @@ using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
+using System.Drawing;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
@@ -239,7 +240,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-
+        public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
         public MapPoint DestinationMapPoint
         {
             get
@@ -271,7 +272,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     try
                     {
-                        if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
+                        if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
                                 HandshakeIOOff();
@@ -376,12 +377,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
-                string Wago_IP = Parameters.WagoSimulation ? "127.0.0.1" : Parameters.Connections["Wago"].IP;
-                int Wago_Port = Parameters.WagoSimulation ? 9999 : Parameters.Connections["Wago"].Port;
-                int Wago_Protocol_Interval_ms = Parameters.Connections["Wago"].Protocol_Interval_ms;
+                Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
+                Params.clsConnectionParam rosbridge_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.RosBridge];
+                string Wago_IP = Parameters.WagoSimulation ? "127.0.0.1" : wago_connection_params.IP;
+                int Wago_Port = Parameters.WagoSimulation ? 9999 : wago_connection_params.Port;
+                int Wago_Protocol_Interval_ms = wago_connection_params.Protocol_Interval_ms;
                 int LastVisitedTag = Parameters.LastVisitedTag;
-                string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
-                int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
+                string RosBridge_IP = rosbridge_connection_params.IP;
+                int RosBridge_Port = rosbridge_connection_params.Port;
                 WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
                 {
                     AgvType = Parameters.AgvType,
@@ -473,6 +476,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
                     StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
+                    StaEmuManager.agvRosEmu.OnLastVisitedTagChanged += (tag) =>
+                    {
+                        var pt_kp = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == tag);
+                        if (pt_kp.Value != null)
+                        {
+                            return new PointF((float)pt_kp.Value.X, (float)pt_kp.Value.Y);
+                        }
+                        else
+                            return new PointF();
+                    };
                     StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
                     {
                         return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
@@ -614,9 +627,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
                         $"Back_Area  1->3 ={BackArea1.ToSymbol("O", "X")}|{BackArea2.ToSymbol("O", "X")}|{BackArea3.ToSymbol("O", "X")}\r\n" +
                         $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
-                        $"Left_Area       ={LeftArea.ToSymbol("O", "X")}");
+                        $"Left_Area       ={LeftArea.ToSymbol("O", "X")}", false);
 
-            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea | LeftArea;
+            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea && LeftArea;
         }
 
         protected virtual async Task DOSignalDefaultSetting()
@@ -641,14 +654,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, $"當前狀態不可進行初始化(任務執行中)");
             }
 
-            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing))
+            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || Sub_Status == SUB_STATUS.Initializing))
             {
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
-            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
+            if ((Parameters.AgvType == AGV_TYPE.FORK || Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
             {
                 if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
                 {
@@ -742,7 +755,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ExecutingTaskEntity = null;
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
-            if ((_IsEQAbnormal_when_handshaking || _IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
+            if ((IsEQAbnormal_when_handshaking || IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
             {
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
             }
@@ -895,6 +908,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsInitialized = false;
             StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
+            if (ExecutingTaskEntity != null)
+            {
+                IsAGVAbnormal_when_handshaking = ExecutingTaskEntity.IsNeedHandshake;
+                ExecutingTaskEntity.Abort(alarmCode);
+            }
             //AGVSTaskFeedBackReportAndOffline(alarmCode);
             if (Remote_Mode == REMOTE_MODE.ONLINE)
             {
@@ -1016,7 +1034,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(1000);
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                 {
-                    bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                    bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
                     if (isObstacle)
                     {
@@ -1139,7 +1157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) | !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
             }
             catch (Exception)
             {

@@ -135,7 +135,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (forkAgv.IsForkWorking && action != "stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
-            if (action == "home" | action == "orig")
+            if (action == "home" || action == "orig")
             {
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
@@ -165,13 +165,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             else if (action == "up")
             {
-                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + 0.1;
+                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + 0.1;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 return Ok(new { confirm = result.success, message = result.message });
             }
             else if (action == "down")
             {
-                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition - 0.1;
+                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition - 0.1;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 return Ok(new { confirm = result.success, message = result.message });
             }
@@ -194,7 +194,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             else if (action == "increase")
             {
-                var pose_to = forkAgv.ForkLifter.Driver.CurrentPosition + pose;
+                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
                 LOG.WARN($"USER adjust fork position from web ui:pose to = {pose_to}");
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 return Ok(new { confirm = result.success, message = result.message });

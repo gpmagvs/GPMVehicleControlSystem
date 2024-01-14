@@ -159,7 +159,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
             int mode_int = (int)mode;
-            if (CurrentLaserModeOfSick == mode_int | (CurrentLaserModeOfSick == 16 && mode_int == 0) | (CurrentLaserModeOfSick == 0 && mode_int == 16))
+            if (CurrentLaserModeOfSick == mode_int || (CurrentLaserModeOfSick == 16 && mode_int == 0) || (CurrentLaserModeOfSick == 0 && mode_int == 16))
                 return true;
             return await ModeSwitch((int)mode, isSettingByAGVS);
         }

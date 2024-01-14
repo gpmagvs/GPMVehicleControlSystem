@@ -173,7 +173,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 bool Battery1LockNG = IsBattery1Exist && !IsBattery1Locked;
                 bool Battery2LockNG = IsBattery2Exist && !IsBattery2Locked;
-                if (Battery1LockNG | Battery2LockNG)
+                if (Battery1LockNG || Battery2LockNG)
                 {
                     string err_msg = "";
                     if (IsBattery1Exist)
@@ -407,7 +407,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!status)
                 return;
             await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
+            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;

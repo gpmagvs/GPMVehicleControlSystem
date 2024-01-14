@@ -43,7 +43,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
             if (request.command == "stop")
             {
                 StopFlag = true;
-                ActionDone();
             }
             response = new VerticalCommandResponse()
             {
@@ -75,7 +74,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 if (StopFlag)
                     break;
             }
-            ActionDone();
         }
         private async void VerticalDownSimulation()
         {
@@ -88,7 +86,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 if (StopFlag)
                     break;
             }
-            ActionDone();
         }
         private async void VerticalPositionMoveSimulation(double target, double speed = 1)
         {

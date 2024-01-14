@@ -45,7 +45,13 @@ namespace GPMVehicleControlSystem.Models.WorkStation
     /// </summary>
     public class clsWorkStationData
     {
-
+        public Dictionary<string, string> Notes { get; set; } = new Dictionary<string, string>()
+        {
+            { "HandShakeModeHandShakeMode ","設備交握模式- 0:不需交握,1:需交握" },
+            { "HandShakeConnectionMode ","設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬" },
+            { "CargoTransferMode ","貨物轉移模式- 0:設備動作,1:AGV動作" },
+            { "ForkArmExtend ","牙叉是否需要伸出- true:需伸出,false:不需伸出" },
+        };
         public int Tag { get; set; }
         public string Name { get; set; } = "";
         /// <summary>
