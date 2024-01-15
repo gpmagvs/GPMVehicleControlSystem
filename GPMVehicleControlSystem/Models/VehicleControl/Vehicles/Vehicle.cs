@@ -659,6 +659,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
+
+            if (lastVisitedMapPoint.IsEquipment)
+            {
+                return (false, "AGV位於設備內禁止初始化，請將AGV移動至道路Tag上");
+            }
+
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
             if ((Parameters.AgvType == AGV_TYPE.FORK || Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
@@ -680,8 +686,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-            //Parameters.EQHandshakeMethod = Parameters._EQHandshakeMethodStore;
-            BarcodeReader.OnAGVReachingTag -= NormalMoveTask.BarcodeReader_OnAGVReachingTag;
             SaveParameters(Parameters);
 
             return await Task.Run(async () =>
@@ -891,7 +895,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-            BarcodeReader.OnAGVReachingTag -= NormalMoveTask.BarcodeReader_OnAGVReachingTag;
             LOG.WARN($"Software EMO!!! {alarmCode}");
             AlarmManager.AddAlarm(alarmCode);
             _Sub_Status = SUB_STATUS.DOWN;
@@ -919,7 +922,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
                 await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
             }
-            HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"交握失敗-{alarmCode}" : HandshakeStatusText;
+            HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"{alarmCode}" : HandshakeStatusText;
 
             if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
             {

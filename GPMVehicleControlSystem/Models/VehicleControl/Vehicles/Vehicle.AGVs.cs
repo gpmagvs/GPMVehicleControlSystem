@@ -89,7 +89,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                                          feedbackData.PointIndex,
                                                          TASK_RUN_STATUS.ACTION_FINISH,
                                                          Navigation.LastVisitedTag,
-                                                         Navigation.CurrentCoordination);
+                                                         Navigation.CurrentCoordination,
+                                                         taskfeedbackCanceTokenSoruce.Token,
+                                                         feedbackData.IsFeedbackBecauseTaskCancel);
                 });
             }
             AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);

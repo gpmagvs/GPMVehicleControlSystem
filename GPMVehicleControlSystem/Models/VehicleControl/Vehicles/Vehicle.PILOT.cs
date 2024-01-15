@@ -199,9 +199,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
                 LOG.TRACE("Start Execute Task");
+                bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
                 List<AlarmCodes> alarmCodes = await ExecutingTaskEntity.Execute();
                 LOG.TRACE("Execute Task Done");
-
                 alarmCodes = alarmCodes.FindAll(al => al != AlarmCodes.None);
                 bool _agv_alarm = alarmCodes.Count != 0;
                 IEnumerable<AlarmCodes> _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
@@ -210,7 +210,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
                     await Task.Delay(200);
                 }
-                if (ExecutingTaskEntity.IsNeedHandshake && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
+
+                if (_isNeedHandshaking && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
                 {
                     alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
                 }
@@ -223,6 +224,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     });
                     _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
                     LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+                }
+                else
+                {
+                    if (action != ACTION_TYPE.Charge)
+                        Sub_Status = SUB_STATUS.IDLE;
                 }
                 AGVC.OnAGVCActionChanged = null;
                 await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
@@ -425,14 +431,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 }
                 taskfeedbackCanceTokenSoruce?.Cancel(); //Raise取消請求,若前一次回報請求還沒完成則會取消回報
-                taskfeedbackCanceTokenSoruce = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
                 await Task.Delay(10);
                 CurrentTaskRunStatus = status;
                 if (alarms_tracking != null)
                 {
                     await WaitAlarmCodeReported(alarms_tracking);
                 }
-                bool feedback_success = await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, IsTaskCancel, taskfeedbackCanceTokenSoruce);
+                bool feedback_success = await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, taskfeedbackCanceTokenSoruce.Token, IsTaskCancel);
 
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {

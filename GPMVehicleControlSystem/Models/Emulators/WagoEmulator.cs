@@ -70,6 +70,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
             SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, true);
             SetState(DI_ITEM.EQ_GO, true);
             SetState(DI_ITEM.Safty_PLC_Output, true);
+
+            //模擬已經縮回
+            SetState(DI_ITEM.Fork_Extend_Exist_Sensor, true);
+            SetState(DI_ITEM.Fork_Short_Exist_Sensor, false);
         }
         public void SetState(DI_ITEM item, bool state)
         {

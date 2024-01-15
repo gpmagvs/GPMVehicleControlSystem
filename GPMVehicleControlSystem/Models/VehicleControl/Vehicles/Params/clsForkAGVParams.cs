@@ -18,5 +18,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = true;
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
+        public clsForkInit InitParams = new clsForkInit();
+    }
+    public class clsForkInit
+    {
+        /// <summary>
+        /// 初始化時.車上有貨物的Fork移動速度
+        /// </summary>
+        public double ForkInitActionSpeedWithCargo { get; set; } = 1.0;
+        /// <summary>
+        /// 初始化時.車上沒有貨物的Fork移動速度
+        /// </summary>
+        public double ForkInitActionSpeedWithoutCargo { get; set; } = 0.5;
+
     }
 }

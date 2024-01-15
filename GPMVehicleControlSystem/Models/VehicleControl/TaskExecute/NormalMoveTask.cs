@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.NaviMap;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SQLitePCL;
@@ -29,19 +30,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
             }
-
+        }
+        protected override Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
+        {
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
-                Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
-                ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(taskDownloadData, out NextSecondartPointTag, out NextWorkStationPointTag);
+                ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 LOG.INFO($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
                 if (ForkActionStartWhenReachSecondartPTFlag)
                 {
-                    Agv.BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+                    StartTrackingSecondaryPointReach();
                 }
             }
+            return base.TransferTaskToAGVC();
         }
-
         private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
         {
             DoActionTag = nextWorkStationPointTag = -1;
@@ -93,48 +95,72 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
-        internal static void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+        internal void StartTrackingSecondaryPointReach()
         {
-            ForkAGV? forkAGV = (StaStored.CurrentVechicle as ForkAGV);
-            var _currentTag = forkAGV.BarcodeReader.CurrentTag;
-            if (_currentTag == null)
-                return;
-            if (NextSecondartPointTag == _currentTag)
+            Task.Run(() =>
             {
-                var isunLoad = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
-                var ischarge = forkAGV._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
-
-                LOG.WARN($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({forkAGV._RunTaskData.OrderInfo.ActionName})");
-                try
+                while (Agv.Sub_Status == SUB_STATUS.RUN)
                 {
-                    forkAGV.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
-
-
-
-                    double _position_aim = 0;
-                    var forkHeightSetting = forkAGV.WorkStations.Stations[NextWorkStationPointTag].LayerDatas[forkAGV._RunTaskData.Height];
-                    _position_aim = isunLoad || ischarge ? forkHeightSetting.Down_Pose : forkHeightSetting.Up_Pose;
-
-                    var _Height_PreAction = forkAGV.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? forkAGV.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
-                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至({_Height_PreAction}cm)");
-
-                    Task.Run(async () =>
+                    Thread.Sleep(1);
+                    var _currentTag = Agv.BarcodeReader.CurrentTag;
+                    if (_currentTag == null)
+                        continue;
+                    if (NextSecondartPointTag == _currentTag)
                     {
-                        var result = await forkAGV.ForkLifter.ForkPose(_Height_PreAction, 1);
-                        if (!result.confirm)
+                        if (Agv.AGVC.CycleStopActionExecuting)
                         {
-                            forkAGV.SoftwareEMO(AlarmCodes.Fork_Action_Aborted);
+                            break;
                         }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    LOG.Critical(ex.Message, ex);
-                    forkAGV.SoftwareEMO(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
-                }
+                        var isunLoad = Agv._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
+                        var ischarge = Agv._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
 
-            }
+                        LOG.WARN($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
+                        try
+                        {
+                            double _position_aim = 0;
+                            if (Agv.WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
+                            {
+                                if (_stationData.LayerDatas.TryGetValue(Agv._RunTaskData.Height, out WorkStation.clsStationLayerData? _settings))
+                                {
+                                    _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
+                                    var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
+                                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至({_Height_PreAction}cm)");
 
+                                    Task.Run(async () =>
+                                    {
+                                        var result = await Agv.ForkLifter.ForkPose(_Height_PreAction, 1);
+                                        if (!result.confirm)
+                                        {
+                                            Abort(AlarmCodes.Fork_Action_Aborted);
+                                        }
+                                    });
+                                    break;
+                                }
+                                else
+                                {
+                                    AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
+                                    Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
+                                Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LOG.Critical(ex.Message, ex);
+                            Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                            break;
+                        }
+                    }
+
+                }
+                LOG.TRACE($"牙叉提前上升至安全位置程序結束..", color: ConsoleColor.Green);
+            });
         }
 
         public override void DirectionLighterSwitchBeforeTaskExecute()

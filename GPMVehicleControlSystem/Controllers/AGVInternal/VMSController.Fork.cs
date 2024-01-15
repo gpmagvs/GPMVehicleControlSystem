@@ -53,6 +53,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }).ToArray();
             return mapped_data;
         }
+      
         [HttpGet("Fork/TeachDatas")]
         public async Task<IActionResult> GetTeachDatas()
         {
@@ -123,8 +124,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
         [HttpGet("Fork")]
-        public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 0)
+        public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 1)
         {
+            if (speed == 0)
+                speed = 1;
+
             if (forkAgv.ForkLifter.IsInitialing)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
             if (!forkAgv.IsForkInitialized)

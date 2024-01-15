@@ -175,7 +175,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     ForkLifter.IsInitialized = true;
                 }
                 else
-                    forkInitizeResult = await ForkLifter.ForkInitialize(HasAnyCargoOnAGV() ? 0.3 : 0.5);
+                {
+                    var _speed = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
+                    forkInitizeResult = await ForkLifter.ForkInitialize(_speed);
+                }
                 if (forkInitizeResult.done)
                 {
                     //self test Home action 

@@ -324,5 +324,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             LOG.TRACE($"Remote user change LDULD_Task_No_Entry to {actived}!!");
             return Ok(0);
         }
+        [HttpGet("WorkStationData")]
+        public async Task<IActionResult> GetWorkStationData()
+        {
+            return Ok(agv.WorkStations);
+        }
     }
 }

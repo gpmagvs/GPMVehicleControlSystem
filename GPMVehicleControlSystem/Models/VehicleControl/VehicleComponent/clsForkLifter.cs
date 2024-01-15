@@ -14,6 +14,7 @@ using System.ComponentModel;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.Emulators;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -269,6 +270,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (wait_reach_end)
                 {
                     cts.TryReset();
+                    if (forkAGV.Parameters.SimulationMode)
+                    {
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(1000);
+                            //模擬以伸出 
+                            StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_Extend_Exist_Sensor, false);
+                            StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_Short_Exist_Sensor, true);
+                        });
+                    }
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                     {
                         Thread.Sleep(1);
@@ -310,6 +321,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     CancellationTokenSource cts = new CancellationTokenSource();
                     cts.CancelAfter(TimeSpan.FromSeconds(30));
+                    if (forkAGV.Parameters.SimulationMode)
+                    {
+                        _ = Task.Factory.StartNew(async () =>
+                        {
+                            await Task.Delay(1000);
+                            //模擬已經縮回
+                            StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_Extend_Exist_Sensor, true);
+                            StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_Short_Exist_Sensor, false);
+                        });
+                    }
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     {
                         await Task.Delay(1);
@@ -349,6 +370,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
         {
+            LOG.INFO($"Fork 初始化動作開始，速度={InitForkSpeed}");
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
             try
             {

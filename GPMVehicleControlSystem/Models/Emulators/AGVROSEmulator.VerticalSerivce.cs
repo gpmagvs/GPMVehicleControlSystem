@@ -20,25 +20,26 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private bool VerticalActionCallback(VerticalCommandRequest request, out VerticalCommandResponse response)
         {
             EmuLog($"recieve command_action : {request.ToJson()}");
+            double _speed = request.speed;
             if (request.command == "orig")
             {
                 Task.Run(() =>
                 {
-                    VerticalPositionMoveSimulation(0);
+                    VerticalPositionMoveSimulation(0, _speed);
                 });
             }
 
             if (request.command == "up" || request.command == "up_search")
             {
-                Task.Run(() => VerticalUpSimulation());
+                Task.Run(() => VerticalUpSimulation(_speed));
             }
             if (request.command == "down" || request.command == "down_search")
             {
-                Task.Run(() => VerticalDownSimulation());
+                Task.Run(() => VerticalDownSimulation(_speed));
             }
             if (request.command == "pose")
             {
-                Task.Run(() => VerticalPositionMoveSimulation(request.target));
+                Task.Run(() => VerticalPositionMoveSimulation(request.target, _speed));
             }
             if (request.command == "stop")
             {
@@ -62,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 });
             });
         }
-        private async void VerticalUpSimulation()
+        private async void VerticalUpSimulation(double speed_ = 1.0)
         {
             StaEmuManager.wagoEmu.SetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Vertical_Home_Pos, false);
 
@@ -70,19 +71,19 @@ namespace GPMVehicleControlSystem.Models.Emulators
             while (true)
             {
                 currentVerticalPosition += 0.1;
-                await Task.Delay(1);
+                await Task.Delay(TimeSpan.FromMilliseconds(1.0 / speed_));
                 if (StopFlag)
                     break;
             }
         }
-        private async void VerticalDownSimulation()
+        private async void VerticalDownSimulation(double speed_ = 1.0)
         {
             StaEmuManager.wagoEmu.SetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Vertical_Home_Pos, false);
             StopFlag = false;
             while (true)
             {
                 currentVerticalPosition -= 0.1;
-                await Task.Delay(1);
+                await Task.Delay(TimeSpan.FromMilliseconds(1.0 / speed_));
                 if (StopFlag)
                     break;
             }
@@ -107,7 +108,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     currentVerticalPosition += 0.1;
                 else
                     currentVerticalPosition -= 0.1;
-                await Task.Delay(1);
+                await Task.Delay(TimeSpan.FromMilliseconds(1.0 / speed));
                 if (StopFlag)
                     break;
             }
