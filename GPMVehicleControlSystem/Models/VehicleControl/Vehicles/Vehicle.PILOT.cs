@@ -225,10 +225,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
                     LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
                 }
-                else
+                else if (action != ACTION_TYPE.Charge)
                 {
-                    if (action != ACTION_TYPE.Charge)
-                        Sub_Status = SUB_STATUS.IDLE;
+                    Sub_Status = SUB_STATUS.IDLE;
                 }
                 AGVC.OnAGVCActionChanged = null;
                 await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
