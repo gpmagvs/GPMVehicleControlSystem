@@ -212,11 +212,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             InitializingStatusText = "牙叉初始化動作中";
-            (bool confirm, string message) baseInitize = await base.InitializeActions(cancellation);
             ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
-
-            if (!baseInitize.confirm)
-                return baseInitize;
             if (ForkLifter.Enable)
             {
                 ForkLifter.ForkShortenInAsync();
@@ -260,8 +256,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
             {
                 AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
-                return (true, "Forklift disabled");
             }
+            return await base.InitializeActions(cancellation);
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)

@@ -297,16 +297,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                 }
-                AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                while ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
-                {
-                    await Task.Delay(100);
-                    if (cts.IsCancellationRequested)
-                    {
-                        return (false, checkstatus_alarm_code);
-                    }
-                }
+
+                if (!TryCheckAGVStatus(out AlarmCodes alarmCode))
+                    return (false, alarmCode);
+
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
                 {
                     HSResult = await Agv.WaitEQBusyOnAndOFF(action);
@@ -359,6 +353,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             return await StartBackToHome();
 
+        }
+
+        private bool TryCheckAGVStatus(out AlarmCodes alarmCode)
+        {
+            alarmCode = AlarmCodes.None;
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while ((alarmCode = CheckAGVStatus()) != AlarmCodes.None)
+            {
+                Thread.Sleep(100);
+                if (cts.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+            return alarmCode == AlarmCodes.None;
         }
 
         private async Task<(bool success, AlarmCodes alarmCode)> StartBackToHome()

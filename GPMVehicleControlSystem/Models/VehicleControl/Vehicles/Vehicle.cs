@@ -308,6 +308,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private clsAGVStatusTrack status_data_store;
+
+        public bool IsCstReaderMounted => CSTReader != null;
+
+        /// <summary>
+        /// 是否為有料無帳的狀態
+        /// </summary>
+        public bool IsNoCargoButIDExist => !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "";
+        /// <summary>
+        /// 是否為有帳無料的狀態
+        /// </summary>
+        public bool IsCargoExistButNoID => CSTReader.ValidCSTID == "" && HasAnyCargoOnAGV();
+
         private async Task StoreStatusToDataBase()
         {
 
@@ -649,7 +661,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
-
             if (Sub_Status == SUB_STATUS.RUN)
             {
                 return (false, $"當前狀態不可進行初始化(任務執行中)");
@@ -668,20 +679,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
-            if ((Parameters.AgvType == AGV_TYPE.FORK || Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
-            {
-                if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
-                {
-                    CSTReader.ValidCSTID = "";
-                    LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
-                }
-                if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && HasAnyCargoOnAGV() && CSTReader.ValidCSTID == "")
-                {
-                    (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
-                    if (result.request_success)
-                        LOG.WARN($"偵測到AGV無帳有料，已完成自動建帳");
-                }
-            }
+          
             IsWaitForkNextSegmentTask = false;
             AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
@@ -709,6 +707,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Sub_Status = SUB_STATUS.Initializing;
                     await Task.Delay(500);
                     IsInitialized = false;
+
                     result = await InitializeActions(InitializeCancelTokenResourece);
                     if (!result.Item1)
                     {
@@ -855,7 +854,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
         }
 
-        protected abstract Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation);
+        protected virtual async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
+        {
+            if (IsCstReaderMounted)
+            {
+                if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
+                {
+                    CSTReader.ValidCSTID = "";
+                    LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+                }
+                else if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && IsCargoExistButNoID)
+                {
+                    InitializingStatusText = "自動建帳中...";
+                    (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
+                    if (result.request_success)
+                        LOG.WARN($"偵測到AGV有料無帳，已完成自動建帳");
+                }
+            }
+            return (true, "");
+        }
         private (int tag, double locx, double locy, double theta) CurrentPoseReqCallback()
         {
             var tag = Navigation.Data.lastVisitedNode.data;

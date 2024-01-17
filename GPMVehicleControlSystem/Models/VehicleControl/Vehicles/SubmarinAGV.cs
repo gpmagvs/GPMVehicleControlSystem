@@ -79,10 +79,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return RETURN_CODE.OK;
         }
 
-        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
-        {
-            return (true, "");
-        }
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
