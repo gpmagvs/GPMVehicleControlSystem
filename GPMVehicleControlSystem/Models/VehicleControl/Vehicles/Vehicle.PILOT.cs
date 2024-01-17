@@ -200,23 +200,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 LOG.TRACE("Start Execute Task");
                 bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
-                List<AlarmCodes> alarmCodes = await ExecutingTaskEntity.Execute();
+                List<AlarmCodes> alarmCodes =( await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
                 LOG.TRACE("Execute Task Done");
-                alarmCodes = alarmCodes.FindAll(al => al != AlarmCodes.None);
+                IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                 bool _agv_alarm = alarmCodes.Count != 0;
-                IEnumerable<AlarmCodes> _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
-                if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
-                {
-                    alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
-                    await Task.Delay(200);
-                }
-
-                if (_isNeedHandshaking && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
-                {
-                    alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
-                }
+                alarmCodes = alarmCodes;
                 if (_agv_alarm)
                 {
+                    AGVC.EmergencyStop();
+                    _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                    if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
+                    {
+                        alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
+                        await Task.Delay(200);
+                    }
+
+                    if (_isNeedHandshaking && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
+                    {
+                        alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
+                    }
+
                     Sub_Status = SUB_STATUS.DOWN;
                     alarmCodes.ForEach(alarm =>
                     {

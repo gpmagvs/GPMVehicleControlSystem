@@ -439,7 +439,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             BuzzerPlayer.Alarm();
                             IsSystemInitialized = true;
                             AlarmManager.Active = true;
-                            AlarmManager.AddAlarm(AlarmCodes.None);
+                            AlarmManager.RecordAlarm(AlarmCodes.None);
                             if (HasAnyCargoOnAGV() && CSTReader != null)
                             {
                                 CSTReader.ReadCSTIDFromLocalStorage();
@@ -679,7 +679,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
-          
+
             IsWaitForkNextSegmentTask = false;
             AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
@@ -916,11 +916,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
+        protected internal virtual async void SoftwareEMOFromUI()
+        {
+            AGVC.EmergencyStop(bypass_stopped_check: true); //
+            LOG.Critical($"Software EMO By User!!!");
+            SoftwareEMO(AlarmCodes.SoftwareEMS);
+        }
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-            LOG.WARN($"Software EMO!!! {alarmCode}");
-            AlarmManager.AddAlarm(alarmCode);
+            LOG.Critical($"EMO-{alarmCode}");
             _Sub_Status = SUB_STATUS.DOWN;
+
+            if (ExecutingTaskEntity != null)
+            {
+                IsAGVAbnormal_when_handshaking = ExecutingTaskEntity.IsNeedHandshake;
+                ExecutingTaskEntity.Abort(alarmCode);
+            }
+            else
+                AlarmManager.RecordAlarm(alarmCode);
+
             StoreStatusToDataBase();
             HandshakeIOOff();
             BuzzerPlayer.Alarm();
@@ -934,11 +948,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsInitialized = false;
             StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
-            if (ExecutingTaskEntity != null)
-            {
-                IsAGVAbnormal_when_handshaking = ExecutingTaskEntity.IsNeedHandshake;
-                ExecutingTaskEntity.Abort(alarmCode);
-            }
+
             //AGVSTaskFeedBackReportAndOffline(alarmCode);
             if (Remote_Mode == REMOTE_MODE.ONLINE)
             {
@@ -947,30 +957,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"{alarmCode}" : HandshakeStatusText;
 
-            if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
-            {
-                AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                AGVC.OnAGVCActionChanged += RaiseActionStatusNoGoal;
-                AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());//下空任務清空
-            }
-            void RaiseActionStatusNoGoal(ActionStatus status)
-            {
-                LOG.WARN($"[Software EMO] AGVC Status changed to {status}");
-                if (status == ActionStatus.SUCCEEDED)
-                {
 
-                    Task.Factory.StartNew(async () =>
-                    {
-
-                        await Task.Delay(1000);
-                        AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                        LOG.WARN($"[Software EMO] Set AGVC Status changed to {ActionStatus.NO_GOAL}");
-                        AGVC.OnAGVCActionChanged -= RaiseActionStatusNoGoal;
-                        ExecutingTaskEntity?.Dispose();
-                        ExecutingTaskEntity = null;
-                    });
-                }
-            }
         }
         protected virtual void HandshakeIOOff()
         {

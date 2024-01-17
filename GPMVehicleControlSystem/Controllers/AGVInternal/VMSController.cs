@@ -156,7 +156,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-                agv.SoftwareEMO(AlarmCodes.SoftwareEMS);
+                agv.SoftwareEMOFromUI();
             }
             catch (Exception ex)
             {

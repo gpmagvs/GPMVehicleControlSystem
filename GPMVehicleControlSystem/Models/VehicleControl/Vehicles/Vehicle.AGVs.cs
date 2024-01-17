@@ -324,8 +324,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             if (!normal_state)
                             {
-                                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task);
-                                Sub_Status = SUB_STATUS.DOWN;
+                                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task, false);
                             }
                             ExecutingTaskEntity.Abort();
                         });

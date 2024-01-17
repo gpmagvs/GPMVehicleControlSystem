@@ -167,7 +167,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 if (AGVCActionStatusChaged != null)
+                {
+                    LOG.WARN($"車控 AGVCActionStatusChaged event 註冊狀態未清空=>自動清空");
                     AGVCActionStatusChaged = null;
+                }
 
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
@@ -249,7 +252,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             catch (Exception ex)
             {
-                throw ex;
+                LOG.Critical(ex);
+                return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
         }
@@ -599,7 +603,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 try
                 {
-                    Agv.AGVC.EMOHandler(this, EventArgs.Empty);
+                    Agv.AGVC.EmergencyStop();
                     Agv.ExecutingTaskEntity.Abort();
                     Agv.Sub_Status = SUB_STATUS.DOWN;
                     AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);

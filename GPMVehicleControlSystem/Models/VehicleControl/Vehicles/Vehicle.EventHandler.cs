@@ -275,7 +275,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
 
                 LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.AddAlarm(alarm_code);
+                AlarmManager.RecordAlarm(alarm_code);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
 
             }
@@ -353,7 +353,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.AddAlarm(alarm_code);
+                AlarmManager.RecordAlarm(alarm_code);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
             }
             else
@@ -391,7 +391,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.AddAlarm(alarm_code);
+                AlarmManager.RecordAlarm(alarm_code);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
             }
             else
@@ -565,12 +565,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
-            _ = Task.Factory.StartNew(async () =>
-            {
-                SoftwareEMO(alarm_code);
-
-            });
-
+            AGVC.EmergencyStop();
+            SoftwareEMO(alarm_code);
         }
 
 

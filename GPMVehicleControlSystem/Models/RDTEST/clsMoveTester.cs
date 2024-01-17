@@ -76,7 +76,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                     {
                         LOG.INFO($"測試過程中脫離Tag", false);
                         BuzzerPlayer.Alarm();
-                        AlarmManager.AddAlarm(AlarmCodes.Motion_control_Missing_Tag_On_End_Point);
+                        AlarmManager.RecordAlarm(AlarmCodes.Motion_control_Missing_Tag_On_End_Point);
                         TestEnd();
                         return;
                     }
