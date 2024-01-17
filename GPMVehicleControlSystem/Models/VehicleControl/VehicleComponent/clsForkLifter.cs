@@ -185,19 +185,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             return await base.CheckStateDataContent();
         }
+
+        /// <summary>
+        /// Fork升降動作暫停
+        /// </summary>
+        /// <param name="IsEMS"></param>
+        /// <returns></returns>
         public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = true)
         {
             if (IsEMS)
             {
-                (forkAGV.AGVC as ForkAGVController).wait_action_down_cts.Cancel();
+                fork_ros_controller.BeforeForkStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                fork_ros_controller.wait_action_down_cts.Cancel();
                 LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
             return await fork_ros_controller.ZAxisStop();
         }
 
-        internal async Task ForkResumeAction()
+        /// <summary>
+        /// 繼續動作
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<(bool confirm, string message)> ForkResumeAction()
         {
-            await fork_ros_controller.ZAxisResume();
+            return await fork_ros_controller.ZAxisResume();
         }
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
@@ -519,7 +530,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed)
         {
-
             try
             {
                 fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();

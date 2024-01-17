@@ -18,6 +18,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             { "Cst_ID_Not_Match_Action(CST ID讀取結果與任務不符)","0:上報拍到的ID ,1:向派車查詢虛擬ID" },
             { "LsrObsDetectedAlarmLevel(雷射偵測到設備內有障礙物警報等級)","0:Warning,1:Alarm" },
             { "IO_VAL_TYPE(Modbus交握時使用的IO種類)","0:使用INPUT讀寫,1:使用 InputRegist 讀/SingleRegister寫(歐迪爾模組)" },
+            { "HandshakeIOFlickDelayTime (交握 EQIO 瞬閃判斷秒數)","單位:毫秒" },
         };
         public string LogFolder { get; set; } = "GPM_AGV_LOG";
         public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
@@ -136,6 +137,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         internal EQ_HS_METHOD _EQHandshakeMethodStore = EQ_HS_METHOD.PIO;
 
+        public int HandshakeIOFlickDelayTime { get; set; } = 300;
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();
         public clsCstExistDetection CST_EXIST_DETECTION { get; set; } = new clsCstExistDetection();
         public clsSensorBypass SensorBypass { get; set; } = new clsSensorBypass();

@@ -686,6 +686,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+            _RunTaskData = new clsTaskDownloadData();
             SaveParameters(Parameters);
 
             return await Task.Run(async () =>

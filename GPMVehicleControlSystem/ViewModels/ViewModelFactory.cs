@@ -90,7 +90,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     HandshakeStatus = new AGVCStatusVM.clsEQHandshake
                     {
-                        IsHandshaking = AGV.IsHandshaking,
+                        IsHandshaking = AGV.IsHandshaking || (AGV.Sub_Status == clsEnums.SUB_STATUS.RUN && (AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Load || AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Unload)),
                         HandshakingInfoText = AGV.HandshakeStatusText,
                         ConnectionType = AGV.Parameters.EQHandshakeMethod,
                         Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
@@ -117,11 +117,6 @@ namespace GPMVehicleControlSystem.ViewModels
                         },
                         new clsAlarmCode
                         {
-
-
-
-
-
                             Time=DateTime.Now,
 
                              Code =  (int)AlarmCodes.Code_Error_In_System,

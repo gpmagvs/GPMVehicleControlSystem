@@ -77,6 +77,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public class clsHandshakeSignalState
         {
+            public static int FlickDelayTime => StaStored.CurrentVechicle.Parameters.HandshakeIOFlickDelayTime;
             public clsHandshakeSignalState(EQ_HSSIGNAL signal_name)
             {
                 this.signal_name = signal_name;

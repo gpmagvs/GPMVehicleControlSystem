@@ -456,10 +456,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (status == ActionStatus.SUCCEEDED)
             {
+                await Task.Delay(200);
                 if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                 {
-                    return AlarmCodes.AGV_Location_Not_Secondary;
+                    //return AlarmCodes.AGV_Location_Not_Secondary;
+                    AlarmManager.AddWarning(AlarmCodes.AGV_Location_Not_Secondary);
                 }
+
                 AGVCActionStatusChaged = null;
                 back_to_secondary_flag = true;
 
@@ -594,8 +597,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
                 if (!CstExistCheckResult.confirm)
                     return (false, CstExistCheckResult.alarmCode);
-
-                await Task.Delay(1000);
+                await Task.Delay(700);
                 var FormArmShortenTask = Task.Run(async () =>
                 {
                     Agv.HandshakeStatusText = "AGV牙叉縮回中";
@@ -841,6 +843,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
+            Agv.HandshakeStatusText = "檢查在席狀態.(車上應無物料)";
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 

@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -40,6 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
+            ForkMovingProtectedProcess();
         }
         public override CARGO_STATUS CargoStatus
         {
@@ -97,7 +99,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CommonEventsRegist()
         {
             base.CommonEventsRegist();
-            (AGVC as ForkAGVController).OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
+            var _fork_car_controller = (AGVC as ForkAGVController);
+            _fork_car_controller.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
+            _fork_car_controller.OnForkStartMove += _fork_car_controller_OnForkStartMove;
+            _fork_car_controller.OnForkStopMove += _fork_car_controller_OnForkStopMove;
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -120,6 +125,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             };
         }
+        private bool _ForkSaftyProtectFlag = false;
+        private void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
+        {
+            //throw new NotImplementedException();
+            LOG.TRACE("Fork Stop");
+            _ForkSaftyProtectFlag = false;
+            if (Sub_Status == SUB_STATUS.IDLE)
+                BuzzerPlayer.Stop();
+        }
+
+        private void _fork_car_controller_OnForkStartMove(object? sender, string command)
+        {
+            //throw new NotImplementedException();
+            LOG.TRACE($"Fork Star Run (Started by:{command})");
+            _ForkSaftyProtectFlag = true;
+        }
+        private void ForkMovingProtectedProcess()
+        {
+            Thread _thread = new Thread(() =>
+            {
+                bool _isStopped = false;
+                WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandlerSideLaserStateChange);
+                WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandlerSideLaserStateChange);
+
+                void HandlerSideLaserStateChange(object? sender, bool state)
+                {
+                    bool _isLsrTrigger = !state;
+                    if (_ForkSaftyProtectFlag)
+                    {
+                        if (_isLsrTrigger && !_isStopped)
+                        {
+                            LOG.TRACE("Side Laser Trigger, Stop Fork");
+                            ForkLifter.ForkStopAsync(false);
+                            _isStopped = true;
+                            AGVStatusChangeToAlarmWhenLaserTrigger();
+
+                        }
+                    }
+                    if (!_isLsrTrigger && _isStopped)
+                    {
+                        LOG.TRACE("Side Laser Reconvery, Resume Fork Action");
+                        ForkLifter.ForkResumeAction();
+                        _isStopped = false;
+                        if (ForkLifter.IsInitialing || _RunTaskData.IsActionFinishReported)
+                        {
+                            BuzzerPlayer.Stop();
+                        }
+                        else
+                        {
+                            if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                BuzzerPlayer.Move();
+                            else
+                                BuzzerPlayer.Action();
+                        }
+                    }
+                }
+
+            });
+            _thread.Start();
+            LOG.TRACE("Start Fork Safty Protect Process Thread");
+        }
+
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();

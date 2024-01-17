@@ -487,7 +487,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 waitNoObstacleCTS.Cancel();
             }
         }
-        private void AGVStatusChangeToAlarmWhenLaserTrigger()
+        protected void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
             _Sub_Status = SUB_STATUS.ALARM;
             BuzzerPlayer.Alarm();

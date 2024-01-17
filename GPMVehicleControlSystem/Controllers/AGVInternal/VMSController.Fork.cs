@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }).ToArray();
             return mapped_data;
         }
-      
+
         [HttpGet("Fork/TeachDatas")]
         public async Task<IActionResult> GetTeachDatas()
         {
@@ -196,6 +196,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkStopAsync();
                 return Ok(new { confirm = result.success, message = result.message });
             }
+            else if (action == "resume")
+            {
+                (bool confirm, string message) result = await forkAgv.ForkLifter.ForkResumeAction();
+                return Ok(new { confirm = result.confirm, message = result.message });
+            }
             else if (action == "increase")
             {
                 var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
@@ -240,6 +245,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> ForkArmStop()
         {
             forkAgv.ForkLifter.ForkARMStop();
+            return Ok();
+        }
+        [HttpGet("Fork/Command_Action")]
+        public async Task<IActionResult> Command_Action(string command, double target, double speed)
+        {
+            (forkAgv.AGVC as ForkAGVController).CallVerticalCommandService(new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest
+            {
+                command = command,
+                model = "FORK",
+                target = target,
+                speed = speed
+            });
             return Ok();
         }
     }

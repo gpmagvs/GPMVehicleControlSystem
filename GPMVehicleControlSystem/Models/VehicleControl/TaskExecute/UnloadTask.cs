@@ -51,6 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
+            Agv.HandshakeStatusText = "檢查在席狀態.(車上應有物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 

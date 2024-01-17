@@ -384,6 +384,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     (bool success, AlarmCodes alarmCode) result = await HandleAGVCActionSucceess();
                     task_abort_alarmcode = result.success ? AlarmCodes.None : result.alarmCode;
                     LOG.TRACE($"HandleAGVCActionSucceess result => {task_abort_alarmcode}");
+
                     _wait_agvc_action_done_pause.Set();
                 }
             });
@@ -473,7 +474,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.TRACE($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
                 (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (Agv.ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME, AlarmCodes.None);
                 await Agv.Laser.SideLasersEnable(true);
-                await RegisterSideLaserTriggerEvent();
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
                 bool isCurrentHightAboveSaftyH() => Agv.ForkLifter.CurrentHeightPosition > _safty_height;
                 if (isCurrentHightAboveSaftyH())
@@ -510,7 +510,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 }
                 ForkGoHomeActionResult.confirm = true;
-                await UnRegisterSideLaserTriggerEvent();
                 await Task.Delay(500);
                 await Agv.Laser.SideLasersEnable(false);
                 if (!ForkGoHomeActionResult.confirm)
@@ -538,26 +537,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
 
             LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-            await RegisterSideLaserTriggerEvent();
             (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, position, 1).Result;
-            await UnRegisterSideLaserTriggerEvent();
             _wait_fork_reach_position_cst.Cancel();
             return result;
         }
 
-        protected async Task RegisterSideLaserTriggerEvent()
-        {
-            Agv.WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
-            Agv.WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
-            await Task.Delay(500);
-            await Agv.Laser.SideLasersEnable(true);//開啟左右雷射
-        }
-        protected async Task UnRegisterSideLaserTriggerEvent()
-        {
-            Agv.WagoDI.UnRegistSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
-            Agv.WagoDI.UnRegistSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, LaserTriggerWhenForkLiftMove);
-            await Agv.Laser.SideLasersEnable(false);
-        }
         private bool IsSideLsrFlickBefore = false;
         private async void LaserTriggerWhenForkLiftMove(object? sender, bool active)
         {
@@ -668,7 +652,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     // TODO: 處置受控狀態 (受控物件)
                 }
-                UnRegisterSideLaserTriggerEvent();
                 AGVCActionStatusChaged = null;
                 TaskCancelCTS.Cancel();
                 disposedValue = true;

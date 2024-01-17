@@ -14,6 +14,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         public Action<bool> OnZAxisActionDone;
         public bool _IsZAxisActionDone = false;
+
+        private double PoseTarget = 0;
+        private double Speed = 0;
+
+        public event EventHandler<string> OnForkStartMove;
+        public event EventHandler OnForkStopMove;
         public bool IsZAxisActionDone
         {
             get => _IsZAxisActionDone;
@@ -23,6 +29,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (_IsZAxisActionDone)
                 {
                     WaitActionDoneFlag = false;
+
+                    if (IsForkStartRunCommand(CurrentForkActionRequesting))
+                        OnForkStopMove?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
@@ -35,6 +44,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public OnForkStartGoHomeDelage OnForkStartGoHome;
 
         public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
+        public VerticalCommandRequest BeforeForkStopActionRequesting { get; set; } = new VerticalCommandRequest();
         public double InitForkSpeed = 1;
         public ForkAGVController()
         {
@@ -76,11 +86,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 target = 0,
                 speed = 0
             };
-            return await CallVerticalCommandService(request, false);
+            return await CallVerticalCommandService(request);
         }
 
-        private double PoseTarget = 0;
-        private double Speed = 0;
         public async Task<(bool success, string message)> ZAxisGoTo(double target, double speed = 1.0, bool wait_done = true)
         {
             PoseTarget = target;
@@ -112,7 +120,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
         internal CancellationTokenSource wait_action_down_cts = new CancellationTokenSource();
-        private async Task<(bool success, string message)> WaitActionDone(int timeout = 60)
+        private async Task<(bool success, string message)> WaitActionDone(int timeout = 300)
         {
             return await Task.Run(() =>
             {
@@ -223,6 +231,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
 
+        /// <summary>
+        /// 暫停動作
+        /// </summary>
+        /// <returns></returns>
         public async Task<(bool confirm, string message)> ZAxisStop()
         {
             WaitActionDoneFlag = false;
@@ -233,32 +245,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 speed = 0,
                 target = 0
             };
-            return await CallVerticalCommandService(request, false);
+            return await CallVerticalCommandService(request);
         }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
-            VerticalCommandRequest request = new VerticalCommandRequest
-            {
-                model = "FORK",
-                command = "resum",
-                speed = Speed,
-                target = PoseTarget
-            };
+            if (BeforeForkStopActionRequesting.command == "")
+                return (true, "No Request be stop");
+            VerticalCommandRequest request = BeforeForkStopActionRequesting.Clone();
+            LOG.WARN($"Fork {request.command} resume to action");
             return await CallVerticalCommandService(request);
         }
-        private async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request, bool wait_reply = true)
+        internal async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request)
         {
             try
             {
-                CurrentForkActionRequesting = request;
 
                 LOG.INFO($"Try rosservice call /command_action : {request.ToJson()}");
-
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action", request, 1000);
-
                 if (response == null)
                     throw new TimeoutException();
 
+
+                if (response.confirm)
+                {
+                    if (IsForkStartRunCommand(request) || (CurrentForkActionRequesting.command == "stop" && request.command == "resume"))
+                    {
+                        OnForkStartMove?.Invoke(this, request.command);
+                    }
+                    if (request.command == "stop")
+                    {
+                        BeforeForkStopActionRequesting = CurrentForkActionRequesting.Clone();
+                        OnForkStopMove?.Invoke(this, EventArgs.Empty);
+                    }
+
+                    CurrentForkActionRequesting = request;
+                }
                 return (response.confirm, "");
 
             }
@@ -266,6 +287,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return (false, ex.Message);
             }
+        }
+
+        private static bool IsForkStartRunCommand(VerticalCommandRequest request)
+        {
+            return request.command == "pose" || request.command == "orig" || request.command == "up" || request.command == "up_search"
+                                                || request.command == "down" || request.command == "down_search";
         }
     }
 }
