@@ -113,6 +113,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
         internal string HandshakeStatusText = "";
+        internal string InitializingStatusText = "";
         /// <summary>
         /// 里程數
         /// </summary>
@@ -704,9 +705,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return result;
                     }
 
+                    InitializingStatusText = "初始化開始";
                     Sub_Status = SUB_STATUS.Initializing;
+                    await Task.Delay(500);
                     IsInitialized = false;
-
                     result = await InitializeActions(InitializeCancelTokenResourece);
                     if (!result.Item1)
                     {
@@ -715,14 +717,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
-
+                    InitializingStatusText = "雷射模式切換(Bypass)..";
+                    await Task.Delay(200);
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
                     await Laser.AllLaserDisable();
-                    await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
+
                     StatusLighter.AbortFlash();
                     DirectionLighter.CloseAll();
-                    Sub_Status = SUB_STATUS.IDLE;
 
+                    InitializingStatusText = "初始化完成!";
+                    await Task.Delay(500);
+                    Sub_Status = SUB_STATUS.IDLE;
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");

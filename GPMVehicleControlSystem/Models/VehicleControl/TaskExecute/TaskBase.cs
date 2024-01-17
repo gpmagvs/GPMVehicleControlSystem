@@ -542,38 +542,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return result;
         }
 
-        private bool IsSideLsrFlickBefore = false;
-        private async void LaserTriggerWhenForkLiftMove(object? sender, bool active)
-        {
-            clsIOSignal input = (clsIOSignal)sender;
-            AlarmCodes alarm_code = input.Input == DI_ITEM.RightProtection_Area_Sensor_3 ? AlarmCodes.RightProtection_Area3 : AlarmCodes.LeftProtection_Area3;
-
-            if (!active)
-            {
-                await Task.Delay(300);
-                if (Agv.WagoDI.GetState(input.Input))
-                {
-                    IsSideLsrFlickBefore = true;
-                    return;
-                }
-                IsSideLsrFlickBefore = false;
-                await Agv.ForkLifter.ForkStopAsync(false);
-                AlarmManager.AddAlarm(alarm_code);
-                await Task.Delay(100);
-                BuzzerPlayer.Alarm();
-            }
-            else
-            {
-                if (Agv.WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3) && Agv.WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3))
-                {
-                    AlarmManager.ClearAlarm(alarm_code);
-                    Agv.ForkLifter.fork_ros_controller.IsZAxisActionDone = true;
-                    await Task.Delay(100);
-                    BuzzerPlayer.Action();
-                }
-            }
-        }
-
         /// <summary>
         /// 車頭二次檢Sensor檢察功能
         /// </summary>

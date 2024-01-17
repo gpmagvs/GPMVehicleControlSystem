@@ -25,6 +25,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public string CarName { get; set; } = "";
         public string AGVC_ID { get; set; } = "";
         public string CST_Data { get; set; } = "";
+        public string InitializingStatusText { get; set; } = "";
         public int Tag { get; set; }
         public MapPoint Last_Visit_MapPoint { get; set; } = new MapPoint();
         public int Last_Visited_Tag { get; set; }

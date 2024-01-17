@@ -157,7 +157,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (_isLsrTrigger && !_isStopped)
                         {
                             LOG.TRACE("Side Laser Trigger, Stop Fork");
-                            ForkLifter.ForkStopAsync(false);
+                            ForkLifter.ForkStopAsync();
                             _isStopped = true;
                             AGVStatusChangeToAlarmWhenLaserTrigger();
 
@@ -196,29 +196,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!Parameters.CheckObstacleWhenForkInit)
                 return (true, "");
 
-            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
-            await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
-            await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-            await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
-
             bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
             if (RightLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
             bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
             if (LeftLaserAbnormal)
                 return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
-            //bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
-            //if (forkFrontendSensorAbnormal)
-            //    return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 前端障礙物檢出)");
-            else
-            {
-                return (true, "");
-            }
 
+            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
+            await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
+            await WagoDO.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+            await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+            return (true, "");
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-
+            InitializingStatusText = "牙叉初始化動作中";
             (bool confirm, string message) baseInitize = await base.InitializeActions(cancellation);
             ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
 
@@ -231,9 +224,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                 }
+                InitializingStatusText = "牙叉原點覆歸...";
                 await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
                 bool isForkAllowNoDoInitializeAction = Parameters.SimulationMode || Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+
                 (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
                 if (isForkAllowNoDoInitializeAction)
                 {
@@ -243,8 +238,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else
                 {
-                    var _speed = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                    forkInitizeResult = await ForkLifter.ForkInitialize(_speed);
+                    double _speed_of_init = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
+                    forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
                 }
                 if (forkInitizeResult.done)
                 {
@@ -283,7 +278,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.Critical($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
-                ForkLifter.ForkStopAsync();
+                ForkLifter.ForkStopAsync(true);
             });
             base.SoftwareEMO(alarmCode);
         }
@@ -294,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
-                ForkLifter.ForkStopAsync();
+                ForkLifter.ForkStopAsync(true);
             });
         }
 

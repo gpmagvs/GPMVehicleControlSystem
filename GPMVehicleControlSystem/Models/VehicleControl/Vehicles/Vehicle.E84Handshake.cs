@@ -108,7 +108,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             try
                             {
                                 cts = new CancellationTokenSource();
-                                await Task.Delay(300, cts.Token);
+                                await Task.Delay(FlickDelayTime, cts.Token);
                                 bool is_changed = _state != lastNewInput;
                                 _state = lastNewInput;
                                 if (is_changed)

@@ -329,5 +329,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             return Ok(agv.WorkStations);
         }
+        [HttpGet("SetSubStatus")]
+        public async Task SetSubStatus(SUB_STATUS status)
+        {
+            agv.Sub_Status = status;
+        }
     }
 }
