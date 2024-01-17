@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-KillRunningVCSProcesses();
+StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
@@ -125,17 +125,3 @@ app.MapControllers();
 
 app.Run();
 
-
-static void KillRunningVCSProcesses()
-{
-    var currentProcess = Process.GetCurrentProcess();
-    var porcess = Process.GetProcessesByName("GPM_VCS");
-    if (porcess.Length != 0)
-    {
-        foreach (var p in porcess)
-        {
-            if (p.Id != currentProcess.Id)
-                p.Kill();
-        }
-    }
-}

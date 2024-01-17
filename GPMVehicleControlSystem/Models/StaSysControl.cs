@@ -6,6 +6,15 @@ namespace GPMVehicleControlSystem.Models
     public static class StaSysControl
     {
 
+        public static void KillRunningVCSProcesses()
+        {
+            var currentProcessId = Process.GetCurrentProcess().Id;
+            var currentProcessName = Process.GetCurrentProcess().ProcessName;
+
+            Process.GetProcessesByName(currentProcessName)
+                                       .Where(p => p.Id != currentProcessId).ToList().ForEach(other_process => other_process.Kill());
+        }
+
         public static void SystemClose()
         {
             _ = Task.Factory.StartNew(async () =>
