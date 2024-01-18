@@ -485,8 +485,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
                 _ = Task.Run(async () =>
                 {
-                    HandshakeStatusText = "交握結束";
+                    HandshakeStatusText = "Finish!";
                     await Task.Delay(1000);
+                    HandshakeStatusText = "";
                 });
             }
             catch (Exception ex)

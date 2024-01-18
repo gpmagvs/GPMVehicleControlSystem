@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     CST_Data = AGV.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
                     BatteryStatus = GetBatteryStatusVM(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
-                    Angle = AGV.SickData.HeadingAngle,
+                    Angle = AGV.Navigation.Angle,
                     Mileage = AGV.Odometry,
                     BCR_State_MoveBase = AGV.BarcodeReader.Data,
                     AlarmCodes = AlarmManager.CurrentAlarms.Values.ToArray(),

@@ -221,18 +221,18 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
                      RobotStopMRE = new ManualResetEvent(true);
 
-                     Task task = Task.Factory.StartNew(() =>
-                     {
-                         while (!cts.IsCancellationRequested && !emergency_stop_canceltoken_source.IsCancellationRequested)
-                         {
-                             Thread.Sleep(1);
+                     //Task task = Task.Factory.StartNew(() =>
+                     //{
+                     //    while (!cts.IsCancellationRequested && !emergency_stop_canceltoken_source.IsCancellationRequested)
+                     //    {
+                     //        Thread.Sleep(1);
 
-                             if (Agv.AGVC._IsEmergencyStopFlag)
-                             {
-                                 emergency_stop_canceltoken_source.Cancel();
-                             }
-                         }
-                     });
+                     //        if (Agv.AGVC._IsEmergencyStopFlag)
+                     //        {
+                     //            emergency_stop_canceltoken_source.Cancel();
+                     //        }
+                     //    }
+                     //});
                      //是否為分段任務
                      //模擬走型
 

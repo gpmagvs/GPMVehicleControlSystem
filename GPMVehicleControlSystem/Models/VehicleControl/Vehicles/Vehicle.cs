@@ -291,9 +291,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
-
-                            //if (!IMU.IsAccSensorError)
-                            //    IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
                         }
 
                     }
@@ -302,6 +299,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
 
                     _Sub_Status = value;
+                    LOG.TRACE($"Sub_Status change to {value}");
                     StoreStatusToDataBase();
                 }
             }
