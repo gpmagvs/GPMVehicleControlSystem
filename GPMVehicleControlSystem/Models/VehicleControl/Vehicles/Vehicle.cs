@@ -28,6 +28,7 @@ using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Drawing;
 using System.Net.Sockets;
+using System.Reflection;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -481,6 +482,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void EmulatorInitialize()
         {
+            MapPoint GetMapPointByTag(int tag)
+            {
+                return NavingMap.Points.Values.FirstOrDefault(p => p.TagNumber == tag);
+            }
+
             if (Parameters.SimulationMode)
             {
                 try
@@ -489,17 +495,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
                     StaEmuManager.agvRosEmu.OnLastVisitedTagChanged += (tag) =>
                     {
-                        var pt_kp = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == tag);
-                        if (pt_kp.Value != null)
+                        var pt = GetMapPointByTag(tag);
+                        if (pt != null)
                         {
-                            return new PointF((float)pt_kp.Value.X, (float)pt_kp.Value.Y);
+                            return new PointF((float)pt.X, (float)pt.Y);
                         }
                         else
                             return new PointF();
                     };
                     StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
                     {
-                        return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
+                        MapPoint point = GetMapPointByTag(tag);
+                        if (point == null)
+                            return false;
+                        return point.IsCharge && IsChargeCircuitOpened;
                     };
                 }
                 catch (SocketException)
