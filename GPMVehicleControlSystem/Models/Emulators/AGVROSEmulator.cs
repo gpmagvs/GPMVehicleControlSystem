@@ -218,24 +218,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                      CancellationTokenSource cts = new CancellationTokenSource();
                      emergency_stop_canceltoken_source = new CancellationTokenSource();
                      emergency_stop = false;
-
                      RobotStopMRE = new ManualResetEvent(true);
-
-                     //Task task = Task.Factory.StartNew(() =>
-                     //{
-                     //    while (!cts.IsCancellationRequested && !emergency_stop_canceltoken_source.IsCancellationRequested)
-                     //    {
-                     //        Thread.Sleep(1);
-
-                     //        if (Agv.AGVC._IsEmergencyStopFlag)
-                     //        {
-                     //            emergency_stop_canceltoken_source.Cancel();
-                     //        }
-                     //    }
-                     //});
-                     //是否為分段任務
-                     //模擬走型
-
                      _CycleStopFlag = false;
                      complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
                      var firstTag = obj.planPath.poses.First().header.seq;
@@ -282,7 +265,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
                              var _speed = 2; //m/s
                              var destine_position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(tag_pose_x, tag_pose_y, 0);
-                             double _timespend = distanceFromDestine(module_info.nav_state.robotPose.pose.position, destine_position) / _speed;
+                             double _distance_to_next_point = distanceFromDestine(module_info.nav_state.robotPose.pose.position, destine_position);
+                             double _timespend = _distance_to_next_point / _speed;
                              var _x_delta = tag_pose_x - module_info.nav_state.robotPose.pose.position.x; //x方向距離  m/s
                              var _y_delta = tag_pose_y - module_info.nav_state.robotPose.pose.position.y;
 
@@ -298,8 +282,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                  await Task.Delay(TimeSpan.FromMilliseconds(100), emergency_stop_canceltoken_source.Token);
                                  module_info.nav_state.robotPose.pose.position.x += _x_speed / 10.0;
                                  module_info.nav_state.robotPose.pose.position.y += _y_speed / 10.0;
+                                 module_info.Mileage += _distance_to_next_point / 1000.0 * 0.1;
                              }
-
                              EmuLog($"Reach...{tag}");
                              module_info.nav_state.lastVisitedNode.data = (int)tag;
                              module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
