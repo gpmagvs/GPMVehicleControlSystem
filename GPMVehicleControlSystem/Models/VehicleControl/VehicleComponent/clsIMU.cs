@@ -127,30 +127,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             else
             {
-                PitchState = DeterminePitchState(AccData);
-                IsImpacting = ImpactDetection(AccData, out var mag);
+                PitchState = DeterminePitchState(AccData,Options.PitchErrorThresHold);
+                IsImpacting = ImpactDetection(AccData, Options.ThresHold, out var mag);
             }
             IMUData = _imu_state.imuData;
             return true;
         }
 
-        private bool ImpactDetection(Vector3 acc_raw, out double mag)
+        private bool ImpactDetection(Vector3 acc_raw, double threshold, out double mag)
         {
             double[] raw = new double[] { acc_raw.x, acc_raw.y, acc_raw.z };//9.8 m/s2
             mag = Vector<double>.Build.DenseOfArray(raw).L2Norm() / 9.8;
-            return mag > Options.ThresHold;
+            return mag > threshold;
         }
 
-        private PITCH_STATES DeterminePitchState(Vector3 AccData)
+        private PITCH_STATES DeterminePitchState(Vector3 AccData, double pitchErrorThresHold=0.5)
         {
-            double error_threshold = 0.5;//9.8 9.2
+            
             double Xaxis_g_error = Math.Abs(Math.Abs(AccData.x) - 9.8);
             double Yaxis_g_error = Math.Abs(Math.Abs(AccData.y) - 9.8);
             double Zaxis_g_error = Math.Abs(Math.Abs(AccData.z) - 9.8);
 
-            if ((Xaxis_g_error < error_threshold || Yaxis_g_error < error_threshold) && Zaxis_g_error > (9.8 - error_threshold))
+            if ((Xaxis_g_error < pitchErrorThresHold || Yaxis_g_error < pitchErrorThresHold) && Zaxis_g_error > (9.8 - pitchErrorThresHold))
                 return PITCH_STATES.SIDE_FLIP;
-            else if (Zaxis_g_error > error_threshold && AccData.z < 9.8)
+            else if (Zaxis_g_error > pitchErrorThresHold && AccData.z < 9.8)
                 return PITCH_STATES.INCLINED;
             else
                 return PITCH_STATES.NORMAL;

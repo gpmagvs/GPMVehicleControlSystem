@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using RosSharp.RosBridgeClient.Actionlib;
 using SQLitePCL;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -43,6 +44,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             return base.TransferTaskToAGVC();
+        }
+        protected override async Task WaitTaskDone()
+        {
+            LOG.TRACE($"等待 AGV完成 [移動] 任務", color: ConsoleColor.Green);
+            var _t = Task.Run(() =>
+            {
+                bool IsAGVMoving()
+                {
+                    var _status = Agv.AGVC.ActionStatus;
+                    return _status == ActionStatus.ACTIVE || _status == ActionStatus.PENDING;
+                }
+                while (IsAGVMoving())
+                {
+                    Thread.Sleep(1);
+                    if (TaskCancelByReplan.IsCancellationRequested)
+                    {
+                        throw new TaskCanceledException();
+                    }
+                }
+            }, TaskCancelByReplan.Token);
+            try
+            {
+                await _t;
+                LOG.TRACE($"AGV完成 [移動] 任務, Alarm Code: {task_abort_alarmcode}.]", color: ConsoleColor.Green);
+
+            }
+            catch (TaskCanceledException ex)
+            {
+                _wait_agvc_action_done_pause.Set();
+                task_abort_alarmcode = AlarmCodes.Replan;
+                LOG.TRACE($"[移動]任務-Replan.{ex.Message}, Alarm Code:{task_abort_alarmcode}.]", color: ConsoleColor.Green);
+            }
+            catch (Exception ex)
+            {
+                _wait_agvc_action_done_pause.Set();
+                task_abort_alarmcode = AlarmCodes.Replan;
+                LOG.TRACE($"[移動]任務-Replan.{ex.Message}=>{task_abort_alarmcode}.]", color: ConsoleColor.Green);
+            }
         }
         private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
         {
@@ -184,7 +223,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return base.BeforeTaskExecuteActions();
         }
 
-
+        protected override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        {
+            return base.HandleAGVCActionSucceess();
+        }
         /// <summary>
         /// 偵測貨物傾倒
         /// </summary>

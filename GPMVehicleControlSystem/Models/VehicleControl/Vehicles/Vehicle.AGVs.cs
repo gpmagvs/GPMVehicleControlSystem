@@ -12,6 +12,7 @@ using AGVSystemCommonNet6.MAP;
 using System.Diagnostics;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using System.Threading.Tasks;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -33,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
-            AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+            AGVS.OnTaskDownloadFeekbackDone += AGVS_OnTaskDownloadFeekbackDone;
             AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
             AGVS.OnDisconnected += AGVS_OnDisconnected;
             AGVS.OnTaskFeedBack_T1Timeout += Handle_AGVS_TaskFeedBackT1Timeout;
@@ -64,6 +65,58 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        private void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
+        {
+            LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+            LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
+            CheckActionFinishFeedbackFinish();
+
+            clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+            _TryClearExecutingTask();
+            WriteTaskNameToFile(taskDownloadData.Task_Name);
+
+            try
+            {
+                ExecuteAGVSTask(taskDownloadData);
+            }
+            catch (NullReferenceException ex)
+            {
+                LOG.Critical(ex.Message, ex);
+            }
+
+            void _TryClearExecutingTask()
+            {
+                AGVC.OnAGVCActionChanged = null;
+
+                if (ExecutingTaskEntity != null)
+                {
+                    ExecutingTaskEntity.TaskCancelByReplan.Cancel();
+                    ExecutingTaskEntity.Dispose();
+                }
+            }
+        }
+
+        private void CheckActionFinishFeedbackFinish()
+        {
+            if (!IsActionFinishTaskFeedbackExecuting)
+                return;
+
+            LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (IsActionFinishTaskFeedbackExecuting)
+            {
+                if (cts.IsCancellationRequested)
+                {
+                    taskfeedbackCanceTokenSoruce?.Cancel();
+                    IsActionFinishTaskFeedbackExecuting = false;
+                    break;
+                }
+                Thread.Sleep(1);
+            }
+        }
+
         private void Handle_AGVS_RunningStatusReport_T1Timeout(object? sender, EventArgs e)
         {
             AlarmManager.AddWarning(AlarmCodes.RunningStatusReport_T1_Timeout);
@@ -83,6 +136,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.WARN($"Retry Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})");
                 Task.Factory.StartNew(async () =>
                 {
+                    taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
                     _RunTaskData.IsActionFinishReported = await AGVS.TryTaskFeedBackAsync(feedbackData.TaskName,
                                                          feedbackData.TaskSimplex,
                                                          feedbackData.TaskSequence,

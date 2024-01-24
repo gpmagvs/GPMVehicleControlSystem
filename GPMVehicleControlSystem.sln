@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPMVehicleControlSystemTest
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RosBridgeClient", "..\RosBridgeClient\RosBridgeClient.csproj", "{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AGV_Offline_Data_Analysis", "AGV_Offline_Data_Analysis\AGV_Offline_Data_Analysis.csproj", "{9415F4CF-284B-4725-BB50-E7932A9301A2}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Analysis", "Analysis", "{6A8C99F0-3042-4DB4-BF88-C70517DAF581}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AGV_Offline_Data_Analysis", "..\AGV_Offline_Data_Analysis\AGV_Offline_Data_Analysis.csproj", "{9415F4CF-284B-4725-BB50-E7932A9301A2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -42,6 +44,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9415F4CF-284B-4725-BB50-E7932A9301A2} = {6A8C99F0-3042-4DB4-BF88-C70517DAF581}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {91EEF8DB-FB65-492A-801F-11465AF138E5}

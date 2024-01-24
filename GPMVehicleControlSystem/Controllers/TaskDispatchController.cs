@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Controllers
             task_download_feedback.ReturnCode = return_code;
             if (return_code == TASK_DOWNLOAD_RETURN_CODES.OK)
             {
-                Agv.ExecuteAGVSTask(this, data);
+                Agv.ExecuteAGVSTask(data);
             }
             LogResponseAsync("Execute", task_download_feedback);
             return Ok(task_download_feedback);
@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpPost("OrderInfo")]
         public async Task<IActionResult> OrderInfo([FromBody] clsOrderInfo OrderInfo)
         {
-            LogAsync("Cancel", OrderInfo, method: "POST");
+            LogAsync("OrderInfo", OrderInfo, method: "POST");
             try
             {
                 if (Agv.Parameters.OrderInfoFetchSource == Vehicle.ORDER_INFO_FETCH_SOURCE.FROM_CIM_POST_IN)
@@ -86,7 +86,7 @@ namespace GPMVehicleControlSystem.Controllers
             {
                 LOG.ERROR(ex);
             }
-            LogResponseAsync("Cancel", true);
+            LogResponseAsync("OrderInfo", true);
             return Ok(true);
         }
     }

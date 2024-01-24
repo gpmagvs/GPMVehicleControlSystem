@@ -33,6 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public Action<string> OnTaskFinish;
         protected CancellationTokenSource TaskCancelCTS = new CancellationTokenSource();
+        public CancellationTokenSource TaskCancelByReplan = new CancellationTokenSource();
         private bool disposedValue;
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         public Action<ActionStatus> AGVCActionStatusChaged
@@ -204,13 +205,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                 {
                     LOG.TRACE($"任務發送至車控前停等");
-                    await Task.Delay(Debugger.IsAttached ? 3000 : 100);
+                    await Task.Delay(Debugger.IsAttached ? 3000 : 50);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                         return new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
                     else
                     {
-                        await Task.Delay(1000);
                         if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
                         {
                             var _result = await HandleAGVCActionSucceess();
@@ -243,9 +243,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
-                        LOG.TRACE($"等待 AGV完成任務---[{action}.]");
-                        _wait_agvc_action_done_pause.WaitOne();
-                        LOG.TRACE($"AGV完成任務---[{action}=>{task_abort_alarmcode}.]");
+                        await WaitTaskDone();
                         return new List<AlarmCodes>() { task_abort_alarmcode };
                     }
                 }
@@ -256,6 +254,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
+        }
+
+        protected virtual async Task WaitTaskDone()
+        {
+            LOG.TRACE($"等待AGV完成 [{action}] 任務", color: ConsoleColor.Green);
+            _wait_agvc_action_done_pause.WaitOne();
+            LOG.TRACE($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]", color: ConsoleColor.Green);
         }
 
         private async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(ACTION_TYPE action)

@@ -20,6 +20,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
         private Vehicle agv => StaStored.CurrentVechicle;
 
+
+        [HttpGet("TaskContinueTest")]
+        public async Task TaskContinueTest()
+        {
+            agv.ExecutingTaskEntity.TaskCancelByReplan.Cancel();
+        }
+
+
         [HttpGet("Action")]
         public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "")
         {
@@ -155,30 +163,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               return;
                           _taskDataDto.OrderInfo = _OrderInfo;
-                          agv.ExecuteAGVSTask(this, _taskDataDto);
-                          await Task.Delay(200);
-                          //LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
-                          while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
-                          {
-                              if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
-                                  return;
-                              await Task.Delay(1);
-                          }
-
-                          //LOG.WARN($"[Local Task Dispather]  AGVC Active");
-                          await Task.Delay(10);
-                          //LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
-
-                          while (agv.AGVC._ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
-                          {
-                              if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
-                              {
-                                  return;
-                              }
-                              await Task.Delay(200);
-                          }
-                          //LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
-                          //LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
+                          LOG.WARN($"[Local Task Dispather] Wait Task-{_taskDataDto.Action_Type} Done...");
+                          await agv.ExecuteAGVSTask(_taskDataDto);
+                          LOG.WARN($"[Local Task Dispather] Task -{_taskDataDto.Action_Type} Done.!");
                       }
                   });
                 return Ok(new TaskActionResult
