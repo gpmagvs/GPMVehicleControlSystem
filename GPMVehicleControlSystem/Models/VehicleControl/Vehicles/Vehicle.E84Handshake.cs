@@ -171,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool _IsEQ_READYOFF_when_handshaking = false;
 
         private bool IsEQGoOFF_When_Handshaking { get => _IsEQGoOFF_When_Handshaking; set { _IsEQGoOFF_When_Handshaking = value; IsAGVAbnormal_when_handshaking = false; } }
-        private bool IsAGVAbnormal_when_handshaking { get => _IsAGVAbnormal_when_handshaking; set { _IsAGVAbnormal_when_handshaking = value;} }
+        private bool IsAGVAbnormal_when_handshaking { get => _IsAGVAbnormal_when_handshaking; set { _IsAGVAbnormal_when_handshaking = value; } }
         private bool IsEQAbnormal_when_handshaking { get => _IsEQAbnormal_when_handshaking; set { _IsEQAbnormal_when_handshaking = value; IsAGVAbnormal_when_handshaking = false; } }
         private bool IsEQBusy_when_AGV_Busy { get => _IsEQBusy_when_AGV_Busy; set { _IsEQBusy_when_AGV_Busy = value; IsAGVAbnormal_when_handshaking = false; } }
         private bool IsEQREQOFF_when_wait_EQREADY_when_handshaking { get => _IsEQREQOFF_when_wait_EQREADY_when_handshaking; set { _IsEQREQOFF_when_wait_EQREADY_when_handshaking = value; IsAGVAbnormal_when_handshaking = false; } }
@@ -407,7 +407,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //normal
                 LOG.TRACE($"EQ READY Normal OFF When AGV_COMPT ON");
             }
-            else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State) //EQ GO ON著
+            else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State || Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS) //EQ GO ON著/若沒有光IO則不管
             {
                 LOG.WARN($"EQ READY OFF When Handshaking running");
                 IsEQAbnormal_when_handshaking = true;
@@ -513,7 +513,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 IsEQGoOFF_When_Handshaking = true;
                 hs_abnormal_happen_cts.Cancel();
-                ExecutingTaskEntity.Abort( AlarmCodes.Handshake_Fail_EQ_GO);
+                ExecutingTaskEntity.Abort(AlarmCodes.Handshake_Fail_EQ_GO);
             }
         }
 
