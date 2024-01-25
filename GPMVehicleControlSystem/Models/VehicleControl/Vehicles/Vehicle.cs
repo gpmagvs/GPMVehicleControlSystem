@@ -373,7 +373,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                LOG.ERROR(ex, false);
             }
         }
 
@@ -863,23 +863,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-            if (IsCstReaderMounted)
-            {
-                if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
-                {
-                    CSTReader.ValidCSTID = "";
-                    LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
-                }
-                else if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && IsCargoExistButNoID)
-                {
-                    InitializingStatusText = "自動建帳中...";
-                    (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
-                    if (result.request_success)
-                        LOG.WARN($"偵測到AGV有料無帳，已完成自動建帳");
-                }
-            }
+            await AutoCargoIDInit();
             return (true, "");
         }
+
+        private async Task AutoCargoIDInit()
+        {
+            if (!IsCstReaderMounted)
+                return;
+            if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
+            {
+                CSTReader.ValidCSTID = "";
+                LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+            }
+            else if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && IsCargoExistButNoID)
+            {
+                InitializingStatusText = "自動建帳中...";
+                (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
+                if (result.request_success)
+                    LOG.WARN($"偵測到AGV有料無帳，已完成自動建帳");
+            }
+        }
+
         private (int tag, double locx, double locy, double theta) CurrentPoseReqCallback()
         {
             var tag = Navigation.Data.lastVisitedNode.data;
@@ -934,6 +939,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.Critical($"EMO-{alarmCode}");
             _Sub_Status = SUB_STATUS.DOWN;
 
+
+
             if (ExecutingTaskEntity != null)
             {
                 IsAGVAbnormal_when_handshaking = ExecutingTaskEntity.IsNeedHandshake;
@@ -941,6 +948,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
                 AlarmManager.RecordAlarm(alarmCode);
+
+            TryFeedbackActionFinisInEmoMoment();
 
             StoreStatusToDataBase();
             HandshakeIOOff();
@@ -959,13 +968,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //AGVSTaskFeedBackReportAndOffline(alarmCode);
             if (Remote_Mode == REMOTE_MODE.ONLINE)
             {
-                LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
-                await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                _ = Task.Run(async () =>
+                {
+                    LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                    await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
+                });
             }
             HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"{alarmCode}" : HandshakeStatusText;
 
 
         }
+
+        private void TryFeedbackActionFinisInEmoMoment()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                }
+            });
+        }
+
         protected virtual void HandshakeIOOff()
         {
             SetAGV_TR_REQ(false);

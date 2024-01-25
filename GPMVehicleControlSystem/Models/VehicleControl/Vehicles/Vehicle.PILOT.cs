@@ -287,7 +287,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 File.WriteAllText("task_name.txt", task_Name);
-                LOG.TRACE($"任務ID站存寫入檔案成功({task_Name})");
+                LOG.TRACE($"任務ID站存寫入檔案成功({task_Name})", false);
             }
             catch (Exception ex)
             {
@@ -383,8 +383,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, List<AlarmCodes> alarms_tracking = null, bool IsTaskCancel = false)
         {
-            LOG.WARN($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
 
+            LOG.WARN($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 _orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
@@ -393,7 +393,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.WARN($"{_RunTaskData.Task_Name}-本地任務不需要向派車系統回報任務狀態!({status})");
                 return;
             }
+            var _task_namae = _RunTaskData.Task_Name;
+            var _task_simplex = _RunTaskData.Task_Simplex;
+            var _task_sequence = _RunTaskData.Task_Sequence;
             int currentPosIndexInTrajectory = GetCurrentTagIndexOfTrajectory();
+
             try
             {
                 bool needReOnline = false;
@@ -429,7 +433,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     await WaitAlarmCodeReported(alarms_tracking);
                 }
-                bool feedback_success = await AGVS.TryTaskFeedBackAsync(_RunTaskData.Task_Name, _RunTaskData.Task_Simplex, _RunTaskData.Task_Sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, taskfeedbackCanceTokenSoruce.Token, IsTaskCancel);
+                bool feedback_success = await AGVS.TryTaskFeedBackAsync(_task_namae, _task_simplex, _task_sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, taskfeedbackCanceTokenSoruce.Token, IsTaskCancel);
 
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {

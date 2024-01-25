@@ -432,7 +432,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
+            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})", false);
             if (cmd == ROBOT_CONTROL_CMD.STOP)
             {
                 OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);

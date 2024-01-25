@@ -209,20 +209,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.BatteryModule.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
                 var currentPt = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == BarcodeReader.CurrentTag);
-                if (currentPt == null) return;
+                if (currentPt == null)
+                    return;
 
                 if (currentPt.IsCharge)
                 {
-                    if (IsChargeCircuitOpened)
-                        return;
-                    Task.Factory.StartNew(async () =>
-                    {
-                        await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
-                    });
+                    AutomaticChargeStationActions();
                 }
             }
         }
-
+        internal async void AutomaticChargeStationActions()
+        {
+            if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
+            {
+                LOG.WARN($"AGV位於充電站且偵測到AGV有帳無料=>自動清帳");
+                CSTReader.ValidCSTID = "";
+            }
+            if (!IsChargeCircuitOpened)
+            {
+                await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
+            }
+        }
         private void WagoDI_OnReConnected(object? sender, EventArgs e)
         {
             if (AGVC == null)
@@ -580,13 +587,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+            LOG.TRACE($"AGV Direction Change to {direction}", color: ConsoleColor.DarkRed);
+            bool _isAGVRunning = AGVC.ActionStatus == ActionStatus.ACTIVE || AGVC.ActionStatus == ActionStatus.PENDING;
+            bool _isDirectionEqualStop = direction == clsNavigation.AGV_DIRECTION.STOP;
+            if (!_isAGVRunning || _isDirectionEqualStop)
+                return;
+            //雷射
+            Task.Run(() =>
             {
-                //雷射
-                if (direction != clsNavigation.AGV_DIRECTION.STOP)
-                    Laser.LaserChangeByAGVDirection(sender, direction);
-            }
+                Laser.LaserChangeByAGVDirection(sender, direction);
+                var _oriLaser = Laser.AgvsLsrSetting;
+                if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
+                    _CheckLaserStateAfter(_oriLaser);
+            });
+            //方向燈
+            Task.Run(() => DirectionLighter.LightSwitchByAGVDirection(sender, direction));
+        }
+
+        private async Task _CheckLaserStateAfter(int _oriLaser)
+        {
+            _ = Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(1000);
+                bool _isAGVStillForward = Navigation.Direction == clsNavigation.AGV_DIRECTION.FORWARD;
+                if (!_isAGVStillForward)
+                    return;
+
+                bool _isLaserSettingError = Laser.AgvsLsrSetting != _oriLaser;
+                if (_isLaserSettingError)
+                {
+                    LOG.WARN($"偵測到AGV向前但雷射組數為{Laser.AgvsLsrSetting}(應為{_oriLaser})");
+                    await Laser.ModeSwitch(_oriLaser, true);
+                }
+            });
         }
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)

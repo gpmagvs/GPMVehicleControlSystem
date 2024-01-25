@@ -64,7 +64,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.INFO($"AGV Sub Status Will Changed by charge state after {_delayTime } second ");
                 Thread.Sleep(TimeSpan.FromSeconds(_delayTime));
                 Agv.WaitingForChargeStatusChangeFlag = false;
-                LOG.INFO($"AGV Sub Status Will Changed by charge state");
             });
 
             return (true, AlarmCodes.None);

@@ -48,8 +48,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 driversState = new DriverState[2]
                  {
-                     new DriverState{ errorCode=21},
-                     new DriverState{ errorCode=21}
+                     new DriverState{},
+                     new DriverState{}
                  }
             },
             IMU = new GpmImuMsg
@@ -76,38 +76,38 @@ namespace GPMVehicleControlSystem.Models.Emulators
         public delegate PointF OnLastVisitedTagChangedDelegate(int tag);
         public OnLastVisitedTagChangedDelegate OnLastVisitedTagChanged;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
+        private string rosbridge_ip = "127.0.0.1";
+        private int rosbridge_port = 9090;
         public AGVROSEmulator(clsEnums.AGV_TYPE agvType = clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
         {
             this.agvType = agvType;
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
-            string RosBridge_IP = param.Connections[clsConnectionParam.CONNECTION_ITEM.RosBridge].IP;
-            int RosBridge_Port = param.Connections[clsConnectionParam.CONNECTION_ITEM.RosBridge].Port;
+            rosbridge_ip = param.Connections[clsConnectionParam.CONNECTION_ITEM.RosBridge].IP;
+            rosbridge_port = param.Connections[clsConnectionParam.CONNECTION_ITEM.RosBridge].Port;
             module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(param.LastVisitedTag);
 
-            bool connected = Init(RosBridge_IP, RosBridge_Port);
+            bool connected = Init(rosbridge_ip, rosbridge_port);
             if (!connected)
             {
                 HandleRosDisconnected(null, EventArgs.Empty);
 
             }
-            void HandleRosDisconnected(object sender, EventArgs e)
-            {
-                rosSocket.protocol.OnClosed -= HandleRosDisconnected;
-                Task.Factory.StartNew(async () =>
-                {
-                    EmuLog("AGVC ROS Trying Reconnect...");
-                    while (!Init(RosBridge_IP, RosBridge_Port))
-                    {
-                        await Task.Delay(1000);
-                    }
-                    EmuLog("AGVC ROS Reconnected");
-                    rosSocket.protocol.OnClosed += HandleRosDisconnected;
-                    PublishModuleInformation(rosSocket);
-                });
-            }
             rosSocket.protocol.OnClosed += HandleRosDisconnected;
         }
 
+        void HandleRosDisconnected(object sender, EventArgs e)
+        {
+            rosSocket.protocol.OnClosed -= HandleRosDisconnected;
+            Task.Factory.StartNew(async () =>
+            {
+                while (!Init(rosbridge_ip, rosbridge_port))
+                {
+                    await Task.Delay(1000);
+                }
+                rosSocket.protocol.OnClosed += HandleRosDisconnected;
+                PublishModuleInformation(rosSocket);
+            });
+        }
         private bool Init(string RosBridge_IP, int RosBridge_Port)
         {
             bool isconnected = false;
@@ -273,7 +273,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                              var _x_speed = _x_delta / _timespend;
                              var _y_speed = _y_delta / _timespend;
 
-                             EmuLog($"next potin time spend...{_timespend}");
                              Stopwatch stopwatch = Stopwatch.StartNew();
                              while (stopwatch.ElapsedMilliseconds <= _timespend * 1000)
                              {
@@ -284,7 +283,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                  module_info.nav_state.robotPose.pose.position.y += _y_speed / 10.0;
                                  module_info.Mileage += _distance_to_next_point / 1000.0 * 0.1;
                              }
-                             EmuLog($"Reach...{tag}");
                              module_info.nav_state.lastVisitedNode.data = (int)tag;
                              module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
                              module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
@@ -302,12 +300,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                              if (_CycleStopFlag || emergency_stop)
                              {
                                  EmuLog("Cycle Stop Flag ON, Stop move.");
-                                 break;
-                             }
-
-                             if (tag == 18 & i == obj.planPath.poses.Length - 1 & Debugger.IsAttached)
-                             {
-                                 module_info.nav_state.errorCode = 4;
                                  break;
                              }
                              RobotStopMRE.WaitOne();

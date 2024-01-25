@@ -244,13 +244,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
                         await WaitTaskDone();
+                        AGVCActionStatusChaged -= HandleAGVActionChanged;
+
                         return new List<AlarmCodes>() { task_abort_alarmcode };
                     }
                 }
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                LOG.Critical(ex.Message, ex);
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
@@ -387,7 +389,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         _wait_agvc_action_done_pause.Set();
                         return;
                     }
-                    LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
+                    //LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
                     Agv.DirectionLighter.CloseAll();
                     Agv.lastParkingAccuracy = StoreParkingAccuracy();
                     (bool success, AlarmCodes alarmCode) result = await HandleAGVCActionSucceess();

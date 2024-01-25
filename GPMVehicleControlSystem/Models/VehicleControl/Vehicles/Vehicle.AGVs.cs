@@ -31,7 +31,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
             AGVS.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
-            AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
+            AGVS.OnRemoteModeChanged += HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += AGVS_OnTaskDownloadFeekbackDone;
@@ -65,55 +65,57 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        private void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
+        private async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
-            LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
-            LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
-
-            AGV_Reset_Flag = AGVSResetCmdFlag = false;
-            CheckActionFinishFeedbackFinish();
-
-            clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-            _TryClearExecutingTask();
-            WriteTaskNameToFile(taskDownloadData.Task_Name);
-
-            try
+            await Task.Delay(1);
+            _ = Task.Run(async () =>
             {
-                ExecuteAGVSTask(taskDownloadData);
-            }
-            catch (NullReferenceException ex)
-            {
-                LOG.Critical(ex.Message, ex);
-            }
+                LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+                LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+                AGV_Reset_Flag = AGVSResetCmdFlag = false;
 
-            void _TryClearExecutingTask()
-            {
-                AGVC.OnAGVCActionChanged = null;
-
-                if (ExecutingTaskEntity != null)
+                await CheckActionFinishFeedbackFinish();
+                clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                _TryClearExecutingTask();
+                WriteTaskNameToFile(taskDownloadData.Task_Name);
+                try
                 {
-                    ExecutingTaskEntity.TaskCancelByReplan.Cancel();
-                    ExecutingTaskEntity.Dispose();
+                    await Task.Delay(200);
+                    ExecuteAGVSTask(taskDownloadData);
                 }
-            }
+                catch (NullReferenceException ex)
+                {
+                    LOG.Critical(ex.Message, ex);
+                }
+
+                void _TryClearExecutingTask()
+                {
+                    AGVC.OnAGVCActionChanged = null;
+
+                    if (ExecutingTaskEntity != null)
+                    {
+                        ExecutingTaskEntity.TaskCancelByReplan.Cancel();
+                        ExecutingTaskEntity.Dispose();
+                    }
+                }
+
+            });
+
         }
 
-        private void CheckActionFinishFeedbackFinish()
+        private async Task CheckActionFinishFeedbackFinish()
         {
             if (!IsActionFinishTaskFeedbackExecuting)
                 return;
-
             LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
-            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (IsActionFinishTaskFeedbackExecuting)
             {
+                await Task.Delay(1);
                 if (cts.IsCancellationRequested)
                 {
-                    taskfeedbackCanceTokenSoruce?.Cancel();
-                    IsActionFinishTaskFeedbackExecuting = false;
                     break;
                 }
-                Thread.Sleep(1);
             }
         }
 
