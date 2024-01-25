@@ -17,8 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private double PoseTarget = 0;
         private double Speed = 0;
-
-        public event EventHandler<string> OnForkStartMove;
+        public event EventHandler<VerticalCommandRequest> OnForkStartMove;
         public event EventHandler OnForkStopMove;
         public bool IsZAxisActionDone
         {
@@ -270,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     if (IsForkStartRunCommand(request) || (CurrentForkActionRequesting.command == "stop" && request.command == "resume"))
                     {
-                        OnForkStartMove?.Invoke(this, request.command);
+                        OnForkStartMove?.Invoke(this, request);
                     }
                     if (request.command == "stop")
                     {

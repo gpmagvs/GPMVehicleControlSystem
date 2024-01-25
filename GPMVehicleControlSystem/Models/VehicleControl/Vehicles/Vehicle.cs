@@ -685,8 +685,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
-
-
             IsWaitForkNextSegmentTask = false;
             AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();

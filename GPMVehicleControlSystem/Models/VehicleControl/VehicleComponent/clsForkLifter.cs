@@ -181,6 +181,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         internal ForkAGVController fork_ros_controller => forkAGV.AGVC as ForkAGVController;
 
         public bool IsHeightPreSettingActionRunning { get; internal set; }
+        public bool IsManualOperation { get; internal set; } = false;
 
         private ForkAGV forkAGV;
 

@@ -129,10 +129,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (speed == 0)
                 speed = 1;
 
-            if (forkAgv.ForkLifter.IsInitialing)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
+            if (forkAgv.ForkLifter.IsInitialing)
+                return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
 
             string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkActionRequesting.command;
 
@@ -141,6 +141,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             if (action == "home" || action == "orig")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
                 while (forkAgv.ForkLifter.CurrentForkLocation != Models.VehicleControl.VehicleComponent.clsForkLifter.FORK_LOCATIONS.HOME)
@@ -148,9 +149,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     await Task.Delay(1);
                     if (_wait.IsCancellationRequested)
                     {
+                        forkAgv.ForkLifter.IsManualOperation = false;
                         return Ok(new { confirm = false, message = "Go Home Timeout" });
                     }
                 }
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
             }
             else if (action == "init")
@@ -160,39 +163,55 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             else if (action == "pose")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 if (pose < forkAgv.Parameters.ForkAGV.DownlimitPose)
                     pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
                 else if (pose > forkAgv.Parameters.ForkAGV.UplimitPose)
                     pose = forkAgv.Parameters.ForkAGV.UplimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
+
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.success, message = result.message });
             }
             else if (action == "up")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + 0.1;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.success, message = result.message });
             }
             else if (action == "down")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.ForkLifter.CurrentHeightPosition - 0.1;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.success, message = result.message });
             }
             else if (action == "up_limit")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = true });
             }
             else if (action == "down_limit")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = true });
             }
             else if (action == "stop")
             {
+                forkAgv.ForkLifter.IsManualOperation = false;
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkStopAsync();
                 return Ok(new { confirm = result.success, message = result.message });
             }
@@ -203,9 +222,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             else if (action == "increase")
             {
+                forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
                 LOG.WARN($"USER adjust fork position from web ui:pose to = {pose_to}");
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.success, message = result.message });
             }
             else

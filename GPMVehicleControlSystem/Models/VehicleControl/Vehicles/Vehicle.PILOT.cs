@@ -390,6 +390,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (_RunTaskData.IsLocalTask)
             {
+                _RunTaskData.IsActionFinishReported = status == TASK_RUN_STATUS.ACTION_FINISH;
                 LOG.WARN($"{_RunTaskData.Task_Name}-本地任務不需要向派車系統回報任務狀態!({status})");
                 return;
             }

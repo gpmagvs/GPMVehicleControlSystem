@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -135,11 +136,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 BuzzerPlayer.Stop();
         }
 
-        private void _fork_car_controller_OnForkStartMove(object? sender, string command)
+        private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
         {
             //throw new NotImplementedException();
-            LOG.TRACE($"Fork Star Run (Started by:{command})");
-            _ForkSaftyProtectFlag = true;
+            LOG.TRACE($"Fork Star Run (Started by:{request.command})");
+            bool isGoUpAction = request.command == "pose" && request.target > ForkLifter.CurrentHeightPosition;
+            bool isGoUpByLdUldAction = (isGoUpAction && _isLoadUnloadTaskRunning);
+            _ForkSaftyProtectFlag = !isGoUpByLdUldAction;
         }
         private void ForkMovingProtectedProcess()
         {
@@ -161,13 +164,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             LOG.WARN("Side Laser Trigger, Stop Fork");
                             ForkLifter.ForkStopAsync();
                             _isStopped = true;
-                            AGVStatusChangeToAlarmWhenLaserTrigger();
+                            BuzzerPlayer.Alarm();
+                            //AGVStatusChangeToAlarmWhenLaserTrigger();
 
                         }
                     }
                     if (_isLaserSafeAndForkIsStopping)
                     {
-
                         LOG.INFO("Side Laser Reconvery, Resume Fork Action");
                         ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning();
                         ForkLifter.ForkResumeAction();
@@ -179,35 +182,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _thread.Start();
             LOG.TRACE("Start Fork Safty Protect Process Thread");
         }
-
+        private bool _isLoadUnloadTaskRunning => _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
         private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
         {
             if (Sub_Status == SUB_STATUS.DOWN)
                 return;
 
-            bool _isLoadUnloadTaskRunning = _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
-            bool _isForkRunningAndNoObstacleArround = ForkLifter.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger().Result;
 
-            if (_isLoadUnloadTaskRunning || _isForkRunningAndNoObstacleArround)
+            bool _isForkRunningPreActionAndNoObstacleArround = ForkLifter.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger().Result;
+
+            if (_isLoadUnloadTaskRunning || _isForkRunningPreActionAndNoObstacleArround)
             {
                 _Sub_Status = SUB_STATUS.RUN;
                 StatusLighter.RUN();
-
                 if (_RunTaskData.Action_Type == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
                 else
                     BuzzerPlayer.Action();
             }
-            if (ForkLifter.IsInitialing)
+            if (ForkLifter.IsInitialing || ForkLifter.IsManualOperation || ForkLifter.CurrentHeightPosition <= Parameters.ForkAGV.SaftyPositionHeight)
             {
                 BuzzerPlayer.Stop();
-                _Sub_Status = SUB_STATUS.Initializing;
-                StatusLighter.AbortFlash();
-                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
+                if (ForkLifter.IsInitialing)
+                {
+                    //_Sub_Status = SUB_STATUS.Initializing;
+                    StatusLighter.AbortFlash();
+                    StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
+                }
             }
         }
 
-   
+
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
