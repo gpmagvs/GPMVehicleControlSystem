@@ -88,22 +88,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (false, CstExistCheckResult.alarmCode);
 
 
-            
+
 
             RecordLDULDStateToDB();
 
             if (IsNeedHandshake)
             {
-                if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
+                bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS;
+                
+                Agv.HandshakeStatusText = "AGV交握訊號重置...";
+                Agv.ResetHandshakeSignals();
+                Agv.ResetHSTimersAndEvents();
+                await Task.Delay(400);
+                Agv.HandshakeStatusText = _is_modbus_hs ? "建立Modbus連線..." : "確認光IO EQ GO訊號...";
+                if (_is_modbus_hs)
                 {
                     var modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
                     if (!modbusTcp.Start(Agv.AGVS, Agv.AGVHsSignalStates, Agv.EQHsSignalStates))
                         return (false, AlarmCodes.Waiting_EQ_Handshake);
                 }
-                Agv.ResetHandshakeSignals();
-                Agv.ResetHSTimersAndEvents();
-                await Task.Delay(700);
-                Agv.HandshakeStatusText = "確認光IO EQ GO訊號...";
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     if (!Agv.IsEQGOOn())
