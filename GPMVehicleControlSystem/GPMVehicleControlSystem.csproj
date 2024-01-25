@@ -15,6 +15,9 @@
     <Optimize>False</Optimize>
     <WarningLevel>1</WarningLevel>
   </PropertyGroup>
+	<PropertyGroup>
+		<RestorePackages>false</RestorePackages>
+	</PropertyGroup>
   <ItemGroup>
     <None Remove="src\IO_Wago.ini" />
     <None Remove="task_name.txt" />

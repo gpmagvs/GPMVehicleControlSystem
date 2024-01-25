@@ -167,7 +167,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                                     Task.Run(async () =>
                                     {
+                                        Agv.ForkLifter.IsHeightPreSettingActionRunning = true;
                                         var result = await Agv.ForkLifter.ForkPose(_Height_PreAction, 1);
+                                        Agv.ForkLifter.IsHeightPreSettingActionRunning = false;
                                         if (!result.confirm)
                                         {
                                             Abort(AlarmCodes.Fork_Action_Aborted);

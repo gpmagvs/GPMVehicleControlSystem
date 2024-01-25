@@ -158,7 +158,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         if (_isLaserTriggerAndForkIsMoving)
                         {
-                            LOG.TRACE("Side Laser Trigger, Stop Fork");
+                            LOG.WARN("Side Laser Trigger, Stop Fork");
                             ForkLifter.ForkStopAsync();
                             _isStopped = true;
                             AGVStatusChangeToAlarmWhenLaserTrigger();
@@ -167,20 +167,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     if (_isLaserSafeAndForkIsStopping)
                     {
-                        LOG.TRACE("Side Laser Reconvery, Resume Fork Action");
+
+                        LOG.INFO("Side Laser Reconvery, Resume Fork Action");
+                        ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning();
                         ForkLifter.ForkResumeAction();
                         _isStopped = false;
-                        if (ForkLifter.IsInitialing || _RunTaskData.IsActionFinishReported)
-                        {
-                            BuzzerPlayer.Stop();
-                        }
-                        else
-                        {
-                            if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
-                            else
-                                BuzzerPlayer.Action();
-                        }
                     }
                 }
 
@@ -189,6 +180,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.TRACE("Start Fork Safty Protect Process Thread");
         }
 
+        private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
+        {
+            if (Sub_Status == SUB_STATUS.DOWN)
+                return;
+
+            bool _isLoadUnloadTaskRunning = _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
+            bool _isForkRunningAndNoObstacleArround = ForkLifter.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger().Result;
+
+            if (_isLoadUnloadTaskRunning || _isForkRunningAndNoObstacleArround)
+            {
+                _Sub_Status = SUB_STATUS.RUN;
+                StatusLighter.RUN();
+
+                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                    BuzzerPlayer.Move();
+                else
+                    BuzzerPlayer.Action();
+            }
+            if (ForkLifter.IsInitialing)
+            {
+                BuzzerPlayer.Stop();
+                _Sub_Status = SUB_STATUS.Initializing;
+                StatusLighter.AbortFlash();
+                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
+            }
+        }
+
+   
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
