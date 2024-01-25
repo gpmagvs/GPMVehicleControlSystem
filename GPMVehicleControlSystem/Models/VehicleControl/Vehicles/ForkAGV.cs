@@ -152,9 +152,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 void HandlerSideLaserStateChange(object? sender, bool state)
                 {
                     bool _isLsrTrigger = !state;
+                    bool _isLaserTriggerAndForkIsMoving = _isLsrTrigger && !_isStopped;
+                    bool _isLaserSafeAndForkIsStopping = !_isLsrTrigger && _isStopped;
                     if (_ForkSaftyProtectFlag)
                     {
-                        if (_isLsrTrigger && !_isStopped)
+                        if (_isLaserTriggerAndForkIsMoving)
                         {
                             LOG.TRACE("Side Laser Trigger, Stop Fork");
                             ForkLifter.ForkStopAsync();
@@ -163,7 +165,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                         }
                     }
-                    if (!_isLsrTrigger && _isStopped)
+                    if (_isLaserSafeAndForkIsStopping)
                     {
                         LOG.TRACE("Side Laser Reconvery, Resume Fork Action");
                         ForkLifter.ForkResumeAction();
