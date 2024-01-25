@@ -803,7 +803,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
-            HandshakeStatusText = "AGV交握訊號重置...";
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
@@ -936,8 +935,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             LOG.Critical($"EMO-{alarmCode}");
             _Sub_Status = SUB_STATUS.DOWN;
-
-
 
             if (ExecutingTaskEntity != null)
             {
