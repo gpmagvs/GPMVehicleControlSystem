@@ -77,16 +77,18 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
 
 
-        public override void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        public override bool SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
             try
             {
 
                 VCSOutputs[Indexs[signal]].OnStateChanged += handler;
+                return true;
             }
             catch (Exception ex)
             {
                 LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
+                return false;
             }
 
         }
