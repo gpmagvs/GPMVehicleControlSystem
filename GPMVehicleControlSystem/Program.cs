@@ -9,6 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
+Console.Title="GPM AGV ó更╰参";
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -86,7 +87,7 @@ _ = Task.Run(() =>
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("=======================GPM AGV Console=======================");
+            Console.WriteLine($"GPM AGV ó更╰参-v.{StaStored.APPVersion}");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }
