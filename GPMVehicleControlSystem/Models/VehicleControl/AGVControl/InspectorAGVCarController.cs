@@ -15,7 +15,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public Action<clsMeasureDone> OnInstrumentMeasureDone;
         private COMMANDS action_command;
         private DateTime previousStartMeasureTime = DateTime.MinValue;
-
+        public string InstrumentMeasureServiceName => "/command_action";
+        public string BatteryLockControlServiceName => "/battery_lock";
 
         public InspectorAGVCarController()
         {
@@ -61,9 +62,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         public async Task<(bool confirm, string message)> MeasurementInit()
         {
-            return await CallCommandAction("/command_action",COMMANDS.init);
+            return await CallCommandAction(InstrumentMeasureServiceName, COMMANDS.init);
         }
-       
+
         /// <summary>
         /// 開始量測
         /// </summary>
@@ -71,7 +72,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public async Task<(bool confirm, string message)> StartInstrumentMeasure(int tagID)
         {
             previousStartMeasureTime = DateTime.Now;
-            return await CallCommandAction("/command_action", COMMANDS.pose, tagID);
+            return await CallCommandAction(InstrumentMeasureServiceName, COMMANDS.pose, tagID);
+        }
+
+        public async Task<(bool confirm, string message)> BatteryLockControlService(int batNo, Vehicles.TsmcMiniAGV.BAT_LOCK_ACTION lockAction)
+        {
+            try
+            {
+                VerticalCommandResponse? response = await rosSocket.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(InstrumentMeasureServiceName,
+                    new VerticalCommandRequest
+                    {
+
+                    });
+                bool _success = response != null && response.confirm;
+                return new(_success, _success ? "" : "Call battery lock service fail");
+            }
+            catch (Exception ex)
+            {
+                return new(false, $"Call battery lock service fail-{ex.Message}");
+            }
         }
 
         public override Task<(bool request_success, bool action_done)> TriggerCSTReader()

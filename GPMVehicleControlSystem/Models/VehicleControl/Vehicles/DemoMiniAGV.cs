@@ -5,11 +5,13 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Net.Sockets;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public class DemoMiniAGV : TsmcMiniAGV
     {
+        public InspectorAGVCarController? DemoMiniAGVControl => base.MiniAgvAGVC;
         public DemoMiniAGV() : base()
         {
             LOG.INFO("Demo Mini AGV Created.");
@@ -98,5 +100,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StaEmuManager.wagoEmu.SetState(DI_ITEM.Safty_PLC_Output, false);
             }
         }
+
+        public override async Task<bool> Battery1Lock()
+        {
+            DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.LOCK);
+            return WaitBatteryLocked(1);
+        }
+        public override async Task<bool> Battery2Lock()
+        {
+            DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.LOCK);
+            return WaitBatteryLocked(2);
+        }
+
+        public override async Task<bool> Battery1UnLock()
+        {
+            DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
+            return WaitBatteryUnLocked(1);
+        }
+        public override async Task<bool> Battery2UnLock()
+        {
+            DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
+            return WaitBatteryUnLocked(2);
+        }
+
     }
 }

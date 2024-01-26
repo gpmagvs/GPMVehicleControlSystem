@@ -24,6 +24,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public partial class TsmcMiniAGV : Vehicle
     {
+
+        public enum BAT_LOCK_ACTION
+        {
+            LOCK, UNLOCK
+        }
+
         public override CARGO_STATUS CargoStatus { get; } = CARGO_STATUS.NO_CARGO_CARRARYING_CAPABILITY;
         public bool IsBattery1Exist => WagoDI.GetState(DI_ITEM.Battery_1_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_1_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_1_Exist_4);
         public bool IsBattery2Exist => WagoDI.GetState(DI_ITEM.Battery_2_Exist_1) && WagoDI.GetState(DI_ITEM.Battery_2_Exist_2) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_3) && !WagoDI.GetState(DI_ITEM.Battery_2_Exist_4);
@@ -44,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
              };
         }
 
-        private InspectorAGVCarController? OHAAGVC;
+        protected InspectorAGVCarController? MiniAgvAGVC = new InspectorAGVCarController();
 
         public override clsCSTReader CSTReader { get; set; } = null;
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsInspectorAGVDirectionLighter();
@@ -240,20 +246,170 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new InspectorAGVCarController(RosBridge_IP, RosBridge_Port);
-            OHAAGVC = AGVC as InspectorAGVCarController;
-            OHAAGVC.OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
+            MiniAgvAGVC = AGVC as InspectorAGVCarController;
+            MiniAgvAGVC.OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
         }
 
+      
+        internal void MeasureCompleteInvoke(clsMeasureResult measure_result)
+        {
+            OnMeasureComplete?.Invoke(this, measure_result);
+        }
+      
+        public int ToIntVal(string valStr)
+        {
+            if (valStr == "NA")
+                return -1;
+            if (int.TryParse(valStr, out int val))
+                return val;
+            else
+            {
+                LOG.WARN($"int convert fail. convert ${valStr} to int fail");
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// 鎖定1號電池
+        /// </summary>
+        /// <returns></returns>
+        public virtual async Task<bool> Battery1Lock()
+        {
+            return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.LOCK);
+        }
+
+        /// <summary>
+        /// 鎖定2號電池
+        /// </summary>
+        /// <returns></returns>
+        public virtual async Task<bool> Battery2Lock()
+        {
+            return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.LOCK);
+        }
+
+        /// <summary>
+        /// 解鎖1號電池
+        /// </summary>
+        /// <returns></returns>
+        public virtual async Task<bool> Battery1UnLock()
+        {
+            return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.UNLOCK);
+        }
+        /// <summary>
+        /// 解鎖2號電池
+        /// </summary>
+        /// <returns></returns>
+        public virtual async Task<bool> Battery2UnLock()
+        {
+            return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.UNLOCK);
+        }
+      
+        /// <summary>
+        /// 等待電池完成鎖定
+        /// </summary>
+        /// <param name="battery_no">電池編號</param>
+        /// <returns></returns>
+        protected bool WaitBatteryLocked(int battery_no)
+        {
+            CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            bool IsBatLocked(int battery_no)
+            {
+                return (battery_no == 1 ? IsBattery1Locked : IsBattery2Locked);
+            }
+            while (!IsBatLocked(battery_no))
+            {
+                Thread.Sleep(1);
+                if (cst.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+            return IsBatLocked(battery_no);
+        }
+        /// <summary>
+        /// 等待電池完成解鎖
+        /// </summary>
+        /// <param name="battery_no">電池編號</param>
+        /// <returns></returns>
+        protected bool WaitBatteryUnLocked(int battery_no)
+        {
+            CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            bool IsBatUnLocked(int battery_no)
+            {
+                return (battery_no == 1 ? IsBattery1UnLocked : IsBattery2UnLocked);
+            }
+            while (!IsBatUnLocked(battery_no))
+            {
+                Thread.Sleep(1);
+                if (cst.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+            return IsBatUnLocked(battery_no);
+        }
+
+        internal async Task<(bool confirm, string message)> StartMeasure(int tagID)
+        {
+            (bool confirm, string message) response = await MiniAgvAGVC.StartInstrumentMeasure(tagID);
+            return response;
+        }
+
+        internal async Task<(bool confirm, string message)> MeasurementInit()
+        {
+            (bool confirm, string message) init_result = await MiniAgvAGVC.MeasurementInit();
+            LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
+            return init_result;
+        }
+
+        /// <summary>
+        /// 進行定位
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<(bool confirm, string message)> Localization(ushort tagID)
+        {
+            double current_loc_x = Navigation.Data.robotPose.pose.position.x;
+            double current_loc_y = Navigation.Data.robotPose.pose.position.y;
+            double theta = Navigation.Angle;
+            (bool confrim, string message) result = await MiniAgvAGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
+            if (!result.confrim)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
+            }
+            return result;
+        }
+        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
+        {
+            if (!status)
+                return;
+            await Task.Delay(1000);
+            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+                return;
+
+            clsIOSignal signal = (clsIOSignal)sender;
+            var input = signal?.Input;
+            var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_1)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_2)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Rear;
+            if (input == DI_ITEM.Horizon_Motor_Error_3)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Front;
+            if (input == DI_ITEM.Horizon_Motor_Error_4)
+                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
+            AlarmManager.AddAlarm(alarmCode, false);
+        }
+        protected override async void HandshakeIOOff()
+        {
+            //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
+        }
+        #region Private Methods
         private void HandleAGVCInstrumentMeasureDone(clsMeasureDone result)
         {
             clsMeasureResult measure_result = ParseMeasureData(result.result_cmd);
             measure_result.StartTime = result.start_time;
             measure_result.TaskName = ExecutingTaskEntity.RunningTaskData.Task_Name;
             MeasureCompleteInvoke(measure_result);
-        }
-        internal void MeasureCompleteInvoke(clsMeasureResult measure_result)
-        {
-            OnMeasureComplete?.Invoke(this, measure_result);
         }
         /// <summary>
         /// 解析量測數據
@@ -299,40 +455,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
                 return -1.0;
         }
-        public int ToIntVal(string valStr)
-        {
-            if (valStr == "NA")
-                return -1;
-            if (int.TryParse(valStr, out int val))
-                return val;
-            else
-            {
-                LOG.WARN($"int convert fail. convert ${valStr} to int fail");
-                return -1;
-            }
-        }
-
-
-        public async Task<bool> Battery1Lock()
-        {
-            return await ChangeBatteryLockState(1, true);
-        }
-
-        public async Task<bool> Battery2Lock()
-        {
-            return await ChangeBatteryLockState(2, true);
-        }
-
-        public async Task<bool> Battery1UnLock()
-        {
-            return await ChangeBatteryLockState(1, false);
-        }
-
-        public async Task<bool> Battery2UnLock()
-        {
-            return await ChangeBatteryLockState(2, false);
-        }
-        private async Task<bool> ChangeBatteryLockState(int battery_no, bool lockBattery)
+        private async Task<bool> ChangeBatteryLockState(int battery_no, BAT_LOCK_ACTION action)
         {
             var noLockAlarmCode = battery_no == 1 ? AlarmCodes.Battery1_Not_Lock : AlarmCodes.Battery2_Not_Lock;
             try
@@ -344,24 +467,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await WagoDO.SetState(DO_ITEM.Battery_1_Unlock, false);
                     await WagoDO.SetState(DO_ITEM.Battery_2_Unlock, false);
                 }
-                var isBatLocking = battery_no == 1 ? IsBattery1Locked : IsBattery2Locked;
                 var lockDO = battery_no == 1 ? DO_ITEM.Battery_1_Lock : DO_ITEM.Battery_2_Lock;
                 var unlockDO = battery_no == 1 ? DO_ITEM.Battery_1_Unlock : DO_ITEM.Battery_2_Unlock;
                 await OffAllBatLockUnlockDO();
                 await Task.Delay(200);
-                if (lockBattery)
-                    await WagoDO.SetState(lockDO, true);
-                else
-                    await WagoDO.SetState(unlockDO, true);
-
-                CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                while (!(battery_no == 1 ? (lockBattery ? IsBattery1Locked : IsBattery1UnLocked) : (lockBattery ? IsBattery2Locked : IsBattery2UnLocked)))
+                if (action == BAT_LOCK_ACTION.LOCK)
                 {
-                    if (cst.IsCancellationRequested)
-                    {
-                        await OffAllBatLockUnlockDO();
-                        return false;
-                    }
+                    await WagoDO.SetState(lockDO, true);
+                    WaitBatteryLocked(battery_no);
+                }
+                else
+                {
+                    await WagoDO.SetState(unlockDO, true);
+                    WaitBatteryUnLocked(battery_no);
                 }
                 await OffAllBatLockUnlockDO();
                 return true;
@@ -373,59 +491,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal async Task<(bool confirm, string message)> StartMeasure(int tagID)
-        {
-            (bool confirm, string message) response = await OHAAGVC.StartInstrumentMeasure(tagID);
-            return response;
-        }
-
-        internal async Task<(bool confirm, string message)> MeasurementInit()
-        {
-            (bool confirm, string message) init_result = await OHAAGVC.MeasurementInit();
-            LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
-            return init_result;
-        }
-
-        /// <summary>
-        /// 進行定位
-        /// </summary>
-        /// <returns></returns>
-        internal async Task<(bool confirm, string message)> Localization(ushort tagID)
-        {
-            double current_loc_x = Navigation.Data.robotPose.pose.position.x;
-            double current_loc_y = Navigation.Data.robotPose.pose.position.y;
-            double theta = Navigation.Angle;
-            (bool confrim, string message) result = await OHAAGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
-            if (!result.confrim)
-            {
-                AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
-            }
-            return result;
-        }
-        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
-        {
-            if (!status)
-                return;
-            await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
-                return;
-
-            clsIOSignal signal = (clsIOSignal)sender;
-            var input = signal?.Input;
-            var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_1)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_2)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Rear;
-            if (input == DI_ITEM.Horizon_Motor_Error_3)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_4)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
-            AlarmManager.AddAlarm(alarmCode, false);
-        }
-        protected override async void HandshakeIOOff()
-        {
-            //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
-        }
+        #endregion
     }
 }
