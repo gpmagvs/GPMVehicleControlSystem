@@ -377,6 +377,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        /// <summary>
+        /// AGV是否有搭載極限Sensor
+        /// </summary>
+        public bool IsLimitSwitchSensorMounted => WagoDI.VCSInputs.Any(input => input.Input == DI_ITEM.Limit_Switch_Sensor_Left || input.Input == DI_ITEM.Limit_Switch_Sensor_Right);
         public Vehicle()
         {
             try
