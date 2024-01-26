@@ -79,7 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             try
             {
-                VerticalCommandResponse? response = await rosSocket.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(InstrumentMeasureServiceName,
+                VerticalCommandResponse? response = await rosSocket.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(BatteryLockControlServiceName,
                     new VerticalCommandRequest
                     {
 

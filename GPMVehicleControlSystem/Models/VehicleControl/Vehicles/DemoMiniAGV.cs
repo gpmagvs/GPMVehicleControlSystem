@@ -103,22 +103,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override async Task<bool> Battery1Lock()
         {
+            LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.1 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.LOCK);
             return WaitBatteryLocked(1);
         }
         public override async Task<bool> Battery2Lock()
         {
+            LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.2 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.LOCK);
             return WaitBatteryLocked(2);
         }
 
         public override async Task<bool> Battery1UnLock()
         {
+            LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
             return WaitBatteryUnLocked(1);
         }
         public override async Task<bool> Battery2UnLock()
         {
+            LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
             return WaitBatteryUnLocked(2);
         }

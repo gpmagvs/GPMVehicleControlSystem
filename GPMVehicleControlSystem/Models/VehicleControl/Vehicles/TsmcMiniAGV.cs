@@ -250,12 +250,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             MiniAgvAGVC.OnInstrumentMeasureDone += HandleAGVCInstrumentMeasureDone;
         }
 
-      
+
         internal void MeasureCompleteInvoke(clsMeasureResult measure_result)
         {
             OnMeasureComplete?.Invoke(this, measure_result);
         }
-      
+
         public int ToIntVal(string valStr)
         {
             if (valStr == "NA")
@@ -275,6 +275,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery1Lock()
         {
+            LOG.TRACE("Mini AGV- Try Lock Battery No.1");
             return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.LOCK);
         }
 
@@ -284,6 +285,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery2Lock()
         {
+            LOG.TRACE("Mini AGV- Try Lock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.LOCK);
         }
 
@@ -293,6 +295,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery1UnLock()
         {
+            LOG.TRACE("Mini AGV- Try Unlock Battery No.1");
             return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.UNLOCK);
         }
         /// <summary>
@@ -301,9 +304,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery2UnLock()
         {
+            LOG.TRACE("Mini AGV- Try Unlock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.UNLOCK);
         }
-      
+
         /// <summary>
         /// 等待電池完成鎖定
         /// </summary>
@@ -316,11 +320,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (battery_no == 1 ? IsBattery1Locked : IsBattery2Locked);
             }
+            LOG.TRACE($"Start wait battery-{battery_no} Locked done...");
             while (!IsBatLocked(battery_no))
             {
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
+                    LOG.WARN($"Battery-{battery_no} [Lock] Timeout");
                     break;
                 }
             }
@@ -338,11 +344,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (battery_no == 1 ? IsBattery1UnLocked : IsBattery2UnLocked);
             }
+            LOG.TRACE($"Start wait battery-{battery_no} Unlocked done...");
             while (!IsBatUnLocked(battery_no))
             {
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
+                    LOG.WARN($"Battery-{battery_no} [Unlock] Timeout");
                     break;
                 }
             }
