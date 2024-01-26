@@ -2,9 +2,9 @@
 {
     public partial class clsDIModule
     {
-        public enum DI_ITEM : byte
+        public enum DI_ITEM : short
         {
-            Unknown,
+            Unknown = -1,
             EMO,
             EMO_Button,
             EMO_Button_2,
