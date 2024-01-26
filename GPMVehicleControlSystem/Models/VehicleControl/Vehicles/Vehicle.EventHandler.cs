@@ -102,15 +102,47 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange);
+
+            Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
+            {
+                { DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal},
+                { DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal},
+                { DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
+                { DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
+                { DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
+                { DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
+                { DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
+                { DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
+                { DI_ITEM.Limit_Switch_Sensor_Left, HandleLimitSwitchSensorSignalChange},
+                { DI_ITEM.Limit_Switch_Sensor_Right, HandleLimitSwitchSensorSignalChange},
+            };
+            foreach (KeyValuePair<DI_ITEM, Action<object, bool>> item in InputsEventsMap)
+            {
+                var _input = item.Key;
+                Action<object, bool> _handler = item.Value;
+                bool _subSuccess = WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
+                LOG.TRACE($"{_input} signal change event subscribe :_{(_subSuccess ? "Success" : "Fail")}");
+            }
+
         }
+
+        private void HandleLimitSwitchSensorSignalChange(object? sender, bool input_status)
+        {
+            Dictionary<DI_ITEM, AlarmCodes> alarm_map = new Dictionary<DI_ITEM, AlarmCodes> {
+                { DI_ITEM.Limit_Switch_Sensor_Left , AlarmCodes.Limit_Switch_Sensor_Left} ,
+                { DI_ITEM.Limit_Switch_Sensor_Right , AlarmCodes.Limit_Switch_Sensor_Right}
+            };
+            clsIOSignal signalObj = (clsIOSignal)sender;
+            var sensorName = signalObj.Name;
+            var isTriggered = input_status; //TODO 確認 A接點或B接點
+            bool isLDULDActionRunning = _RunTaskData.IsLDULDAction() && AGVC.ActionStatus == ActionStatus.ACTIVE;
+
+            if (!isTriggered || !isLDULDActionRunning)
+                return;
+            LOG.TRACE($"AGV進站過程中限動開關-{sensorName} 觸發!");
+            AlarmManager.AddAlarm(alarm_map[signalObj.Input], false);
+        }
+
         private bool HandleChargeTaskTryOpenChargeCircuit()
         {
             if (!Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold)

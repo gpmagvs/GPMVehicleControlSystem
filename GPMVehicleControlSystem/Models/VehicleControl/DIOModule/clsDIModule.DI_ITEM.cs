@@ -150,6 +150,8 @@
             Safty_PLC_Output,
             Front_Right_Ultrasound_Sensor,
             Back_Left_Ultrasound_Sensor,
+            Limit_Switch_Sensor_Left,
+            Limit_Switch_Sensor_Right
         }
 
     }
