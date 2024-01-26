@@ -356,7 +356,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 await Task.Delay(2000);
                 while (IsCharge)
                 {
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                     module_info.Battery.batteryLevel += 0x04;
                     module_info.Battery.Voltage += 200;
                     if (module_info.Battery.batteryLevel >= 100)
@@ -382,7 +382,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 {
                     try
                     {
-                        Thread.Sleep(10);
+                        await Task.Delay(100);
                         module_info.Battery.maxCellTemperature = (byte)(24 + DateTime.Now.Second / 10.0);
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
