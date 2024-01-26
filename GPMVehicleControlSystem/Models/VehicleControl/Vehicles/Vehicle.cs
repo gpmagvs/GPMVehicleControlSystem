@@ -380,7 +380,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// AGV是否有搭載極限Sensor
         /// </summary>
-        public bool IsLimitSwitchSensorMounted => WagoDI.VCSInputs.Any(input => input.Input == DI_ITEM.Limit_Switch_Sensor_Left || input.Input == DI_ITEM.Limit_Switch_Sensor_Right);
+        public bool IsLimitSwitchSensorMounted
+        {
+            get
+            {
+                try
+                {
+                    var inputs_mounted = WagoDI.VCSInputs.Select(i => i.Input).ToList();
+                    return inputs_mounted.Any(input => input is DI_ITEM.Limit_Switch_Sensor_Left or DI_ITEM.Limit_Switch_Sensor_Right);
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+
+            }
+        }
+
         public Vehicle()
         {
             try
@@ -447,6 +463,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             {
                                 CSTReader.ReadCSTIDFromLocalStorage();
                             }
+
+                            LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                         }
                     }
                     );
@@ -621,6 +639,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     WagoDI.StartAsync();
                     await DOSignalDefaultSetting();
                     await ResetMotor();
+
                 }
                 catch (SocketException ex)
                 {
