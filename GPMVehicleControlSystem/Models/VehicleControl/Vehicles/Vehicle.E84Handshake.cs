@@ -193,16 +193,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS)
                 return true;
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
+
+            bool _simulate_eq_go_on = Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun;
+            if (_simulate_eq_go_on)
             {
-                if (Parameters.EQHandshakeSimulationAutoRun)
+                _ = Task.Factory.StartNew(async () =>
                 {
-                    _ = Task.Factory.StartNew(async () =>
-                    {
-                        await Task.Delay(20);
-                        await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, true);
-                    });
-                }
+                    await Task.Delay(20);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, true);
+                });
             }
             return EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State;
         }
