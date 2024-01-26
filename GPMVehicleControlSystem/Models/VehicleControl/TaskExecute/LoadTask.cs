@@ -95,13 +95,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (IsNeedHandshake)
             {
                 bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS;
-                
+                bool _is_agv_simulation_mode = Agv.Parameters.SimulationMode;
                 Agv.HandshakeStatusText = "AGV交握訊號重置...";
                 Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimersAndEvents();
                 await Task.Delay(400);
                 Agv.HandshakeStatusText = _is_modbus_hs ? "建立Modbus連線..." : "確認光IO EQ GO訊號...";
-                if (_is_modbus_hs)
+                if (_is_modbus_hs && !_is_agv_simulation_mode)
                 {
                     var modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
                     if (!modbusTcp.Start(Agv.AGVS, Agv.AGVHsSignalStates, Agv.EQHsSignalStates))
