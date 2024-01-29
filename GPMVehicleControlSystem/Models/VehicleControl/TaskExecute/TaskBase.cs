@@ -41,7 +41,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             get => Agv.AGVC.OnAGVCActionChanged;
             set => Agv.AGVC.OnAGVCActionChanged = value;
         }
-
+        internal bool isMoveToChargeStationTask
+        {
+            get
+            {
+                try
+                {
+                    var mapPoints = Agv.NavingMap.Points;
+                    IEnumerable<MapPoint> charge_stations = mapPoints.Values.Where(station => station.IsCharge);
+                    KeyValuePair<int, MapPoint> destinStation = mapPoints.FirstOrDefault(pt => pt.Value.TagNumber == destineTag);
+                    var targetStations = destinStation.Value.Target.Keys.Select(index => mapPoints[index]);
+                    return targetStations.Any(station => station.IsCharge);
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                    return false;
+                }
+            }
+        }
         public clsTaskDownloadData RunningTaskData
         {
             get => _RunningTaskData;

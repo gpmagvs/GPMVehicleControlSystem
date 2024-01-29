@@ -8,6 +8,7 @@
         Stop,
         Measure,
         Exchange,
-        Handshaking
+        Handshaking,
+        GoToChargeStation
     }
 }
