@@ -13,6 +13,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using System.Diagnostics;
+using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
@@ -97,7 +98,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     }
                     EmuLog("AGVC ROS Reconnected");
                     rosSocket.protocol.OnClosed += HandleRosDisconnected;
-                    PublishModuleInformation(rosSocket);
+                    TopicsPublish();
                 });
             }
             rosSocket.protocol.OnClosed += HandleRosDisconnected;
@@ -135,6 +136,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal virtual void TopicsPublish()
         {
             _ = PublishModuleInformation(rosSocket);
+            _ = PublishSickOutputPathsMsg(rosSocket);
         }
 
         /// <summary>
@@ -143,6 +145,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal virtual void TopicsAdvertise()
         {
             rosSocket.Advertise<ModuleInformation>("AGVC_Emu", "/module_information");
+            rosSocket.Advertise<OutputPathsMsg>("sick_safetyscanners_output_paths_Emu", "/sick_safetyscanners/output_paths");
             rosSocket.Advertise<LocalizationControllerResultMessage0502>("SICK_Emu", "localizationcontroller/out/localizationcontroller_result_message_0502");
         }
         /// <summary>
@@ -178,6 +181,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 LOG.TRACE($"isPreviousMoveActionNotFinish={value}");
             }
         }
+
+        public int SickLaserMode { get; internal set; } = 0;
+
         private void NavGaolHandle(object sender, TaskCommandGoal obj)
         {
             Task.Factory.StartNew(() =>
@@ -348,7 +354,21 @@ namespace GPMVehicleControlSystem.Models.Emulators
                 }
             });
         }
+        private async Task PublishSickOutputPathsMsg(RosSocket rosSocket)
+        {
+            await Task.Factory.StartNew(async () =>
+            {
+                while (rosSocket.protocol.IsAlive())
+                {
+                    await Task.Delay(100);
 
+                    rosSocket.Publish("sick_safetyscanners_output_paths_Emu", new OutputPathsMsg()
+                    {
+                        active_monitoring_case = SickLaserMode
+                    });
+                }
+            });
+        }
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);

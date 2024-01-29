@@ -35,7 +35,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             TA2_Wait_EQ_READY_ON,
             TA3_Wait_EQ_BUSY_ON,
             TA4_Wait_EQ_BUSY_OFF,
-            TA5_Wait_L_U_REQ_OFF
+            TA5_Wait_L_U_REQ_OFF,
+            TP_3_Wait_AGV_BUSY_OFF,
+            TP_5_Wait_AGV_BUSY_OFF,
         }
         private Dictionary<HANDSHAKE_EQ_TIMEOUT, Stopwatch> EQHSTimersStopwatches = new Dictionary<HANDSHAKE_EQ_TIMEOUT, Stopwatch>() {
             {  HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON , new Stopwatch()},

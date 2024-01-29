@@ -306,8 +306,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             if (_Connected)
             {
-                master?.WriteMultipleCoils(Start, new bool[Size]);
-                LOG.INFO($"Wago DO All OFF Done.");
+                try
+                {
+                    master?.WriteMultipleCoils(Start, new bool[Size]);
+                    LOG.INFO($"Wago DO All OFF Done.");
+                }
+                catch (Exception ex)
+                {
+                    LOG.INFO($"{ex.Message}");
+                }
             }
         }
 
