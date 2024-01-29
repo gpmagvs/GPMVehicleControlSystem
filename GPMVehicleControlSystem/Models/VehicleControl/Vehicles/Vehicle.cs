@@ -715,7 +715,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             _RunTaskData = new clsTaskDownloadData();
             SaveParameters(Parameters);
-
+            HandshakeStatusText = "";
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();
