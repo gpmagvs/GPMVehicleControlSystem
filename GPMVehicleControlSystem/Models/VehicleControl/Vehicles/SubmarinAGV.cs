@@ -74,6 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<RETURN_CODE> RemoveCstData()
         {
             //向AGVS請求移除卡匣
+            LOG.TRACE($"使用者進行'移除卡匣'操作");
             CSTReader.ValidCSTID = "";
             simulation_cargo_status = CARGO_STATUS.NO_CARGO;
             return RETURN_CODE.OK;
