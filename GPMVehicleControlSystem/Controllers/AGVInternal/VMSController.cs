@@ -71,6 +71,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Message = "AGV執行任務中不可切為手動模式"
                 });
             }
+
+            LOG.TRACE($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
             bool confirm = await agv.Auto_Mode_Siwtch(mode);
             return Ok(new
             {
