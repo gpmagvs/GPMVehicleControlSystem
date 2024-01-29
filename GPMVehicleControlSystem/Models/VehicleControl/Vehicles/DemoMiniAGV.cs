@@ -12,6 +12,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public class DemoMiniAGV : TsmcMiniAGV
     {
         public InspectorAGVCarController? DemoMiniAGVControl => base.MiniAgvAGVC;
+
+        public override bool IsBattery1Exist
+        {
+            get
+            {
+                bool _IsHeadSideSensorOn = WagoDI.GetState(DI_ITEM.Battery_1_Exist_1);
+                bool _IsTailSideSensorON = WagoDI.GetState(DI_ITEM.Battery_1_Exist_2);
+                return _IsTailSideSensorON || _IsHeadSideSensorOn;
+            }
+        }
+
+        public override bool IsBattery2Exist
+        {
+            get
+            {
+                bool _IsHeadSideSensorOn = WagoDI.GetState(DI_ITEM.Battery_2_Exist_1);
+                bool _IsTailSideSensorON = WagoDI.GetState(DI_ITEM.Battery_2_Exist_2);
+                return _IsTailSideSensorON || _IsHeadSideSensorOn;
+            }
+        }
+
         public DemoMiniAGV() : base()
         {
             LOG.INFO("Demo Mini AGV Created.");
