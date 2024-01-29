@@ -40,11 +40,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private LASER_MODE _Mode = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         private int _CurrentLaserModeOfSick = -1;
+        private DateTime _lastSickOuputPathDataUpdateDateTime = DateTime.MinValue;
         internal int CurrentLaserModeOfSick
         {
             get => _CurrentLaserModeOfSick;
             set
             {
+                _lastSickOuputPathDataUpdateDateTime = DateTime.Now;
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
@@ -52,6 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
+        public bool IsSickOutputDataNoUpdated => (DateTime.Now - _lastSickOuputPathDataUpdateDateTime).TotalSeconds > 3;
         internal int CurrentLaserModeOfDO = -1;
         private int _AgvsLsrSetting = 1;
         public delegate void LsrModeSwitchDelegate(int mode);
@@ -83,7 +86,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    if (CurrentLaserModeOfSick == -1)
+                    if (CurrentLaserModeOfSick == -1 || IsSickOutputDataNoUpdated)
                     {
                         return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfDO);
                     }
@@ -216,7 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 CurrentLaserModeOfDO = mode_int;
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
                 _CurrentLaserModeOfSick = 999;
-                if (CurrentLaserModeOfSick != -1)
+                if (CurrentLaserModeOfSick != -1 && !IsSickOutputDataNoUpdated)
                 {
                     while ((mode_int != 0 & mode_int != 16) ? CurrentLaserModeOfSick != mode_int : (CurrentLaserModeOfSick != 0 && CurrentLaserModeOfSick != 16))
                     {
