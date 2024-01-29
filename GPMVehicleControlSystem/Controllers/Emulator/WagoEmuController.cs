@@ -9,7 +9,7 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class WagoEmuController : ControllerBase
+    public partial class WagoEmuController : ControllerBase
     {
 
         private Vehicle Agv => StaStored.CurrentVechicle;

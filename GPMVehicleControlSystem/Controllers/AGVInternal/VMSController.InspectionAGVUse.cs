@@ -29,6 +29,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(_result);
         }
 
+        [HttpGet("BatteryLockActionStop")]
         public async Task<IActionResult> BatteryLockActionStop()
         {
             var _agv = (agv as DemoMiniAGV);
