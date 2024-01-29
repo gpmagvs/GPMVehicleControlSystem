@@ -32,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        
+
 
         private bool OnlineModeChangingFlag = false;
 
@@ -104,6 +104,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddWarning(AlarmCodes.Cant_Online_At_Virtual_Point);
                     //檢查是否停在禁止上線的TAG位置
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online_At_Virtual_Point);
+                }
+                if (IsNoCargoButIDExist)
+                {
+                    return (false, RETURN_CODE.AGV_HasIDBut_No_Cargo);
                 }
             }
             await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);

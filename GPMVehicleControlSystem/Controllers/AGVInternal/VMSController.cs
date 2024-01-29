@@ -100,13 +100,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     _message = "AGV位於虛擬點上不可上線";
                 else if (result.return_code == RETURN_CODE.AGV_Not_Initialized)
                     _message = "AGV尚未完成初始化時不可上線";
-
+                else if (result.return_code == RETURN_CODE.AGV_HasIDBut_No_Cargo)
+                    _message = "有帳無料!請先進行'移除卡匣'";
                 else
                     _message = result.return_code.ToString();
                 return Ok(new
                 {
                     Success = result.success,
-                    Message = _message
+                    Message = _message,
+                    Code = result.success ? 0 : result.return_code
                 });
             }
             catch (Exception ex)
@@ -114,7 +116,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new
                 {
                     Success = false,
-                    Message = $"Code Error:{ex.Message}"
+                    Message = $"Code Error:{ex.Message}",
+                    Code = 400,
                 });
             }
         }
