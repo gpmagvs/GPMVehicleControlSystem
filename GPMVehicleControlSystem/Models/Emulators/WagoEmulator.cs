@@ -74,6 +74,14 @@ namespace GPMVehicleControlSystem.Models.Emulators
             //模擬已經縮回
             SetState(DI_ITEM.Fork_Extend_Exist_Sensor, true);
             SetState(DI_ITEM.Fork_Short_Exist_Sensor, false);
+
+            SetState(DI_ITEM.Battery_1_Exist_1, false);
+            SetState(DI_ITEM.Battery_1_Exist_2, true);
+
+
+            SetState(DI_ITEM.Battery_2_Exist_1, false);
+            SetState(DI_ITEM.Battery_2_Exist_2, true);
+
         }
         public void SetState(DI_ITEM item, bool state)
         {
