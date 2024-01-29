@@ -208,10 +208,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
             if (CurrentLaserModeOfSick == mode_int)
-            {
-                LOG.WARN($"Laser Mode Already Set as {mode_int}");
                 return true;
-            }
 
             try
             {
