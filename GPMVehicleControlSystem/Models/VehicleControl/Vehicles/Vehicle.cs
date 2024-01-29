@@ -1208,6 +1208,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<bool> Auto_Mode_Siwtch(OPERATOR_MODE mode)
         {
             Operation_Mode = mode;
+            LOG.TRACE($"手/自動模式已切換為:{mode}");
             if (mode == OPERATOR_MODE.AUTO)
             {
                 await Laser.FrontBackLasersEnable(true, true);
