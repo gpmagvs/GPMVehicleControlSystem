@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using System.Diagnostics.Metrics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
@@ -14,9 +15,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public Action<clsMeasureDone> OnInstrumentMeasureDone;
         private COMMANDS action_command;
+        private COMMANDS battery_lock_action_command;
         private DateTime previousStartMeasureTime = DateTime.MinValue;
+        private ManualResetEvent batteryLockManualResetEvent = new ManualResetEvent(false);
         public string InstrumentMeasureServiceName => "/command_action";
-        public string BatteryLockControlServiceName => "/battery_lock";
+        public string BatteryLockControlServiceName => "/command_actionm";
 
         public InspectorAGVCarController()
         {
@@ -75,23 +78,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return await CallCommandAction(InstrumentMeasureServiceName, COMMANDS.pose, tagID);
         }
 
-        public async Task<(bool confirm, string message)> BatteryLockControlService(int batNo, Vehicles.TsmcMiniAGV.BAT_LOCK_ACTION lockAction)
+        /// <summary>
+        /// 電池鎖定Service.
+        /// </summary>
+        /// <param name="batNo"></param>
+        /// <param name="lockAction"></param>
+        /// <returns></returns>
+        public async Task<(bool confirm, string message)> BatteryLockControlService(int batNo, TsmcMiniAGV.BAT_LOCK_ACTION lockAction)
         {
+            batteryLockManualResetEvent.Reset();
             try
             {
+                COMMANDS CreateCommand(int batNO, TsmcMiniAGV.BAT_LOCK_ACTION lockAction)
+                {
+                    if (batNO == 1 && lockAction == TsmcMiniAGV.BAT_LOCK_ACTION.LOCK)
+                        return COMMANDS.lock1;
+                    if (batNO == 1 && lockAction == TsmcMiniAGV.BAT_LOCK_ACTION.UNLOCK)
+                        return COMMANDS.unlock1;
+                    if (batNO == 2 && lockAction == TsmcMiniAGV.BAT_LOCK_ACTION.LOCK)
+                        return COMMANDS.lock2;
+                    if (batNO == 2 && lockAction == TsmcMiniAGV.BAT_LOCK_ACTION.UNLOCK)
+                        return COMMANDS.unlock2;
+                    throw new NotImplementedException("錯誤的電池鎖定/解鎖請求參數");
+                }
+
+                battery_lock_action_command = lockAction == TsmcMiniAGV.BAT_LOCK_ACTION.Stop ? COMMANDS.stop : CreateCommand(batNo, lockAction);
+
                 VerticalCommandResponse? response = await rosSocket.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(BatteryLockControlServiceName,
                     new VerticalCommandRequest
                     {
-
+                        model = "batterylock",
+                        command = battery_lock_action_command.ToString()
                     });
+
                 bool _success = response != null && response.confirm;
                 return new(_success, _success ? "" : "Call battery lock service fail");
             }
             catch (Exception ex)
             {
+                batteryLockManualResetEvent.Set();
                 return new(false, $"Call battery lock service fail-{ex.Message}");
             }
         }
+
 
         public override Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
@@ -114,17 +143,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         private bool InstrumentMeasureDone(VerticalCommandRequest request, out VerticalCommandResponse response)
         {
-            LOG.INFO($"儀器量測結束, request.command= {request.command}");
+
+            string model = request.model;
             response = new VerticalCommandResponse()
             {
                 confirm = true,
             };
-            if (action_command == COMMANDS.pose && OnInstrumentMeasureDone != null)
-                OnInstrumentMeasureDone(new clsMeasureDone()
-                {
-                    result_cmd = request.command,
-                    start_time = previousStartMeasureTime
-                });
+            if (model == "batterylock")
+            {
+                LOG.INFO($"電池{battery_lock_action_command} 動作完成, request.command= {request.command}");
+                batteryLockManualResetEvent.Set();
+            }
+            else
+            {
+
+                LOG.INFO($"儀器量測結束, request.command= {request.command}");
+                if (action_command == COMMANDS.pose && OnInstrumentMeasureDone != null)
+                    OnInstrumentMeasureDone(new clsMeasureDone()
+                    {
+                        result_cmd = request.command,
+                        start_time = previousStartMeasureTime
+                    });
+            }
             return true;
         }
 

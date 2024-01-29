@@ -27,7 +27,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public enum BAT_LOCK_ACTION
         {
-            LOCK, UNLOCK
+            LOCK, UNLOCK,
+            Stop
         }
 
         public override CARGO_STATUS CargoStatus { get; } = CARGO_STATUS.NO_CARGO_CARRARYING_CAPABILITY;
@@ -315,7 +316,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         protected bool WaitBatteryLocked(int battery_no)
         {
-            CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            CancellationTokenSource cst = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             bool IsBatLocked(int battery_no)
             {
                 return (battery_no == 1 ? IsBattery1Locked : IsBattery2Locked);
@@ -326,7 +327,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
-                    LOG.WARN($"Battery-{battery_no} [Lock] Timeout");
+                    LOG.WARN($"Battery-{battery_no} [Lock] LOCK Sensor 檢知 Timeout");
                     break;
                 }
             }
@@ -350,7 +351,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
-                    LOG.WARN($"Battery-{battery_no} [Unlock] Timeout");
+                    LOG.WARN($"Battery-{battery_no} [Unlock] UNLOCK Sensor 檢知  Timeout");
                     break;
                 }
             }

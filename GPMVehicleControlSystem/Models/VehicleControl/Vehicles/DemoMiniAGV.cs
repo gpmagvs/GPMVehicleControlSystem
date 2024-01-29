@@ -127,5 +127,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return WaitBatteryUnLocked(2);
         }
 
+        internal void BatteryLockActionStop()
+        {
+            DemoMiniAGVControl.BatteryLockControlService(0, BAT_LOCK_ACTION.Stop);
+        }
     }
 }
