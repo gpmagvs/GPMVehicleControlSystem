@@ -387,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     var inputs_mounted = WagoDI.VCSInputs.Select(i => i.Input).ToList();
-                    return inputs_mounted.Any(input => input is DI_ITEM.Limit_Switch_Sensor_Left or DI_ITEM.Limit_Switch_Sensor_Right);
+                    return inputs_mounted.Any(input => input is DI_ITEM.Limit_Switch_Sensor);
                 }
                 catch (Exception)
                 {
