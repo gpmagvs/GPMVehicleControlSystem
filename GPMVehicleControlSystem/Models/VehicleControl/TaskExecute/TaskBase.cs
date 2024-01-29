@@ -499,6 +499,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await Agv.Laser.SideLasersEnable(false);
         }
         private bool IsSideLsrFlickBefore = false;
+        internal bool isMoveToChargeStationTask
+        {
+            get
+            {
+                try
+                {
+                    var mapPoints = Agv.NavingMap.Points;
+                    IEnumerable<MapPoint> charge_stations = mapPoints.Values.Where(station => station.IsCharge);
+                    KeyValuePair<int, MapPoint> destinStation = mapPoints.FirstOrDefault(pt => pt.Value.TagNumber == destineTag);
+                    var targetStations = destinStation.Value.Target.Keys.Select(index => mapPoints[index]);
+                    return targetStations.Any(station => station.IsCharge);
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                    return false;
+                }
+            }
+        }
+
         private async void LaserTriggerWhenForkLiftMove(object? sender, bool active)
         {
             clsIOSignal input = (clsIOSignal)sender;

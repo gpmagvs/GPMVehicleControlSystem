@@ -58,6 +58,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             OnParamEdited += (param) => { this.Parameters = param; };
+
+            BuzzerPlayer.BeforeBuzzerMovePlay += () =>
+            {
+                if (ExecutingTaskModel != null && ExecutingTaskModel.isMoveToChargeStationTask)
+                    return SOUNDS.GoToChargeStation;
+                else
+                    return SOUNDS.Move;
+            };
             if (Parameters.SimulationMode)
                 Laser.OnLsrModeSwitchRequest += (mode) =>
                 {
