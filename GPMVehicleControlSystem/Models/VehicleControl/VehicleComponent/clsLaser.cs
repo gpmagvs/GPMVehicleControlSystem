@@ -5,12 +5,13 @@ using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using RosSharp.RosBridgeClient;
 using System.Reflection;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
-    public class clsLaser : IDIOUsagable
+    public class clsLaser : IDIOUsagable, IRosSocket
     {
         public enum LASER_MODE
         {
@@ -38,9 +39,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         private LASER_MODE _Mode = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
-        internal int CurrentLaserModeOfSick = -1;
+        private int _CurrentLaserModeOfSick = -1;
+        internal int CurrentLaserModeOfSick
+        {
+            get => _CurrentLaserModeOfSick;
+            set
+            {
+                if (_CurrentLaserModeOfSick != value)
+                {
+                    _CurrentLaserModeOfSick = value;
+                    LOG.TRACE($"[From sick_safetyscanners topic] Laser Mode Switch to {value}");
+                }
+            }
+        }
         internal int CurrentLaserModeOfDO = -1;
         private int _AgvsLsrSetting = 1;
+        public delegate void LsrModeSwitchDelegate(int mode);
+        public LsrModeSwitchDelegate OnLsrModeSwitchRequest;
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
         public int AgvsLsrSetting
@@ -81,6 +96,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
+
+        private RosSocket _rosSocket = null;
+        public RosSocket rosSocket
+        {
+            get => _rosSocket;
+            set
+            {
+                _rosSocket = value;
+                _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+
+            }
+        }
+        private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
+        {
+            CurrentLaserModeOfSick = sick_scanner_out_data.active_monitoring_case;
+        }
+
         internal async Task FrontBackLasersEnable(bool front_active, bool back_active)
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, !front_active);
@@ -165,6 +197,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
         {
+
+            if (OnLsrModeSwitchRequest != null)
+                OnLsrModeSwitchRequest(mode_int);
+
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
             if (CurrentLaserModeOfSick == mode_int)
@@ -183,6 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 CurrentLaserModeOfDO = mode_int;
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                _CurrentLaserModeOfSick = 999;
                 if (CurrentLaserModeOfSick != -1)
                 {
                     while ((mode_int != 0 & mode_int != 16) ? CurrentLaserModeOfSick != mode_int : (CurrentLaserModeOfSick != 0 && CurrentLaserModeOfSick != 16))

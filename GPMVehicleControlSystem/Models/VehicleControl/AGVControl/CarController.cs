@@ -106,7 +106,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<ModuleInformation> OnModuleInformationUpdated;
         public event EventHandler<LocalizationControllerResultMessage0502> OnSickLocalicationDataUpdated;
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
-        public event EventHandler<int> OnSickLaserModeSettingChanged;
         public event EventHandler OnAGVCCycleStopRequesting;
         public event EventHandler OnRosSocketReconnected;
         public event EventHandler OnSTOPCmdRequesting;
@@ -276,18 +275,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: QueueSize_of_Topic_ModuleInfo);
                 rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
                 rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
-                rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
             });
-        }
-
-        private int LaserModeSetting = -1;
-        private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
-        {
-            if (LaserModeSetting != sick_scanner_out_data.active_monitoring_case)
-            {
-                OnSickLaserModeSettingChanged?.Invoke(this, sick_scanner_out_data.active_monitoring_case);
-                LaserModeSetting = sick_scanner_out_data.active_monitoring_case;
-            }
         }
 
         private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)

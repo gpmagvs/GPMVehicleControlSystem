@@ -924,7 +924,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
             AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
-            AGVC.OnSickLaserModeSettingChanged += (sender, active_monitoring_case) => Laser.CurrentLaserModeOfSick = active_monitoring_case;
+            Laser.rosSocket = AGVC.rosSocket;
+
         }
 
 
