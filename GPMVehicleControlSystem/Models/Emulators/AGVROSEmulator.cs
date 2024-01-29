@@ -159,7 +159,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
             rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
             rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/command_action", VerticalActionCallback);
-            rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/battery_lock", BatteryLockActionRequestHandler);
+            rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/command_actionm", BatteryLockActionRequestHandler);
         }
 
 
