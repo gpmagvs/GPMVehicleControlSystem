@@ -60,10 +60,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             OnParamEdited += (param) => { this.Parameters = param; };
-            Laser.OnLsrModeSwitchRequest += (mode) =>
-            {
-                StaEmuManager.agvRosEmu.SickLaserMode = mode;
-            };
+
+            if (Parameters.SimulationMode)
+                Laser.OnLsrModeSwitchRequest += (mode) =>
+                {
+                    StaEmuManager.agvRosEmu.SickLaserMode = mode;
+                };
+
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;
