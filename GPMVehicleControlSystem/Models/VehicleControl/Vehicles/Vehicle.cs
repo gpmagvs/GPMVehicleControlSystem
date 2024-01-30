@@ -707,6 +707,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, "AGV位於設備內禁止初始化，請將AGV移動至道路Tag上");
             }
 
+            BuzzerPlayer.Stop();
+            DirectionLighter.CloseAll();
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
             IsWaitForkNextSegmentTask = false;
             AGVSResetCmdFlag = false;
@@ -718,6 +720,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             HandshakeStatusText = "";
             return await Task.Run(async () =>
             {
+                
+
                 StopAllHandshakeTimer();
                 StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
@@ -727,13 +731,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     (bool, string) result = await PreActionBeforeInitialize();
                     if (!result.Item1)
                     {
+                        IsInitialized = false;
+                        _Sub_Status = SUB_STATUS.ALARM;
+                        BuzzerPlayer.Alarm();
                         StatusLighter.AbortFlash();
                         return result;
                     }
 
                     InitializingStatusText = "初始化開始";
                     Sub_Status = SUB_STATUS.Initializing;
-                    await Task.Delay(500);
                     IsInitialized = false;
 
                     result = await InitializeActions(InitializeCancelTokenResourece);
@@ -744,6 +750,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
+                    await Task.Delay(500);
                     InitializingStatusText = "雷射模式切換(Bypass)..";
                     await Task.Delay(200);
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
@@ -782,8 +789,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            _Basic_Initialze_Actions();
-            
+            _Basic_Initialze_ActionsAsync();
+
             (bool confirm, string message) eq_io_status_check_reuslt = _Try_CheckEQ_IO_Status();
             if (!eq_io_status_check_reuslt.confirm)
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
@@ -795,7 +802,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, hardware_status_check_reuslt.message);
 
             AlarmCodeWhenHandshaking = AlarmCodes.None;
-            
+
             if (!WagoDI.Connected)
                 return (false, $"DIO 模組連線異常");
 
@@ -815,18 +822,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
 
-            void _Basic_Initialze_Actions()
+            async Task _Basic_Initialze_ActionsAsync()
             {
-                if (ExecutingTaskEntity != null)
+                await Task.Delay(1).ContinueWith(async (tsk) =>
                 {
-                    ExecutingTaskEntity.AGVCActionStatusChaged = null;
-                }
-                AGVC.OnAGVCActionChanged = null;
-                IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
-                _ = AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
-                ExecutingTaskEntity = null;
-                BuzzerPlayer.Stop();
-                DirectionLighter.CloseAll();
+                   
+                    if (ExecutingTaskEntity != null)
+                    {
+                        ExecutingTaskEntity.AGVCActionStatusChaged = null;
+                        ExecutingTaskEntity = null;
+                    }
+                    AGVC.OnAGVCActionChanged = null;
+                    IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
+                    await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
+                });
             }
             #endregion
 
