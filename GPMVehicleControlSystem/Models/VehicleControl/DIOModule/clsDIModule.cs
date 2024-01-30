@@ -59,7 +59,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public event EventHandler OnResetButtonPressed;
 
         public event EventHandler OnFrontSecondObstacleSensorDetected;
-        protected bool IOBusy = false;
         protected bool _Connected = false;
         public virtual bool Connected
         {

@@ -66,11 +66,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return SOUNDS.Move;
             };
+
             if (Parameters.SimulationMode)
                 Laser.OnLsrModeSwitchRequest += (mode) =>
                 {
-                    StaEmuManager.agvRosEmu.SickLaserMode = mode;
+                    if (StaEmuManager.agvRosEmu != null)
+                        StaEmuManager.agvRosEmu.SickLaserMode = mode;
                 };
+
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;

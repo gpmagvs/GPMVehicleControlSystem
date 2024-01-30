@@ -108,9 +108,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             get => _rosSocket;
             set
             {
-                if (_output_paths_subscribe_id != null)
-                    _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
+                try
+                {
 
+                    if (_output_paths_subscribe_id != null)
+                        _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                }
                 _rosSocket = value;
                 _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
                 LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
@@ -199,7 +206,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
             int mode_int = (int)mode;
-            if (CurrentLaserModeOfSick == mode_int | (CurrentLaserModeOfSick == 16 && mode_int == 0) | (CurrentLaserModeOfSick == 0 && mode_int == 16))
+            if (CurrentLaserModeOfSick == mode_int || (CurrentLaserModeOfSick == 16 && mode_int == 0) || (CurrentLaserModeOfSick == 0 && mode_int == 16))
                 return true;
             return await ModeSwitch((int)mode, isSettingByAGVS);
         }

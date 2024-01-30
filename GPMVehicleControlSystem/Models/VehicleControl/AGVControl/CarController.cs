@@ -231,6 +231,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
                 Connected = false;
                 await Task.Delay(1000);
+                if (rosSocket != null)
+                {
+                    rosSocket.Close();
+                    rosSocket.protocol.Close();
+                }
                 LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
                 try
                 {
@@ -270,7 +275,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             Task.Run(() =>
             {
-                rosSocket.Subscribe<ModuleInformation>("/module_information", (module_information) => { 
+                rosSocket.Subscribe<ModuleInformation>("/module_information", (module_information) =>
+                {
                     module_info = module_information;
                 }, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: QueueSize_of_Topic_ModuleInfo);
                 rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
