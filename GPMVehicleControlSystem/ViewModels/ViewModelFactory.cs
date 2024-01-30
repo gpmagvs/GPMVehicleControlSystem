@@ -46,7 +46,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     AGVC_ID = AGV.Parameters.SID,
                     CarName = AGV.Parameters.VehicleName,
                     MainState = AGV.Main_Status.ToString(),
-                    SubState = AGV.Sub_Status.ToString(),
+                    SubState = AGV.GetSub_Status().ToString(),
                     Tag = AGV.BarcodeReader.CurrentTag,
                     Last_Visit_MapPoint = AGV.lastVisitedMapPoint,
                     Last_Visited_Tag = AGV.Navigation.LastVisitedTag,
@@ -67,9 +67,9 @@ namespace GPMVehicleControlSystem.ViewModels
                     NavInfo = new NavStateVM
                     {
                         Destination = AGV.ExecutingTaskEntity == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
-                        DestinationMapPoint = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph = new Graph { Display = "" } } : AGV.DestinationMapPoint,
+                        DestinationMapPoint = AGV.GetSub_Status() != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph = new Graph { Display = "" } } : AGV.DestinationMapPoint,
                         Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
-                        PathPlan = AGV.Sub_Status != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskEntity == null ? new int[0] : AGV.ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
+                        PathPlan = AGV.GetSub_Status() != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskEntity == null ? new int[0] : AGV.ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
 
                     },
@@ -90,7 +90,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     HandshakeStatus = new AGVCStatusVM.clsEQHandshake
                     {
-                        IsHandshaking = AGV.IsHandshaking || (AGV.Sub_Status == clsEnums.SUB_STATUS.RUN && (AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Load || AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Unload)),
+                        IsHandshaking = AGV.IsHandshaking || (AGV.GetSub_Status() == clsEnums.SUB_STATUS.RUN && (AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Load || AGV._RunTaskData.Action_Type == AGVSystemCommonNet6.AGVDispatch.Messages.ACTION_TYPE.Unload)),
                         HandshakingInfoText = AGV.HandshakeStatusText,
                         ConnectionType = AGV.Parameters.EQHandshakeMethod,
                         Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected

@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.WaitingForChargeStatusChangeFlag = true;
             await Task.Delay(1000);
             Agv._IsCharging = true;
-            Agv.Sub_Status = SUB_STATUS.Charging;
+            Agv.SetSub_Status(SUB_STATUS.Charging);
             BuzzerPlayer.Stop();
             //將狀態設為充電中後 ,開始等待電池真正開始充電
 

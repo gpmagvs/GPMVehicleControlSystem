@@ -37,8 +37,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> CloseSystem()
         {
 
-            if (agv.Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN || agv.Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
-                return Ok(new { confirm = false, message = $"AGV當前狀態({agv.Sub_Status})禁止重新啟動系統!" });
+            if (agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN || agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+                return Ok(new { confirm = false, message = $"AGV當前狀態({agv.GetSub_Status()})禁止重新啟動系統!" });
             StaSysControl.SystemClose();
             return Ok(new { confirm = true, message = "" });
         }
@@ -47,8 +47,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("RestartSystem")]
         public async Task<IActionResult> RestartSystem()
         {
-            if (agv.Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN|| agv.Sub_Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
-                return Ok(new { confirm = false, message = $"AGV當前狀態({agv.Sub_Status})禁止重新啟動系統!" });
+            if (agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN|| agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+                return Ok(new { confirm = false, message = $"AGV當前狀態({agv.GetSub_Status()})禁止重新啟動系統!" });
             StaSysControl.SystemRestart();
             return Ok(new { confirm = true, message = "" });
         }

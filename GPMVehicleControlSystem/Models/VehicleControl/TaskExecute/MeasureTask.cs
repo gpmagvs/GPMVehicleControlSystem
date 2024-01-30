@@ -48,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 while (!cancelFlashCts.IsCancellationRequested)
                 {
-                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                         break;
                     foreach (var item in flash_dos)
                     {
@@ -165,7 +165,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Entry  Point of Bay] AGVC Action Status Changed: {status}.");
 
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
                 AGVCActionStatusChaged -= HandleAGVCBackToEntryPointDone;
                 return;
@@ -173,13 +173,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (status == ActionStatus.SUCCEEDED)
             {
                 AGVCActionStatusChaged = null;
-                Agv.Sub_Status = SUB_STATUS.IDLE;
+                Agv.SetSub_Status(SUB_STATUS.IDLE);
             }
         }
         private async void HandleAGVCReachMeasurePoint(ActionStatus status)
         {
             LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Go To Measure Point] AGVC Action Status Changed: {status}.");
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
                 AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
                 return;

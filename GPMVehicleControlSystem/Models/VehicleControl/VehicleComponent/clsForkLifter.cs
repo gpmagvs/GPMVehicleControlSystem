@@ -411,7 +411,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 bool _leaveHome = false;
                 while (true)
                 {
-                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
+                    if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
@@ -471,7 +471,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Thread.Sleep(1000);
                     if (CurrentForkLocation == FORK_LOCATIONS.HOME)
                         break;
-                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN)
+                    if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
                     }
@@ -615,7 +615,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 //皮帶是否有異常
                 bool AGVBeltStatusError() => !belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass);
-                bool AGVStatusError() => forkAGV.Sub_Status == SUB_STATUS.DOWN || forkAGV.Sub_Status == SUB_STATUS.Initializing;
+                bool AGVStatusError() => forkAGV.GetSub_Status() == SUB_STATUS.DOWN || forkAGV.GetSub_Status() == SUB_STATUS.Initializing;
                 #endregion
             }
             catch (TaskCanceledException ex)

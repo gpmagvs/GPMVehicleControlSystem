@@ -82,7 +82,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             var action_type = taskDownloadData.Action_Type;
 
-            if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
+            if (GetSub_Status() == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
 
             //if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
@@ -110,7 +110,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
 
             AlarmManager.ClearAlarm();
-            Sub_Status = SUB_STATUS.RUN;
+            LOG.TRACE("Set Sub_Status RUN When Execute AGVS Task");
+            await Task.Delay(200);
+            SetSub_Status(SUB_STATUS.RUN);
             await Laser.AllLaserActive();
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
@@ -160,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
                     }
 
-                    Sub_Status = SUB_STATUS.DOWN;
+                    SetSub_Status(SUB_STATUS.DOWN);
                     alarmCodes.ForEach(alarm =>
                     {
                         AlarmManager.AddAlarm(alarm, false);
@@ -170,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else if (action != ACTION_TYPE.Charge)
                 {
-                    Sub_Status = SUB_STATUS.IDLE;
+                    //Sub_Status = SUB_STATUS.IDLE;
                 }
                 AGVC.OnAGVCActionChanged = null;
                 await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
@@ -457,9 +459,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _ = Task.Factory.StartNew(async () =>
                         {
                             await Task.Delay(1000);
-                            while (Sub_Status != SUB_STATUS.IDLE)
+                            while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
-                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
+                            LOG.WARN($"[{GetSub_Status()}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
                             bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
 

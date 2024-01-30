@@ -62,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, ForkGoHomeResultAlarmCode);
                 }
             }
-            Agv.Sub_Status = SUB_STATUS.IDLE;
+            Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

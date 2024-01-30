@@ -383,7 +383,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
                 {
                     Thread.Sleep(1);
-                    if (Sub_Status == SUB_STATUS.DOWN)
+                    if (GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         if (!IsEQAbnormal_when_handshaking && !IsEQBusy_when_AGV_Busy && !IsEQGoOFF_When_Handshaking && !IsEQREQOFF_when_wait_EQREADY_when_handshaking)
                         {
@@ -578,9 +578,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
             AlarmCodes _alarmcode = AlarmCodes.None;
-            if (!changed_done || Sub_Status == SUB_STATUS.DOWN)
+            if (!changed_done || GetSub_Status() == SUB_STATUS.DOWN)
             {
-                if (IsAGVAbnormal_when_handshaking && Sub_Status == SUB_STATUS.DOWN)
+                if (IsAGVAbnormal_when_handshaking && GetSub_Status() == SUB_STATUS.DOWN)
                     _alarmcode = AlarmCodes.Handshake_Fail_AGV_DOWN;
                 else if (IsEQGoOFF_When_Handshaking)
                     _alarmcode = AlarmCodes.Handshake_Fail_EQ_GO;

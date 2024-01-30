@@ -401,7 +401,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!send_task_result.Accept)
                 {
                     LOG.ERROR($"{send_task_result.ToJson()}");
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
                     return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
                 }
                 else
@@ -429,14 +429,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         AGVCActionStatusChaged -= BackToHomeActionDoneCallback;
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
-                            Agv.Sub_Status = SUB_STATUS.DOWN;
+                            Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
                         LOG.TRACE("車控回HOME位置任務完成", color: ConsoleColor.Magenta);
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
                     }
-                    Agv.Sub_Status = _alarmcode == AlarmCodes.None ? SUB_STATUS.IDLE : SUB_STATUS.DOWN;
+                    Agv.SetSub_Status(_alarmcode == AlarmCodes.None ? SUB_STATUS.IDLE : SUB_STATUS.DOWN);
                     return (_alarmcode == AlarmCodes.None, _alarmcode);
                 }
 
@@ -457,9 +457,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         private async Task<AlarmCodes> AfterBackHomeActions(ActionStatus status)
         {
-            if (IsAGVCActionNoOperate(status) || Agv.Sub_Status == SUB_STATUS.DOWN)
+            if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
-                LOG.WARN($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.Sub_Status})");
+                LOG.WARN($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.GetSub_Status()})");
                 var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
                 return IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
             }
@@ -524,7 +524,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         default:
                             break;
                     }
-                    Agv.Sub_Status = Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE;
+                    Agv.SetSub_Status(Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE);
                     if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
                         await WaitCSTIDReported();
                     //await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
@@ -690,7 +690,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
             AlarmCodes alarm_code = AlarmCodes.None;
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 alarm_code = AlarmCodes.AGV_State_Cant_Move;
 
             else if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
@@ -701,7 +701,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 alarm_code = AlarmCodes.None;
 
             if (alarm_code != AlarmCodes.None)
-                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
 
             return alarm_code;
         }
@@ -713,7 +713,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
             if (!HSResult.eqready)
             {
-                Agv.Sub_Status = SUB_STATUS.DOWN;
+                Agv.SetSub_Status(SUB_STATUS.DOWN);
                 return (false, HSResult.alarmCode);
             }
             else

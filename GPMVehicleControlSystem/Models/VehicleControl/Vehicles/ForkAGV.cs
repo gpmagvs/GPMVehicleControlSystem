@@ -132,7 +132,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //throw new NotImplementedException();
             LOG.TRACE("Fork Stop");
             _ForkSaftyProtectFlag = false;
-            if (Sub_Status == SUB_STATUS.IDLE)
+            if (GetSub_Status() == SUB_STATUS.IDLE)
                 BuzzerPlayer.Stop();
         }
 
@@ -185,7 +185,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool _isLoadUnloadTaskRunning => _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
         private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
         {
-            if (Sub_Status == SUB_STATUS.DOWN)
+            if (GetSub_Status() == SUB_STATUS.DOWN)
                 return;
 
 
@@ -333,7 +333,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (signal.Input == DI_ITEM.Vertical_Motor_Alarm)
             {
 
-                if (Sub_Status == SUB_STATUS.RUN)
+                if (GetSub_Status() == SUB_STATUS.RUN)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
                     return;

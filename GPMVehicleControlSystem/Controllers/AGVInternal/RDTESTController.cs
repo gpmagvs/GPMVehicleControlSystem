@@ -22,7 +22,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("MoveTest")]
         public async Task<IActionResult> MoveTestStart(clsMoveTestModel options)
         {
-            if (agv.Remote_Mode == REMOTE_MODE.ONLINE || agv.Operation_Mode == OPERATOR_MODE.AUTO || agv.Sub_Status != SUB_STATUS.IDLE)
+            if (agv.Remote_Mode == REMOTE_MODE.ONLINE || agv.Operation_Mode == OPERATOR_MODE.AUTO || agv.GetSub_Status() != SUB_STATUS.IDLE)
             {
                 return Ok(new { result = false, message = "AGV必須在Offline、手動模式且狀態為IDLE的狀態方可執行測試" });
             }

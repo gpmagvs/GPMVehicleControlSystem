@@ -45,12 +45,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (agv.Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE && agv.Sub_Status != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Charging)
+            if (agv.GetSub_Status() != AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE && agv.GetSub_Status() != AGVSystemCommonNet6.clsEnums.SUB_STATUS.Charging)
             {
                 return Ok(new
                 {
                     accpet = false,
-                    error_message = $"AGV當前狀態無法執行任務({agv.Sub_Status})"
+                    error_message = $"AGV當前狀態無法執行任務({agv.GetSub_Status()})"
                 });
             }
 
@@ -160,7 +160,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                   {
                       foreach (clsTaskDownloadData? _taskDataDto in taskLinkList)
                       {
-                          if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
+                          if (agv.GetSub_Status() == clsEnums.SUB_STATUS.DOWN)
                               return;
                           _taskDataDto.OrderInfo = _OrderInfo;
                           LOG.WARN($"[Local Task Dispather] Wait Task-{_taskDataDto.Action_Type} Done...");
@@ -190,7 +190,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("MoveTo")]
         public async Task<IActionResult> MoveTest(MoveTestVM testVM)
         {
-            if (agv.Sub_Status != clsEnums.SUB_STATUS.IDLE)
+            if (agv.GetSub_Status() != clsEnums.SUB_STATUS.IDLE)
             {
                 return Ok(new { confirm = false, message = "AGV狀態異常，請先進行初始化" });
             }

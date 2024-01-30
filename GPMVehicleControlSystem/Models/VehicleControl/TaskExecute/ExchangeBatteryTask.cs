@@ -213,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         private void OnAGVCBackToEntryPoint(ActionStatus status)
         {
-            if (Agv.Sub_Status == SUB_STATUS.DOWN)
+            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
                 AGVCActionStatusChaged -= OnAGVCBackToEntryPoint;
                 return;

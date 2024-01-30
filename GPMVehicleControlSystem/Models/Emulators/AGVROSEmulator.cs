@@ -202,17 +202,21 @@ namespace GPMVehicleControlSystem.Models.Emulators
                     try
                     {
                         actionServer?.SucceedInvoke();
+                        actionServer?.AcceptedInvoke();
+                        Thread.Sleep(100);
+                        actionServer?.SucceedInvoke();
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        EmuLog(ex.Message + ex.StackTrace);
                     }
-                    actionServer?.AcceptedInvoke();
-                    emergency_stop = true;
-                    emergency_stop_canceltoken_source?.Cancel();
-                    isPreviousMoveActionNotFinish = false;
-                    previousTaskAction = null;
-                    Thread.Sleep(100);
-                    actionServer?.SucceedInvoke();
+                    finally
+                    {
+                        emergency_stop = true;
+                        emergency_stop_canceltoken_source?.Cancel();
+                        isPreviousMoveActionNotFinish = false;
+                        previousTaskAction = null;
+                    }
                     return;
                 }
                 EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");

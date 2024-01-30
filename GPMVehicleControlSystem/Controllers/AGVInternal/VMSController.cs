@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
-            if (mode == OPERATOR_MODE.MANUAL && agv.Sub_Status == SUB_STATUS.RUN)
+            if (mode == OPERATOR_MODE.MANUAL && agv.GetSub_Status() == SUB_STATUS.RUN)
             {
                 return Ok(new
                 {
@@ -335,7 +335,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("SetSubStatus")]
         public async Task SetSubStatus(SUB_STATUS status)
         {
-            agv.Sub_Status = status;
+            agv.SetSub_Status(status);
         }
     }
 }

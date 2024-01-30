@@ -146,42 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public OPERATOR_MODE Operation_Mode { get; internal set; } = OPERATOR_MODE.MANUAL;
 
-        public MAIN_STATUS Main_Status
-        {
-            get
-            {
-                if (!IsInitialized)
-                    return MAIN_STATUS.DOWN;
-                switch (_Sub_Status)
-                {
-                    case SUB_STATUS.IDLE:
-                        return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.RUN:
-                        return MAIN_STATUS.RUN;
-                    case SUB_STATUS.DOWN:
-                        return MAIN_STATUS.DOWN;
-                    case SUB_STATUS.Charging:
-                        return MAIN_STATUS.Charging;
-                    case SUB_STATUS.Initializing:
-                        return MAIN_STATUS.DOWN;
-                    case SUB_STATUS.ALARM:
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            return MAIN_STATUS.RUN;
-                        else
-                            return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.WARNING:
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            return MAIN_STATUS.RUN;
-                        else
-                            return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.STOP:
-                        return MAIN_STATUS.IDLE;
-                    default:
-                        return MAIN_STATUS.DOWN;
-                }
-            }
-        }
-
+    
         /// <summary>
         /// 與 AGVS Reset Command 相關，若收到 AGVS 下 AGVS Reset
         /// Command 給 AGV
@@ -215,34 +180,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
-        public bool IsCharging
-        {
-            get => _IsCharging;
-            set
-            {
-                if (IsChargeCircuitOpened && Batteries.Any(bat => bat.Value.Data.Voltage >= Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval))
-                {
-                    LOG.WARN($"Battery voltage  lower than threshold ({Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval}) mV, cut off recharge circuit ! ");
-                    WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
-                    Sub_Status = IsInitialized ? AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN;
-                    _IsCharging = false;
-                    return;
-                }
-                if (_IsCharging != value)
-                {
-                    if (value)
-                    {
-                        BeforeChargingSubStatus = _Sub_Status;
-                        _Sub_Status = SUB_STATUS.Charging;
-                        StatusLighter.ActiveGreen();
-                    }
-                    else
-                        Sub_Status = IsInitialized ? AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN;
-                    _IsCharging = value;
-                }
-            }
-        }
-        public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
+       public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
         public MapPoint DestinationMapPoint
         {
             get
@@ -256,52 +194,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 catch (Exception)
                 {
                     return _mapPoint_default;
-                }
-            }
-        }
-
-        private SUB_STATUS BeforeChargingSubStatus;
-        /// <summary>
-        /// 充電迴路是否已開啟
-        /// </summary>
-        public virtual bool IsChargeCircuitOpened => WagoDO.GetState(DO_ITEM.Recharge_Circuit);
-        public SUB_STATUS Sub_Status
-        {
-            get => _Sub_Status;
-            set
-            {
-                if (_Sub_Status != value)
-                {
-                    try
-                    {
-                        if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
-                        {
-                            if (value == SUB_STATUS.DOWN)
-                                HandshakeIOOff();
-                            if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
-                                BuzzerPlayer.Alarm();
-                            DirectionLighter.CloseAll(1000);
-                            StatusLighter.DOWN();
-                        }
-                        else if (value == SUB_STATUS.IDLE)
-                        {
-                            BuzzerPlayer.Stop();
-                            StatusLighter.IDLE();
-                            DirectionLighter.CloseAll(1000);
-                        }
-                        else if (value == SUB_STATUS.RUN)
-                        {
-                            StatusLighter.RUN();
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                    }
-
-                    _Sub_Status = value;
-                    LOG.TRACE($"Sub_Status change to {value}");
-                    StoreStatusToDataBase();
                 }
             }
         }
@@ -340,7 +232,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string _Task_Simplex = "";
                 ACTION_TYPE _TaskAction = ACTION_TYPE.NoAction;
                 int _DestineTag = Navigation.LastVisitedTag;
-                bool IsRunStatus = Sub_Status == SUB_STATUS.RUN;
+                bool IsRunStatus = GetSub_Status() == SUB_STATUS.RUN;
                 if (IsRunStatus)
                 {
                     _Task_Name = _RunTaskData.Task_Name;
@@ -351,7 +243,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 clsAGVStatusTrack status_data = new clsAGVStatusTrack
                 {
                     Time = DateTime.Now,
-                    Status = Sub_Status,
+                    Status = GetSub_Status(),
                     BatteryLevel1 = _bat1_level,
                     BatteryLevel2 = _bat2_level,
                     BatteryVoltage1 = _bat1_voltage,
@@ -691,14 +583,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
-            if (Sub_Status == SUB_STATUS.RUN)
+            if (GetSub_Status() == SUB_STATUS.RUN)
             {
                 return (false, $"當前狀態不可進行初始化(任務執行中)");
             }
 
-            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || Sub_Status == SUB_STATUS.Initializing))
+            if (GetSub_Status() != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || GetSub_Status() == SUB_STATUS.Initializing))
             {
-                string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
+                string reason_string = GetSub_Status() != SUB_STATUS.RUN ? (GetSub_Status() == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
 
@@ -739,13 +631,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
 
                     InitializingStatusText = "初始化開始";
-                    Sub_Status = SUB_STATUS.Initializing;
+                    SetSub_Status(SUB_STATUS.Initializing);
                     IsInitialized = false;
 
                     result = await InitializeActions(InitializeCancelTokenResourece);
                     if (!result.Item1)
                     {
-                        Sub_Status = SUB_STATUS.STOP;
+                        SetSub_Status(SUB_STATUS.STOP);
                         IsInitialized = false;
                         StatusLighter.AbortFlash();
                         return result;
@@ -761,7 +653,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     InitializingStatusText = "初始化完成!";
                     await Task.Delay(500);
-                    Sub_Status = SUB_STATUS.IDLE;
+                    SetSub_Status(SUB_STATUS.IDLE);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
@@ -1062,7 +954,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleIMUVibrationDataChanged(object? sender, Vector3 e)
         {
-            if (Sub_Status != SUB_STATUS.RUN)
+            if (GetSub_Status() != SUB_STATUS.RUN)
             {
                 IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
                 RecordVibrationDataToDatabase();
@@ -1289,7 +1181,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (BarcodeReader.CurrentTag == 0)
                     return (false, "AGV並未在Tag上,無法操作自動移動到TAG中心功能");
 
-                if (Sub_Status != SUB_STATUS.IDLE)
+                if (GetSub_Status() != SUB_STATUS.IDLE)
                     return (false, "AGV非IDLE狀態, 無法操作自動移動到TAG中心功能");
             }
 
@@ -1328,10 +1220,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 bool IsFakeCharging = lastVisitedMapPoint.IsCharge && IsInitialized && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.All(bat => bat.Value.Data.batteryLevel > Parameters.BatteryModule.ChargeLevelThreshold);
-                IsCharging = IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging());
+                SetIsCharging(IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging()));
                 //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
                 if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
-                    Sub_Status = Sub_Status == SUB_STATUS.Charging ? SUB_STATUS.IDLE : Sub_Status;
+                    SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status());
             }
         }
     }

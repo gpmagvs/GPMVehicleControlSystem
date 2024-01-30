@@ -24,7 +24,7 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, true);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, true);
             AlarmManager.AddAlarm( AlarmCodes.Handshake_Fail_Inside_EQ_EQ_GO, false);
-            agv.Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN;
+            agv.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN);
             return Ok();
         }
         

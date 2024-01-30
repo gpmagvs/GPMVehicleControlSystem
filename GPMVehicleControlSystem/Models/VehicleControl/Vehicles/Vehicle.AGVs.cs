@@ -234,7 +234,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (Sub_Status == SUB_STATUS.IDLE || Sub_Status == SUB_STATUS.Charging))
+                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (GetSub_Status() == SUB_STATUS.IDLE || GetSub_Status() == SUB_STATUS.Charging))
                 {
                     HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
                 }
@@ -275,7 +275,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
-                    IsCharging = IsCharging,
+                    IsCharging = GetIsCharging(),
                 };
                 return status;
             }
@@ -326,7 +326,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = AGV_Reset_Flag,
                     Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
-                    IsCharging = IsCharging
+                    IsCharging = GetIsCharging()
                 };
                 return status;
             }
@@ -345,11 +345,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
-            LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}", color: ConsoleColor.Red);
+            LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Red);
 
             if (AGVSResetCmdFlag)
             {
-                LOG.INFO($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}", color: ConsoleColor.Yellow);
+                LOG.INFO($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Yellow);
                 return true;
             }
 

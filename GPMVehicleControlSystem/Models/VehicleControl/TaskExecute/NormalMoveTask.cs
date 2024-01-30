@@ -138,7 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Task.Run(() =>
             {
-                while (Agv.Sub_Status == SUB_STATUS.RUN)
+                while (Agv.GetSub_Status() == SUB_STATUS.RUN)
                 {
                     Thread.Sleep(1);
                     var _currentTag = Agv.BarcodeReader.CurrentTag;

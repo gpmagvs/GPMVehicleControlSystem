@@ -115,7 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (!WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3))
                 {
                     await Task.Delay(1);
-                    if (Sub_Status == SUB_STATUS.DOWN)
+                    if (GetSub_Status() == SUB_STATUS.DOWN)
                         return;
                 }
                 await Task.Delay(3000);

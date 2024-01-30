@@ -59,9 +59,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         Task.Factory.StartNew(async () =>
                         {
                             await Task.Delay(1000);
-                            while (Sub_Status != SUB_STATUS.IDLE)
+                            while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
-                            LOG.WARN($"[{Sub_Status}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
+                            LOG.WARN($"[{GetSub_Status()}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
                             bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
                         });

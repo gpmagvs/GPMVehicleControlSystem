@@ -191,9 +191,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
                 }
 
-                if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 {
-                    LOG.WARN($"車載狀態錯誤:{Agv.Sub_Status}");
+                    LOG.WARN($"車載狀態錯誤:{Agv.GetSub_Status()}");
                     var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
 
                     return new List<AlarmCodes> { IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode };
@@ -364,7 +364,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _ = Task.Factory.StartNew(async () =>
             {
                 LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
-                if (IsAGVCActionNoOperate(status) || Agv.Sub_Status == SUB_STATUS.DOWN)
+                if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 {
                     if (Agv.AGVSResetCmdFlag)
                     {
@@ -380,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AGVCActionStatusChaged = null;
                     LOG.ERROR($"存在貨物傾倒異常");
                     Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
                     task_abort_alarmcode = AlarmCodes.Cst_Slope_Error;
                     _wait_agvc_action_done_pause.Set();
                     return;
@@ -400,7 +400,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     AGVCActionStatusChaged = null;
 
-                    if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
                         task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
@@ -444,7 +444,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            Agv.Sub_Status = SUB_STATUS.IDLE;
+            Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);
         }
 
@@ -493,7 +493,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
                     {
                         await Task.Delay(1);
-                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                         {
                             IsNeedWaitForkHome = false;
                             return;
@@ -510,7 +510,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     while (isCurrentHightAboveSaftyH())
                     {
                         await Task.Delay(1);
-                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                         {
                             IsNeedWaitForkHome = false;
                             return;
@@ -526,7 +526,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     while (Agv.ForkLifter.CurrentHeightPosition > 0.1)
                     {
                         await Task.Delay(1);
-                        if (Agv.Sub_Status == SUB_STATUS.DOWN)
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                         {
                             IsNeedWaitForkHome = false;
                             return;
@@ -543,7 +543,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Agv.Laser.SideLasersEnable(false);
                 if (!ForkGoHomeActionResult.confirm)
                 {
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
                     ForkGoHomeResultAlarmCode = ForkGoHomeActionResult.alarm_code;
                     AlarmManager.AddAlarm(ForkGoHomeResultAlarmCode, false);
                 }
@@ -630,7 +630,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     Agv.AGVC.EmergencyStop();
                     Agv.ExecutingTaskEntity.Abort();
-                    Agv.Sub_Status = SUB_STATUS.DOWN;
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
                     AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
                 }
                 catch (Exception ex)
