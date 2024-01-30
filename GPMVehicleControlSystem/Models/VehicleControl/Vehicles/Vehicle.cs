@@ -782,38 +782,54 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            if (ExecutingTaskEntity != null)
-            {
-                ExecutingTaskEntity.AGVCActionStatusChaged = null;
-            }
-            AGVC.OnAGVCActionChanged = null;
-            IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
-            await AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
-            ExecutingTaskEntity = null;
-            BuzzerPlayer.Stop();
-            DirectionLighter.CloseAll();
-            if ((IsEQAbnormal_when_handshaking || IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
-            {
+            _Basic_Initialze_Actions();
+            
+            (bool confirm, string message) eq_io_status_check_reuslt = _Try_CheckEQ_IO_Status();
+            if (!eq_io_status_check_reuslt.confirm)
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
-            }
 
             ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
-            var hardware_status_check_reuslt = CheckHardwareStatus();
+            (bool confirm, string message) hardware_status_check_reuslt = CheckHardwareStatus();
             if (!hardware_status_check_reuslt.confirm)
                 return (false, hardware_status_check_reuslt.message);
-            //if (Sub_Status == SUB_STATUS.Charging)
-            //    return (false, "無法在充電狀態下進行初始化");
-            //bool forkRackExistAbnormal = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-            //if (forkRackExistAbnormal)
-            //    return (false, "無法在有Rack的狀態下進行初始化");
 
-            //if (lastVisitedMapPoint.StationType !=STATION_TYPE.Normal)
-            //    return (false, $"無法在非一般點位下進行初始化({lastVisitedMapPoint.StationType})");
             AlarmCodeWhenHandshaking = AlarmCodes.None;
+            
             if (!WagoDI.Connected)
                 return (false, $"DIO 模組連線異常");
+
             return (true, "");
+
+            #region Local Methods
+
+            (bool confirm, string message) _Try_CheckEQ_IO_Status()
+            {
+                if ((IsEQAbnormal_when_handshaking || IsEQBusy_when_AGV_Busy) && EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State)
+                {
+                    return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
+                }
+                else
+                {
+                    return (true, "");
+                }
+            }
+
+            void _Basic_Initialze_Actions()
+            {
+                if (ExecutingTaskEntity != null)
+                {
+                    ExecutingTaskEntity.AGVCActionStatusChaged = null;
+                }
+                AGVC.OnAGVCActionChanged = null;
+                IMU.OnAccelermeterDataChanged -= HandleIMUVibrationDataChanged;
+                _ = AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
+                ExecutingTaskEntity = null;
+                BuzzerPlayer.Stop();
+                DirectionLighter.CloseAll();
+            }
+            #endregion
+
         }
 
         /// <summary>
@@ -865,7 +881,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (true, "");
             else
             {
-                AlarmManager.AddAlarm(alarmo_code, false);
+                AlarmManager.AddAlarm(alarmo_code, true);
                 BuzzerPlayer.Alarm();
                 return (false, error_message);
             }
