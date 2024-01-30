@@ -50,12 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.TRACE($"等待 AGV完成 [移動] 任務", color: ConsoleColor.Green);
             var _t = Task.Run(() =>
             {
-                bool IsAGVMoving()
-                {
-                    var _status = Agv.AGVC.ActionStatus;
-                    return _status == ActionStatus.ACTIVE || _status == ActionStatus.PENDING;
-                }
-                while (IsAGVMoving())
+                while (Agv.AGVC.IsRunning)
                 {
                     Thread.Sleep(1);
                     if (TaskCancelByReplan.IsCancellationRequested)

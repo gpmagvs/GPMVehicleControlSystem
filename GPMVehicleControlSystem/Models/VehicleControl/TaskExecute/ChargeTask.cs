@@ -61,8 +61,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _ = Task.Run(async () =>
             {
                 var _delayTime = Agv.Parameters.BatteryModule.WaitChargeStartDelayTimeWhenReachChargeTaskFinish;
-                LOG.INFO($"AGV Sub Status Will Changed by charge state after {_delayTime } second ");
+                int _time_count_down = _delayTime;
+                Timer timer = new Timer(new TimerCallback((s) =>
+                {
+                    LOG.INFO($"AGV Sub Status Will Changed by charge state after {_time_count_down} second ");
+                    _time_count_down--;
+                }), null, 0, 1000);
                 Thread.Sleep(TimeSpan.FromSeconds(_delayTime));
+                LOG.INFO($"Agv.WaitingForChargeStatusChangeFlag = false");
+                timer.Dispose();
                 Agv.WaitingForChargeStatusChangeFlag = false;
             });
 

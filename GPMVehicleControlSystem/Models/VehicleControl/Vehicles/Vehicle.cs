@@ -146,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public OPERATOR_MODE Operation_Mode { get; internal set; } = OPERATOR_MODE.MANUAL;
 
-    
+
         /// <summary>
         /// 與 AGVS Reset Command 相關，若收到 AGVS 下 AGVS Reset
         /// Command 給 AGV
@@ -180,7 +180,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
-       public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
+        public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
         public MapPoint DestinationMapPoint
         {
             get
@@ -612,7 +612,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             HandshakeStatusText = "";
             return await Task.Run(async () =>
             {
-                
+
 
                 StopAllHandshakeTimer();
                 StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
@@ -718,7 +718,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await Task.Delay(1).ContinueWith(async (tsk) =>
                 {
-                   
+
                     if (ExecutingTaskEntity != null)
                     {
                         ExecutingTaskEntity.AGVCActionStatusChaged = null;
@@ -1217,14 +1217,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void JudgeIsBatteryCharging()
         {
-            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+            if (!lastVisitedMapPoint.IsCharge || AGVC.IsRunning || Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
             {
-                bool IsFakeCharging = lastVisitedMapPoint.IsCharge && IsInitialized && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.All(bat => bat.Value.Data.batteryLevel > Parameters.BatteryModule.ChargeLevelThreshold);
-                SetIsCharging(IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging()));
-                //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
-                if (lastVisitedMapPoint.IsCharge && !IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
-                    SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status());
+                if (Debugger.IsAttached)
+                    LOG.WARN($"Cancel Judge Battery is charging or not . (AGVC Is Running: {AGVC.IsRunning})/ Current Station is Charge Station:{lastVisitedMapPoint.IsCharge}");
+                return;
             }
+
+            bool IsFakeCharging = lastVisitedMapPoint.IsCharge && IsInitialized && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.All(bat => bat.Value.Data.batteryLevel > Parameters.BatteryModule.ChargeLevelThreshold);
+            SetIsCharging(IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging()));
+            //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
+            if (!IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
+                SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status(), false);
         }
     }
 }

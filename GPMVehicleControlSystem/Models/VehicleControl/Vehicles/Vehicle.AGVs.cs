@@ -359,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
 
-                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
+                if (!AGVC.IsRunning && mode == RESET_MODE.CYCLE_STOP)
                 {
                     AGVC.OnAGVCActionChanged = null;
                     AGV_Reset_Flag = false;

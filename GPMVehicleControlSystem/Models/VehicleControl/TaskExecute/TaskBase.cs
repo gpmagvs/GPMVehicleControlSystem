@@ -244,7 +244,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
                         }
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                        else if (Agv.AGVC.IsRunning)
                         {
                             if (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload)
                             {

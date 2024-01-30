@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 設定AGV目前的子狀態
         /// </summary>
         /// <param name="value"></param>
-        public void SetSub_Status(SUB_STATUS value)
+        public void SetSub_Status(SUB_STATUS value, bool auto_stop_buzzer = true)
         {
             lock (lock_obj)
             {
@@ -47,7 +47,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else if (value == SUB_STATUS.IDLE)
                         {
-                            BuzzerPlayer.Stop();
+                            if (auto_stop_buzzer)
+                                BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
                             DirectionLighter.CloseAll(1000);
                         }

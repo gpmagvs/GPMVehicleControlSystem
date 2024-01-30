@@ -628,7 +628,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             LOG.TRACE($"AGV Direction Change to {direction}", color: ConsoleColor.DarkRed);
-            bool _isAGVRunning = AGVC.ActionStatus == ActionStatus.ACTIVE || AGVC.ActionStatus == ActionStatus.PENDING;
+            bool _isAGVRunning = AGVC.IsRunning;
             bool _isDirectionEqualStop = direction == clsNavigation.AGV_DIRECTION.STOP;
             if (!_isAGVRunning || _isDirectionEqualStop)
                 return;

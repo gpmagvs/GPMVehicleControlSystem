@@ -415,7 +415,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                         _alarmcode = await AfterBackHomeActions(ActionStatus.SUCCEEDED);
                     }
-                    else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                    else if (Agv.AGVC.IsRunning)
                     {
                         if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                             ForkHomeProcess();
