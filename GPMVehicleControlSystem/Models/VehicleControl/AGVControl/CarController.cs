@@ -435,6 +435,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
+
+        internal bool IsRunning => ActionStatus == ActionStatus.PENDING || ActionStatus == ActionStatus.ACTIVE;
+
         internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
@@ -483,9 +486,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             await Task.Delay(500);
-            while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
+            while (!IsRunning && ActionStatus != ActionStatus.SUCCEEDED)
             {
-                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
+                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}", false);
                 await Task.Delay(1);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
