@@ -70,8 +70,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.SimulationMode)
                 Laser.OnLsrModeSwitchRequest += (mode) =>
                 {
-                    StaEmuManager.agvRosEmu.SickLaserMode = mode;
+                    if (StaEmuManager.agvRosEmu != null)
+                        StaEmuManager.agvRosEmu.SickLaserMode = mode;
                 };
+
 
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {

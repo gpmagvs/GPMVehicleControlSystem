@@ -230,6 +230,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
                 Connected = false;
                 await Task.Delay(1000);
+                if (rosSocket != null)
+                {
+                    rosSocket.Close();
+                    rosSocket.protocol.Close();
+                }
                 LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
                 try
                 {

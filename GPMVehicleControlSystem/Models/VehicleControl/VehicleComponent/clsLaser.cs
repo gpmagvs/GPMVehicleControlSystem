@@ -102,14 +102,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         private RosSocket _rosSocket = null;
+        private string _output_paths_subscribe_id;
         public RosSocket rosSocket
         {
             get => _rosSocket;
             set
             {
-                _rosSocket = value;
-                _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                try
+                {
 
+                    if (_output_paths_subscribe_id != null)
+                        _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message, ex);
+                }
+                _rosSocket = value;
+                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }
         private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
