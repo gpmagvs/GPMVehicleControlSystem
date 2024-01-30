@@ -37,7 +37,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             NORMAL,
         }
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
-        private LASER_MODE _Mode = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         private int _CurrentLaserModeOfSick = -1;
         private DateTime _lastSickOuputPathDataUpdateDateTime = DateTime.MinValue;
@@ -47,11 +46,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             set
             {
                 _lastSickOuputPathDataUpdateDateTime = DateTime.Now;
+
                 if (_CurrentLaserModeOfSick != value)
                 {
-                    _CurrentLaserModeOfSick = value;
                     LOG.TRACE($"[From sick_safetyscanners topic] Laser Mode Switch to {value}");
                 }
+                _CurrentLaserModeOfSick = value;
             }
         }
         public bool IsSickOutputDataNoUpdated => (DateTime.Now - _lastSickOuputPathDataUpdateDateTime).TotalSeconds > 3;
@@ -101,14 +101,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         private RosSocket _rosSocket = null;
+        private string _output_paths_subscribe_id;
+
         public RosSocket rosSocket
         {
             get => _rosSocket;
             set
             {
-                _rosSocket = value;
-                _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                if (_output_paths_subscribe_id != null)
+                    _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
 
+                _rosSocket = value;
+                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }
         private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)

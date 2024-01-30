@@ -457,7 +457,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void AGVC_OnRosSocketReconnected(object? sender, EventArgs e)
         {
-            BuzzerPlayer.rossocket = (RosSocket)sender;
+            Laser.rosSocket = BuzzerPlayer.rossocket = (RosSocket)sender;
         }
 
 
