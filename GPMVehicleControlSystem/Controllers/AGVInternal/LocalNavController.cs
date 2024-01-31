@@ -317,7 +317,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         private clsTaskDownloadData[] CreateActionLinksTaskJobs(Map mapData, ACTION_TYPE actionType, int fromTag, int toTag)
         {
-            string Task_Name = $"UI_{DateTime.Now.ToString("yyyyMMddHHmmssff")}";
+            string Task_Name = $"UI_{actionType.ToString()}_{DateTime.Now.ToString("yyyyMMddHHmmssff")}";
             int seq = 1;
             PathFinder pathFinder = new PathFinder();
             int normal_move_start_tag;
