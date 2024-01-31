@@ -202,6 +202,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO != null)
                 {
                     OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
+
+                    CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    while (DO.State != state)
+                    {
+                        await Task.Delay(1);
+                        if (_timeout.IsCancellationRequested)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                            return false;
+                        }
+                    }
                     return true;
                 }
                 else
@@ -228,9 +239,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (DO != null)
                 {
                     OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
+                    CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     while (GetState(signal) != state)
                     {
-                        Thread.Sleep(1);
+                        await Task.Delay(1);
+                        if (_timeout.IsCancellationRequested)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                            return false;
+                        }
                     }
                     return true;
                 }
