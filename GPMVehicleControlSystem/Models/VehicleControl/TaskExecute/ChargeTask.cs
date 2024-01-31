@@ -52,16 +52,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             var result = base.HandleAGVCActionSucceess();
-            if (Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && !Agv.IsChargeCircuitOpened)
+
+            Agv.Sub_Status = SUB_STATUS.Charging;
+
+            if (!Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold)
             {
-                Task.Run(async () =>
+                int _time_to_wait_change_status = 15;//sec
+                Task.Factory.StartNew(async () =>
                 {
-                    await Task.Delay(2000);
-                    Agv.Sub_Status = SUB_STATUS.Charging;
+                    var _count_down = _time_to_wait_change_status;
+                    Timer _count_down_timer = new Timer((_obj) =>
+                    {
+                        LOG.TRACE($"Sub Status will Change after {_count_down} sec");
+                        _count_down--;
+                    }, null, 1, 1000);
+
+                    await Task.Delay(TimeSpan.FromSeconds(_time_to_wait_change_status));
+                    _count_down_timer.Dispose();
+                    Agv.Sub_Status = !Agv.IsCharging ? SUB_STATUS.IDLE : SUB_STATUS.Charging;
                 });
             }
-            if (Agv.IsCharging)
-                Agv.Sub_Status = SUB_STATUS.Charging;
+
+
             return result;
         }
     }
