@@ -215,16 +215,4 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public ushort InputRegister_Read_Num { get; set; } = 1;
         public ushort InputRegister_Write_Start { get; set; } = 0;
     }
-
-
-    public class clsImpactDetectionParams
-    {
-        public bool Enabled { get; set; } = false;
-        /// <summary>
-        /// 碰撞偵測閥值(單位:G)
-        /// </summary>
-        public double ThresHold { get; set; } = 2;
-
-        public bool PitchErrorDetection { get; set; } = false;
-    }
 }
