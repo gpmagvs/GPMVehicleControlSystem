@@ -16,6 +16,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -120,6 +121,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
+
+                if (Agv.Parameters.LDULDParams.LsrObstacleDetectionEnable)
+                {
+                    LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
+                    bool _HasObstacle = await CheckPortObstacleViaLaser();
+                    if (_HasObstacle)
+                    {
+                        if (Agv.Parameters.LDULDParams.LsrObsDetectedAlarmLevel == ALARM_LEVEL.ALARM)
+                        {
+                            LOG.ERROR($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
+                            return (false, AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                        }
+                        else
+                        {
+                            LOG.WARN($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
+                            AlarmManager.AddWarning(AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                        }
+                    }
+                    else
+                    {
+                        LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
+                    }
+                }
+
+
                 #region 前方障礙物預檢
 
                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
@@ -344,7 +370,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
         }
+        private async Task<bool> CheckPortObstacleViaLaser()
+        {
+            var _laserModeNumber = Agv.Parameters.LDULDParams.LsrObsLaserModeNumber;
+            await Agv.Laser.ModeSwitch(_laserModeNumber);
+            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, false);
+            await Task.Delay(800);
 
+            bool _front_area_1_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+            bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+            bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
+
+            await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
+
+            return _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
+        }
         private void RecordParkLoction()
         {
             lduld_record.ParkLocX = Agv.Navigation.Data.robotPose.pose.position.x;

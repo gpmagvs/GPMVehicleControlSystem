@@ -17,6 +17,8 @@ var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
 {
     LOG.SetLogFolderName(param.LogFolder);
+    LOG.INFO($"APP Version:V.{StaStored.APPVersion}");
+
     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
     DBhelper.Initialize();
     Console.WriteLine($"Memory when system start = {LinuxTools.GetMemUsedMB()} Mb");
