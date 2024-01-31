@@ -1,4 +1,6 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -59,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
         public Vector3 GyroData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.angular_velocity;
-        public bool IsAccSensorError => AccData.x == 0 && AccData.y == 0 && AccData.z == 0;
+        public bool IsAccSensorError => AccData == null ? false : (AccData.x == 0 && AccData.y == 0 && AccData.z == 0);
 
         private PITCH_STATES _PitchState = PITCH_STATES.NORMAL;
         public PITCH_STATES PitchState
@@ -98,7 +100,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task<bool> CheckStateDataContent()
         {
-
             if (!await base.CheckStateDataContent())
                 return false;
 
@@ -109,28 +110,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
+                LOG.Critical(ex.Message, ex);
                 _AccData = new Vector3(0, 0, 0);
                 return false;
             }
-            if (_imu_state.state != 0)
+            Current_Warning_Code = _imu_state.state != 0 ? AlarmCodes.IMU_Module_Error : AlarmCodes.None;
+            try
             {
-                Current_Warning_Code = AlarmCodes.IMU_Module_Error;
+                AccData = _imu_state == null ? new Vector3(0, 0, 0) : _imu_state.imuData.linear_acceleration;
+                if (!IsAccSensorError) //加速規異常
+                {
+                    PitchState = DeterminePitchState(AccData);
+                    IsImpacting = ImpactDetection(AccData, out var mag);
+                    IMUData = _imu_state.imuData;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Current_Warning_Code = AlarmCodes.None;
+                LOG.Critical(ex.Message, ex);
             }
-            AccData = _imu_state == null ? new Vector3(0, 0, 0) : _imu_state.imuData.linear_acceleration;
-            if (IsAccSensorError) //加速規異常
-            {
-
-            }
-            else
-            {
-                PitchState = DeterminePitchState(AccData);
-                IsImpacting = ImpactDetection(AccData, out var mag);
-            }
-            IMUData = _imu_state.imuData;
             return true;
         }
 
@@ -145,7 +143,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             var threshold = Options.PitchErrorThresHold;
             double Zaxis_Gval_abs = Math.Abs(AccData.z);
-
             if (Zaxis_Gval_abs <= threshold)
                 return PITCH_STATES.INCLINED;
             else
