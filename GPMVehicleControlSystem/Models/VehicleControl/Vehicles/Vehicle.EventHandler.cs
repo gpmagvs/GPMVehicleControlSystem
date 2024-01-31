@@ -591,13 +591,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+            Task.Factory.StartNew(() =>
             {
-                //雷射
-                if (direction != clsNavigation.AGV_DIRECTION.STOP)
+                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
+            });
+
+            Task.Factory.StartNew(() =>
+            {
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.STOP)
+                {
                     Laser.LaserChangeByAGVDirection(sender, direction);
-            }
+                }
+            });
         }
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
