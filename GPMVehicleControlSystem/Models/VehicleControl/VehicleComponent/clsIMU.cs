@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_IsImpacting != value)
                 {
                     _IsImpacting = value;
-                    if (value && Options.Enabled)
+                    if (value && Options.PitchErrorDetection)
                     {
                         OnImuStatesError?.Invoke(this, new IMUStateErrorEventData(AccData, AlarmCodes.IMU_Impacting, PitchState));
                     }
@@ -143,14 +143,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private PITCH_STATES DeterminePitchState(Vector3 AccData)
         {
-            double error_threshold = 0.5;//9.8 9.2
-            double Xaxis_g_error = Math.Abs(Math.Abs(AccData.x) - 9.8);
-            double Yaxis_g_error = Math.Abs(Math.Abs(AccData.y) - 9.8);
-            double Zaxis_g_error = Math.Abs(Math.Abs(AccData.z) - 9.8);
+            var threshold = Options.PitchErrorThresHold;
+            double Zaxis_Gval_abs = Math.Abs(AccData.z);
 
-            if ((Xaxis_g_error < error_threshold | Yaxis_g_error < error_threshold) && Zaxis_g_error > (9.8 - error_threshold))
-                return PITCH_STATES.SIDE_FLIP;
-            else if (Zaxis_g_error > error_threshold && AccData.z < 9.8)
+            if (Zaxis_Gval_abs <= threshold)
                 return PITCH_STATES.INCLINED;
             else
                 return PITCH_STATES.NORMAL;
