@@ -100,6 +100,8 @@ namespace GPMVehicleControlSystem.ViewModels
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
         public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
         public clsTaskDownloadData.clsOrderInfo OrderInfo { get; set; } = new clsTaskDownloadData.clsOrderInfo();
+        public string InitializingStatusText { get; internal set; } = "";
+
         public class clsTransferInfoViewModel
         {
             public string Action { get; set; } = "";
@@ -121,6 +123,10 @@ namespace GPMVehicleControlSystem.ViewModels
         {
             public EQ_HS_METHOD ConnectionType { get; set; }
             public bool Connected { get; set; }
+
+            public bool IsHandshaking { get; set; }
+
+            public string HandshakingInfoText { get; set; } = "Non-Handshake";
 
         }
     }

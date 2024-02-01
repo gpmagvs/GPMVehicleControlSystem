@@ -519,37 +519,60 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!status)
                 return;
+            await Task.Delay(200);
 
-            await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) | IsResetAlarmWorking)
+            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;
             var input = signal?.Input;
+
             var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             if (input == DI_ITEM.Horizon_Motor_Alarm_1)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
 
-            if (Sub_Status != SUB_STATUS.IDLE & Sub_Status != SUB_STATUS.Charging)
+
+            bool IsAGVAtChargeStation = lastVisitedMapPoint.IsCharge;
+            if (!IsAGVAtChargeStation)
             {
                 AlarmManager.AddAlarm(alarmCode, false);
                 return;
             }
 
             AlarmManager.AddWarning(alarmCode);
+
+            if (IsMotorReseting)
+            {
+                LOG.WARN($"{signal.Name}-Auto reset process not start. because it is Running by {(signal.Input== DI_ITEM.Horizon_Motor_Alarm_1? "Motor 2":"Motor 1")}");
+                return;
+            }
+            IsMotorReseting = true;
             #region 嘗試Reset馬達
             _ = Task.Factory.StartNew(async () =>
             {
                 LOG.WARN($"Horizon Motor IO Alarm, Try auto reset process start");
                 await Task.Delay(500);
-                while (signal.State) //異常持續存在
+
+                while (CheckMotorsAlarmExisting()) //異常持續存在
                 {
                     await Task.Delay(1000);
                     IsMotorReseting = false;
                     await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
                 }
+
+                bool CheckMotorsAlarmExisting()
+                {
+                    bool motor1Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1);
+                    bool motor2Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+
+                    LOG.TRACE($"Motor1-Alarm? {(motor1Alarm ? " Exist" : "Clear")}");
+                    LOG.TRACE($"Motor2-Alarm? {(motor2Alarm ? " Exist" : "Clear")}");
+
+                    return motor1Alarm || motor2Alarm;
+                }
+
             });
 
             #endregion
@@ -581,7 +604,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             AlarmManager.ClearAlarm(alarmCode);
-            return await ResetMotor(false);
+            return await ResetMotor(false, "ResetMotorWithWait");
         }
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)

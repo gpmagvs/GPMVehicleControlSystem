@@ -70,6 +70,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             FROM_TASK_DOWNLOAD_CONTENT,
             FROM_CIM_POST_IN
         }
+
+
+
+        internal bool IsHandshaking = false;
+        internal string HandshakeStatusText = "貨物移載...";
+        public string InitializingStatusText { get; internal set; } = "";
+
+
         public abstract clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;
@@ -206,7 +214,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
         protected bool IsResetAlarmWorking = false;
-        protected bool IsMotorReseting = false;
+        private bool _IsMotorReseting = false;
+        protected bool IsMotorReseting
+        {
+            get => _IsMotorReseting;
+            set
+            {
+                if (_IsMotorReseting != value)
+                {
+                    _IsMotorReseting = value;
+                    LOG.TRACE($"IsMotorReseting change to :{value}");
+                }
+            }
+        }
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
@@ -581,7 +601,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     WagoDI.StartAsync();
                     await DOSignalDefaultSetting();
-                    await ResetMotor();
+                    await ResetMotor(callerName: "After DIO Module Initialize done");
                 }
                 catch (SocketException ex)
                 {
@@ -660,10 +680,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         LOG.WARN($"偵測到AGV無帳有料，已完成自動建帳");
                 }
             }
-            IsWaitForkNextSegmentTask = false;
-            AGVSResetCmdFlag = false;
+
+            IsHandshaking = AGVSResetCmdFlag = IsWaitForkNextSegmentTask = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
+            HandshakeStatusText = "";
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();
@@ -671,15 +692,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     IsMotorReseting = false;
-                    await ResetMotor();
+                    await ResetMotor(callerName: "AGV Initialize Process");
                     (bool, string) result = await PreActionBeforeInitialize();
                     if (!result.Item1)
                     {
                         StatusLighter.AbortFlash();
                         return result;
                     }
-
+                    InitializingStatusText = "初始化開始";
                     Sub_Status = SUB_STATUS.Initializing;
+                    await Task.Delay(500);
                     IsInitialized = false;
 
                     result = await InitializeActions(InitializeCancelTokenResourece);
@@ -690,12 +712,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         StatusLighter.AbortFlash();
                         return result;
                     }
-
+                    InitializingStatusText = "雷射模式切換(Bypass)..";
+                    await Task.Delay(200);
                     await Laser.ModeSwitch(LASER_MODE.Bypass);
                     await Laser.AllLaserDisable();
                     await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
                     DirectionLighter.CloseAll();
+                    InitializingStatusText = "初始化完成!";
+                    await Task.Delay(500);
                     Sub_Status = SUB_STATUS.IDLE;
 
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
@@ -891,6 +916,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsInitialized = false;
             StopAllHandshakeTimer();
             previousSoftEmoTime = DateTime.Now;
+            HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"{alarmCode}" : HandshakeStatusText;
+
             AGVSTaskFeedBackReportAndOffline(alarmCode);
 
             if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
@@ -1022,7 +1049,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
             IsMotorReseting = false;
-            await ResetMotor();
+            await ResetMotor(callerName: "ResetAlarmsAsync");
             _ = Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
@@ -1057,11 +1084,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(delay);
             return true;
         }
-        public virtual async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
+        public virtual async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callerName = "")
         {
             try
             {
-                var caller_class_name = new StackTrace().GetFrame(1).GetMethod().DeclaringType.Name;
                 if (IsMotorReseting)
                 {
                     LOG.WARN($"Reset Motor Action is excuting by other process");
@@ -1069,10 +1095,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 IsMotorReseting = true;
                 await WagoDO.ResetSaftyRelay();
-                if (bypass_when_motor_busy_on & WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
+                if (bypass_when_motor_busy_on && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
+                {
+                    IsMotorReseting = false;
                     return true;
+                }
 
-                LOG.TRACE($"Reset Motor Process Start (caller:{caller_class_name})");
+                LOG.TRACE($"Reset Motor Process Start (caller:{callerName})");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, true, 100)) throw new Exception($"Horizon_Motor_Free set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");

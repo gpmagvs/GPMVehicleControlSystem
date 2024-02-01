@@ -90,6 +90,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
+                Agv.IsHandshaking = true;
+                Agv.HandshakeStatusText = $"{(action == ACTION_TYPE.Load ? "[放貨]" : "[取貨]")} 任務開始";
                 if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
                 {
                     var modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
@@ -428,7 +430,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                 {
                     Thread.Sleep(1);
-                    if(cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested)
                     {
                         return (false, AlarmCodes.Fork_Arm_Pose_Error);
                     }
@@ -579,6 +581,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
 
+                Agv.IsHandshaking = false;
 
                 if (status == ActionStatus.SUCCEEDED)
                 {
