@@ -145,8 +145,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var thetaInfo = $"當前角度={Navigation.Angle}";
             if (imu_event_data.Imu_AlarmCode == AlarmCodes.IMU_Pitch_State_Error)
             {
-                bool _warning_level_setting = _agv_pitch_error_alarm_level == ALARM_LEVEL.WARNING;
-                AlarmManager.AddAlarm(AlarmCodes.IMU_Pitch_State_Error, !_warning_level_setting);
+                bool IsRecoverable = _agv_pitch_error_alarm_level == ALARM_LEVEL.WARNING;
+                AlarmManager.AddAlarm(AlarmCodes.IMU_Pitch_State_Error, IsRecoverable);
             }
             else
                 AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
