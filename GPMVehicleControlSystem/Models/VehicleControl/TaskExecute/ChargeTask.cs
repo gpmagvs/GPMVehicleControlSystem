@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -66,10 +67,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         LOG.TRACE($"Sub Status will Change after {_count_down} sec");
                         _count_down--;
                     }, null, 1, 1000);
-
                     await Task.Delay(TimeSpan.FromSeconds(_time_to_wait_change_status));
                     _count_down_timer.Dispose();
-                    Agv.Sub_Status = !Agv.IsCharging ? SUB_STATUS.IDLE : SUB_STATUS.Charging;
+                    bool isAGVRunning = Agv.AGVC.ActionStatus == ActionStatus.PENDING || Agv.AGVC.ActionStatus == ActionStatus.ACTIVE;
+                    if (Agv.Sub_Status == SUB_STATUS.RUN || isAGVRunning)
+                        return;
+                    Agv.Sub_Status = !Agv.IsCharging ? (isAGVRunning ? SUB_STATUS.RUN : SUB_STATUS.IDLE) : SUB_STATUS.Charging;
                 });
             }
 
