@@ -170,11 +170,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           while (agv.AGVC._ActionStatus !=  RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
-                              {
                                   return;
-                              }
                               await Task.Delay(200);
                           }
+                          if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
+                              return;
                           LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
                           LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
                       }
