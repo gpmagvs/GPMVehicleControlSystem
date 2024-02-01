@@ -268,7 +268,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             else
             {
-                BuzzerPlayer.Action();
+                BuzzerPlayer.Action(action == ACTION_TYPE.Charge);
             }
         }
         public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;
