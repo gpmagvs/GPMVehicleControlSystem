@@ -36,14 +36,14 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 IsAlarmPlaying = true;
             });
         }
-        public static async void Action()
+        public static async void Action(bool IsCharge = false)
         {
             if (IsActionPlaying)
                 return;
             _ = Task.Run(async () =>
             {
                 await Stop();
-                await Play(SOUNDS.Action);
+                await Play(IsCharge ? SOUNDS.GoToChargeStation : SOUNDS.Action);
                 IsActionPlaying = true;
             });
         }
