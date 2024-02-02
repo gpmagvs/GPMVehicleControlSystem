@@ -105,7 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_IsImpacting != value)
                 {
                     _IsImpacting = value;
-                    if (value && Options.PitchErrorDetection)
+                    if (value && Options.Enabled)
                     {
                         OnImuStatesError?.Invoke(this, new IMUStateErrorEventData(AccData, AlarmCodes.IMU_Impacting, PitchState));
                     }

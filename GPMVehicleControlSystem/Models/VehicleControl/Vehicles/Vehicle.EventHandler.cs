@@ -155,18 +155,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleIMUStatesError(object? sender, clsIMU.IMUStateErrorEventData imu_event_data)
         {
-            ALARM_LEVEL _agv_pitch_error_alarm_level = Parameters.ImpactDetection.PitchErrorAlarmLevel;
+            Dictionary<AlarmCodes, ALARM_LEVEL> alarmLevelMap = new Dictionary<AlarmCodes, ALARM_LEVEL>() {
+                { AlarmCodes.IMU_Impacting ,Parameters.ImpactDetection.ImpactingAlarmLevel },
+                { AlarmCodes.IMU_Pitch_State_Error ,Parameters.ImpactDetection.PitchErrorAlarmLevel }
+            };
+
+            ALARM_LEVEL alarm_level = alarmLevelMap[imu_event_data.Imu_AlarmCode];
+
+            bool IsRecoverable = alarm_level == ALARM_LEVEL.WARNING;
+            AlarmManager.AddAlarm(imu_event_data.Imu_AlarmCode, IsRecoverable);
 
             var locInfo = $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})";
             var thetaInfo = $"當前角度={Navigation.Angle}";
-            if (imu_event_data.Imu_AlarmCode == AlarmCodes.IMU_Pitch_State_Error)
-            {
-                bool IsRecoverable = _agv_pitch_error_alarm_level == ALARM_LEVEL.WARNING;
-                AlarmManager.AddAlarm(AlarmCodes.IMU_Pitch_State_Error, IsRecoverable);
-            }
-            else
-                AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
-
             LOG.WARN($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nState={imu_event_data.ToJson()}");
         }
 
