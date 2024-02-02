@@ -21,6 +21,8 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using MathNet.Numerics;
 using AGVSystemCommonNet6.Alarm;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
+using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -57,6 +59,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             IMU.OnImuStatesError += HandleIMUStatesError;
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
+            IMU.OnMaxMinGvalChanged += Handle_IMU_OnMaxMinGvalChanged;
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             OnParamEdited += (param) => { this.Parameters = param; };
 
@@ -103,6 +106,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 };
             }
+        }
+
+        private Point Handle_IMU_OnMaxMinGvalChanged()
+        {
+            var _currentCoordination = Navigation.Data.robotPose.pose.position;
+            LOG.TRACE($"IMU Max/Min Value Changed At {_currentCoordination.ToJson()}=> IMU Data:{IMU.MaxMinGValRecord.ToJson(Formatting.Indented)}");
+            return _currentCoordination;
+
         }
 
 
@@ -545,7 +556,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (IsMotorReseting)
             {
-                LOG.WARN($"{signal.Name}-Auto reset process not start. because it is Running by {(signal.Input== DI_ITEM.Horizon_Motor_Alarm_1? "Motor 2":"Motor 1")}");
+                LOG.WARN($"{signal.Name}-Auto reset process not start. because it is Running by {(signal.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? "Motor 2" : "Motor 1")}");
                 return;
             }
             IsMotorReseting = true;
