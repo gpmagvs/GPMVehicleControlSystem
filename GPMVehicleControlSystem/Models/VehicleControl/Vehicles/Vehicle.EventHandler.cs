@@ -108,12 +108,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private Point Handle_IMU_OnMaxMinGvalChanged()
+        private (Point coordination, SUB_STATUS sub_status, clsTaskDownloadData taskData) Handle_IMU_OnMaxMinGvalChanged()
         {
-            var _currentCoordination = Navigation.Data.robotPose.pose.position;
-            LOG.TRACE($"IMU Max/Min Value Changed At {_currentCoordination.ToJson()}=> IMU Data:{IMU.MaxMinGValRecord.ToJson(Formatting.Indented)}");
-            return _currentCoordination;
-
+            try
+            {
+                var _currentCoordination = Navigation.Data.robotPose.pose.position;
+                return new(_currentCoordination, _Sub_Status, _RunTaskData);
+            }
+            catch (Exception)
+            {
+                return new(new Point(0, 0, 0), SUB_STATUS.UNKNOWN, new clsTaskDownloadData());
+            }
         }
 
 

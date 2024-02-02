@@ -1,6 +1,8 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -9,7 +11,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
+using SQLitePCL;
 using System.Text.Json.Serialization;
+using WebSocketSharp;
+using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -57,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         internal delegate clsImpactDetectionParams OptionsFetchDelegate();
         internal OptionsFetchDelegate OnOptionsFetching;
         internal event EventHandler<Vector3> OnAccelermeterDataChanged;
-        public delegate Point GValMaxMinValChange();
+        public delegate (Point coordination, SUB_STATUS sub_status, clsTaskDownloadData taskData) GValMaxMinValChange();
         internal GValMaxMinValChange OnMaxMinGvalChanged;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
         private Vector3 _AccData;
@@ -135,7 +140,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     IsImpacting = ImpactDetection(AccData, out var mag);
                     IMUData = _imu_state.imuData;
 
-                    MaxAndMiniGValueUpdate(AccData);
+                    MaxAndMiniGValueUpdate(IMUData.linear_acceleration);
                 }
             }
             catch (Exception ex)
@@ -146,60 +151,54 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public void ResetMaxAndMinGvalRecord()
         {
-            MaxMinGValRecord.Reset();
+            MaxMinGValRecord.Reset(new Vector3(AccData.x / 9.8, AccData.y / 9.8, AccData.z / 9.8));
+            SaveRecordValue(MaxMinGValRecord);
+            LOG.TRACE($"IMU最大最小值紀錄已重置...{MaxMinGValRecord.ToJson()}");
         }
         private void MaxAndMiniGValueUpdate(Vector3 accData)
         {
             double currentGx = Math.Abs(accData.x / 9.8);
             double currentGy = Math.Abs(accData.y / 9.8);
             double currentGz = Math.Abs(accData.z / 9.8);
-
-            double maxGx = currentGx > MaxMinGValRecord.MaxVals.x ? currentGx : MaxMinGValRecord.MaxVals.x;
-            double maxGy = currentGy > MaxMinGValRecord.MaxVals.y ? currentGy : MaxMinGValRecord.MaxVals.y;
-            double maxGz = currentGz > MaxMinGValRecord.MaxVals.z ? currentGz : MaxMinGValRecord.MaxVals.z;
-
-            double minGx = currentGx < MaxMinGValRecord.MinVals.x ? currentGx : MaxMinGValRecord.MinVals.x;
-            double minGy = currentGy < MaxMinGValRecord.MinVals.y ? currentGy : MaxMinGValRecord.MinVals.y;
-            double minGz = currentGz < MaxMinGValRecord.MinVals.z ? currentGz : MaxMinGValRecord.MinVals.z;
-
-
-            bool IsAnyMaxGValChanged = maxGx != MaxMinGValRecord.MaxVals.x || maxGy != MaxMinGValRecord.MaxVals.y || maxGz != MaxMinGValRecord.MaxVals.z;
-            bool IsAnyMinGValChanged = minGx != MaxMinGValRecord.MinVals.x || minGy != MaxMinGValRecord.MinVals.y || minGz != MaxMinGValRecord.MinVals.z;
-
-            MaxMinGValRecord.MaxVals.x = maxGx;
-            MaxMinGValRecord.MaxVals.y = maxGy;
-            MaxMinGValRecord.MaxVals.z = maxGz;
-
-            MaxMinGValRecord.MinVals.x = minGx;
-            MaxMinGValRecord.MinVals.y = minGy;
-            MaxMinGValRecord.MinVals.z = minGz;
-
-            if (IsAnyMaxGValChanged || IsAnyMinGValChanged)
+            double currentMag = Vector<double>.Build.DenseOfArray(new double[] { currentGx, currentGy, currentGz }).L2Norm();
+            bool IsAnyMaxGValChanged = currentMag > MaxMinGValRecord.MaxMag;
+            if (IsAnyMaxGValChanged)
             {
-
-                Point _happen_corrdination = new Point();
-                if (OnMaxMinGvalChanged != null)
-                    _happen_corrdination = OnMaxMinGvalChanged();
-
-                if (IsAnyMaxGValChanged)
+                MaxMinGValRecord.AccVal = new Vector3(currentGx, currentGy, currentGz);
+                Task.Factory.StartNew(() =>
                 {
+                    Point _happen_corrdination = new Point();
+                    if (OnMaxMinGvalChanged != null)
+                    {
+                        (Point coordination, SUB_STATUS sub_status, clsTaskDownloadData taskData) agv_status = OnMaxMinGvalChanged();
+                        _happen_corrdination = agv_status.coordination;
+                        MaxMinGValRecord.AGV_Status = agv_status.sub_status.ToString();
+                        MaxMinGValRecord.AGV_TaskName = agv_status.taskData.Task_Name;
+                        MaxMinGValRecord.AGV_Action = agv_status.taskData.Action_Type.ToString();
+                    }
                     MaxMinGValRecord.Coordination = _happen_corrdination;
                     MaxMinGValRecord.Time = DateTime.Now;
-                }
-                SaveRecordValue(_happen_corrdination, MaxMinGValRecord);
+                    SaveRecordValue(MaxMinGValRecord);
+                });
             }
 
         }
         public class clsMaxMinGvalDataSaveModel
         {
             public DateTime Time { get; set; } = DateTime.MinValue;
+            public string AGV_Status { get; set; } = "";
+            public string AGV_TaskName { get; set; } = "";
+            public string AGV_Action { get; set; } = "";
             public Point Coordination { get; set; } = new Point();
-            public Vector3 MaxVals { get; set; } = new Vector3();
-            public Vector3 MinVals { get; set; } = new Vector3();
+            public Vector3 AccVal { get; set; } = new Vector3();
+            public double MaxMag => Vector<double>.Build.DenseOfArray(new double[] { AccVal.x, AccVal.y, AccVal.z }).L2Norm();
 
-            public void Reset()
+            public void Reset(Vector3 defaultVal)
             {
-                MaxVals = MinVals = new Vector3(0, 0, 0);
+                Time = DateTime.Now;
+                Coordination = new Point();
+                AGV_Status = AGV_TaskName = AGV_Action = "";
+                AccVal = defaultVal;
             }
         }
         private void LoadMaxMiniRecords()
@@ -211,11 +210,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        private void SaveRecordValue(Point _happen_corrdination, clsMaxMinGvalDataSaveModel record)
+        private void SaveRecordValue(clsMaxMinGvalDataSaveModel record)
         {
             try
             {
-                var json = Newtonsoft.Json.JsonConvert.SerializeObject(record, Newtonsoft.Json.Formatting.Indented);
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(record, Formatting.Indented);
+                LOG.TRACE($"Save IMU Max/Min Record:{json} to : {MinMaxRecordFilePath} ");
                 File.WriteAllText(MinMaxRecordFilePath, json);
             }
             catch (Exception ex)

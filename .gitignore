@@ -213,3 +213,4 @@ VCS_Release
 /GPMVehicleControlSystem/task_name.txt
 /GPMVehicleControlSystem/VMS.db
 /GPMVehicleControlSystem/uploads
+/GPMVehicleControlSystem/IMU_MaxMin_Record.json
