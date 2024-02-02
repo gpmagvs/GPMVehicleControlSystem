@@ -282,7 +282,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             module_info.reader.yValue = tag_pose_y;
                             module_info.reader.theta = tag_theta;
 
-                            module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
+                            module_info.IMU.imuData.linear_acceleration.x = (new Random(DateTime.Now.Second)).Next(10, 20) / 10.0 + (new Random(DateTime.Now.Second)).Next(1, 1000) / 100.0;
                             await Task.Delay(TimeSpan.FromSeconds(delay_time));
                             module_info.IMU.imuData.linear_acceleration.x = 0.0001;
                             module_info.Battery.batteryLevel -= 1;
