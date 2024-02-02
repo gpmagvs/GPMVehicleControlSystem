@@ -7,6 +7,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.MAP;
 using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -101,7 +102,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
         public clsTaskDownloadData.clsOrderInfo OrderInfo { get; set; } = new clsTaskDownloadData.clsOrderInfo();
         public string InitializingStatusText { get; internal set; } = "";
-
+        public clsIMU.clsMaxMinGvalDataSaveModel IMUMaxMinValRecord { get; internal set; } = new clsIMU.clsMaxMinGvalDataSaveModel();
         public class clsTransferInfoViewModel
         {
             public string Action { get; set; } = "";

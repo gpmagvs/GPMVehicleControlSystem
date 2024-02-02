@@ -97,7 +97,8 @@ namespace GPMVehicleControlSystem.ViewModels
 
                     },
                     OrderInfo = AGV.orderInfoViewModel,
-                    InitializingStatusText = AGV.InitializingStatusText
+                    InitializingStatusText = AGV.InitializingStatusText,
+                    IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord
 
                 };
                 return data_view_model;
