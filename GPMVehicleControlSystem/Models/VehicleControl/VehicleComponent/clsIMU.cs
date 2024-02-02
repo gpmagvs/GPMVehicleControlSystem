@@ -142,7 +142,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private PITCH_STATES DeterminePitchState(Vector3 AccData)
         {
             var threshold = Options.PitchErrorThresHold;
-            double Zaxis_Gval_abs = Math.Abs(AccData.z);
+            double Zaxis_Gval_abs = Math.Abs(AccData.z / 9.8); //轉換成G值
             if (Zaxis_Gval_abs <= threshold)
                 return PITCH_STATES.INCLINED;
             else
