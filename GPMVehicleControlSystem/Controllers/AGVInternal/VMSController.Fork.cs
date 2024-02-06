@@ -280,5 +280,25 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             });
             return Ok();
         }
+
+        [HttpGet("Fork/Pin/Init")]
+        public async Task<IActionResult> PinInit()
+        {
+            forkAgv.PinHardware?.Init();
+            return Ok();
+        }
+
+        [HttpGet("Fork/Pin/Lock")]
+        public async Task<IActionResult> PinLock()
+        {
+            forkAgv.PinHardware?.Lock();
+            return Ok();
+        }
+        [HttpGet("Fork/Pin/Release")]
+        public async Task<IActionResult> PinRelease()
+        {
+            forkAgv.PinHardware?.Release();
+            return Ok();
+        }
     }
 }
