@@ -256,8 +256,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             List<Task> _actions = new List<Task>();
             if (PinHardware != null)
             {
-                Task Pin_Init_Task = Task.Factory.StartNew(async () =>
+                Task Pin_Init_Task = await Task.Factory.StartNew(async () =>
                 {
+                    InitializingStatusText = "PIN-模組初始化";
                     try
                     {
                         await PinHardware.Init();
@@ -273,8 +274,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
                 _pin_init_result = (true, "Pin is not mounted");
 
-            Task ForkLift_Init_Task = Task.Factory.StartNew(async () =>
+            Task ForkLift_Init_Task = await Task.Factory.StartNew(async () =>
             {
+                await Task.Delay(700);
                 InitializingStatusText = "牙叉初始化動作中";
                 ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
                 if (ForkLifter.Enable)

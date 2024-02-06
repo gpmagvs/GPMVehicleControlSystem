@@ -1,13 +1,18 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.Vehicle_Control;
 using RosSharp.RosBridgeClient;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
-    public class clsPin : IRosSocket
+    public class clsPin : CarComponent, IRosSocket
     {
+
+        public string PinActionServiceName = "/pin_action";
+        public string PinActionDonwServiceName = "/pin_done_action";
+
         public bool IsPinActionDone;
 
         private RosSocket _rosSocket;
@@ -23,14 +28,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             set
             {
                 _rosSocket = value;
-                _rosSocket?.AdvertiseService<PinCommandRequest, PinCommandResponse>("/pin_done_action", PinDoneActionCallback);
-                LOG.TRACE($"/pin_done_action Service advertised.");
+                _rosSocket?.AdvertiseService<PinCommandRequest, PinCommandResponse>(PinActionDonwServiceName, PinDoneActionCallback);
+                LOG.TRACE($"[Pin] {PinActionDonwServiceName} Service advertised (Action request service name={PinActionServiceName})");
             }
         }
 
+        public override COMPOENT_NAME component_name => COMPOENT_NAME.PIN;
+
+        public override string alarm_locate_in_name => "PIN_DRIVER";
+
         public clsPin()
         {
-
         }
 
         /// <summary>
@@ -40,41 +48,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task Init()
         {
             pin_command.command = "init";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
 
         }
 
         public async Task Orig()
         {
             pin_command.command = "orig";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
         }
         public async Task Up()
         {
             pin_command.command = "up";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
         }
         public async Task Down()
         {
             pin_command.command = "down";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
         }
         public async Task Lock()
         {
             pin_command.command = "lock";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
         }
         public async Task Release()
         {
             pin_command.command = "release";
-            await _Callservice(pin_command);
+            await _CallPinCommandActionService(pin_command);
         }
 
 
-        private async Task<bool> _Callservice(PinCommandRequest request)
+        private async Task<bool> _CallPinCommandActionService(PinCommandRequest request)
         {
             IsPinActionDone = false;
-            PinCommandResponse _resonpse = await _rosSocket.CallServiceAndWait<PinCommandRequest, PinCommandResponse>("/pin_action", request);
+            PinCommandResponse _resonpse = await _rosSocket.CallServiceAndWait<PinCommandRequest, PinCommandResponse>(PinActionServiceName, request);
             if (_resonpse.confirm)
             {
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -84,6 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (_wait.IsCancellationRequested)
                     {
                         LOG.ERROR($"Pin-{request.command} request timeout");
+                        Current_Alarm_Code = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes.Pin_Action_Error;
                         throw new TimeoutException();
                     }
                 }
