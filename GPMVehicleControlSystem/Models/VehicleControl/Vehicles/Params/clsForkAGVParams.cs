@@ -10,6 +10,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public double VehielLengthWitchForkArmExtend { get; set; } = 160.0;
         public double UplimitPose { get; set; } = 35;
         public double DownlimitPose { get; set; } = 0;
+        /// <summary>
+        /// 是否搭載PIN
+        /// </summary>
+        public bool IsPinMounted { get; set; } = true;
         public bool NoWaitForkArmFinishAndMoveOutInWorkStation { get; set; } = true;
         /// <summary>
         /// 退至二次定位點不等待就定位牙叉即開始回HOME
