@@ -831,7 +831,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return new(tag, x, y, theta);
         }
 
-        protected internal async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+        protected virtual internal async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
             AGVC.Throttle_rate_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevHandlePeriod;
