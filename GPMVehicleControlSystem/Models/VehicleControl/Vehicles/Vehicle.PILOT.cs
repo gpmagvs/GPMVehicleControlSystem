@@ -84,9 +84,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
             AGV_Reset_Flag = AGVSResetCmdFlag = false;
-            Thread _executingTaskThread = new Thread(async(_taskDownloadData) =>
+            Thread _executingTaskThread = new Thread(async (_taskDownloadData) =>
             {
-                clsTaskDownloadData _downloadedData= (clsTaskDownloadData)_taskDownloadData;
+                clsTaskDownloadData _downloadedData = (clsTaskDownloadData)_taskDownloadData;
                 AGV_Reset_Flag = AGVSResetCmdFlag = false;
                 if (IsActionFinishTaskFeedbackExecuting)
                 {
@@ -262,8 +262,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void WriteTaskNameToFile(string task_Name)
         {
-            TaskName = task_Name;
-            File.WriteAllText("task_name.txt", task_Name);
+            try
+            {
+                TaskName = task_Name;
+                File.WriteAllText("task_name.txt", task_Name);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex.Message, ex);
+            }
         }
 
         private void ReadTaskNameFromFile()
