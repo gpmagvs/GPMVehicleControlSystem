@@ -225,7 +225,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Coordination = Corrdination,
                     Odometry = Odometry,
                     AGV_Reset_Flag = AGV_Reset_Flag,
-                    Alarm_Code = _RunTaskData.IsLocalTask &!Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
+                    Alarm_Code = _RunTaskData.IsLocalTask && !Debugger.IsAttached ? new AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[0] : alarm_codes,
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };
@@ -262,7 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = false;
                     LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, delay: 10, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
                     //Sub_Status = SUB_STATUS.IDLE;
