@@ -58,22 +58,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (!Agv.Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold)
             {
-                int _time_to_wait_change_status = 15;//sec
-                Task.Factory.StartNew(async () =>
+                _ = Task.Run(async () =>
                 {
+                    await Task.Delay(1000);
+                    CancellationTokenSource _cancelTokenSorurce = new CancellationTokenSource();
+                    int _time_to_wait_change_status = 15;//sec
                     var _count_down = _time_to_wait_change_status;
-                    Timer _count_down_timer = new Timer((_obj) =>
+                    while (_count_down > 0)
                     {
+                        if (Agv.Sub_Status != SUB_STATUS.Charging)
+                        {
+                            LOG.TRACE($"After charge count down process canceled(Because AGV Sub_Status Now is {Agv.Sub_Status})");
+                            return;
+                        }
                         LOG.TRACE($"Sub Status will Change after {_count_down} sec");
                         _count_down--;
-                    }, null, 1, 1000);
-                    await Task.Delay(TimeSpan.FromSeconds(_time_to_wait_change_status));
-                    _count_down_timer.Dispose();
+                        Thread.Sleep(1000);
+                    }
+                    LOG.TRACE($"Count down Finish");
                     bool isAGVRunning = Agv.AGVC.ActionStatus == ActionStatus.PENDING || Agv.AGVC.ActionStatus == ActionStatus.ACTIVE;
                     if (Agv.Sub_Status == SUB_STATUS.RUN || isAGVRunning)
                         return;
                     Agv.Sub_Status = !Agv.IsCharging ? (isAGVRunning ? SUB_STATUS.RUN : SUB_STATUS.IDLE) : SUB_STATUS.Charging;
                 });
+
             }
 
 
