@@ -59,7 +59,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
             TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
-            AGV_Reset_Flag = AGVSResetCmdFlag = false;
 
             var action_type = taskDownloadData.Action_Type;
 
@@ -84,6 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
             Thread _executingTaskThread = new Thread(async(_taskDownloadData) =>
             {
                 clsTaskDownloadData _downloadedData= (clsTaskDownloadData)_taskDownloadData;
