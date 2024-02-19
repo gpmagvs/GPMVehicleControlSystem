@@ -440,9 +440,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             //I1130 12:47:19.313843  2141 INNERS.h:512] 0, 99, 26653, 0, 4560, 28
             //C:\Users\jinwei\Documents\GPM LOG\2023-12-04\batteryLog
-            if (!Directory.Exists(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder))
-                return;
-
+            Directory.CreateDirectory(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder);
             string logFolder = Path.Combine(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder, $@"{DateTime.Now.ToString("yyyy-MM-dd")}\batteryLog");
             Directory.CreateDirectory(logFolder);
             string logFilePath = Path.Combine(logFolder, "batteryLog.INFO");
