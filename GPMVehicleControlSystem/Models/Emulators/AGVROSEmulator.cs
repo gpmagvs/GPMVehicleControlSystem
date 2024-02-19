@@ -301,8 +301,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                 module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
 
                                 module_info.reader.tagID = tag;
-                                module_info.reader.xValue = tag_pose_x;
-                                module_info.reader.yValue = tag_pose_y;
+                                module_info.reader.xValue = 0;//這是距離Tag中心的X偏差值
+                                module_info.reader.yValue = 0;//這是距離Tag中心的Y偏差值
                                 module_info.reader.theta = tag_theta;
                                 module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
 
@@ -440,6 +440,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             //I1130 12:47:19.313843  2141 INNERS.h:512] 0, 99, 26653, 0, 4560, 28
             //C:\Users\jinwei\Documents\GPM LOG\2023-12-04\batteryLog
+            if (!Directory.Exists(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder))
+                return;
+
             string logFolder = Path.Combine(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder, $@"{DateTime.Now.ToString("yyyy-MM-dd")}\batteryLog");
             Directory.CreateDirectory(logFolder);
             string logFilePath = Path.Combine(logFolder, "batteryLog.INFO");
