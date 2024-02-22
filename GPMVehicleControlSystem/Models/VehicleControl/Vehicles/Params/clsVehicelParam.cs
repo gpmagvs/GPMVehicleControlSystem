@@ -10,7 +10,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
     public class clsVehicelParam
     {
         public Dictionary<string, string> Descrption { get; set; } = new Dictionary<string, string>() {
-            { "AgvType(車款)","0:叉車AGV, 1:潛盾AGV, 2:巡檢AGV" },
+            { "AgvType(車款)","0:叉車AGV,1:YUNTECH_FORK_AGV, 2:巡檢AGV, 3:潛盾AGV" },
             { "OrderInfoFetchSource(任務訂單訊息來源)","0:從派車任務內容, 1:接收CIM呼叫API" },
             { "LDULD_Task_No_Entry(空取空放)","true:啟用 , false:禁用" },
             { "EQHandshakeMethod(設備交握預設方式)","0:光IO , 1:Modbus , 2:模擬器" },

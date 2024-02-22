@@ -59,7 +59,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
         public Vector3 GyroData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.angular_velocity;
-        public bool IsAccSensorError => AccData.x == 0 && AccData.y == 0 && AccData.z == 0;
+        public bool IsAccSensorError => AccData == null ? true : AccData.x == 0 && AccData.y == 0 && AccData.z == 0;
 
         private PITCH_STATES _PitchState = PITCH_STATES.NORMAL;
         public PITCH_STATES PitchState
@@ -127,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             else
             {
-                PitchState = DeterminePitchState(AccData,Options.PitchErrorThresHold);
+                PitchState = DeterminePitchState(AccData, Options.PitchErrorThresHold);
                 IsImpacting = ImpactDetection(AccData, Options.ThresHold, out var mag);
             }
             IMUData = _imu_state.imuData;
@@ -141,9 +141,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             return mag > threshold;
         }
 
-        private PITCH_STATES DeterminePitchState(Vector3 AccData, double pitchErrorThresHold=0.5)
+        private PITCH_STATES DeterminePitchState(Vector3 AccData, double pitchErrorThresHold = 0.5)
         {
-            
+
             double Xaxis_g_error = Math.Abs(Math.Abs(AccData.x) - 9.8);
             double Yaxis_g_error = Math.Abs(Math.Abs(AccData.y) - 9.8);
             double Zaxis_g_error = Math.Abs(Math.Abs(AccData.z) - 9.8);
