@@ -400,12 +400,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = Parameters.Connections["RosBridge"].IP;
                 int RosBridge_Port = Parameters.Connections["RosBridge"].Port;
-                WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
+                WagoDO = new clsDOModule(Wago_IP, Wago_Port)
                 {
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version,
                 };
-                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO, Wago_Protocol_Interval_ms)
+                WagoDI = new clsDIModule(Wago_IP, Wago_Port, Wago_Protocol_Interval_ms)
                 {
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version

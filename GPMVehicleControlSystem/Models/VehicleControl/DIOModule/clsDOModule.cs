@@ -28,11 +28,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             //ReadCurrentDOStatus();
         }
-        public clsDOModule(string IP, int Port, clsDOModule DoModuleRef) : base(IP, Port, DoModuleRef)
-        {
-            //ReadCurrentDOStatus();
-        }
-
         public override bool Connected { get => _Connected; set => _Connected = value; }
         internal override void RegistSignalEvents()
         {
@@ -149,9 +144,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         {
                             if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
                             {
-                                Current_Warning_Code = AlarmCodes.Wago_IO_Write_Fail;
+                                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                                 Thread.Sleep(100);
-                                Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
+                                Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                             }
                             LOG.WARN($"DO Module try reconnecting..");
                             Disconnect();
@@ -196,6 +191,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(string address, bool state)
         {
+            if (Current_Alarm_Code != AlarmCodes.None)
+                return false;
             try
             {
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
@@ -209,7 +206,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         await Task.Delay(1);
                         if (_timeout.IsCancellationRequested)
                         {
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
                     }
@@ -218,21 +215,22 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 else
                 {
                     LOG.ERROR("DO-" + address + $"Wago_IO_Write_Fail Error.{address}-Not found ");
-                    AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
-
+                    Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 LOG.ERROR("DO-" + address + $"Wago_IO_Write_Fail Error.{ex.Message + ex.StackTrace}");
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
         }
 
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
+            if (Current_Alarm_Code != AlarmCodes.None)
+                return false;
             try
             {
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
@@ -245,7 +243,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         await Task.Delay(1);
                         if (_timeout.IsCancellationRequested)
                         {
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
                     }
@@ -259,7 +257,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             catch (Exception ex)
             {
                 LOG.Critical(ex);
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
         }
@@ -277,13 +275,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
+            if (Current_Alarm_Code != AlarmCodes.None)
+                return false;
             try
             {
                 clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
                 if (DO_Start == null)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + start_signal + "Wago_IO_Write_Fail Error.");
-                    AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                    Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                     return false;
                 }
                 else
@@ -307,7 +307,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         Thread.Sleep(1);
                         if (_intime_detector.IsCancellationRequested)
                         {
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
                     }
@@ -319,7 +319,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 LOG.ERROR("DO-" + start_signal + $"Wago_IO_Write_Fail Error {ex.Message}");
                 LOG.Critical(ex);
-                AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
         }
