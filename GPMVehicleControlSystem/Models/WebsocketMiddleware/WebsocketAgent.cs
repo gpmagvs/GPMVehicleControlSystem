@@ -66,7 +66,9 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     while (!closeFlag)
                     {
                         await Task.Delay(100);
-                        var data = OnViewDataFetching();
+                        object? data = null;
+                        if (OnViewDataFetching != null)
+                            data = OnViewDataFetching();
                         if (data != null)
                         {
                             try
