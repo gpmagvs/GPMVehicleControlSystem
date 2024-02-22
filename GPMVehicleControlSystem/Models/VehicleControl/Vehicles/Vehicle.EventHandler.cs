@@ -163,7 +163,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ALARM_LEVEL alarm_level = alarmLevelMap[imu_event_data.Imu_AlarmCode];
 
             bool IsRecoverable = alarm_level == ALARM_LEVEL.WARNING;
-            AlarmManager.AddAlarm(imu_event_data.Imu_AlarmCode, IsRecoverable);
+
+            if (IsRecoverable)
+                AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
+            else
+                AlarmManager.AddAlarm(imu_event_data.Imu_AlarmCode, IsRecoverable: false);
+
 
             var locInfo = $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})";
             var thetaInfo = $"當前角度={Navigation.Angle}";
