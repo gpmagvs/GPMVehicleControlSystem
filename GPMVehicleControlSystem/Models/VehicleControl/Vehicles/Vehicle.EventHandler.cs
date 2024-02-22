@@ -28,6 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        public bool ModuleInformationUpdatedInitState = false;
         private bool IsLaserRecoveryHandled = false;
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
@@ -755,6 +756,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
                     LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
 
+                ModuleInformationUpdatedInitState = true;
             }
             catch (Exception ex)
             {

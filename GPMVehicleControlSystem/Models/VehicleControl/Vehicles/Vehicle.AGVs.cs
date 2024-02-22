@@ -148,8 +148,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 生成支援WebAPI的RunningStatus Model
         /// </summary>
         /// <returns></returns>
-        public virtual clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
+        public virtual (bool report_allow, clsRunningStatus running_status) HandleWebAPIProtocolGetRunningStatus()
         {
+            if (!this.ModuleInformationUpdatedInitState)
+            {
+                return (false, new clsRunningStatus());
+            }
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
@@ -178,12 +182,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };
-                return status;
+                return (true, status);
             }
             catch (Exception ex)
             {
                 //LOG.ERROR("GenRunningStateReportData ", ex);
-                return new clsRunningStatus();
+                return (false, new clsRunningStatus());
             }
         }
 
@@ -203,8 +207,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 生成支援TCPIP通訊的RunningStatus Model
         /// </summary>
         /// <returns></returns>
-        protected virtual RunningStatus HandleTcpIPProtocolGetRunningStatus()
+        protected virtual (bool report_allow, RunningStatus running_status) HandleTcpIPProtocolGetRunningStatus()
         {
+
+            if (!this.ModuleInformationUpdatedInitState)
+            {
+                return (false, new RunningStatus());
+            }
+
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
@@ -229,12 +239,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Escape_Flag = ExecutingTaskModel == null ? false : ExecutingTaskModel.RunningTaskData.Escape_Flag,
                     IsCharging = IsCharging
                 };
-                return status;
+                return (true, status);
             }
             catch (Exception ex)
             {
                 //LOG.ERROR("GenRunningStateReportData ", ex);
-                return new RunningStatus();
+                return (false, new RunningStatus());
             }
         }
 

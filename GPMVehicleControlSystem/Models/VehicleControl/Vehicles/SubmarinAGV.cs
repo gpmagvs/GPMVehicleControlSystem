@@ -46,17 +46,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
 
-        protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
+        protected override (bool report_allow, RunningStatus running_status) HandleTcpIPProtocolGetRunningStatus()
         {
-            var status = base.HandleTcpIPProtocolGetRunningStatus();
-            status.CSTID = new string[] { CSTReader.ValidCSTID };
-            return status;
+            var feedbackDto = base.HandleTcpIPProtocolGetRunningStatus();
+            feedbackDto.running_status.CSTID = new string[] { CSTReader.ValidCSTID };
+            return feedbackDto;
         }
-        public override clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
+        public override (bool report_allow, clsRunningStatus running_status) HandleWebAPIProtocolGetRunningStatus()
         {
-            var status = base.HandleWebAPIProtocolGetRunningStatus();
-            status.CSTID = new string[] { CSTReader.ValidCSTID };
-            return status;
+            var feedbackDto =  base.HandleWebAPIProtocolGetRunningStatus();
+            feedbackDto.running_status.CSTID = new string[] { CSTReader.ValidCSTID };
+            return feedbackDto;
         }
 
 
