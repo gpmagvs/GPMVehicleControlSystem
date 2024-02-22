@@ -70,32 +70,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="taskDownloadData"></param>
-        /// <returns></returns>
-        internal TASK_DOWNLOAD_RETURN_CODES AGVSTaskDownloadConfirm(clsTaskDownloadData taskDownloadData)
-        {
-
-            TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
-            AGV_Reset_Flag = AGVSResetCmdFlag = false;
-
-            var action_type = taskDownloadData.Action_Type;
-
-            if (GetSub_Status() == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
-                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
-
-            //if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
-            //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
-
-            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
-                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
-
-            LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
-            return returnCode;
-        }
-
-        /// <summary>
         /// 執行派車系統任務
         /// </summary>
         /// <param name="sender"></param>

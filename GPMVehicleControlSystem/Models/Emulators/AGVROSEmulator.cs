@@ -255,7 +255,6 @@ namespace GPMVehicleControlSystem.Models.Emulators
                                 {
                                     if (tag == previousTaskAction.planPath.poses[i].header.seq)
                                     {
-                                        LOG.TRACE($"Tag {tag} already pass.");
                                         continue;
                                     }
                                 }

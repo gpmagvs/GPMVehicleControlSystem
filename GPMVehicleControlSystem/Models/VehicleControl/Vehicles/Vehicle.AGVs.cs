@@ -65,6 +65,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskDownloadData"></param>
+        /// <returns></returns>
+        internal TASK_DOWNLOAD_RETURN_CODES AGVSTaskDownloadConfirm(clsTaskDownloadData taskDownloadData)
+        {
+
+            TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
+            AGV_Reset_Flag = AGVSResetCmdFlag = false;
+            ACTION_TYPE action_type = taskDownloadData.Action_Type;
+            MapPoint? destineStation = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
+            bool isMoveOrderButDestineIsWorkStation = destineStation?.StationType != STATION_TYPE.Normal && action_type == ACTION_TYPE.None;
+            if (GetSub_Status() == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
+
+            if (isMoveOrderButDestineIsWorkStation)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
+
+            LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
+            return returnCode;
+        }
+
         private async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
             await Task.Delay(1);
