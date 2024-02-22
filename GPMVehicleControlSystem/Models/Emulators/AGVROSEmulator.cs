@@ -13,12 +13,13 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using System.Diagnostics;
+using System.Drawing;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 
 namespace GPMVehicleControlSystem.Models.Emulators
 {
 
-    public class AGVROSEmulator
+    public partial class AGVROSEmulator
     {
         protected RosSocket? rosSocket;
         private ModuleInformation module_info = new ModuleInformation()
@@ -48,8 +49,8 @@ namespace GPMVehicleControlSystem.Models.Emulators
             {
                 driversState = new DriverState[2]
                  {
-                     new DriverState{ errorCode=21},
-                     new DriverState{ errorCode=21}
+                     new DriverState{},
+                     new DriverState{}
                  }
             },
             IMU = new GpmImuMsg
@@ -66,44 +67,48 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private LocalizationControllerResultMessage0502 localizeResult = new LocalizationControllerResultMessage0502();
         private ManualResetEvent RobotStopMRE = new ManualResetEvent(true);
         private ROBOT_CONTROL_CMD complex_cmd;
+        private bool _CycleStopFlag = false;
         public List<ushort> ChargeStationTags = new List<ushort>() { 50, 52, 6, 10 };
         private bool IsCharge = false;
         private bool IsCSTTriggering = false;
         public delegate bool ChargeSimulateActiveCheckDelegate(int tag);
         public ChargeSimulateActiveCheckDelegate OnChargeSimulationRequesting;
+        private VehicleControl.Vehicles.Vehicle Agv => StaStored.CurrentVechicle;
+        public delegate PointF OnLastVisitedTagChangedDelegate(int tag);
+        public OnLastVisitedTagChangedDelegate OnLastVisitedTagChanged;
         public clsEmulatorParams EmuParam => StaStored.CurrentVechicle.Parameters.Emulator;
+        private string rosbridge_ip = "127.0.0.1";
+        private int rosbridge_port = 9090;
         public AGVROSEmulator(clsEnums.AGV_TYPE agvType = clsEnums.AGV_TYPE.SUBMERGED_SHIELD)
         {
             this.agvType = agvType;
             var param = VehicleControl.Vehicles.Vehicle.LoadParameters();
-            string RosBridge_IP = param.Connections["RosBridge"].IP;
-            int RosBridge_Port = param.Connections["RosBridge"].Port;
+            rosbridge_ip = param.Connections["RosBridge"].IP;
+            rosbridge_port = param.Connections["RosBridge"].Port;
             module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(param.LastVisitedTag);
 
-            bool connected = Init(RosBridge_IP, RosBridge_Port);
+            bool connected = Init(rosbridge_ip, rosbridge_port);
             if (!connected)
             {
                 HandleRosDisconnected(null, EventArgs.Empty);
 
             }
-            void HandleRosDisconnected(object sender, EventArgs e)
-            {
-                rosSocket.protocol.OnClosed -= HandleRosDisconnected;
-                Task.Factory.StartNew(async () =>
-                {
-                    EmuLog("AGVC ROS Trying Reconnect...");
-                    while (!Init(RosBridge_IP, RosBridge_Port))
-                    {
-                        await Task.Delay(1000);
-                    }
-                    EmuLog("AGVC ROS Reconnected");
-                    rosSocket.protocol.OnClosed += HandleRosDisconnected;
-                    TopicsPublish();
-                });
-            }
             rosSocket.protocol.OnClosed += HandleRosDisconnected;
         }
 
+        void HandleRosDisconnected(object sender, EventArgs e)
+        {
+            rosSocket.protocol.OnClosed -= HandleRosDisconnected;
+            Task.Factory.StartNew(async () =>
+            {
+                while (!Init(rosbridge_ip, rosbridge_port))
+                {
+                    await Task.Delay(1000);
+                }
+                rosSocket.protocol.OnClosed += HandleRosDisconnected;
+                TopicsPublish();
+            });
+        }
         private bool Init(string RosBridge_IP, int RosBridge_Port)
         {
             bool isconnected = false;
@@ -118,15 +123,13 @@ namespace GPMVehicleControlSystem.Models.Emulators
             }
             if (isconnected)
             {
-
-                Task.Factory.StartNew(async () =>
+                Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
+                    Thread.Sleep(100);
                     TopicsAdvertise();
                     AdvertiseServices();
                     InitNewTaskCommandActionServer();
                     TopicsPublish();
-                    // _ = PublishLocalizeResult(rosSocket);
                 });
             }
             return isconnected;
@@ -155,7 +158,10 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderServiceCallack);
             rosSocket.AdvertiseService<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", ComplexRobotControlCallBack);
+            rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/command_action", VerticalActionCallback);
+            rosSocket.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/command_actionm", BatteryLockActionRequestHandler);
         }
+
 
         /// <summary>
         /// 建立 barcodemovebase server
@@ -170,6 +176,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         TaskCommandGoal previousTaskAction;
         bool _isPreviousMoveActionNotFinish = false;
         bool emergency_stop = false;
+        CancellationTokenSource emergency_stop_canceltoken_source = new CancellationTokenSource();
         private readonly clsEnums.AGV_TYPE agvType;
 
         bool isPreviousMoveActionNotFinish
@@ -178,155 +185,179 @@ namespace GPMVehicleControlSystem.Models.Emulators
             set
             {
                 _isPreviousMoveActionNotFinish = value;
-                LOG.TRACE($"isPreviousMoveActionNotFinish={value}");
             }
         }
 
-        public int SickLaserMode { get; internal set; } = 0;
+        public int SickLaserMode { get; internal set; }
 
         private void NavGaolHandle(object sender, TaskCommandGoal obj)
         {
-            Task.Factory.StartNew(() =>
+            TaskCommandActionServer actionServer = null;
+            actionServer = (TaskCommandActionServer)sender;
+            Thread thred = new Thread(() =>
             {
-                TaskCommandActionServer actionServer = (TaskCommandActionServer)sender;
-
-                emergency_stop = false;
                 if (obj.planPath.poses.Length == 0) //急停效果
                 {
-                    actionServer.AcceptedInvoke();
-                    emergency_stop = true;
                     EmuLog($"[ROS 車控模擬器] 空任務-緊急停止!!");
-                    isPreviousMoveActionNotFinish = false;
-                    previousTaskAction = null;
-                    actionServer.SucceedInvoke();
-                    return;
-                }
-                CancellationTokenSource cts = new CancellationTokenSource();
-                var Task_Watch_StatusActive = new Task(async () =>
-                {
-                    while (true)
+                    try
                     {
-                        await Task.Delay(1);
-                        if (actionServer.GetStatus() != ActionStatus.ACTIVE)
-                        {
-                            cts.Cancel();
-                            break;
-                        }
+                        actionServer?.SucceedInvoke();
+                        actionServer?.AcceptedInvoke();
+                        Thread.Sleep(100);
+                        actionServer?.SucceedInvoke();
                     }
-
-                });
-                EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
-                RobotStopMRE = new ManualResetEvent(true);
-                //是否為分段任務
-                //模擬走型
-                Task.Run(async () =>
-                {
-                    complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
-                    var firstTag = obj.planPath.poses.First().header.seq;
-                    IsCharge = false;
-                    module_info.Battery.dischargeCurrent = 13200;
-                    module_info.Battery.chargeCurrent = 0;
-
-                    for (int i = 0; i < obj.planPath.poses.Length; i++)
+                    catch (Exception ex)
                     {
-                        while (StaStored.CurrentVechicle.WagoDO.GetState(DO_ITEM.Horizon_Motor_Stop))
-                        {
-                            Console.WriteLine($"[Move simulation] Motro Stop. wait...");
-                            if (cts.IsCancellationRequested)
-                                return;
-                            await Task.Delay(1000);
-                        }
-                        if (cts.IsCancellationRequested)
-                        {
-                            isPreviousMoveActionNotFinish = false;
-                            previousTaskAction = null;
-                            actionServer.SucceedInvoke();
-                            return;
-                        }
-                        try
-                        {
-                            var pose = obj.planPath.poses[i];
-                            uint tag = pose.header.seq;
-                            if (isPreviousMoveActionNotFinish && previousTaskAction.planPath.poses.Length > i)
-                            {
-                                if (tag == previousTaskAction.planPath.poses[i].header.seq)
-                                {
-                                    LOG.TRACE($"Tag {tag} already pass.");
-                                    continue;
-                                }
-                            }
-                            double tag_pose_x = pose.pose.position.x;
-                            double tag_pose_y = pose.pose.position.y;
-                            double tag_theta = pose.pose.orientation.ToTheta();
-                            var current_position = module_info.nav_state.robotPose.pose.position;
-                            var delay_time = 1.0;
-                            //計算距離
-                            if (current_position.x == 0 && current_position.y == 0)
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(delay_time));
-                            }
-
-                            if (EmuParam.Move_Time_Mode == clsEmulatorParams.MOVE_TIME_EMULATION.DISTANCE)
-                            {
-                                var distance = Math.Sqrt(Math.Pow(tag_pose_x - current_position.x, 2) + Math.Pow(tag_pose_y - current_position.y, 2)); //m
-                                delay_time = distance / 0.8;
-                            }
-                            //module_info.Battery.batteryLevel -= 0x01;
-                            module_info.nav_state.lastVisitedNode.data = (int)tag;
-                            module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
-                            module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
-                            module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
-
-                            module_info.reader.tagID = tag;
-                            module_info.reader.xValue = tag_pose_x;
-                            module_info.reader.yValue = tag_pose_y;
-                            module_info.reader.theta = tag_theta;
-
-                            module_info.IMU.imuData.linear_acceleration.x = (new Random(DateTime.Now.Second)).Next(10, 20) / 10.0 + (new Random(DateTime.Now.Second)).Next(1, 1000) / 100.0;
-                            await Task.Delay(TimeSpan.FromSeconds(delay_time));
-                            module_info.IMU.imuData.linear_acceleration.x = 0.0001;
-                            module_info.Battery.batteryLevel -= 1;
-                            EmuLog($"Barcode data change to = {module_info.reader.ToJson()}");
-                            if (complex_cmd == ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
-                                break;
-
-                            if (tag == 18 & i == obj.planPath.poses.Length - 1 & Debugger.IsAttached)
-                            {
-                                module_info.nav_state.errorCode = 4;
-                                break;
-                            }
-                            RobotStopMRE.WaitOne();
-                        }
-                        catch (Exception ex)
-                        {
-                            EmuLog(ex.Message + $"\r\n{ex.StackTrace}");
-                        }
-                        if (i == 0)
-                            Task_Watch_StatusActive.Start();
+                        EmuLog(ex.Message + ex.StackTrace);
                     }
-
-                    if (OnChargeSimulationRequesting != null)
+                    finally
                     {
-                        bool charging_simulation = OnChargeSimulationRequesting(obj.finalGoalID);
-                        if (charging_simulation)
-                            StartChargeSimulation();
-                    }
-                    previousTaskAction = obj;
-                    EmuLog($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
-                    if (complex_cmd != ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
-                    {
-                        isPreviousMoveActionNotFinish = obj.finalGoalID != obj.planPath.poses.Last().header.seq;
-                    }
-                    else
-                    {
+                        emergency_stop = true;
+                        emergency_stop_canceltoken_source?.Cancel();
                         isPreviousMoveActionNotFinish = false;
                         previousTaskAction = null;
                     }
-                    await Task.Delay(1000);
-                    actionServer.SucceedInvoke();
+                    return;
+                }
+                EmuLog($"[ROS 車控模擬器] New Task , Task Name = {obj.taskID}, Tags Path = {string.Join("->", obj.planPath.poses.Select(p => p.header.seq))}");
+                actionServer.SetPeddingInvoke();
+                Thread.Sleep(100);
+                actionServer.SetActiveInvoke();
+                Task.Factory.StartNew(async () =>
+                {
+                    try
+                    {
+                        CancellationTokenSource cts = new CancellationTokenSource();
+                        emergency_stop_canceltoken_source = new CancellationTokenSource();
+                        emergency_stop = false;
+                        RobotStopMRE = new ManualResetEvent(true);
+                        _CycleStopFlag = false;
+                        complex_cmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
+                        var firstTag = obj.planPath.poses.First().header.seq;
+                        IsCharge = false;
+                        module_info.Battery.dischargeCurrent = 13200;
+                        module_info.Battery.chargeCurrent = 0;
+
+                        for (int i = 0; i < obj.planPath.poses.Length; i++)
+                        {
+                            if (cts.IsCancellationRequested)
+                            {
+                                isPreviousMoveActionNotFinish = false;
+                                previousTaskAction = null;
+                                actionServer.SucceedInvoke();
+                                return;
+                            }
+                            try
+                            {
+                                var pose = obj.planPath.poses[i];
+                                uint tag = pose.header.seq;
+                                if (isPreviousMoveActionNotFinish && previousTaskAction.planPath.poses.Length > i)
+                                {
+                                    if (tag == previousTaskAction.planPath.poses[i].header.seq)
+                                    {
+                                        continue;
+                                    }
+                                }
+                                double tag_pose_x = pose.pose.position.x;
+                                double tag_pose_y = pose.pose.position.y;
+                                double tag_theta = pose.pose.orientation.ToTheta();
+                                var current_position = module_info.nav_state.robotPose.pose.position;
+                                var delay_time = EmuParam.Move_Fixed_Time;
+                                //計算距離
+                                if (current_position.x == 0 && current_position.y == 0)
+                                {
+                                    await Task.Delay(TimeSpan.FromSeconds(delay_time));
+                                }
+
+                                double distanceFromDestine(RosSharp.RosBridgeClient.MessageTypes.Geometry.Point current, RosSharp.RosBridgeClient.MessageTypes.Geometry.Point destine)
+                                {
+                                    return Math.Sqrt(Math.Pow(destine.x - current.x, 2) + Math.Pow(destine.y - current.y, 2)); //m
+                                }
+
+                                var _speed = 2; //m/s
+                                var destine_position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(tag_pose_x, tag_pose_y, 0);
+                                double _distance_to_next_point = distanceFromDestine(module_info.nav_state.robotPose.pose.position, destine_position);
+                                double _timespend = _distance_to_next_point / _speed;
+                                var _x_delta = tag_pose_x - module_info.nav_state.robotPose.pose.position.x; //x方向距離  m/s
+                                var _y_delta = tag_pose_y - module_info.nav_state.robotPose.pose.position.y;
+
+                                var _x_speed = _x_delta / _timespend;
+                                var _y_speed = _y_delta / _timespend;
+
+                                Stopwatch stopwatch = Stopwatch.StartNew();
+                                while (stopwatch.ElapsedMilliseconds <= _timespend * 1000)
+                                {
+                                    if (emergency_stop_canceltoken_source.Token.IsCancellationRequested)
+                                        throw new TaskCanceledException();
+                                    await Task.Delay(TimeSpan.FromMilliseconds(100), emergency_stop_canceltoken_source.Token);
+                                    module_info.nav_state.robotPose.pose.position.x += _x_speed / 10.0;
+                                    module_info.nav_state.robotPose.pose.position.y += _y_speed / 10.0;
+                                    module_info.Mileage += _distance_to_next_point / 1000.0 * 0.1;
+                                }
+                                module_info.nav_state.lastVisitedNode.data = (int)tag;
+                                module_info.nav_state.robotPose.pose.position.x = tag_pose_x;
+                                module_info.nav_state.robotPose.pose.position.y = tag_pose_y;
+                                module_info.nav_state.robotPose.pose.orientation = tag_theta.ToQuaternion();
+
+                                module_info.reader.tagID = tag;
+                                module_info.reader.xValue = 0;//這是距離Tag中心的X偏差值
+                                module_info.reader.yValue = 0;//這是距離Tag中心的Y偏差值
+                                module_info.reader.theta = tag_theta;
+                                module_info.IMU.imuData.linear_acceleration.x = 0.02 + DateTime.Now.Second / 100.0;
+
+                                module_info.IMU.imuData.linear_acceleration.x = 0.0001;
+                                module_info.Battery.batteryLevel -= 1;
+
+                                if (_CycleStopFlag || emergency_stop)
+                                {
+                                    EmuLog("Cycle Stop Flag ON, Stop move.");
+                                    break;
+                                }
+                                RobotStopMRE.WaitOne();
+                            }
+                            catch (TaskCanceledException ex)
+                            {
+                                EmuLog("Task Canceled. " + ex.Message + $"\r\n{ex.StackTrace}");
+                                actionServer?.SucceedInvoke();
+                                return;
+                            }
+                            catch (Exception ex)
+                            {
+                                EmuLog(ex.Message + $"\r\n{ex.StackTrace}");
+                                actionServer?.SucceedInvoke();
+                                return;
+                            }
+
+                        }
+
+                        if (OnChargeSimulationRequesting != null)
+                        {
+                            bool charging_simulation = OnChargeSimulationRequesting(obj.finalGoalID);
+                            if (charging_simulation)
+                                StartChargeSimulation();
+                        }
+                        previousTaskAction = obj;
+                        EmuLog($"Final GoalID => {obj.finalGoalID} , Trajectory Final = {obj.planPath.poses.Last().header.seq}");
+                        if (complex_cmd != ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL)
+                        {
+                            isPreviousMoveActionNotFinish = obj.finalGoalID != obj.planPath.poses.Last().header.seq;
+                        }
+                        else
+                        {
+                            isPreviousMoveActionNotFinish = false;
+                            previousTaskAction = null;
+                        }
+                        actionServer?.SucceedInvoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        EmuLog($"WTF-{ex.Message}-{ex.StackTrace}");
+                    }
                 });
 
             });
+            thred.IsBackground = false;
+            thred.Start();
         }
 
         private void StartChargeSimulation()
@@ -334,7 +365,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             IsCharge = true;
             module_info.Battery.chargeCurrent = 23000;
             module_info.Battery.dischargeCurrent = 0;
-            _ = Task.Factory.StartNew(async () =>
+            _ = Task.Run(async () =>
             {
                 await Task.Delay(2000);
                 while (IsCharge)
@@ -372,15 +403,15 @@ namespace GPMVehicleControlSystem.Models.Emulators
         private async Task PublishModuleInformation(RosSocket rosSocket)
         {
             await Task.Delay(1);
-            await Task.Factory.StartNew(async () =>
+            await Task.Run(async () =>
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (rosSocket.protocol.IsAlive())
                 {
                     try
                     {
-                        await Task.Delay(50);
-
+                        await Task.Delay(100);
+                        module_info.Battery.maxCellTemperature = (byte)(24 + DateTime.Now.Second / 10.0);
                         if (stopwatch.ElapsedMilliseconds > 5000)
                         {
                             module_info.Battery.batteryLevel -= 1;
@@ -391,7 +422,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
                             LOGBatteryStatus(module_info.Battery);
                             stopwatch.Restart();
                         }
-
+                        module_info.Action_Driver.position = (float)currentVerticalPosition;
                         rosSocket.Publish("AGVC_Emu", module_info);
                     }
                     catch (Exception ex)
@@ -408,6 +439,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
         {
             //I1130 12:47:19.313843  2141 INNERS.h:512] 0, 99, 26653, 0, 4560, 28
             //C:\Users\jinwei\Documents\GPM LOG\2023-12-04\batteryLog
+            Directory.CreateDirectory(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder);
             string logFolder = Path.Combine(StaStored.CurrentVechicle.Parameters.BatteryModule.BatteryLogFolder, $@"{DateTime.Now.ToString("yyyy-MM-dd")}\batteryLog");
             Directory.CreateDirectory(logFolder);
             string logFilePath = Path.Combine(logFolder, "batteryLog.INFO");
@@ -435,6 +467,7 @@ namespace GPMVehicleControlSystem.Models.Emulators
             else if (req.reqsrv == 100)
             {
                 isPreviousMoveActionNotFinish = false;
+                _CycleStopFlag = true;
                 complex_cmd = ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL;
             }
             res = new ComplexRobotControlCmdResponse
@@ -468,9 +501,9 @@ namespace GPMVehicleControlSystem.Models.Emulators
 
             return true;
         }
-        private void EmuLog(string msg, bool show_console = true)
+        internal void EmuLog(string msg, bool show_console = true)
         {
-            LOG.TRACE($"[車控模擬] {msg}", show_console);
+            LOG.TRACE($"[車控模擬] {msg}", show_console, color: ConsoleColor.Magenta);
         }
 
         internal void SetInitTag(int lastVisitedTag)
@@ -526,6 +559,22 @@ namespace GPMVehicleControlSystem.Models.Emulators
         internal void SetBatteryLevel(byte level, int batIndex)
         {
             module_info.Battery.batteryLevel = level;
+        }
+
+        internal void SetImuData(RosSharp.RosBridgeClient.MessageTypes.Sensor.Imu imu)
+        {
+            module_info.IMU.imuData = imu;
+        }
+
+        internal void SetLastVisitedTag(int tag)
+        {
+            module_info.nav_state.lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(tag);
+            module_info.reader.tagID = (uint)tag;
+            if (OnLastVisitedTagChanged != null)
+            {
+                var _pt_coordination = OnLastVisitedTagChanged(tag);
+                module_info.nav_state.robotPose.pose.position = new RosSharp.RosBridgeClient.MessageTypes.Geometry.Point(_pt_coordination.X, _pt_coordination.Y, 0);
+            }
         }
     }
 }
