@@ -7,7 +7,7 @@ using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
+
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -71,13 +71,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return SOUNDS.Move;
             };
-
-            if (Parameters.SimulationMode)
-                Laser.OnLsrModeSwitchRequest += (mode) =>
-                {
-                    if (StaEmuManager.agvRosEmu != null)
-                        StaEmuManager.agvRosEmu.SickLaserMode = mode;
-                };
 
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
@@ -479,10 +472,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (IsNoObstacleAroundAGV)
             {
-                if (Debugger.IsAttached)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, false);
-                }
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                 {
                     IsLaserRecoveryHandled = true;
@@ -658,35 +647,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
         {
-
-            if (Parameters.SimulationMode)
-            {
-                StaEmuManager.agvRosEmu.SetDriversAlarm(errorCode: 10);
-
-                if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, true);
-
-                    if (Parameters.Version == 1)
-                    {
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, false);
-                    }
-                }
-                else
-                {
-
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
-                }
-            }
             SoftwareEMO(AlarmCodes.EMS);
         }
 

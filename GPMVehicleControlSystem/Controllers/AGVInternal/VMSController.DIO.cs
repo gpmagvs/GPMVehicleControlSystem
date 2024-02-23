@@ -1,5 +1,4 @@
-﻿using GPMVehicleControlSystem.Models.Emulators;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -123,12 +122,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 default:
                     break;
             }
-            if (IsWagoModuleSimulation)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM, state);
-            }
-            else
-                agv.WagoDO.SetState(address, state);
+
+            agv.WagoDO.SetState(address, state);
             return Ok();
         }
     }

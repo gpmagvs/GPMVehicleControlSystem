@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
@@ -19,8 +18,6 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         [HttpGet("EQAlarmWhenEQBusySimulation")]
         public async Task<IActionResult> EQAlarmWhenEQBusySimulation()
         {
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, true);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, true);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, true);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, true);
             agv.EQAlarmWhenEQBusyFlag = true;
@@ -33,10 +30,6 @@ namespace GPMVehicleControlSystem.Controllers.Emulator
         [HttpGet("EQInitialze")]
         public async Task<IActionResult> EQInitialze()
         {
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_L_REQ, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_U_REQ, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_BUSY, false);
-            StaEmuManager.wagoEmu.SetState(DI_ITEM.EQ_READY, false);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
             agv.WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);

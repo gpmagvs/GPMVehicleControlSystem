@@ -11,7 +11,7 @@ using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
+
 using GPMVehicleControlSystem.Models.NaviMap;
 
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
@@ -122,7 +122,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 里程數
         /// </summary>
         public double Odometry;
-        VehicleEmu emulator;
         public virtual CARGO_STATUS CargoStatus
         {
             get
@@ -485,46 +484,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void EmulatorInitialize()
         {
-            if (Parameters.SimulationMode)
-            {
-                try
-                {
-                    StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
-                    StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
-                    StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
-                    {
-                        return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
-                    };
-                }
-                catch (SocketException)
-                {
-                    LOG.ERROR("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR("\"模擬器無法啟動 : 異常訊息\" + ex.Message"); ;
-                }
-            }
-            if (Parameters.MeasureServiceSimulator)
-            {
-                try
-                {
-                    StaEmuManager.StartMeasureROSEmu();
-                }
-                catch (SocketException)
-                {
-                    LOG.ERROR("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message");
-                }
-            }
-
-            if (Parameters.WagoSimulation)
-            {
-                StaEmuManager.StartWagoEmu(WagoDI, Parameters.AgvType);
-            }
+            //if (Parameters.SimulationMode)
+            //{
+            //    try
+            //    {
+            //        StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
+            //        StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
+            //        StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
+            //        {
+            //            return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
+            //        };
+            //    }
+            //    catch (SocketException)
+            //    {
+            //        LOG.ERROR("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LOG.ERROR("\"模擬器無法啟動 : 異常訊息\" + ex.Message"); ;
+            //    }
+            //}
+            //if (Parameters.MeasureServiceSimulator)
+            //{
+            //    try
+            //    {
+            //        StaEmuManager.StartMeasureROSEmu();
+            //    }
+            //    catch (SocketException)
+            //    {
+            //        LOG.ERROR("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LOG.ERROR("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message");
+            //    }
+            //}
         }
 
 
@@ -1109,25 +1103,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
                 LOG.TRACE("Reset Motor Process End");
-
-                if (Parameters.SimulationMode)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, true);
-
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, false);
-                    if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                    {
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, true);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, true);
-
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, false);
-                    }
-                    StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
-                }
-
                 IsMotorReseting = false;
                 return true;
             }

@@ -1,6 +1,6 @@
 ﻿
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using GPMVehicleControlSystem.Models.Emulators;
+
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Net.Sockets;
@@ -50,13 +50,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await WagoDO.ResetSaftyRelay();
-                if (Parameters.WagoSimulation)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Safty_PLC_Output, true);
-                }
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
-                StaEmuManager.agvRosEmu?.ClearDriversErrorCodes();
                 if (bypass_when_motor_busy_on & !anyDriverAlarm)
                     return true;
 
@@ -84,19 +79,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
         {
             base.WagoDI_OnBumpSensorPressed(sender, e);
-            if (Parameters.WagoSimulation)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Safty_PLC_Output, false);
-            }
         }
 
         protected override void EMOButtonPressedHandler(object? sender, EventArgs e)
         {
             base.EMOButtonPressedHandler(sender, e);
-            if (Parameters.WagoSimulation)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Safty_PLC_Output, false);
-            }
         }
     }
 }

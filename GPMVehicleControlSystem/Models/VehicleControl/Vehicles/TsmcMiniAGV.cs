@@ -4,7 +4,6 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -206,9 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await WagoDO.ResetSaftyRelay();
-                if (Parameters.SimulationMode)
-                    StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
-
+              
                 if (!CheckMotorIOError())
                     return true;
                 bool io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);

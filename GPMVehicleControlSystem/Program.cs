@@ -12,6 +12,7 @@ using static AGVSystemCommonNet6.clsEnums;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+Console.Title = $"¨®¸ü¨t²Î-{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
