@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     CST_Data = AGV.Parameters.AgvType == clsEnums.AGV_TYPE.INSPECTION_AGV ? "" : (AGV as SubmarinAGV)?.CSTReader.ValidCSTID,
                     BatteryStatus = GetBatteryStatusVM(),
                     Pose = AGV.Navigation.Data.robotPose.pose,
-                    Angle = AGV.SickData.HeadingAngle,
+                    Angle = AGV.Navigation.Angle,
                     Mileage = AGV.Odometry,
                     BCR_State_MoveBase = AGV.BarcodeReader.Data,
                     AlarmCodes = AlarmManager.CurrentAlarms.Values.ToArray(),
@@ -236,7 +236,7 @@ namespace GPMVehicleControlSystem.ViewModels
         {
             ConnectionStateVM data_view_model = new ConnectionStateVM()
             {
-                RosbridgeServer = AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                RosbridgeServer = AGV.AGVC==null? ConnectionStateVM.CONNECTION.DISCONNECT: AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 WAGO = AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
             };
