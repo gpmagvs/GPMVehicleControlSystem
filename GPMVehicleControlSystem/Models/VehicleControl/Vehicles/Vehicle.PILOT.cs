@@ -60,15 +60,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             TASK_DOWNLOAD_RETURN_CODES returnCode = TASK_DOWNLOAD_RETURN_CODES.OK;
 
-            var action_type = taskDownloadData.Action_Type;
-
+            ACTION_TYPE action_type = taskDownloadData.Action_Type;
+            AGVSystemCommonNet6.MAP.MapPoint? destinePoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
             if (Sub_Status == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
 
-            //if (Batteries.Average(bat => bat.Value.Data.batteryLevel) < 10)
-            //    returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_BATTERY_LOW_LEVEL;
-
-            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && taskDownloadData.Destination % 2 == 0 && action_type == ACTION_TYPE.None)
+            if (destinePoint?.StationType != STATION_TYPE.Normal && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
 
             LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
@@ -166,7 +163,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (action == ACTION_TYPE.Unpark)
                             ExecutingTaskModel = new UnParkTask(this, _downloadedData);
                         else if (action == ACTION_TYPE.Measure)
-                            ExecutingTaskModel = new MeasureTask(this, _downloadedData);
+                            ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
                         else if (action == ACTION_TYPE.ExchangeBattery)
                             ExecutingTaskModel = new ExchangeBatteryTask(this, _downloadedData);
                         else
@@ -207,7 +204,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _executingTaskThread.IsBackground = true;
             _executingTaskThread.Start(taskDownloadData);
         }
-
 
         private async void TryGetTransferInformationFromCIM(string task_Name)
         {
