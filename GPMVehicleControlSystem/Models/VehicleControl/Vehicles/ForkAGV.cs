@@ -262,6 +262,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     try
                     {
                         await PinHardware.Init();
+                        await PinHardware.Lock();
                         _pin_init_result = (true, "");
                     }
                     catch (TimeoutException)
