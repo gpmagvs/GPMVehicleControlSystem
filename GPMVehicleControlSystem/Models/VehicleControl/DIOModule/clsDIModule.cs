@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         TcpClient client;
         protected ModbusIpMaster? master;
 
-        private AGV_TYPE _AgvType = AGV_TYPE.Any;
+        private AGV_TYPE _AgvType = AGV_TYPE.FORK;
         public AGV_TYPE AgvType
         {
             get => _AgvType;

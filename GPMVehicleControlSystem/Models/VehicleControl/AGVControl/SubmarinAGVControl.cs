@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -18,5 +19,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", CSTReaderDoneActionHandle);
         }
+
     }
 }

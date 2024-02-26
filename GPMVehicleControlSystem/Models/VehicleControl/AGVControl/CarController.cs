@@ -515,6 +515,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
         public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();
+        public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type);
         public abstract Task<(bool request_success, bool action_done)> AbortCSTReader();
 
         internal async Task EmergencyStop(bool bypass_stopped_check = false)

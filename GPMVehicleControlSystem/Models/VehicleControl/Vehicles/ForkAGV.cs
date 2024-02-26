@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
@@ -35,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
 
+        public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
         public ForkAGV() : base()
         {
@@ -42,8 +44,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
+            if (Parameters.ForkAGV.IsPinMounted)
+                PinHardware = new clsPin();
+
+            LOG.INFO($"FORK AGV 搭載Pin模組?{PinHardware != null}");
             ForkMovingProtectedProcess();
         }
+
+        protected internal override async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+        {
+            await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
+            if (PinHardware != null)
+                PinHardware.rosSocket = AGVC.rosSocket;
+        }
+
         public override CARGO_STATUS CargoStatus
         {
             get
@@ -53,15 +67,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override CARGO_STATUS GetCargoStatus()
         {
-            bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-            bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
-            if (existSensor_1 && existSensor_2)
-                return CARGO_STATUS.HAS_CARGO_NORMAL;
-            if (!existSensor_1 && !existSensor_2)
+            CARGO_STATUS _tray_cargo_status = CARGO_STATUS.NO_CARGO;
+            CARGO_STATUS _rack_cargo_status = CARGO_STATUS.NO_CARGO;
+
+            CARGO_STATUS _GetCargoStatus(DI_ITEM sensor1, DI_ITEM sensor2, IO_CONEECTION_POINT_TYPE sensor1_connect_type, IO_CONEECTION_POINT_TYPE sensor2_connect_type)
+            {
+                bool existSensor_1 = sensor1_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor1) : !WagoDI.GetState(sensor1);
+                bool existSensor_2 = sensor2_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor2) : !WagoDI.GetState(sensor2);
+                if (existSensor_1 && existSensor_2)
+                    return CARGO_STATUS.HAS_CARGO_NORMAL;
+                if (!existSensor_1 && !existSensor_2)
+                    return CARGO_STATUS.NO_CARGO;
+                if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
+                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                else
+                    return CARGO_STATUS.NO_CARGO;
+            }
+
+            if (Parameters.CargoExistSensorParams.TraySensorMounted)
+            {
+                var _connect_io_AB_type = Parameters.CargoExistSensorParams.TraySensorPointType;
+                _tray_cargo_status = _GetCargoStatus(DI_ITEM.Fork_TRAY_Left_Exist_Sensor, DI_ITEM.Fork_TRAY_Right_Exist_Sensor, _connect_io_AB_type, _connect_io_AB_type);
+            }
+            if (Parameters.CargoExistSensorParams.RackSensorMounted)
+            {
+                var _connect_io_AB_type = Parameters.CargoExistSensorParams.RackSensorPointType;
+                _rack_cargo_status = _GetCargoStatus(DI_ITEM.Fork_RACK_Left_Exist_Sensor, DI_ITEM.Fork_RACK_Right_Exist_Sensor, _connect_io_AB_type, _connect_io_AB_type);
+            }
+            CARGO_STATUS[] status_collection = new CARGO_STATUS[] { _tray_cargo_status, _rack_cargo_status };
+
+            if (status_collection.All(status => status == CARGO_STATUS.NO_CARGO))
                 return CARGO_STATUS.NO_CARGO;
-            if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
-                return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-            return CARGO_STATUS.NO_CARGO;
+            else
+            {
+                if (status_collection.Any(status => status == CARGO_STATUS.HAS_CARGO_BUT_BIAS))
+                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                else
+                    return CARGO_STATUS.HAS_CARGO_NORMAL;
+            }
         }
         public async Task<bool> ResetVerticalDriver()
         {
@@ -237,52 +280,91 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-            InitializingStatusText = "牙叉初始化動作中";
-            ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
-            if (ForkLifter.Enable)
+            (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
+            (bool pin_init_done, string message) _pin_init_result = (false, "");
+
+            List<Task> _actions = new List<Task>();
+            if (PinHardware != null)
             {
-                ForkLifter.ForkShortenInAsync();
-                if (HasAnyCargoOnAGV())
+                Task Pin_Init_Task = await Task.Factory.StartNew(async () =>
                 {
-                    AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
-                }
-                InitializingStatusText = "牙叉原點覆歸...";
-                await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
+                    InitializingStatusText = "PIN-模組初始化";
+                    try
+                    {
+                        await PinHardware.Init();
+                        await PinHardware.Lock();
+                        _pin_init_result = (true, "");
+                    }
+                    catch (TimeoutException)
+                    {
+                        _pin_init_result = (false, "Pin Action Timeout");
+                    }
+                });
+                _actions.Add(Pin_Init_Task);
+            }
+            else
+                _pin_init_result = (true, "Pin is not mounted");
 
-                bool isForkAllowNoDoInitializeAction = Parameters.SimulationMode || Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
-
-                (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
-                if (isForkAllowNoDoInitializeAction)
+            Task ForkLift_Init_Task = await Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(700);
+                InitializingStatusText = "牙叉初始化動作中";
+                ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                if (ForkLifter.Enable)
                 {
-                    (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
-                    forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
-                    ForkLifter.IsInitialized = true;
+                    ForkLifter.ForkShortenInAsync();
+                    if (HasAnyCargoOnAGV())
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
+                    }
+                    InitializingStatusText = "牙叉原點覆歸...";
+                    await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
+
+                    bool isForkAllowNoDoInitializeAction = Parameters.SimulationMode || Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+
+                    (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
+                    if (isForkAllowNoDoInitializeAction)
+                    {
+                        (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
+                        forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
+                        ForkLifter.IsInitialized = true;
+                    }
+                    else
+                    {
+                        double _speed_of_init = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
+                        forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
+                    }
+                    if (forkInitizeResult.done)
+                    {
+                        //self test Home action 
+                        (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
+                        if (!home_action_response.confirm)
+                        {
+                            _forklift_init_result = (false, home_action_response.alarm_code.ToString());
+                        }
+                    }
+
+                    if (!Parameters.SensorBypass.BeltSensorBypass)
+                        await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+
+                    AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
+                    _forklift_init_result = (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
                 }
                 else
                 {
-                    double _speed_of_init = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                    forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
+                    AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
+                    _forklift_init_result = (true, "");
                 }
-                if (forkInitizeResult.done)
-                {
-                    //self test Home action 
-                    (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
-                    if (!home_action_response.confirm)
-                    {
-                        return (false, home_action_response.alarm_code.ToString());
-                    }
-                }
+            });
+            _actions.Add(ForkLift_Init_Task);
+            Task.WaitAll(_actions.ToArray());
 
-                if (!Parameters.SensorBypass.BeltSensorBypass)
-                    await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
+            if (!_pin_init_result.pin_init_done)
+                return _pin_init_result;
 
-                AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
-                return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
-            }
-            else
-            {
-                AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
-            }
+            if (!_forklift_init_result.forklifer_init_done)
+                return _forklift_init_result;
+
             return await base.InitializeActions(cancellation);
         }
 
@@ -388,7 +470,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+
+                bool _hasRack = false;
+                bool _hasTray = false;
+
+                if (Parameters.CargoExistSensorParams.RackSensorMounted)
+                {
+                    if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
+                    {
+                        _hasRack = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                    }
+                    else
+                    {
+                        _hasRack = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                    }
+                }
+                if (Parameters.CargoExistSensorParams.TraySensorMounted)
+                {
+                    if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
+                        _hasTray = WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+                    else
+                        _hasTray = !WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+
+                }
+
+                return _hasRack || _hasTray;
             }
             catch (Exception)
             {

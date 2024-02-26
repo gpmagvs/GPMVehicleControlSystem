@@ -217,6 +217,22 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cargo_type">Tray=200,Rack=201</param>
+        /// <returns></returns>
+        [HttpGet("TriggerCSTReaderWithCargoType")]
+        public async Task<IActionResult> TriggerCSTReaderWithCargoType(CST_TYPE cargo_type)
+        {
+            (bool request_success, bool action_done) ret = await agv.AGVC.TriggerCSTReader(cargo_type);
+            string barcode = "ERROR";
+            if (ret.action_done)
+            {
+                barcode = agv.CSTReader.Data.data;
+            }
+            return Ok(new { barcode });
+        }
 
 
         [HttpGet("TriggerCSTReader")]

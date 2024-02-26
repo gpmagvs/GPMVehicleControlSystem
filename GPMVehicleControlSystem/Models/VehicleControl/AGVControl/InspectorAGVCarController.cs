@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using System.Diagnostics.Metrics;
@@ -208,6 +209,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return (false, $"call {command}_fail_{ex.Message}");
             }
+        }
+
+        public override Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

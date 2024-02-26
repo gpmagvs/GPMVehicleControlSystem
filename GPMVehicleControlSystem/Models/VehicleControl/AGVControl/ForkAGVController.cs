@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using System.Diagnostics;
@@ -8,7 +9,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
     public class ForkAGVController : SubmarinAGVControl
     {
-        protected override string cst_reader_command { get; set; } = "read";
         /// <summary>
         /// Z軸完成伺服動作的事件, bool false =>異常;true =>已完成伺服動作
         /// </summary>
@@ -294,6 +294,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             return request.command == "pose" || request.command == "orig" || request.command == "up" || request.command == "up_search"
                                                 || request.command == "down" || request.command == "down_search";
+        }
+
+        public override Task<(bool request_success, bool action_done)> TriggerCSTReader()
+        {
+            return base.TriggerCSTReader(CST_TYPE.Rack);
         }
     }
 }

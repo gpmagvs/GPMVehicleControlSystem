@@ -280,5 +280,43 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             });
             return Ok();
         }
+
+        [HttpGet("Fork/Pin/Init")]
+        public async Task<IActionResult> PinInit()
+        {
+            forkAgv.PinHardware?.Init();
+            return Ok();
+        }
+
+        [HttpGet("Fork/Pin/Lock")]
+        public async Task<IActionResult> PinLock()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Lock();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
+        [HttpGet("Fork/Pin/Release")]
+        public async Task<IActionResult> PinRelease()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Release();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
     }
 }

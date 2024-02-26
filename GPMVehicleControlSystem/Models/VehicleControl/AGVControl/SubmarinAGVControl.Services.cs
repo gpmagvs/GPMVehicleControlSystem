@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using RosSharp.RosBridgeClient.MessageTypes.Tf2;
@@ -31,7 +32,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             return true;
         }
-        protected virtual string cst_reader_command { get; set; } = "read_try";
         /// <summary>
         /// 中止 Reader 拍照
         /// </summary>
@@ -51,23 +51,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         CSTReaderCommandResponse? cst_reader_confirm_ack = null;
         ManualResetEvent wait_cst_ack_MRE = new ManualResetEvent(false);
-        /// <summary>
-        /// 請求CST拍照
-        /// </summary>
-        /// <returns></returns>
-        public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
+
+        public override async Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
             Thread.Sleep(1);
             wait_cst_ack_MRE = new ManualResetEvent(false);
             cst_reader_confirm_ack = null;
             int retry_cnt = 0;
+            var cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";
             while (cst_reader_confirm_ack == null)
             {
                 Thread.Sleep(1);
                 await Task.Run(() =>
                 {
                     LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
-                    var id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest() { command = cst_reader_command, model = "FORK" });
+                    var id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
+                    {
+                        command = cst_reader_command,
+                        model = "FORK"
+                    });
                     LOG.TRACE($"Call Service /CSTReader_action done. id={id} ", false);
                 });
 
@@ -140,6 +142,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
 
             }
+
+        }
+        /// <summary>
+        /// 請求CST拍照
+        /// </summary>
+        /// <returns></returns>
+        public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
+        {
+            return await TriggerCSTReader(CST_TYPE.Tray);
         }
 
         private void CstReaderConfirmedAckHandler(CSTReaderCommandResponse ack)

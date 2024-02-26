@@ -7,6 +7,11 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
+    public enum IO_CONEECTION_POINT_TYPE
+    {
+        A,
+        B
+    }
     public class clsVehicelParam
     {
         public Dictionary<string, string> Descrption { get; set; } = new Dictionary<string, string>() {
@@ -171,5 +176,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsBatteryParam BatteryModule { get; set; } = new clsBatteryParam();
         public clsLDULDParams LDULDParams { get; set; } = new clsLDULDParams();
+
+        public clsCargoExistSensorParams CargoExistSensorParams { get; set; } = new clsCargoExistSensorParams();
     }
 }
