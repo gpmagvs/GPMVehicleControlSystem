@@ -155,18 +155,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           agv.ExecuteAGVSTask(this, _taskDataDto);
                           await Task.Delay(200);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
-                          while (agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                          while (IsStartTask(_taskDataDto))
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
                               await Task.Delay(1);
                           }
 
-                          LOG.WARN($"[Local Task Dispather]  AGVC Active");
                           await Task.Delay(10);
-                          LOG.WARN($"[Local Task Dispather] Wait AGVC Succeeded");
 
-                          while (agv.AGVC._ActionStatus !=  RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED)
+                          while (!IsFinishTask(_taskDataDto))
                           {
                               if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                                   return;
@@ -174,8 +172,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           }
                           if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               return;
-                          LOG.WARN($"[Local Task Dispather]  AGVC Succeeded");
-                          LOG.INFO("Local WebUI Task Allocator : Next Task Will Start..");
+
+                          bool IsStartTask(clsTaskDownloadData? _taskDataDto)
+                          {
+                              return agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE && agv.Sub_Status == clsEnums.SUB_STATUS.RUN;
+                          };
+                          bool IsFinishTask(clsTaskDownloadData? _taskDataDto)
+                          {
+                              return agv.BarcodeReader.Data.tagID == _taskDataDto.Destination && agv.AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.SUCCEEDED;
+                          };
                       }
                   });
                 return Ok(new TaskActionResult
