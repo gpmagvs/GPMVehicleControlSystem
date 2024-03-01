@@ -119,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.ERROR(ex.Message, ex);
                 }
                 _rosSocket = value;
-                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
                 LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }

@@ -298,56 +298,57 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             });
             thread.Start();
         }
-        public virtual async void StartAsync()
+        public virtual async Task StartAsync()
         {
             ConnectionWatchDog();
-            Thread thread = new Thread(async() =>
+
+            await Task.Run(async () =>
             {
                 int error_cnt = 0;
                 while (true)
                 {
-                    Thread.Sleep(IO_Interval_ms);
+                    await Task.Delay(IO_Interval_ms);
+
                     if (!Connected)
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
                         await Connect();
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000); // 使用 Task.Delay 而不是 Thread.Sleep
                         continue;
                     }
+
                     try
                     {
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {
-                            LOG.Critical($"DI Read inputs but null return, disconnect connection.");
+                            LOG.Critical("DI Read inputs but null return, disconnect connection.");
                             Disconnect();
                             Connected = false;
                             continue;
                         }
 
                         for (int i = 0; i < input.Length; i++)
+                        {
                             VCSInputs[i].State = input[i];
+                        }
 
                         lastReadTime = DateTime.Now;
-                        input = null;
                         error_cnt = 0;
                     }
                     catch (Exception ex)
                     {
                         LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
-                        error_cnt += 1;
-                        if (error_cnt == 2)
+                        error_cnt++;
+
+                        if (error_cnt >= 2)
                         {
                             Disconnect();
                             Connected = false;
                         }
-                        //LOG.Critical(ex.Message, ex);
-
                     }
                 }
-
             });
-            thread.Start();
         }
 
     }

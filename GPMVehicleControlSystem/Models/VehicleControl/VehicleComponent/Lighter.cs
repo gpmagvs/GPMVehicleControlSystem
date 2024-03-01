@@ -6,7 +6,6 @@ namespace AGVSystemCommonNet6.Abstracts
 {
     public abstract class Lighter
     {
-        public bool AllCloseFlag = false;
         public clsDOModule DOModule { get; set; }
         public Lighter()
         {
@@ -21,65 +20,81 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public void AbortFlash()
         {
-            AllCloseFlag = true;
+            flash_cts?.Cancel();
         }
 
         public void Flash(DO_ITEM light_DO, int flash_period = 400)
         {
-            Task.Factory.StartNew(async () =>
+            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
+            flash_cts = new CancellationTokenSource();
+
+            Task.Run(async () =>
             {
-                await DOModule.SetState(light_DO, true);
-                await Task.Delay(100);
-                flash_cts = new CancellationTokenSource();
-                AllCloseFlag = false;
-                bool light_active = false;
-                while (true)
+                bool light_active = true;  // 假定开始时灯是亮的
+
+                try
                 {
-                    try
+                    while (true)
                     {
-                        if (AllCloseFlag)
-                            break;
                         await DOModule.SetState(light_DO, light_active);
                         await Task.Delay(flash_period, flash_cts.Token);
                         light_active = !light_active;
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR(ex);
+
+                        if (flash_cts.IsCancellationRequested)
+                        {
+                            break;  // 如果收到取消请求，则退出循环
+                        }
                     }
                 }
-            });
+                catch (OperationCanceledException)
+                {
+                    LOG.TRACE("Flash Task Canceled", false);
+                }
+                catch (Exception ex)
+                {
+                    LOG.TRACE("Flash Task Canceled", false);
+                }
+            }, flash_cts.Token);
         }
 
-        public async void Flash(DO_ITEM[] light_DOs, int flash_period = 400)
+        public async Task Flash(DO_ITEM[] light_DOs, int flash_period = 400)
         {
             foreach (var item in light_DOs)
+            {
                 await this.DOModule.SetState(item, true);
+            }
 
             flash_cts = new CancellationTokenSource();
-            _ = Task.Factory.StartNew(async () =>
+
+            await Task.Run(async () =>
             {
-                await Task.Delay(100);
-                AllCloseFlag = false;
+                await Task.Delay(100);  // 允许取消操作的触发
                 bool light_active = false;
-                while (true)
+                try
                 {
-                    try
+                    while (true)
                     {
-                        if (AllCloseFlag)
-                            break;
                         foreach (var item in light_DOs)
+                        {
                             await DOModule.SetState(item, light_active);
+                        }
+
                         await Task.Delay(flash_period, flash_cts.Token);
+
+                        if (flash_cts.Token.IsCancellationRequested)
+                        {
+                            break;
+                        }
                         light_active = !light_active;
                     }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR(ex);
-                    }
                 }
-            });
+                catch (Exception ex)
+                {
+                    LOG.TRACE("Flash Task Canceled", false);
+                }
+            }, flash_cts.Token);
         }
+
 
 
         public abstract void CloseAll(int delay_ms = 10);

@@ -9,7 +9,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
     [Route("api/[controller]")]
     [ApiController]
-    [ApiExplorerSettings(IgnoreApi = true)]
+    [ApiExplorerSettings(IgnoreApi = false)]
     public class AGVLightController : ControllerBase
     {
         private Vehicle agv => StaStored.CurrentVechicle;
@@ -69,6 +69,20 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> State_Down()
         {
             agv.StatusLighter.DOWN();
+            return Ok();
+        }
+        [HttpGet("FlashTest")]
+        public async Task<IActionResult> FlashTest()
+        {
+            agv.DirectionLighter.Flash(new VehicleControl.DIOModule.clsDOModule.DO_ITEM[] { VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Right, VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Left });
+            return Ok();
+        }
+
+
+        [HttpGet("StopFlash")]
+        public async Task<IActionResult> StopFlash()
+        {
+            agv.DirectionLighter.AbortFlash();
             return Ok();
         }
     }
