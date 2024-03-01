@@ -426,6 +426,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (AGVC?.rosSocket != null)
                         {
                             AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
+                            AGVC.OnRosSocketDisconnected += (sender, e) =>
+                            {
+                                ModuleInformationUpdatedInitState = false;
+                                AlarmManager.AddAlarm(AlarmCodes.Motion_control_Disconnected, false);
+                            };
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
                             AlarmManager.Active = false;
 
@@ -610,7 +615,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async Task<bool> IsAllLaserNoTrigger()
         {
-            await Task.Delay(10);
             var FrontArea1 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
             var FrontArea2 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
             var FrontArea3 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
@@ -628,7 +632,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
                         $"Left_Area       ={LeftArea.ToSymbol("O", "X")}");
 
-            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea | LeftArea;
+            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea && LeftArea;
         }
 
         protected virtual async Task DOSignalDefaultSetting()
@@ -674,7 +678,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         LOG.WARN($"偵測到AGV無帳有料，已完成自動建帳");
                 }
             }
-
+            if (!this.ModuleInformationUpdatedInitState)
+            {
+                return (false, "與車控之間的通訊尚未完成，無法初始化");
+            }
             IsHandshaking = AGVSResetCmdFlag = IsWaitForkNextSegmentTask = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
