@@ -108,6 +108,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<RawMicroScanDataMsg> OnSickRawDataUpdated;
         public event EventHandler OnAGVCCycleStopRequesting;
         public event EventHandler OnRosSocketReconnected;
+        public event EventHandler OnRosSocketDisconnected;
         public event EventHandler OnSTOPCmdRequesting;
         public delegate bool SpeedRecoveryRequestingDelegate();
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
@@ -300,6 +301,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void Protocol_OnClosed(object? sender, EventArgs e)
         {
+            OnRosSocketDisconnected?.Invoke(this, e);
             rosSocket.protocol.OnClosed -= Protocol_OnClosed;
             LOG.WARN("Rosbridger Server On Closed...Retry connecting...");
             TryConnecting = true;
@@ -484,7 +486,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
             actionClient.goal = rosGoal;
-            actionClient.SendGoal();
+            actionClient?.SendGoal();
             if (isEmptyPathPlan)
             {
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);

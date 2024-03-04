@@ -7,7 +7,6 @@ using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -44,6 +43,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 是否偵測雷測觸發
         /// </summary>
         private bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
+
+        public bool ModuleInformationUpdatedInitState { get; private set; } = false;
+
         protected virtual void CommonEventsRegist()
         {
             //DBhelper.OnDataBaseChanged += CopyDataBaseToLogFolder;
@@ -67,13 +69,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return SOUNDS.Move;
             };
-            if (Parameters.SimulationMode)
-                Laser.OnLsrModeSwitchRequest += (mode) =>
-                {
-                    if (StaEmuManager.agvRosEmu != null)
-                        StaEmuManager.agvRosEmu.SickLaserMode = mode;
-                };
-
 
             DirectionLighter.OnAGVDirectionChangeToForward += () =>
             {
@@ -134,8 +129,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 var _input = item.Key;
                 Action<object, bool> _handler = item.Value;
-                bool _subSuccess = WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
-                LOG.TRACE($"{_input} signal change event subscribe :_{(_subSuccess ? "Success" : "Fail")}");
+                WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
             }
 
         }
@@ -493,10 +487,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (IsNoObstacleAroundAGV)
             {
-                if (Debugger.IsAttached)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.FrontProtection_Area_Sensor_1, false);
-                }
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                 {
                     IsLaserRecoveryHandled = true;
@@ -666,35 +656,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
         {
-
-            if (Parameters.SimulationMode)
-            {
-                StaEmuManager.agvRosEmu.SetDriversAlarm(errorCode: 10);
-
-                if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, true);
-
-                    if (Parameters.Version == 1)
-                    {
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, false);
-                    }
-                }
-                else
-                {
-
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, true);
-                }
-            }
             SoftwareEMO(AlarmCodes.EMS);
         }
 
@@ -759,8 +720,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     JudgeIsBatteryCharging();
 
                 stopwatch.Stop();
-                //if (stopwatch.ElapsedMilliseconds >= AGVC.Throttle_rate_of_Topic_ModuleInfo)
-                //    LOG.WARN($"[Thread = {Thread.CurrentThread.ManagedThreadId}] Handle /module_information data time spend= {stopwatch.ElapsedMilliseconds} ms");
+                ModuleInformationUpdatedInitState = true;
 
             }
             catch (Exception ex)

@@ -17,6 +17,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     public partial class clsDIModule : Connection
     {
         TcpClient client;
+        public int IO_Interval_ms { get; }
         protected ModbusIpMaster? master;
 
         private AGV_TYPE _AgvType = AGV_TYPE.FORK;
@@ -73,12 +74,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         Task.Factory.StartNew(async () =>
                         {
                             LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
-                            AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Disconnect, false);
+                            Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                         });
                     else
                     {
                         OnReConnected?.Invoke(this, null);
-                        AlarmManager.ClearAlarm(AlarmCodes.Wago_IO_Disconnect);
+                        Current_Alarm_Code = AlarmCodes.None;
                         LOG.INFO($"Wago Module Reconnected");
                     }
                 }
@@ -99,18 +100,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public clsDIModule()
         {
         }
+
         public clsDIModule(string IP, int Port, int IO_Interval_ms = 5)
         {
             this.IP = IP;
             this.VMSPort = Port;
-            this.IO_Interval_ms = IO_Interval_ms;
-            ReadIOSettingsFromIniFile();
-        }
-        public clsDIModule(string IP, int Port, clsDOModule DoModuleRef, int IO_Interval_ms = 5)
-        {
-            this.IP = IP;
-            this.VMSPort = Port;
-            this.DoModuleRef = DoModuleRef;
             this.IO_Interval_ms = IO_Interval_ms;
             LOG.TRACE($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
             ReadIOSettingsFromIniFile();
@@ -156,16 +150,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override async Task<bool> Connect()
         {
-            if (IP == null || VMSPort <= 0)
+            if (IP == null | VMSPort <= 0)
                 throw new SocketException((int)SocketError.AddressNotAvailable);
             try
             {
                 client = new TcpClient(IP, VMSPort);
-                EnableKeepAlive(ref client);
                 master = ModbusIpMaster.CreateIp(client);
-                master.Transport.ReadTimeout = 300;
+                master.Transport.ReadTimeout = 800;
                 master.Transport.WriteTimeout = 300;
-                master.Transport.Retries = 3;
+                master.Transport.Retries = 5;
+                master.Transport.WaitToRetryMilliseconds = 100;
                 Current_Warning_Code = AlarmCodes.None;
                 LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 Connected = true;
@@ -174,32 +168,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             catch (Exception ex)
             {
                 Connected = false;
-                DoModuleRef.Connected = false;
-                Current_Warning_Code = AlarmCodes.Wago_IO_Disconnect;
-                LOG.Critical($"[{this.GetType().Name}]Wago Modbus TCP  Connect FAIL", ex);
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                 OnDisonnected?.Invoke(this, EventArgs.Empty);
                 client = null;
                 master = null;
                 return false;
             }
         }
-        protected void EnableKeepAlive(ref TcpClient _client)
-        {
-            // 设置 keepalive 选项
-            int size = Marshal.SizeOf(new uint());
-            byte[] inOptionValues = new byte[size * 3];
 
-            // 是否启用 Keep-Alive
-            BitConverter.GetBytes((uint)1).CopyTo(inOptionValues, 0);
-
-            // Keep-Alive 检测间隔（单位：毫秒）
-            BitConverter.GetBytes((uint)5000).CopyTo(inOptionValues, size);
-
-            // 如果没有响应，则再次检测的间隔（单位：毫秒）
-            BitConverter.GetBytes((uint)5000).CopyTo(inOptionValues, size * 2);
-            _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
-        }
         public override void Disconnect()
         {
             try
@@ -238,17 +214,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         //監視某個輸入的變化事件??
 
-        public virtual bool SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        public virtual void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
             try
             {
                 VCSInputs[Indexs[signal]].OnStateChanged += handler;
-                return true;
             }
             catch (Exception ex)
             {
                 LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
-                return false;
             }
         }
 
@@ -306,11 +280,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private DateTime lastReadTime = DateTime.MaxValue;
         private async void ConnectionWatchDog()
         {
-            _ = Task.Factory.StartNew(async () =>
+            Thread thread = new Thread(() =>
             {
                 while (true)
                 {
-                    await Task.Delay(10);
+                    Thread.Sleep(10);
                     var period = (DateTime.Now - lastReadTime).TotalMilliseconds;
                     if (period > 5000)
                     {
@@ -318,60 +292,60 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         lastReadTime = DateTime.Now;
                         Disconnect();
                         Connected = false;
-                        DoModuleRef.Connected = false;
                     }
                 }
+
             });
+            thread.Start();
         }
-        public virtual async void StartAsync()
+        public virtual async Task StartAsync()
         {
             ConnectionWatchDog();
+
             await Task.Run(async () =>
             {
+                int error_cnt = 0;
                 while (true)
                 {
-                    Thread.Sleep(IO_Interval_ms);
+                    await Task.Delay(IO_Interval_ms);
+
                     if (!Connected)
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
-                        Thread.Sleep(1000);
                         await Connect();
+                        await Task.Delay(1000); // 使用 Task.Delay 而不是 Thread.Sleep
                         continue;
                     }
+
                     try
                     {
-                        //CancellationTokenSource cts = new CancellationTokenSource(3000);
-                        //while (DoModuleRef.IOBusy)
-                        //{
-                        //    Thread.Sleep(1);
-                        //    if (cts.IsCancellationRequested)
-                        //    {
-                        //        cts.Dispose();
-                        //        continue;
-                        //    }
-                        //}
-                        //cts.Dispose();
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {
-                            LOG.Critical($"DI Read inputs but null return, disconnect connection.");
+                            LOG.Critical("DI Read inputs but null return, disconnect connection.");
                             Disconnect();
                             Connected = false;
                             continue;
                         }
 
                         for (int i = 0; i < input.Length; i++)
+                        {
                             VCSInputs[i].State = input[i];
+                        }
 
                         lastReadTime = DateTime.Now;
-                        input = null;
+                        error_cnt = 0;
                     }
                     catch (Exception ex)
                     {
                         LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
-                        LOG.Critical(ex.Message, ex);
-                        Disconnect();
-                        Connected = false;
+                        error_cnt++;
+
+                        if (error_cnt >= 2)
+                        {
+                            Disconnect();
+                            Connected = false;
+                        }
                     }
                 }
             });

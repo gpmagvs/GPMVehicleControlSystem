@@ -1,7 +1,6 @@
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
@@ -11,24 +10,19 @@ using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
-using GPMVehicleControlSystem.Models.NaviMap;
 
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
-using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Drawing;
 using System.Net.Sockets;
-using System.Reflection;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -119,7 +113,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 里程數
         /// </summary>
         public double Odometry;
-        VehicleEmu emulator;
         public virtual CARGO_STATUS CargoStatus
         {
             get
@@ -303,18 +296,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsSystemInitialized = false;
                 Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
                 Params.clsConnectionParam rosbridge_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.RosBridge];
-                string Wago_IP = Parameters.WagoSimulation ? "127.0.0.1" : wago_connection_params.IP;
-                int Wago_Port = Parameters.WagoSimulation ? 9999 : wago_connection_params.Port;
+                string Wago_IP =  wago_connection_params.IP;
+                int Wago_Port =  wago_connection_params.Port;
                 int Wago_Protocol_Interval_ms = wago_connection_params.Protocol_Interval_ms;
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = rosbridge_connection_params.IP;
                 int RosBridge_Port = rosbridge_connection_params.Port;
-                WagoDO = new clsDOModule(Wago_IP, Wago_Port, null)
+                WagoDO = new clsDOModule(Wago_IP, Wago_Port)
                 {
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version,
                 };
-                WagoDI = new clsDIModule(Wago_IP, Wago_Port, WagoDO, Wago_Protocol_Interval_ms)
+                WagoDI = new clsDIModule(Wago_IP, Wago_Port, Wago_Protocol_Interval_ms)
                 {
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version
@@ -336,6 +329,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (AGVC?.rosSocket != null)
                         {
                             AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
+                            AGVC.OnRosSocketDisconnected += AGVC_OnRosSocketDisconnected;
                             BuzzerPlayer.rossocket = AGVC.rosSocket;
                             AlarmManager.Active = false;
 
@@ -363,8 +357,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 AGVSInit();
-
-                EmulatorInitialize();
                 Task WagoDIConnTask = WagoDIInit();
                 WagoDIConnTask.Start();
                 WebsocketAgent.StartViewDataCollect();
@@ -386,76 +378,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        private void AGVC_OnRosSocketDisconnected(object? sender, EventArgs e)
+        {
+            ModuleInformationUpdatedInitState = false;
+            AlarmManager.AddAlarm( AlarmCodes.Motion_control_Disconnected, false);
+        }
+
         private void AGVC_OnRosSocketReconnected(object? sender, EventArgs e)
         {
             BuzzerPlayer.rossocket = (RosSocket)sender;
         }
-
-
-
-
-        private void EmulatorInitialize()
-        {
-            MapPoint GetMapPointByTag(int tag)
-            {
-                return NavingMap.Points.Values.FirstOrDefault(p => p.TagNumber == tag);
-            }
-
-            if (Parameters.SimulationMode)
-            {
-                try
-                {
-                    StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
-                    StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
-                    StaEmuManager.agvRosEmu.OnLastVisitedTagChanged += (tag) =>
-                    {
-                        var pt = GetMapPointByTag(tag);
-                        if (pt != null)
-                        {
-                            return new PointF((float)pt.X, (float)pt.Y);
-                        }
-                        else
-                            return new PointF();
-                    };
-                    StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
-                    {
-                        MapPoint point = GetMapPointByTag(tag);
-                        if (point == null)
-                            return false;
-                        return point.IsCharge && IsChargeCircuitOpened;
-                    };
-                }
-                catch (SocketException)
-                {
-                    LOG.ERROR("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR("\"模擬器無法啟動 : 異常訊息\" + ex.Message"); ;
-                }
-            }
-            if (Parameters.MeasureServiceSimulator)
-            {
-                try
-                {
-                    StaEmuManager.StartMeasureROSEmu();
-                }
-                catch (SocketException)
-                {
-                    LOG.ERROR("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message");
-                }
-            }
-
-            if (Parameters.WagoSimulation)
-            {
-                StaEmuManager.StartWagoEmu(WagoDI, Parameters.AgvType);
-            }
-        }
-
 
         public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
@@ -583,6 +515,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
+
+            if (!ModuleInformationUpdatedInitState)
+            {
+                return (false, $"與車控系統通訊異常，不可進行初始化");
+            }
+
             if (GetSub_Status() == SUB_STATUS.RUN)
             {
                 return (false, $"當前狀態不可進行初始化(任務執行中)");
@@ -868,7 +806,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMOFromUI()
         {
-            AGVC.EmergencyStop(bypass_stopped_check: true); //
+            _ = Task.Run(() =>
+            {
+                AGVC.EmergencyStop(bypass_stopped_check: true); //
+            });
             LOG.Critical($"Software EMO By User!!!");
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
@@ -1070,24 +1011,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
                 LOG.TRACE("Reset Motor Process End");
-
-                if (Parameters.SimulationMode)
-                {
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_1, true);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_2, true);
-
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_1, false);
-                    StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_2, false);
-                    if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                    {
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_3, true);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Busy_4, true);
-
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_3, false);
-                        StaEmuManager.wagoEmu.SetState(DI_ITEM.Horizon_Motor_Alarm_4, false);
-                    }
-                    StaEmuManager.agvRosEmu.ClearDriversErrorCodes();
-                }
 
                 IsMotorReseting = false;
                 return true;

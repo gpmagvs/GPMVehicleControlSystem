@@ -83,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (!IsInitialized)
+                if (!IsInitialized || !ModuleInformationUpdatedInitState)
                     return MAIN_STATUS.DOWN;
                 switch (_Sub_Status)
                 {

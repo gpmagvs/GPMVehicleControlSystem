@@ -83,6 +83,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             IsPinActionDone = false;
             PinCommandResponse _resonpse = await _rosSocket.CallServiceAndWait<PinCommandRequest, PinCommandResponse>(PinActionServiceName, request);
+            if (_resonpse == null)
+                throw new Exception("Call Service Fail");
             if (_resonpse.confirm)
             {
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));

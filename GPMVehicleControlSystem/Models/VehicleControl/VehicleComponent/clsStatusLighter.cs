@@ -13,7 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async void CloseAll(int delay_ms=10)
         {
-            AllCloseFlag = true;
+            AbortFlash();
             await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
             await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
             await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);

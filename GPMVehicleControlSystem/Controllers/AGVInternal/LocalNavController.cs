@@ -9,7 +9,6 @@ using AGVSystemCommonNet6;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal

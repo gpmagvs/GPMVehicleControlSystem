@@ -4,7 +4,6 @@ using AGVSystemCommonNet6.Log;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using Newtonsoft.Json;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.NaviMap;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -185,9 +184,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (NavingMap.Note != "empty")
                 {
                     LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
-                    var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
-                    if (lastPoint != null && Parameters.SimulationMode)
-                        StaEmuManager.agvRosEmu.SetCoordination(lastPoint.X, lastPoint.Y, 0);
                 }
             }
             else
@@ -208,11 +204,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _NavingMap.Segments = MapManager.CreateSegments(_NavingMap);
                         MapStore.SaveCurrentMap(_NavingMap, out string map_file_saved_path);
                         NavingMap = _NavingMap;
-
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
-                        var lastPoint = NavingMap.Points.FirstOrDefault(pt => pt.Value.TagNumber == Parameters.LastVisitedTag).Value;
-                        if (lastPoint != null && Parameters.SimulationMode)
-                            StaEmuManager.agvRosEmu.SetCoordination(lastPoint.X, lastPoint.Y, 0);
                     }
                     else
                     {

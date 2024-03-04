@@ -286,7 +286,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             List<Task> _actions = new List<Task>();
             if (PinHardware != null)
             {
-                Task Pin_Init_Task = await Task.Factory.StartNew(async () =>
+                Task Pin_Init_Task = Task.Run(async () =>
                 {
                     InitializingStatusText = "PIN-模組初始化";
                     try
@@ -299,13 +299,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         _pin_init_result = (false, "Pin Action Timeout");
                     }
+                    catch (Exception ex)
+                    {
+                        _pin_init_result = (false, ex.Message);
+                    }
                 });
                 _actions.Add(Pin_Init_Task);
             }
             else
                 _pin_init_result = (true, "Pin is not mounted");
 
-            Task ForkLift_Init_Task = await Task.Factory.StartNew(async () =>
+            Task ForkLift_Init_Task = Task.Run(async () =>
             {
                 await Task.Delay(700);
                 InitializingStatusText = "牙叉初始化動作中";
@@ -320,7 +324,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     InitializingStatusText = "牙叉原點覆歸...";
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                    bool isForkAllowNoDoInitializeAction = Parameters.SimulationMode || Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+                    bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
 
                     (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
                     if (isForkAllowNoDoInitializeAction)
@@ -359,13 +363,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _actions.Add(ForkLift_Init_Task);
             Task.WaitAll(_actions.ToArray());
 
-            if (!_pin_init_result.pin_init_done)
-                return _pin_init_result;
+            bool pin_init_success = _pin_init_result.pin_init_done;
+            bool fork_init_success = _forklift_init_result.forklifer_init_done;
 
-            if (!_forklift_init_result.forklifer_init_done)
-                return _forklift_init_result;
+            if (pin_init_success && fork_init_success)
+            {
+                return await base.InitializeActions(cancellation);
+            }
 
-            return await base.InitializeActions(cancellation);
+            string errmsg = "";
+
+            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
+            errmsg += fork_init_success ? "" : $"[Fork:{_forklift_init_result.message}]";
+            return (false, errmsg);
+
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
@@ -377,7 +388,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal override void SoftwareEMO(AlarmCodes alarmCode)
         {
-            Task.Factory.StartNew(async () =>
+            Task.Run(async () =>
             {
                 LOG.Critical($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
                 await Task.Delay(1);

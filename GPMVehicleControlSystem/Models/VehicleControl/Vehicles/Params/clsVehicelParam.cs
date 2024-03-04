@@ -58,14 +58,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsLogParams Log { get; set; } = new clsLogParams();
 
-        public bool SimulationMode { get; set; } = false;
-        public bool WagoSimulation { get; set; } = true;
         public bool ActiveTrafficControl { get; set; } = false;
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;
         public bool Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo { get; set; } = false;
         public bool Auto_Read_CST_ID_When_No_Data_But_Has_Cargo { get; set; } = false;
-        public bool ForkLifer_Enable { get; set; } = false;
         public bool FrontLighterFlashWhenNormalMove { get; set; } = false;
         public bool CheckObstacleWhenForkInit { get; set; } = true;
         public bool LocalTaskCheckCargoExist { get; set; } = false;

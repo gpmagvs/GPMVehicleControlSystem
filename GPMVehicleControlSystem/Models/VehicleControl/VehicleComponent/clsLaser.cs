@@ -50,7 +50,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
-                    LOG.TRACE($"[From sick_safetyscanners topic] Laser Mode Switch to {value}");
+                    LOG.INFO($"Laser Mode Chaged To : {value}({Mode})", true);
+
                 }
             }
         }
@@ -119,7 +120,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.ERROR(ex.Message, ex);
                 }
                 _rosSocket = value;
-                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback, throttle_rate: 10, queue_length: 5);
+                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
                 LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }
@@ -244,7 +245,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         await Task.Delay(1);
                     }
                 }
-                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", true);
                 return true;
             }
             catch (Exception ex)

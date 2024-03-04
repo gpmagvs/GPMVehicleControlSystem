@@ -223,7 +223,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                 {
                     LOG.TRACE($"任務發送至車控前停等");
-                    await Task.Delay(Debugger.IsAttached ? 3000 : 50);
+                    await Task.Delay(50);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                         return new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };

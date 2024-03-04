@@ -37,7 +37,6 @@ namespace GPMVehicleControlSystem.ViewModels
                 {
                     APPVersion = AppVersion,
                     Agv_Type = AGV.Parameters.AgvType,
-                    Simulation = AGV.Parameters.SimulationMode,
                     AutoMode = AGV.Operation_Mode,
                     OnlineMode = AGV.Remote_Mode,
                     IsInitialized = AGV.IsInitialized,
@@ -228,9 +227,11 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {
+            if (AGV == null)
+                return new ConnectionStateVM();
             ConnectionStateVM data_view_model = new ConnectionStateVM()
             {
-                RosbridgeServer = AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                RosbridgeServer = AGV.AGVC == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 WAGO = AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
             };

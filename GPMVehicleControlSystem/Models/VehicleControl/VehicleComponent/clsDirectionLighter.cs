@@ -21,7 +21,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             try
             {
-                AllCloseFlag = true;
                 await Task.Delay(delay_ms);
                 AbortFlash();
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);

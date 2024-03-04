@@ -6,7 +6,6 @@ using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
-using GPMVehicleControlSystem.Models.Emulators;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -95,13 +94,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (IsNeedHandshake)
             {
                 bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS;
-                bool _is_agv_simulation_mode = Agv.Parameters.SimulationMode;
                 Agv.HandshakeStatusText = "AGV交握訊號重置...";
                 Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimersAndEvents();
                 await Task.Delay(400);
                 Agv.HandshakeStatusText = _is_modbus_hs ? "建立Modbus連線..." : "確認光IO EQ GO訊號...";
-                if (_is_modbus_hs && !_is_agv_simulation_mode)
+                if (_is_modbus_hs)
                 {
                     var modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
                     if (!modbusTcp.Start(Agv.AGVS, Agv.AGVHsSignalStates, Agv.EQHsSignalStates))
@@ -380,16 +378,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, checkstatus_alarm_code);
                 }
-
-                if (Agv.Parameters.SimulationMode)
-                {
-                    if (action == ACTION_TYPE.Unload)
-                        HasCargoIOSimulation();
-                    else
-                        NoCargoIOSimulation();
-                }
                 RecordExistSensorState();
-
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
 
@@ -645,34 +634,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (true, AlarmCodes.None);
             }
         }
-
-        private void HasCargoIOSimulation()
-        {
-            if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_1, false);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_2, false);
-            }
-            else if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, false);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, false);
-            }
-        }
-        private void NoCargoIOSimulation()
-        {
-            if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_1, true);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Cst_Sensor_2, true);
-            }
-            else if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor, true);
-                StaEmuManager.wagoEmu.SetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor, true);
-            }
-        }
-
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)
         {

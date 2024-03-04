@@ -4,6 +4,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
     public class clsForkAGVParams
     {
+        public bool ForkLifer_Enable { get; set; } = true;
         /// <summary>
         /// 牙叉伸出後總車長(cm)
         /// </summary>

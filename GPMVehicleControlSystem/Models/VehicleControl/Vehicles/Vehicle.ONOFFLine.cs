@@ -21,8 +21,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             set
             {
                 _Remote_Mode = value;
-                if (Parameters.SimulationMode)
-                    return;
                 if (value == REMOTE_MODE.ONLINE)
                 {
                     StatusLighter.ONLINE();

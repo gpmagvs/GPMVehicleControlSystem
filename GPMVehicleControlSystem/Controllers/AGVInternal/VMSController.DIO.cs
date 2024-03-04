@@ -1,5 +1,4 @@
-﻿using GPMVehicleControlSystem.Models.Emulators;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -78,7 +77,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> SetEQHsSignalState(string signal_name, bool state)
         {
 
-            if (agv.Parameters.EQHandshakeMethod != EQ_HS_METHOD.EMULATION && !agv.Parameters.WagoSimulation)
+            if (agv.Parameters.EQHandshakeMethod != EQ_HS_METHOD.EMULATION)
             {
                 return Ok("不可修改DI訊號");
             }
@@ -86,49 +85,30 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             await Task.Delay(1);
             string address = "";
             List<clsIOSignal> signalList = agv.WagoDO.VCSOutputs;
-            bool IsWagoModuleSimulation = agv.Parameters.WagoSimulation;
             switch (signal_name)
             {
                 case "EQ_READY":
-                    if (IsWagoModuleSimulation)
-                        DI_ITEM = clsDIModule.DI_ITEM.EQ_READY;
-                    else
-                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_READY.ToString()).Address;
+                    address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_READY.ToString()).Address;
                     break;
                 case "EQ_BUSY":
-                    if (IsWagoModuleSimulation)
-                        DI_ITEM = clsDIModule.DI_ITEM.EQ_BUSY;
-                    else
-                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
+                    address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_BUSY.ToString()).Address;
                     break;
                 case "EQ_L_REQ":
-                    if (IsWagoModuleSimulation)
-                        DI_ITEM = clsDIModule.DI_ITEM.EQ_L_REQ;
-                    else
-                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
+
+                    address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_L_REQ.ToString()).Address;
                     break;
                 case "EQ_U_REQ":
-                    if (IsWagoModuleSimulation)
-                        DI_ITEM = clsDIModule.DI_ITEM.EQ_U_REQ;
-                    else
-                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
+                    address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_U_REQ.ToString()).Address;
                     break;
                 case "EQ_GO":
-                    if (IsWagoModuleSimulation)
-                        DI_ITEM = clsDIModule.DI_ITEM.EQ_GO;
-                    else
-                        address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_GO.ToString()).Address;
+
+                    address = signalList.First(output => output.Name == clsDOModule.DO_ITEM.EMU_EQ_GO.ToString()).Address;
                     break;
 
                 default:
                     break;
             }
-            if (IsWagoModuleSimulation)
-            {
-                StaEmuManager.wagoEmu.SetState(DI_ITEM, state);
-            }
-            else
-                agv.WagoDO.SetState(address, state);
+            agv.WagoDO.SetState(address, state);
             return Ok();
         }
     }
