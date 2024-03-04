@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Controllers
             await Task.Factory.StartNew(() =>
             {
                 string bodyJson = body == null ? "" : body.ToJson();
-                Agv.AGVS.LogMsgFromAGVS($"({method}) api route= /api/TaskDispatch/{api_name},body={bodyJson}");
+                Agv.AGVS.LogMsgFromAGVSAsync($"({method}) api route= /api/TaskDispatch/{api_name},body={bodyJson}");
             });
         }
         private async void LogResponseAsync(string api_name, object response = null, string method = "GET")

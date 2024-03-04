@@ -455,68 +455,65 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         CancellationTokenSource wait_agvc_execute_action_cts;
         internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
+            bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
+            string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
+            if (isEmptyPathPlan)
+                LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
+            SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
 
-            return await Task.Run(async () =>
+            if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
+                confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
+
+            if (!confirmResult.Accept)
             {
-                bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
-                string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
-                if (isEmptyPathPlan)
-                    LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
-                SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-
-                if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
-                    confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
-
-                if (!confirmResult.Accept)
+                return confirmResult;
+            }
+            if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
+            {
+                //如果當下AGV正在移動，
+                if (ActionStatus != ActionStatus.ACTIVE)
                 {
+                    actionClient.goal = new TaskCommandGoal();
+                    actionClient.SendGoal();
+                    LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
                     return confirmResult;
                 }
-                if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
+                else
                 {
-                    //如果當下AGV正在移動，
-                    if (ActionStatus != ActionStatus.ACTIVE)
-                    {
-                        actionClient.goal = new TaskCommandGoal();
-                        actionClient.SendGoal();
-                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
-                        return confirmResult;
-                    }
+                    if (CycleStopActionExecuting)
+                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
                     else
-                    {
-                        if (CycleStopActionExecuting)
-                            LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
-                        else
-                            await CycleStop();
-                        return confirmResult;
-                    }
-
+                        await CycleStop();
+                    return confirmResult;
                 }
 
-                CycleStopActionExecuting = false;
-                LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-                actionClient.goal = rosGoal;
-                actionClient.SendGoal();
-                if (isEmptyPathPlan)
-                {
-                    return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-                }
-                wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-                await Task.Delay(500);
-                while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
-                {
-                    LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
-                    await Task.Delay(1);
-                    if (wait_agvc_execute_action_cts.IsCancellationRequested)
-                    {
-                        string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
-                        LOG.Critical(error_msg);
-                        AbortTask();
-                        return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
-                    }
-                }
-                LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            }
+
+            CycleStopActionExecuting = false;
+            LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+            actionClient.goal = rosGoal;
+            actionClient.SendGoal();
+            if (isEmptyPathPlan)
+            {
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-            });
+            }
+            wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+            await Task.Delay(500);
+            while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
+            {
+                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
+                await Task.Delay(1);
+                if (wait_agvc_execute_action_cts.IsCancellationRequested)
+                {
+                    string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
+                    LOG.Critical(error_msg);
+                    AbortTask();
+                    return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
+                }
+            }
+            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+
         }
 
 

@@ -152,7 +152,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (!IsInitialized)
+                if (!IsInitialized || !ModuleInformationUpdatedInitState)
                     return MAIN_STATUS.DOWN;
                 switch (_Sub_Status)
                 {
@@ -456,10 +456,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
 
                 AGVSInit();
-
                 EmulatorInitialize();
-                Task WagoDIConnTask = WagoDIInit();
-                WagoDIConnTask.Start();
+                WagoDIInit();
                 WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
                 StartConfigChangedWatcher();
@@ -581,36 +579,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
         }
 
-        private Task WagoDIInit()
+        private async Task WagoDIInit()
         {
-            return new Task(async () =>
+            try
             {
-                try
+                WagoDI.RegistSignalEvents();
+                DIOStatusChangedEventRegist();
+                LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
+                while (!await WagoDI.Connect())
                 {
-                    WagoDI.RegistSignalEvents();
-                    DIOStatusChangedEventRegist();
-                    LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
-                    while (!await WagoDI.Connect())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    while (!await WagoDO.Connect())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    WagoDI.StartAsync();
-                    await DOSignalDefaultSetting();
-                    await ResetMotor(callerName: "After DIO Module Initialize done");
+                    await Task.Delay(1000);
                 }
-                catch (SocketException ex)
+                while (!await WagoDO.Connect())
                 {
-                    LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+                    await Task.Delay(1000);
                 }
-                catch (Exception ex)
-                {
-                    LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
-                }
-            });
+                WagoDI.StartAsync();
+                await DOSignalDefaultSetting();
+                await ResetMotor(callerName: "After DIO Module Initialize done");
+            }
+            catch (SocketException ex)
+            {
+                LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
+            }
         }
 
         internal async Task<bool> IsAllLaserNoTrigger()
@@ -1051,30 +1046,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVAlarmReportable.ResetAlarmCodes();
             IsMotorReseting = false;
             await ResetMotor(callerName: "ResetAlarmsAsync");
-            _ = Task.Factory.StartNew(async () =>
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
             {
-                await Task.Delay(1000);
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+
+                if (isObstacle)
                 {
-                    bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) | !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) | !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-
-                    if (isObstacle)
-                    {
-                        BuzzerPlayer.Alarm();
-                        return;
-                    }
-                    else
-                    {
-                        if (ExecutingTaskModel.action == ACTION_TYPE.None)
-                            BuzzerPlayer.Move();
-                        else
-                            BuzzerPlayer.Action();
-                        return;
-                    }
+                    BuzzerPlayer.Alarm();
+                    return;
                 }
-
-            });
-            await Task.Delay(500);
+                else
+                {
+                    if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                        BuzzerPlayer.Move();
+                    else
+                        BuzzerPlayer.Action();
+                    return;
+                }
+            }
             IsResetAlarmWorking = false;
             return;
         }

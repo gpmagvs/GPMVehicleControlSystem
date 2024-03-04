@@ -96,60 +96,56 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         private async Task OutputWriteWorker()
         {
-            await Task.Run(async () =>
+            int reconnect_cnt = 0;
+            DateTime lastWriteTime = DateTime.MinValue;
+
+            while (true)
             {
-                int reconnect_cnt = 0;
-                DateTime lastWriteTime = DateTime.MinValue;
-
-                while (true)
+                await Task.Delay(50); // 使用非阻塞的方式等待
+                if (!_Connected)
                 {
-                    await Task.Delay(50); // 使用非阻塞的方式等待
-
-                    if (!_Connected)
+                    if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
                     {
-                        if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
-                        {
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            await Task.Delay(100); // 非阻塞等待
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
-                        }
-
-                        LOG.WARN("DO Module try reconnecting..");
-                        Disconnect();
-                        _Connected = await Connect();
-                        continue;
+                        Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
+                        await Task.Delay(100); // 非阻塞等待
+                        Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                     }
 
+                    LOG.WARN("DO Module try reconnecting..");
+                    Disconnect();
+                    _Connected = await Connect();
+                    continue;
+                }
+
+                try
+                {
+                    master?.ReadCoils(0, 1); // 維持 TCP 連接
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR($"DO Read Coils Fail: {ex.Message}");
+                    _Connected = false;
+                    continue;
+                }
+
+                if (OutputWriteRequestQueue.IsEmpty)
+                    continue;
+
+                if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
+                {
                     try
                     {
-                        master?.ReadCoils(0, 1); // 維持 TCP 連接
+                        WriteToDevice(to_handle_obj);
+                        lastWriteTime = DateTime.Now;
                     }
                     catch (Exception ex)
                     {
-                        LOG.ERROR($"DO Read Coils Fail: {ex.Message}");
+                        OutputWriteRequestQueue.Enqueue(to_handle_obj);
+                        LOG.ERROR($"Error writing to device: {ex.Message}", ex);
                         _Connected = false;
-                        continue;
-                    }
-
-                    if (OutputWriteRequestQueue.IsEmpty)
-                        continue;
-
-                    if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
-                    {
-                        try
-                        {
-                            WriteToDevice(to_handle_obj);
-                            lastWriteTime = DateTime.Now;
-                        }
-                        catch (Exception ex)
-                        {
-                            OutputWriteRequestQueue.Enqueue(to_handle_obj);
-                            LOG.ERROR($"Error writing to device: {ex.Message}", ex);
-                            _Connected = false;
-                        }
                     }
                 }
-            });
+            }
         }
 
       

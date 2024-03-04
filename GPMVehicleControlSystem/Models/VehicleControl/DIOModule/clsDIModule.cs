@@ -301,54 +301,50 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public virtual async Task StartAsync()
         {
             ConnectionWatchDog();
-
-            await Task.Run(async () =>
+            int error_cnt = 0;
+            await Task.Delay(100);
+            while (true)
             {
-                int error_cnt = 0;
-                while (true)
+                await Task.Delay(IO_Interval_ms);
+                if (!Connected)
                 {
-                    await Task.Delay(IO_Interval_ms);
+                    OnDisonnected?.Invoke(this, EventArgs.Empty);
+                    await Connect();
+                    await Task.Delay(1000); // 使用 Task.Delay 而不是 Thread.Sleep
+                    continue;
+                }
 
-                    if (!Connected)
+                try
+                {
+                    bool[]? input = master?.ReadInputs(1, Start, Size);
+                    if (input == null)
                     {
-                        OnDisonnected?.Invoke(this, EventArgs.Empty);
-                        await Connect();
-                        await Task.Delay(1000); // 使用 Task.Delay 而不是 Thread.Sleep
+                        LOG.Critical("DI Read inputs but null return, disconnect connection.");
+                        Disconnect();
+                        Connected = false;
                         continue;
                     }
 
-                    try
+                    for (int i = 0; i < input.Length; i++)
                     {
-                        bool[]? input = master?.ReadInputs(1, Start, Size);
-                        if (input == null)
-                        {
-                            LOG.Critical("DI Read inputs but null return, disconnect connection.");
-                            Disconnect();
-                            Connected = false;
-                            continue;
-                        }
-
-                        for (int i = 0; i < input.Length; i++)
-                        {
-                            VCSInputs[i].State = input[i];
-                        }
-
-                        lastReadTime = DateTime.Now;
-                        error_cnt = 0;
+                        VCSInputs[i].State = input[i];
                     }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
-                        error_cnt++;
 
-                        if (error_cnt >= 2)
-                        {
-                            Disconnect();
-                            Connected = false;
-                        }
+                    lastReadTime = DateTime.Now;
+                    error_cnt = 0;
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
+                    error_cnt++;
+
+                    if (error_cnt >= 2)
+                    {
+                        Disconnect();
+                        Connected = false;
                     }
                 }
-            });
+            }
         }
 
     }

@@ -24,7 +24,7 @@ namespace GPMVehicleControlSystem.Controllers
         {
             await Task.Factory.StartNew(() =>
             {
-                agv.AGVS.LogMsgFromAGVS($"({method}) api route= /api/AGV/{api_name}");
+                agv.AGVS.LogMsgFromAGVSAsync($"({method}) api route= /api/AGV/{api_name}");
             });
         }
         private async void LogResponseAsync(string api_name, string method = "GET", object response = null)

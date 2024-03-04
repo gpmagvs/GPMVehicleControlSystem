@@ -11,7 +11,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPMVehicleControlSystemTest
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RosBridgeClient", "..\RosBridgeClient\RosBridgeClient.csproj", "{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogAnalysisNet6", "LogAnalysisNet6\LogAnalysisNet6.csproj", "{297AF6B7-24D0-466B-9208-637D4D4FCAAB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogAnalysisNet6", "LogAnalysisNet6\LogAnalysisNet6.csproj", "{297AF6B7-24D0-466B-9208-637D4D4FCAAB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{29AF1BD3-228D-45BB-B596-F5DE1A12BFD5}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

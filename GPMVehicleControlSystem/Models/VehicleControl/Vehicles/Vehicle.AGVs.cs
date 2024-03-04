@@ -147,10 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual (bool report_allow, clsRunningStatus running_status) HandleWebAPIProtocolGetRunningStatus()
         {
-            if (!this.ModuleInformationUpdatedInitState)
-            {
-                return (false, new clsRunningStatus());
-            }
+           
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
@@ -206,12 +203,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         protected virtual (bool report_allow, RunningStatus running_status) HandleTcpIPProtocolGetRunningStatus()
         {
-
-            if (!this.ModuleInformationUpdatedInitState)
-            {
-                return (false, new RunningStatus());
-            }
-
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);

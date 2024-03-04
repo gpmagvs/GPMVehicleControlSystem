@@ -6,6 +6,8 @@
     <AssemblyVersion>12.26.1.5</AssemblyVersion>
     <InformationalVersion>23.7.7.1</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
+    <NoWarn>4014</NoWarn>
+    <NoWarn>1998</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>False</Optimize>
@@ -22,6 +24,9 @@
   </ItemGroup>
   <ItemGroup>
     <_WebToolingArtifacts Remove="Properties\PublishProfiles\U007_Remote.pubxml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />

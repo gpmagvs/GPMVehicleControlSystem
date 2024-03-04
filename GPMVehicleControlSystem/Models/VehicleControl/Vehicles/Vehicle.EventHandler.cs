@@ -525,7 +525,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
         }
-
+        private Task<bool> AutoResetMotorTaskExecution;
         protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
             if (!status)
@@ -552,39 +552,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
 
+            if (AutoResetMotorTaskExecution != null && !AutoResetMotorTaskExecution.IsCompleted)
+            {
+                await AutoResetMotorTaskExecution;
+            }
+
+            AutoResetMotorTaskExecution = AutoResetMotorAtChargeStationAsync(alarmCode, signal);
+
+
+        }
+
+        private async Task<bool> AutoResetMotorAtChargeStationAsync(AlarmCodes alarmCode, clsIOSignal signal)
+        {
             AlarmManager.AddWarning(alarmCode);
 
-            if (IsMotorReseting)
-            {
-                LOG.WARN($"{signal.Name}-Auto reset process not start. because it is Running by {(signal.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? "Motor 2" : "Motor 1")}");
-                return;
-            }
             IsMotorReseting = true;
             #region 嘗試Reset馬達
-            _ = Task.Factory.StartNew(async () =>
+
+            LOG.WARN($"Horizon Motor IO-{signal.Name} Alarm, Try auto reset process start!");
+            await Task.Delay(100);
+
+            if(!CheckMotorsAlarmExisting())
             {
-                LOG.WARN($"Horizon Motor IO Alarm, Try auto reset process start");
-                await Task.Delay(500);
+                LOG.WARN($"No Motor Alarm exist, auto reset process completed!");
+                return true;
+            }
 
-                while (CheckMotorsAlarmExisting()) //異常持續存在
-                {
-                    await Task.Delay(1000);
-                    IsMotorReseting = false;
-                    await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
-                }
+            while (CheckMotorsAlarmExisting()) //異常持續存在
+            {
+                bool IsAGVAtChargeStation = lastVisitedMapPoint.IsCharge;
+                if (!IsAGVAtChargeStation)
+                    return false;
+                await Task.Delay(1000);
+                IsMotorReseting = false;
+                await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
+            }
+            return true;
+            bool CheckMotorsAlarmExisting()
+            {
+                bool motor1Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1);
+                bool motor2Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
 
-                bool CheckMotorsAlarmExisting()
-                {
-                    bool motor1Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1);
-                    bool motor2Alarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+                LOG.TRACE($"Motor1-Alarm? {(motor1Alarm ? " Exist" : "Clear")}");
+                LOG.TRACE($"Motor2-Alarm? {(motor2Alarm ? " Exist" : "Clear")}");
 
-                    LOG.TRACE($"Motor1-Alarm? {(motor1Alarm ? " Exist" : "Clear")}");
-                    LOG.TRACE($"Motor2-Alarm? {(motor2Alarm ? " Exist" : "Clear")}");
-
-                    return motor1Alarm || motor2Alarm;
-                }
-
-            });
+                return motor1Alarm || motor2Alarm;
+            }
 
             #endregion
         }
