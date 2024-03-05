@@ -49,9 +49,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 if (_CurrentLaserModeOfSick != value)
                 {
-                    LOG.TRACE($"[From sick_safetyscanners topic] Laser Mode Switch to {value}");
+                    _CurrentLaserModeOfSick = value;
+                    LOG.INFO($"Laser Mode Chaged To : {value}({Mode})", true);
                 }
-                _CurrentLaserModeOfSick = value;
             }
         }
         public bool IsSickOutputDataNoUpdated => (DateTime.Now - _lastSickOuputPathDataUpdateDateTime).TotalSeconds > 3;
@@ -239,7 +239,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         await Task.Delay(1);
                     }
                 }
-                LOG.INFO($"Laser Mode Chaged To : {mode_int}({Mode})", true);
                 return true;
             }
             catch (Exception ex)
