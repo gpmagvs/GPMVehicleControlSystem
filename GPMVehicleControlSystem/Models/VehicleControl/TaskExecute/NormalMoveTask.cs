@@ -45,36 +45,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return base.TransferTaskToAGVC();
         }
-        protected override async Task WaitTaskDone()
+        protected override async Task WaitTaskDoneAsync()
         {
             LOG.TRACE($"等待 AGV完成 [移動] 任務", color: ConsoleColor.Green);
-            var _t = Task.Run(() =>
+            await Task.Delay(10);
+            try
             {
                 while (Agv.AGVC.IsRunning)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     if (TaskCancelByReplan.IsCancellationRequested)
                     {
                         throw new TaskCanceledException();
                     }
                 }
-            }, TaskCancelByReplan.Token);
-            try
-            {
-                await _t;
                 LOG.TRACE($"AGV完成 [移動] 任務, Alarm Code: {task_abort_alarmcode}.]", color: ConsoleColor.Green);
 
             }
             catch (TaskCanceledException ex)
             {
-                _wait_agvc_action_done_pause.Set();
                 task_abort_alarmcode = AlarmCodes.Replan;
+                _wait_agvc_action_done_pause.Set();
                 LOG.TRACE($"[移動]任務-Replan.{ex.Message}, Alarm Code:{task_abort_alarmcode}.]", color: ConsoleColor.Green);
             }
             catch (Exception ex)
             {
-                _wait_agvc_action_done_pause.Set();
                 task_abort_alarmcode = AlarmCodes.Replan;
+                _wait_agvc_action_done_pause.Set();
                 LOG.TRACE($"[移動]任務-Replan.{ex.Message}=>{task_abort_alarmcode}.]", color: ConsoleColor.Green);
             }
         }

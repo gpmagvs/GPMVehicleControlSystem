@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return returnCode;
         }
 
-        private async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
+        internal async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
             await Task.Delay(1);
             _ = Task.Run(async () =>

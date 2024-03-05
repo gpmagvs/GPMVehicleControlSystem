@@ -226,15 +226,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(50);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
-                        return new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
+                    {
+                        bool _is_agvs_task_cancel_req_raised = agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED;
+                        return _is_agvs_task_cancel_req_raised ? new List<AlarmCodes>() { AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised} :new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
+                    }
                     else
                     {
-                        if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
-                        {
-                            var _result = await HandleAGVCActionSucceess();
-                            return _result.success ? new List<AlarmCodes>() : new List<AlarmCodes>() { _result.alarmCode };
-                        }
-
                         if (task_abort_alarmcode != AlarmCodes.None)
                             return new List<AlarmCodes> { task_abort_alarmcode };
 
@@ -261,9 +258,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
-                        await WaitTaskDone();
+                        await WaitTaskDoneAsync();
                         AGVCActionStatusChaged -= HandleAGVActionChanged;
-
                         return new List<AlarmCodes>() { task_abort_alarmcode };
                     }
                 }
@@ -276,7 +272,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
-        protected virtual async Task WaitTaskDone()
+        protected virtual async Task WaitTaskDoneAsync()
         {
             LOG.TRACE($"等待AGV完成 [{action}] 任務", color: ConsoleColor.Green);
             _wait_agvc_action_done_pause.WaitOne();

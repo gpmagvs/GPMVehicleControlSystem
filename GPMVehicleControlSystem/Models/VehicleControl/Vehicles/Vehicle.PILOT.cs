@@ -85,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             AlarmManager.ClearAlarm();
             LOG.TRACE("Set Sub_Status RUN When Execute AGVS Task");
-            await Task.Delay(200);
+            await Task.Delay(10);
             SetSub_Status(SUB_STATUS.RUN);
             await Laser.AllLaserActive();
             ACTION_TYPE action = taskDownloadData.Action_Type;
@@ -110,11 +110,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-                LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
+
+                LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
 
                 if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                 {
                     LOG.WARN("Replan.");
+                    return;
+                }
+                if (alarmCodes.Any(al => al == AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised))
+                {
+                    LOG.WARN("AGVS Cancel Request Raised and AGV is executing cycle stop action");
                     return;
                 }
 

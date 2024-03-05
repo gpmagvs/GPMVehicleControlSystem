@@ -55,9 +55,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             }
         };
         public clsAGVSConnParam VMSParam { get; set; } = new clsAGVSConnParam();
-
-        public clsLogParams Log { get; set; } = new clsLogParams();
-
         public bool ActiveTrafficControl { get; set; } = false;
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;

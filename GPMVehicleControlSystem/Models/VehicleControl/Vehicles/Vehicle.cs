@@ -296,8 +296,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsSystemInitialized = false;
                 Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
                 Params.clsConnectionParam rosbridge_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.RosBridge];
-                string Wago_IP =  wago_connection_params.IP;
-                int Wago_Port =  wago_connection_params.Port;
+                string Wago_IP = wago_connection_params.IP;
+                int Wago_Port = wago_connection_params.Port;
                 int Wago_Protocol_Interval_ms = wago_connection_params.Protocol_Interval_ms;
                 int LastVisitedTag = Parameters.LastVisitedTag;
                 string RosBridge_IP = rosbridge_connection_params.IP;
@@ -321,47 +321,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
-                Task RosConnTask = new Task(async () =>
-                {
-                    await Task.Delay(1).ContinueWith(async t =>
-                    {
-                        await InitAGVControl(RosBridge_IP, RosBridge_Port);
-                        if (AGVC?.rosSocket != null)
-                        {
-                            AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
-                            AGVC.OnRosSocketDisconnected += AGVC_OnRosSocketDisconnected;
-                            BuzzerPlayer.rossocket = AGVC.rosSocket;
-                            AlarmManager.Active = false;
-
-                            lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
-                            Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
-                            BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
-
-                            CommonEventsRegist();
-                            //TrafficMonitor();
-                            LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                            await Task.Delay(3000);
-                            BuzzerPlayer.Alarm();
-                            IsSystemInitialized = true;
-                            AlarmManager.Active = true;
-                            AlarmManager.RecordAlarm(AlarmCodes.None);
-                            if (HasAnyCargoOnAGV() && CSTReader != null)
-                            {
-                                CSTReader.ReadCSTIDFromLocalStorage();
-                            }
-
-                            LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
-                        }
-                    }
-                    );
-                });
-
                 AGVSInit();
-                Task WagoDIConnTask = WagoDIInit();
-                WagoDIConnTask.Start();
+                WagoDIInit();
                 WebsocketAgent.StartViewDataCollect();
-                RosConnTask.Start();
+                RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag);
                 StartConfigChangedWatcher();
+
                 Task.Factory.StartNew(async () =>
                 {
                     ReloadLocalMap();
@@ -378,10 +343,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        private async Task RosConnAsync(string RosBridge_IP, int RosBridge_Port, int LastVisitedTag)
+        {
+            await InitAGVControl(RosBridge_IP, RosBridge_Port);
+            if (AGVC?.rosSocket != null)
+            {
+                AGVC.OnRosSocketReconnected += AGVC_OnRosSocketReconnected;
+                AGVC.OnRosSocketDisconnected += AGVC_OnRosSocketDisconnected;
+                BuzzerPlayer.rossocket = AGVC.rosSocket;
+                AlarmManager.Active = false;
+
+                lastVisitedMapPoint = new MapPoint(LastVisitedTag + "", LastVisitedTag);
+                Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
+                BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
+
+                CommonEventsRegist();
+                //TrafficMonitor();
+                LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
+                await Task.Delay(3000);
+                BuzzerPlayer.Alarm();
+                IsSystemInitialized = true;
+                AlarmManager.Active = true;
+                AlarmManager.RecordAlarm(AlarmCodes.None);
+                if (HasAnyCargoOnAGV() && CSTReader != null)
+                {
+                    CSTReader.ReadCSTIDFromLocalStorage();
+                }
+
+                LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
+            }
+        }
+
         private void AGVC_OnRosSocketDisconnected(object? sender, EventArgs e)
         {
             ModuleInformationUpdatedInitState = false;
-            AlarmManager.AddAlarm( AlarmCodes.Motion_control_Disconnected, false);
+            AlarmManager.AddAlarm(AlarmCodes.Motion_control_Disconnected, false);
         }
 
         private void AGVC_OnRosSocketReconnected(object? sender, EventArgs e)
@@ -443,37 +439,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
         }
 
-        private Task WagoDIInit()
+        private async Task WagoDIInit()
         {
-            return new Task(async () =>
-            {
-                try
-                {
-                    WagoDI.RegistSignalEvents();
-                    DIOStatusChangedEventRegist();
-                    LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
-                    while (!await WagoDI.Connect())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    while (!await WagoDO.Connect())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    WagoDI.StartAsync();
-                    await DOSignalDefaultSetting();
-                    await ResetMotor();
 
-                }
-                catch (SocketException ex)
+            try
+            {
+                WagoDI.RegistSignalEvents();
+                DIOStatusChangedEventRegist();
+                LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
+                while (!await WagoDI.Connect())
                 {
-                    LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+                    await Task.Delay(1000);
                 }
-                catch (Exception ex)
+                while (!await WagoDO.Connect())
                 {
-                    LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
+                    await Task.Delay(1000);
                 }
-            });
+                WagoDI.StartAsync();
+                await DOSignalDefaultSetting();
+                await ResetMotor();
+
+            }
+            catch (SocketException ex)
+            {
+                LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
+            }
         }
 
         internal async Task<bool> IsAllLaserNoTrigger()
@@ -1142,8 +1136,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!lastVisitedMapPoint.IsCharge || AGVC.IsRunning || Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
             {
-                if (Debugger.IsAttached)
-                    LOG.WARN($"Cancel Judge Battery is charging or not . (AGVC Is Running: {AGVC.IsRunning})/ Current Station is Charge Station:{lastVisitedMapPoint.IsCharge}");
                 return;
             }
 

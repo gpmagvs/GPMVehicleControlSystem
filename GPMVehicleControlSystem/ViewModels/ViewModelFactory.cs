@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
 
                     },
-                    Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserModeOfDO})",
+                    Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserModeOfSick})",
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.HasAnyCargoOnAGV(),
