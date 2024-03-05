@@ -195,7 +195,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             private bool IsAcceptCase()
             {
-                return ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.Accept || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION;
+                return ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.Accept || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION;
             }
         }
         public CarController()
@@ -459,6 +459,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
             if (isEmptyPathPlan)
                 LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
+
             SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
 
             if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
@@ -466,27 +467,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             if (!confirmResult.Accept)
             {
-                return confirmResult;
-            }
-            if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
-            {
-                //如果當下AGV正在移動，
-                if (ActionStatus != ActionStatus.ACTIVE)
+                if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
                 {
-                    actionClient.goal = new TaskCommandGoal();
-                    actionClient.SendGoal();
-                    LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
-                    return confirmResult;
-                }
-                else
-                {
-                    if (CycleStopActionExecuting)
-                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
+                    if (ActionStatus == ActionStatus.ACTIVE)
+                    {
+                        if (CycleStopActionExecuting)
+                            LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
+                        else
+                        {
+                            LOG.WARN($"任務取消發送至車控但發送Cycle Stop請求給車控，因AGVs已經發起任務取消請求,且車控還沒有執行Cycle Stop動作({ActionStatus})");
+                            await CycleStop();
+                        }
+                    }
                     else
-                        await CycleStop();
-                    return confirmResult;
+                    {
+                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
+                        actionClient.goal = new TaskCommandGoal();
+                        actionClient.SendGoal();
+                    }
                 }
 
+                return confirmResult;
             }
 
             CycleStopActionExecuting = false;

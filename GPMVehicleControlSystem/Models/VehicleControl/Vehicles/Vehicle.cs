@@ -371,7 +371,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     return;
                 }
-                LOG.TRACE($"Try Write AGV Status to Database \n{status_data.ToJson()}");
                 status_data_store = status_data;
                 DBhelper.AddAgvStatusData(status_data);
             }
@@ -710,7 +709,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     InitializingStatusText = "雷射模式切換(Bypass)..";
                     await Task.Delay(200);
-                    await Laser.ModeSwitch(LASER_MODE.Bypass);
+                    bool _laserModeBypass = await Laser.ModeSwitch(LASER_MODE.Bypass);
+                    if (!_laserModeBypass)
+                        throw new Exception("雷射設定失敗");
                     await Laser.AllLaserDisable();
                     await Task.Delay(Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? 500 : 1000);
                     StatusLighter.AbortFlash();
@@ -718,7 +719,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     InitializingStatusText = "初始化完成!";
                     await Task.Delay(500);
                     Sub_Status = SUB_STATUS.IDLE;
-
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
@@ -738,7 +738,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _Sub_Status = SUB_STATUS.DOWN;
                     BuzzerPlayer.Alarm();
                     IsInitialized = false;
-                    return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
+                    return (false, $"AGV Initizlize Fail ! : \r\n{ex.Message}");
                 }
 
             }, InitializeCancelTokenResourece.Token);

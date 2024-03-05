@@ -19,11 +19,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             Normal = 1,
             Secondary = 2,
             Move_Short = 3,
+            Unknow_4 = 4,
             Turning = 5,
+            Unknow_6 = 6,
             Loading = 7,
+            Unknow_8 = 8,
+            Unknow_9 = 9,
             Special = 10,
+            Unknow_11 = 11,
             Narrow = 12,
             Narrow_Long = 13,
+            Unknow_14 = 14,
+            Unknow_15 = 15,
             Bypass16 = 16,
             Unknow = 444
         }
@@ -39,14 +46,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         private int _CurrentLaserModeOfSick = -1;
-        private DateTime _lastSickOuputPathDataUpdateDateTime = DateTime.MinValue;
         internal int CurrentLaserModeOfSick
         {
             get => _CurrentLaserModeOfSick;
             set
             {
-                _lastSickOuputPathDataUpdateDateTime = DateTime.Now;
-
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
@@ -54,8 +58,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-        public bool IsSickOutputDataNoUpdated => (DateTime.Now - _lastSickOuputPathDataUpdateDateTime).TotalSeconds > 3;
-        internal int CurrentLaserModeOfDO = -1;
         private int _AgvsLsrSetting = 1;
         public delegate void LsrModeSwitchDelegate(int mode);
         public LsrModeSwitchDelegate OnLsrModeSwitchRequest;
@@ -86,12 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    if (CurrentLaserModeOfSick == -1 || IsSickOutputDataNoUpdated)
-                    {
-                        return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfDO);
-                    }
-                    else
-                        return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
+                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
                 }
                 catch (Exception)
                 {
@@ -205,47 +202,46 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
-            int mode_int = (int)mode;
-            if (CurrentLaserModeOfSick == mode_int || (CurrentLaserModeOfSick == 16 && mode_int == 0) || (CurrentLaserModeOfSick == 0 && mode_int == 16))
-                return true;
             return await ModeSwitch((int)mode, isSettingByAGVS);
         }
         public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
         {
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
-            if (CurrentLaserModeOfSick == mode_int)
-                return true;
-            try
+
+            int retry_times_limit = 3;
+            int try_count = 0;
+            bool[] writeBools = mode_int.ToLaserDOSettingBits();
+            while (IsLaserModeNeedChange(mode_int))
             {
-                bool do_write_success = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, mode_int.ToLaserDOSettingBits());
-                if (!do_write_success)
-                {
-                    AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail);
+                LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
+                if (try_count > retry_times_limit)
                     return false;
-                }
-                CurrentLaserModeOfDO = mode_int;
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                _CurrentLaserModeOfSick = 999;
-                if (CurrentLaserModeOfSick != -1 && !IsSickOutputDataNoUpdated)
+
+                bool do_write_success = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+                if (do_write_success)
                 {
-                    while ((mode_int != 0 & mode_int != 16) ? CurrentLaserModeOfSick != mode_int : (CurrentLaserModeOfSick != 0 && CurrentLaserModeOfSick != 16))
-                    {
-                        if (cts.IsCancellationRequested)
-                        {
-                            AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_Timeout);
-                            return false;
-                        }
-                        await Task.Delay(1);
-                    }
+                    await Task.Delay(100);
                 }
-                return true;
+                else
+                {
+                    await Task.Delay(1000);
+                }
+                try_count++;
             }
-            catch (Exception ex)
+            LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
+            return true;
+        }
+
+        private bool IsLaserModeNeedChange(int toSetMode)
+        {
+            if (toSetMode == 0 || toSetMode == 16)
             {
-                LOG.ERROR(ex.ToString(), ex);
-                AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_Fail_Exception);
-                return false;
+                return CurrentLaserModeOfSick != 16 && CurrentLaserModeOfSick != 0;
+            }
+            else
+            {
+                return toSetMode != CurrentLaserModeOfSick;
             }
         }
     }

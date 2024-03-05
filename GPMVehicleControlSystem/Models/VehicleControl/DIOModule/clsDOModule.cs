@@ -119,7 +119,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
                 try
                 {
-                    master?.ReadCoils(0, 1); // 維持 TCP 連接
+                    master?.ReadCoils(0, 1);
+                    Current_Alarm_Code = AlarmCodes.None;
                 }
                 catch (Exception ex)
                 {
@@ -135,7 +136,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 {
                     try
                     {
-                        WriteToDevice(to_handle_obj);
+                        await WriteToDeviceAsync(to_handle_obj);
                         lastWriteTime = DateTime.Now;
                     }
                     catch (Exception ex)
@@ -148,8 +149,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-      
-        private void WriteToDevice(clsWriteRequest to_handle_obj)
+
+        private async Task WriteToDeviceAsync(clsWriteRequest to_handle_obj)
         {
             ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
             bool[] writeStates = to_handle_obj.writeStates;
@@ -158,7 +159,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (!rollback.SequenceEqual(writeStates))
             {
-                Thread.Sleep(1);
                 if (tim.IsCancellationRequested)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
@@ -166,6 +166,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 }
                 master?.WriteMultipleCoils(startAddress, writeStates);
                 rollback = master?.ReadCoils(startAddress, count);
+                await Task.Delay(50); // 使用非阻塞的方式等待
             }
             for (int i = 0; i < writeStates.Length; i++)
             {
@@ -190,12 +191,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     while (DO.State != state)
                     {
-                        await Task.Delay(1);
                         if (_timeout.IsCancellationRequested)
                         {
                             Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
+                        await Task.Delay(10);
+
                     }
                     return true;
                 }
@@ -227,12 +229,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     while (GetState(signal) != state)
                     {
-                        await Task.Delay(1);
                         if (_timeout.IsCancellationRequested)
                         {
                             Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
+                        await Task.Delay(10);
                     }
                     return true;
                 }
@@ -291,12 +293,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     CancellationTokenSource _intime_detector = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                     while (!GetCurrentOuputState(DO_Start.index, writeStates.Length).SequenceEqual(writeStates))
                     {
-                        Thread.Sleep(1);
                         if (_intime_detector.IsCancellationRequested)
                         {
                             Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
+                        await Task.Delay(10);
                     }
 
                     return true;

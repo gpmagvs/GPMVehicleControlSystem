@@ -206,8 +206,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
 
                 SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
-                //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
-                if ((action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
+                if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
                     HandleAGVActionChanged(ActionStatus.SUCCEEDED);
@@ -218,20 +217,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(100);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
-                        return AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
+                    {
+                        bool _isAGVS_Cancel_Task_Req_Raised = agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED;
+                        return _isAGVS_Cancel_Task_Req_Raised ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control;
+                    }
                     else
                     {
-                        await Task.Delay(1000);
-                        if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
-                        {
-                            HandleAGVCActionSucceess();
-                            return AlarmCodes.None;
-                        }
+
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
-                            if (action == ACTION_TYPE.Load | action == ACTION_TYPE.Unload)
+                            if (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload)
                             {
                                 #region 前方障礙物預檢
                                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
