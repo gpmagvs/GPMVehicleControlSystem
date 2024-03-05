@@ -117,12 +117,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
                 {
                     WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
-                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
                     return mode;
                 }
                 else
                 {
-                    LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
                     return WORKSTATION_HS_METHOD.HS;
                 }
             }
