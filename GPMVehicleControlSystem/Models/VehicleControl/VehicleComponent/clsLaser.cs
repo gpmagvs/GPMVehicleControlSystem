@@ -212,10 +212,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
         {
-
-            if (OnLsrModeSwitchRequest != null)
-                OnLsrModeSwitchRequest(mode_int);
-
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
             if (CurrentLaserModeOfSick == mode_int)
