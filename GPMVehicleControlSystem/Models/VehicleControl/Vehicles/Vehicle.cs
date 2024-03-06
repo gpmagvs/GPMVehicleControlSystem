@@ -417,6 +417,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
+                List<Task> tasks = new List<Task>();
                 Task RosConnTask = new Task(async () =>
                 {
                     await Task.Delay(1).ContinueWith(async t =>
@@ -439,32 +440,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             CommonEventsRegist();
                             //TrafficMonitor();
-                            LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
-                            await Task.Delay(3000);
-                            BuzzerPlayer.Alarm();
-                            IsSystemInitialized = true;
-                            AlarmManager.Active = true;
-                            AlarmManager.AddAlarm(AlarmCodes.None);
-
-
-
 
                         }
                     }
                     );
                 });
-
                 AGVSInit();
                 EmulatorInitialize();
-                WagoDIInit();
+                tasks.Add(WagoDIInit());
                 WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
+                tasks.Add(RosConnTask);
+
                 StartConfigChangedWatcher();
                 Task.Factory.StartNew(async () =>
                 {
                     ReloadLocalMap();
                     await Task.Delay(1000);
                     await DownloadMapFromServer();
+                });
+
+                Task.WhenAll(tasks).ContinueWith(t =>
+                {
+                    LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
+                    while (!ModuleInformationUpdatedInitState)
+                    {
+                        Thread.Sleep(1);
+                    }
+                    Thread.Sleep(1000);
+                    BuzzerPlayer.Alarm();
+                    IsSystemInitialized = true;
+                    AlarmManager.Active = true;
+                    AlarmManager.AddAlarm(AlarmCodes.None);
                 });
             }
             catch (Exception ex)
@@ -683,7 +690,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await Task.Run(async () =>
             {
                 StopAllHandshakeTimer();
-                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
+                StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
                 {
                     IsMotorReseting = false;

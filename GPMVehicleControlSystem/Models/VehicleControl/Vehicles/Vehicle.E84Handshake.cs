@@ -402,7 +402,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
             Task wait_eq_busy_OFF = new Task(() =>
             {
-                HandshakeStatusText = $"等待設備開始完成動作...";
+                HandshakeStatusText = $"等待設備完成動作...";
                 LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
 
                 if (waitEQ_BUSY_OFF_CTS.IsCancellationRequested)

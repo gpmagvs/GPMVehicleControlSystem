@@ -23,38 +23,34 @@ namespace AGVSystemCommonNet6.Abstracts
             flash_cts?.Cancel();
         }
 
-        public void Flash(DO_ITEM light_DO, int flash_period = 400)
+        public async Task FlashAsync(DO_ITEM light_DO, int flash_period = 400)
         {
             flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
+            await DOModule.SetState(light_DO, true);
+            await Task.Delay(100);
             flash_cts = new CancellationTokenSource();
-
-            Task.Run(async () =>
+            bool light_active = false;
+            try
             {
-                bool light_active = true;  // 假定开始时灯是亮的
-
-                try
+                while (true)
                 {
-                    while (true)
+                    await Task.Delay(flash_period, flash_cts.Token);
+                    await DOModule.SetState(light_DO, light_active);
+                    light_active = !light_active;
+                    if (flash_cts.IsCancellationRequested)
                     {
-                        await DOModule.SetState(light_DO, light_active);
-                        await Task.Delay(flash_period, flash_cts.Token);
-                        light_active = !light_active;
-
-                        if (flash_cts.IsCancellationRequested)
-                        {
-                            break;  // 如果收到取消请求，则退出循环
-                        }
+                        break;  // 如果收到取消请求，则退出循环
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    LOG.TRACE("Flash Task Canceled", false);
-                }
-                catch (Exception ex)
-                {
-                    LOG.TRACE("Flash Task Canceled", false);
-                }
-            }, flash_cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                LOG.TRACE("Flash Task Canceled", false);
+            }
+            catch (Exception ex)
+            {
+                LOG.TRACE("Flash Task Canceled", false);
+            }
         }
 
         public async Task Flash(DO_ITEM[] light_DOs, int flash_period = 400)

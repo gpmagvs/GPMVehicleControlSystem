@@ -29,6 +29,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             //ReadCurrentDOStatus();
         }
         public override bool Connected { get => _Connected; set => _Connected = value; }
+        public override string alarm_locate_in_name => "DO Module";
         internal override void RegistSignalEvents()
         {
         }
@@ -91,10 +92,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             bool connected = _Connected = await base.Connect();
             if (OutputWriteWorkTask == null)
-                OutputWriteWorkTask = OutputWriteWorker();
+                OutputWriteWorkTask = Task.Run(() => OutputWriteWorker());
             return connected;
         }
-        private async Task OutputWriteWorker()
+        private async void OutputWriteWorker()
         {
             int reconnect_cnt = 0;
             DateTime lastWriteTime = DateTime.MinValue;
@@ -218,6 +219,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
+            await Task.Delay(1).ConfigureAwait(false);
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
             try
@@ -227,14 +229,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 {
                     OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
                     CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
                     while (GetState(signal) != state)
                     {
+                        await Task.Delay(1);
                         if (_timeout.IsCancellationRequested)
                         {
                             Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                             return false;
                         }
-                        await Task.Delay(10);
                     }
                     return true;
                 }

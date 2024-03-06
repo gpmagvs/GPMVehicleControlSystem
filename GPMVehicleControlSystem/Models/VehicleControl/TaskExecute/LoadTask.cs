@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
@@ -145,6 +146,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                         LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
                     }
+
+                    Agv.HandshakeStatusText = "AGV進入設備中...";
+                    await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+                    await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
                 }
 
 
@@ -368,19 +373,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private async Task<bool> CheckPortObstacleViaLaser()
         {
             var _laserModeNumber = Agv.Parameters.LDULDParams.LsrObsLaserModeNumber;
-            await Agv.Laser.ModeSwitch(_laserModeNumber);
+
+            while (Agv.Laser.CurrentLaserModeOfSick != _laserModeNumber)
+            {
+                await Agv.Laser.ModeSwitch(_laserModeNumber);
+                await Task.Delay(500);
+            }
             await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, false);
-            await Task.Delay(800);
 
-            bool _front_area_1_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
-            bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
-            bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
-            bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
+            int detectionTime = 1;//sec
+            Stopwatch timer = Stopwatch.StartNew();
+            while (timer.ElapsedMilliseconds < detectionTime * 1000)
+            {
 
-            await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
-            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
+                Agv.HandshakeStatusText = $"Port雷射偵測障礙物:{timer.Elapsed}";
+                bool _front_area_1_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+                bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+                bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+                bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
+                bool _hasObstacle = _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
 
-            return _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
+                if (_hasObstacle)
+                {
+                    return true;
+                }
+                await Task.Delay(1);
+            }
+            return false;
         }
         private void RecordParkLoction()
         {

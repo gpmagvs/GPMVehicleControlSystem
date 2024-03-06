@@ -48,15 +48,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (_State != value)
                 {
                     _State = value;
-                    Task.Factory.StartNew(() =>
-                    {
-                        LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta, show_console: Debugger.IsAttached, NewLogFileEndStr: "DIO");
-                        OnStateChanged?.Invoke(this, value);
-                        if (_State)
-                            OnSignalON?.Invoke(this, EventArgs.Empty);
-                        else
-                            OnSignalOFF?.Invoke(this, EventArgs.Empty);
-                    });
+                    _ = LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta, show_console: Debugger.IsAttached);
+                    OnStateChanged?.Invoke(this, value);
+                    if (_State)
+                        OnSignalON?.Invoke(this, EventArgs.Empty);
+                    else
+                        OnSignalOFF?.Invoke(this, EventArgs.Empty);
                 }
             }
         }

@@ -309,7 +309,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
                 await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
-
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddAlarm(alarm_code);
                 AGVStatusChangeToAlarmWhenLaserTrigger();
@@ -467,57 +466,63 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
         {
-            await Task.Delay(1000);
-            CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
+            await Task.Delay(1000).ConfigureAwait(false);
 
-            if (IsNoObstacleAroundAGV)
+            Task.Run(async() =>
             {
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
-                {
-                    IsLaserRecoveryHandled = true;
-                    _Sub_Status = SUB_STATUS.RUN;
-                    StatusLighter.RUN();
-                    try
-                    {
-                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                            BuzzerPlayer.Move();
-                        else
-                            BuzzerPlayer.Action();
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR(ex);
-                    }
+                CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
 
-                }
-                if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                if (IsNoObstacleAroundAGV)
                 {
-                    LOG.TRACE($"速度恢復-減速後加速");
-
-                    AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
-                    while (!await IsAllLaserNoTrigger())
+                    if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
                     {
-                        await Task.Delay(100);
-                        if (waitNoObstacleCTS.IsCancellationRequested)
+                        IsLaserRecoveryHandled = true;
+                        _Sub_Status = SUB_STATUS.RUN;
+                        StatusLighter.RUN();
+                        try
                         {
-                            AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
-                            LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
-                            return;
+                            if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                BuzzerPlayer.Move();
+                            else
+                                BuzzerPlayer.Action();
                         }
-                    }
-                    AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
-                    await Task.Delay(1000);
-                    if (!await IsAllLaserNoTrigger())
-                        return;
-                }
-                await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
+                        catch (Exception ex)
+                        {
+                            LOG.ERROR(ex);
+                        }
 
-            }
-            void HandleSTOPCmdRequesting(object sender, EventArgs arg)
-            {
-                waitNoObstacleCTS.Cancel();
-            }
+                    }
+                    if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                    {
+                        LOG.TRACE($"速度恢復-減速後加速");
+
+                        AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
+                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
+
+                        while (!await IsAllLaserNoTrigger())
+                        {
+                            await Task.Delay(100);
+                            if (waitNoObstacleCTS.IsCancellationRequested)
+                            {
+                                AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
+                                LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
+                                return;
+                            }
+                        }
+                        AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
+                        await Task.Delay(1000);
+                        if (!await IsAllLaserNoTrigger())
+                            return;
+                    }
+                    await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
+
+                }
+                void HandleSTOPCmdRequesting(object sender, EventArgs arg)
+                {
+                    waitNoObstacleCTS.Cancel();
+                }
+            });
+
         }
         private void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
@@ -572,7 +577,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.WARN($"Horizon Motor IO-{signal.Name} Alarm, Try auto reset process start!");
             await Task.Delay(100);
 
-            if(!CheckMotorsAlarmExisting())
+            if (!CheckMotorsAlarmExisting())
             {
                 LOG.WARN($"No Motor Alarm exist, auto reset process completed!");
                 return true;
@@ -642,20 +647,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        private async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            Task.Factory.StartNew(() =>
-            {
-                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            });
-
-            Task.Factory.StartNew(() =>
+            await Task.Run(() =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.STOP)
                 {
                     Laser.LaserChangeByAGVDirection(sender, direction);
                 }
-            });
+            }).ContinueWith(t =>
+            {
+                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
+            }).ConfigureAwait(false);
         }
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)

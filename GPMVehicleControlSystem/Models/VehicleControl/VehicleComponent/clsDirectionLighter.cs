@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-              
+
             }
             catch (Exception ex)
             {
@@ -46,12 +46,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public virtual async void TurnRight(bool opened = true)
         {
             CloseAll();
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, true);
             if (opened)
-                Flash(DO_ITEM.AGV_DiractionLight_Right);
+                FlashAsync(DO_ITEM.AGV_DiractionLight_Right).ConfigureAwait(false);
             else
             {
                 AbortFlash();
@@ -61,12 +57,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public virtual async void TurnLeft(bool opened = true)
         {
             CloseAll();
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
             if (opened)
-                Flash(DO_ITEM.AGV_DiractionLight_Left);
+                FlashAsync(DO_ITEM.AGV_DiractionLight_Left).ConfigureAwait(false);
             else
             {
                 AbortFlash();

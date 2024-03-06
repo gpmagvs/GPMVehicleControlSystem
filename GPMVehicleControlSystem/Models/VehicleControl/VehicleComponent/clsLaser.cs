@@ -208,25 +208,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if (isSettingByAGVS)
                 AgvsLsrSetting = mode_int;
-
-            int retry_times_limit = 3;
+            int retry_times_limit = 300;
             int try_count = 0;
             bool[] writeBools = mode_int.ToLaserDOSettingBits();
-            while (IsLaserModeNeedChange(mode_int))
+            while (true)
             {
+                await Task.Delay(10);
+                bool success = !IsLaserModeNeedChange(mode_int);
+                if (success)
+                {
+                    break;
+                }
                 LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
                 if (try_count > retry_times_limit)
                     return false;
-
-                bool do_write_success = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
-                if (do_write_success)
-                {
-                    await Task.Delay(100);
-                }
-                else
-                {
-                    await Task.Delay(1000);
-                }
+                await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
                 try_count++;
             }
             LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
