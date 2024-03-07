@@ -85,8 +85,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     }
                     catch (Exception ex)
                     {
-                        LOG.WARN($"WebStie closed");
-
                         break;
                     }
                 }
