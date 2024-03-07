@@ -46,10 +46,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public virtual async void TurnRight(bool opened = true)
         {
             CloseAll();
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, true);
             if (opened)
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
             else
@@ -61,10 +57,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public virtual async void TurnLeft(bool opened = true)
         {
             CloseAll();
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
             if (opened)
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
             else
@@ -77,18 +69,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async virtual void Forward(bool opened = true)
         {
             await Task.Delay(500);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, opened);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
+            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, opened);
         }
         public async virtual void Backward(bool opened = true, int delay = 500)
         {
             await Task.Delay(delay);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, opened);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
+            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, opened);
         }
 
         internal void WaitPassLights(int interval = 1000)
