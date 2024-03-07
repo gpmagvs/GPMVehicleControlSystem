@@ -240,7 +240,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 try
                 {
                     rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{VMSPort}"));
-                    if (!rosSocket.protocol.IsAlive())
+                    await Task.Delay(1000);
+                    Connected = rosSocket.protocol.IsAlive();
+                    if (!Connected)
                     {
                         rosSocket.protocol.Close();
                     }
@@ -316,7 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override bool IsConnected()
         {
-            return rosSocket != null && rosSocket.protocol.IsAlive();
+            return rosSocket != null && Connected;
         }
 
 
@@ -479,7 +481,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 return confirmResult;
             }
-           
+
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
             actionClient.goal = rosGoal;
