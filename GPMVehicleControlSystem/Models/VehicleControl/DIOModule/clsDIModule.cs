@@ -298,17 +298,16 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             });
             thread.Start();
         }
-        public virtual async Task StartAsync()
+        public virtual async void StartAsync()
         {
             ConnectionWatchDog();
-
-            await Task.Run(async () =>
+            int error_cnt = 0;
+            await Task.Delay(100);
+            Task.Run(async () =>
             {
-                int error_cnt = 0;
                 while (true)
                 {
                     await Task.Delay(IO_Interval_ms);
-
                     if (!Connected)
                     {
                         OnDisonnected?.Invoke(this, EventArgs.Empty);
@@ -348,6 +347,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         }
                     }
                 }
+
             });
         }
 
