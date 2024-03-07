@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 HandshakeIOOff();
                             if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
                                 BuzzerPlayer.Alarm();
-                            DirectionLighter.CloseAll(1000);
+                            DirectionLighter.CloseAll();
                             StatusLighter.DOWN();
                         }
                         else if (value == SUB_STATUS.IDLE)
@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (auto_stop_buzzer)
                                 BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
-                            DirectionLighter.CloseAll(1000);
+                            DirectionLighter.CloseAll();
                         }
                         else if (value == SUB_STATUS.RUN)
                         {
