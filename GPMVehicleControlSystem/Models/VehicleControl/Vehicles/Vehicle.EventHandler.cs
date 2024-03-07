@@ -621,23 +621,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        private void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        private async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            LOG.TRACE($"AGV Direction Change to {direction}", color: ConsoleColor.DarkRed);
-            bool _isAGVRunning = AGVC.IsRunning;
-            bool _isDirectionEqualStop = direction == clsNavigation.AGV_DIRECTION.STOP;
-            if (!_isAGVRunning || _isDirectionEqualStop)
-                return;
-            //雷射
-            Task.Run(() =>
+            await Task.Run(() =>
             {
-                Laser.LaserChangeByAGVDirection(sender, direction);
-                var _oriLaser = Laser.AgvsLsrSetting;
-                if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
-                    _CheckLaserStateAfter(_oriLaser);
-            });
-            //方向燈
-            Task.Run(() => DirectionLighter.LightSwitchByAGVDirection(sender, direction));
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.STOP)
+                {
+                    Laser.LaserChangeByAGVDirection(sender, direction);
+                }
+            }).ContinueWith(t =>
+            {
+                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
+            }).ConfigureAwait(false);
         }
 
         private async Task _CheckLaserStateAfter(int _oriLaser)
