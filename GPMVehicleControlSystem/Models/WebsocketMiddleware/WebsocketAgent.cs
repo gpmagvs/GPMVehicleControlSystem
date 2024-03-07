@@ -1,5 +1,7 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.ViewModels;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -26,15 +28,25 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             GETAGVSMSGIODATA,
             GETRDTestData
         }
-
+        private static List<MessageSender> _clients = new List<MessageSender>();
+        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         public static async Task ClientRequest(HttpContext _HttpContext, WEBSOCKET_CLIENT_ACTION client_req)
         {
             if (_HttpContext.WebSockets.IsWebSocketRequest)
             {
+                semaphore.Wait();
                 WebSocket webSocket = await _HttpContext.WebSockets.AcceptWebSocketAsync();
                 MessageSender msg_sender = new MessageSender(webSocket, client_req);
+                _clients.Add(msg_sender);
                 msg_sender.OnViewDataFetching += () => { return GetData(client_req); };
-                await msg_sender.SendMessage();
+                msg_sender.OnClientDisconnect += (sender, entity) =>
+                {
+                    semaphore.Wait();
+                    _clients.Remove(entity);
+                    semaphore.Release();
+                };
+                semaphore.Release();
+                await msg_sender.ListenConnection();
                 msg_sender.Dispose();
             }
             else
@@ -49,6 +61,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 
             internal delegate object OnViewDataFetchDelate();
             internal OnViewDataFetchDelate OnViewDataFetching;
+            internal event EventHandler<MessageSender> OnClientDisconnect;
             private bool disposedValue;
 
             public MessageSender(WebSocket client, WEBSOCKET_CLIENT_ACTION client_req)
@@ -56,35 +69,13 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 this.client = client;
                 this.client_req = client_req;
             }
-
-            public async Task SendMessage()
+            public async Task PublishMesgOut(byte[] dataByte)
             {
-                var buff = new ArraySegment<byte>(new byte[10]);
-                bool closeFlag = false;
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    while (!closeFlag)
-                    {
-                        await Task.Delay(100);
-                        if (OnViewDataFetching == null)
-                            return;
-                        var data = OnViewDataFetching();
-                        if (data != null)
-                        {
-                            try
-                            {
-
-                                await client.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data))), WebSocketMessageType.Text, true, CancellationToken.None);
-                                data = null;
-                            }
-                            catch (Exception)
-                            {
-                                return;
-                            }
-                        }
-                    }
-                });
-
+                await client.SendAsync(new ArraySegment<byte>(dataByte), WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            public async Task ListenConnection()
+            {
+                byte[] buff = new byte[2];
                 while (true)
                 {
                     try
@@ -94,13 +85,12 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                     }
                     catch (Exception ex)
                     {
+                        LOG.WARN($"WebStie closed");
+
                         break;
                     }
                 }
-                closeFlag = true;
-                client.Dispose();
-                GC.Collect();
-
+                OnClientDisconnect?.Invoke(this, this);
             }
 
             protected virtual void Dispose(bool disposing)
@@ -132,22 +122,63 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         private static object DIOTableVM;
         private static object RDTestData;
 
-        internal static async Task StartViewDataCollect()
+        internal static void StartViewDataCollect()
         {
-            await Task.Run(() =>
+            Task.Run(async () =>
             {
+                Stopwatch stopwatch = Stopwatch.StartNew();
                 while (true)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(10);
                     try
                     {
-                        ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
-                        VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
-                        DIOTableVM = ViewModelFactory.GetDIOTableVM();
-                        RDTestData = ViewModelFactory.GetRDTestData();
+                        var ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
+                        var VMSStatesVM = ViewModelFactory.GetVMSStatesVM();
+                        var DIOTableVM = ViewModelFactory.GetDIOTableVM();
+                        var RDTestData = ViewModelFactory.GetRDTestData();
+
+                        if (_clients.Count > 0)
+                        {
+
+                            semaphore.Wait();
+                            var clients_GETConnectionStates = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETConnectionStates);
+                            var clients_GETVMSStates = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETVMSStates);
+                            var clients_GETDIOTable = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETDIOTable);
+                            var clients_GETRDTestData = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETRDTestData);
+
+                            var data_GETConnectionStates = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ConnectionStatesVM));
+                            var data_GETVMSStates = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(VMSStatesVM));
+                            var data_GETDIOTable = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(DIOTableVM));
+                            var data_GETRDTestData = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(RDTestData));
+
+                            foreach (var client in clients_GETConnectionStates)
+                            {
+                                await client.PublishMesgOut(data_GETConnectionStates);
+                            }
+                            foreach (var client in clients_GETVMSStates)
+                            {
+                                await client.PublishMesgOut(data_GETVMSStates);
+                            }
+                            foreach (var client in clients_GETDIOTable)
+                            {
+                                await client.PublishMesgOut(data_GETDIOTable);
+                            }
+                            foreach (var client in clients_GETRDTestData)
+                            {
+                                await client.PublishMesgOut(data_GETRDTestData);
+                            }
+                            semaphore.Release();
+                        };
+
                     }
                     catch (Exception ex)
                     {
+                        continue;
+                    }
+                    finally
+                    {
+                        //Console.WriteLine(stopwatch.Elapsed);
+                        //stopwatch.Restart();
                     }
                 }
             });
