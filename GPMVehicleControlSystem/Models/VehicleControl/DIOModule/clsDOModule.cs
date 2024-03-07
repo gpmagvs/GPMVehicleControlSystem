@@ -12,6 +12,9 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
+using System.Xml.Linq;
+using static AGVSystemCommonNet6.Vehicle_Control.CarComponent;
 using static GPMVehicleControlSystem.ViewModels.ForkTestVM.clsForkTestState;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
@@ -29,6 +32,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             //ReadCurrentDOStatus();
         }
         public override bool Connected { get => _Connected; set => _Connected = value; }
+        public override string alarm_locate_in_name => "DO Module";
         internal override void RegistSignalEvents()
         {
         }
@@ -91,168 +95,165 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             bool connected = _Connected = await base.Connect();
             if (OutputWriteWorkTask == null)
-                OutputWriteWorkTask = OutputWriteWorker();
+                OutputWriteWorkTask = Task.Run(() => OutputWriteWorker());
             return connected;
         }
-        private async Task OutputWriteWorker()
+        private async void OutputWriteWorker()
         {
-            await Task.Run(async () =>
+            int reconnect_cnt = 0;
+            DateTime lastWriteTime = DateTime.MinValue;
+
+            while (true)
             {
-                int reconnect_cnt = 0;
-                DateTime lastWriteTime = DateTime.MinValue;
-
-                while (true)
+                await Task.Delay(50); // 使用非阻塞的方式等待
+                if (!_Connected)
                 {
-                    await Task.Delay(50); // 使用非阻塞的方式等待
-
-                    if (!_Connected)
+                    if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
                     {
-                        if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
-                        {
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            await Task.Delay(100); // 非阻塞等待
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
-                        }
-
-                        LOG.WARN("DO Module try reconnecting..");
-                        Disconnect();
-                        _Connected = await Connect();
-                        continue;
+                        Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
+                        await Task.Delay(100); // 非阻塞等待
+                        Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                     }
 
+                    LOG.WARN("DO Module try reconnecting..");
+                    Disconnect();
+                    _Connected = await Connect();
+                    continue;
+                }
+
+                try
+                {
+                    master?.ReadCoils(0, 1);
+                    Current_Alarm_Code = AlarmCodes.None;
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR($"DO Read Coils Fail: {ex.Message}");
+                    _Connected = false;
+                    continue;
+                }
+
+                if (OutputWriteRequestQueue.IsEmpty)
+                    continue;
+
+                if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
+                {
                     try
                     {
-                        master?.ReadCoils(0, 1); // 維持 TCP 連接
+                        await WriteToDeviceAsync(to_handle_obj);
+                        lastWriteTime = DateTime.Now;
                     }
                     catch (Exception ex)
                     {
-                        LOG.ERROR($"DO Read Coils Fail: {ex.Message}");
+                        OutputWriteRequestQueue.Enqueue(to_handle_obj);
+                        LOG.ERROR($"Error writing to device: {ex.Message}", ex);
                         _Connected = false;
-                        continue;
-                    }
-
-                    if (OutputWriteRequestQueue.IsEmpty)
-                        continue;
-
-                    if (OutputWriteRequestQueue.TryDequeue(out var to_handle_obj))
-                    {
-                        try
-                        {
-                            WriteToDevice(to_handle_obj);
-                            lastWriteTime = DateTime.Now;
-                        }
-                        catch (Exception ex)
-                        {
-                            OutputWriteRequestQueue.Enqueue(to_handle_obj);
-                            LOG.ERROR($"Error writing to device: {ex.Message}", ex);
-                            _Connected = false;
-                        }
                     }
                 }
-            });
+            }
         }
 
 
-        private void WriteToDevice(clsWriteRequest to_handle_obj)
+        private SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
+        private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
+        private async Task WriteToDeviceAsync(clsWriteRequest to_handle_obj)
         {
             ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
             bool[] writeStates = to_handle_obj.writeStates;
             bool[] rollback = writeStates.Select(s => !s).ToArray();
             ushort count = (ushort)writeStates.Length;
             CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            while (!rollback.SequenceEqual(writeStates))
+
+            async Task<bool[]> ReadFromModule(ushort _startAddress, ushort _count)
             {
-                Thread.Sleep(1);
+                return await master?.ReadCoilsAsync(_startAddress, _count);
+            }
+
+            while (!(rollback = await ReadFromModule(startAddress, count)).SequenceEqual(writeStates))
+            {
+                await Task.Delay(1);
                 if (tim.IsCancellationRequested)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
                     throw new Exception($"DO Write Timeout.");
                 }
                 master?.WriteMultipleCoils(startAddress, writeStates);
-                rollback = master?.ReadCoils(startAddress, count);
             }
             for (int i = 0; i < writeStates.Length; i++)
             {
                 clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == to_handle_obj.signal.index + i);
                 if (_DO != null)
+                {
                     _DO.State = writeStates[i];
+                }
             }
-
+            if (to_handle_obj.OnWriteDone != null)
+                to_handle_obj.OnWriteDone(rollback);
         }
 
         public async Task<bool> SetState(string address, bool state)
         {
+            clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
+            return await SetState(DO.Output, new bool[] { state });
+        }
+
+        public async Task<bool> SetState(DO_ITEM signal, bool state)
+        {
+            return await SetState(signal, new bool[] { state });
+        }
+        internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
+        {
+            await semaphore.WaitAsync().ConfigureAwait(false);
+
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
             try
             {
-                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
+                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == start_signal.ToString());
                 if (DO != null)
                 {
-                    OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
-
-                    CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    while (DO.State != state)
+                    bool writeDone = false;
+                    bool[] DOCurrentSTate = new bool[writeStates.Length];
+                    void sdafasdf(bool[] currentState)
+                    {
+                        DOCurrentSTate = currentState;
+                        writeDone = true;
+                    }
+                    var writeState = new clsWriteRequest(DO, writeStates);
+                    writeState.OnWriteDone += sdafasdf;
+                    OutputWriteRequestQueue.Enqueue(writeState);
+                    while (!writeDone)
                     {
                         await Task.Delay(1);
-                        if (_timeout.IsCancellationRequested)
-                        {
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            return false;
-                        }
                     }
-                    return true;
+                    bool success = DOCurrentSTate.SequenceEqual(writeStates);
+
+
+                    writeState.Dispose();
+
+                    return success;
                 }
                 else
                 {
-                    LOG.ERROR("DO-" + address + $"Wago_IO_Write_Fail Error.{address}-Not found ");
                     Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + address + $"Wago_IO_Write_Fail Error.{ex.Message + ex.StackTrace}");
+                LOG.ERROR($"DO Start From {start_signal} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
+            }
+            finally
+            {
+                semaphore.Release();
             }
         }
 
-        public async Task<bool> SetState(DO_ITEM signal, bool state)
-        {
-            if (Current_Alarm_Code != AlarmCodes.None)
-                return false;
-            try
-            {
-                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
-                if (DO != null)
-                {
-                    OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO, new bool[] { state }));
-                    CancellationTokenSource _timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    while (GetState(signal) != state)
-                    {
-                        await Task.Delay(1);
-                        if (_timeout.IsCancellationRequested)
-                        {
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                LOG.Critical(ex);
-                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                return false;
-            }
-        }
-        class clsWriteRequest
+
+        class clsWriteRequest : IDisposable
         {
             public readonly clsIOSignal signal;
             public readonly bool[] writeStates;
@@ -261,57 +262,27 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 this.signal = signal;
                 this.writeStates = writeStates;
             }
-        }
+            public delegate void OnWriteDoneDelegate(bool[] states);
+            public OnWriteDoneDelegate OnWriteDone;
+            private bool disposedValue;
 
-        private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
-        internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
-        {
-            if (Current_Alarm_Code != AlarmCodes.None)
-                return false;
-            try
+            protected virtual void Dispose(bool disposing)
             {
-                clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
-                if (DO_Start == null)
+                if (!disposedValue)
                 {
-                    LOG.ERROR($"Connected:{Connected} DO-" + start_signal + "Wago_IO_Write_Fail Error.");
-                    Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                    return false;
-                }
-                else
-                {
-                    bool[] GetCurrentOuputState(ushort startIndex, int length)
+                    if (disposing)
                     {
-                        bool[] states = new bool[length];
-
-                        for (int i = 0; i < writeStates.Length; i++)
-                        {
-                            var _index = startIndex + i;
-                            states[i] = VCSOutputs.FirstOrDefault(output => output.index == _index).State;
-                        }
-                        return states;
                     }
-
-                    OutputWriteRequestQueue.Enqueue(new clsWriteRequest(DO_Start, writeStates));
-                    CancellationTokenSource _intime_detector = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    while (!GetCurrentOuputState(DO_Start.index, writeStates.Length).SequenceEqual(writeStates))
-                    {
-                        Thread.Sleep(1);
-                        if (_intime_detector.IsCancellationRequested)
-                        {
-                            Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                            return false;
-                        }
-                    }
-
-                    return true;
+                    OnWriteDone = null;
+                    disposedValue = true;
                 }
             }
-            catch (Exception ex)
+
+            public void Dispose()
             {
-                LOG.ERROR("DO-" + start_signal + $"Wago_IO_Write_Fail Error {ex.Message}");
-                LOG.Critical(ex);
-                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                return false;
+                // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
             }
         }
         public new bool GetState(DO_ITEM signal)
