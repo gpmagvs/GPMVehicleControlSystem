@@ -396,7 +396,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Navigation.StateData = new NavigationState() { lastVisitedNode = new RosSharp.RosBridgeClient.MessageTypes.Std.Int32(LastVisitedTag) };
                 BarcodeReader.StateData = new BarcodeReaderState() { tagID = (uint)LastVisitedTag };
 
-               
+
             }
         }
 
@@ -551,6 +551,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (lastVisitedMapPoint.IsEquipment)
             {
                 return (false, "AGV位於設備內禁止初始化，請將AGV移動至道路Tag上");
+            }
+
+            if (WagoDI.Current_Alarm_Code != AlarmCodes.None || WagoDO.Current_Alarm_Code != AlarmCodes.None)
+            {
+                return (false, "IO 模組異常");
             }
 
             BuzzerPlayer.Stop();
