@@ -51,8 +51,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     _State = value;
                     Task.Factory.StartNew(() =>
                     {
-                        LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta, show_console: Debugger.IsAttached, NewLogFileEndStr: "DIO");
-                        OnStateChanged?.Invoke(this, value);
+                        _ = LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta); OnStateChanged?.Invoke(this, value);
                         if (_State)
                             OnSignalON?.Invoke(this, EventArgs.Empty);
                         else
