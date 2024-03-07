@@ -30,16 +30,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async void RUN()
         {
             await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
             await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
         }
         public async void DOWN()
         {
             try
             {
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
                 await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
                 await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
             }
             catch (Exception ex)
             {
