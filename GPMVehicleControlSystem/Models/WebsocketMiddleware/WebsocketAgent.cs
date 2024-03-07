@@ -129,7 +129,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (true)
                 {
-                    Thread.Sleep(10);
+                    await Task.Delay(10);
                     try
                     {
                         var ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
@@ -139,31 +139,27 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 
                         if (_clients.Count > 0)
                         {
-
-                            semaphore.Wait();
-                            var clients_GETConnectionStates = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETConnectionStates);
-                            var clients_GETVMSStates = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETVMSStates);
-                            var clients_GETDIOTable = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETDIOTable);
-                            var clients_GETRDTestData = _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETRDTestData);
+                            await semaphore.WaitAsync(); // 改用非阻塞等待
 
                             var data_GETConnectionStates = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ConnectionStatesVM));
                             var data_GETVMSStates = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(VMSStatesVM));
                             var data_GETDIOTable = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(DIOTableVM));
                             var data_GETRDTestData = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(RDTestData));
 
-                            foreach (var client in clients_GETConnectionStates)
+                            // 直接在 foreach 中進行篩選，減少臨時變量的創建
+                            foreach (var client in _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETConnectionStates))
                             {
                                 await client.PublishMesgOut(data_GETConnectionStates);
                             }
-                            foreach (var client in clients_GETVMSStates)
+                            foreach (var client in _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETVMSStates))
                             {
                                 await client.PublishMesgOut(data_GETVMSStates);
                             }
-                            foreach (var client in clients_GETDIOTable)
+                            foreach (var client in _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETDIOTable))
                             {
                                 await client.PublishMesgOut(data_GETDIOTable);
                             }
-                            foreach (var client in clients_GETRDTestData)
+                            foreach (var client in _clients.Where(cl => cl.client_req == WEBSOCKET_CLIENT_ACTION.GETRDTestData))
                             {
                                 await client.PublishMesgOut(data_GETRDTestData);
                             }
