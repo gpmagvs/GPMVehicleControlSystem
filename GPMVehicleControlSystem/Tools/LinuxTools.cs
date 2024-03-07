@@ -33,15 +33,15 @@ namespace GPMVehicleControlSystem.Tools
             File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "VCS_PID"), pid.ToString());
         }
 
-        public static void SysLoadingLogProcess()
+        public static async void SysLoadingLogProcess()
         {
-            Task.Factory.StartNew(async () =>
+            await Task.Run(async () =>
             {
                 while (true)
                 {
                     Memory = GetMemUsedMB();
                     LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: false);
-                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    await Task.Delay(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
                 }
             });
         }
