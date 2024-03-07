@@ -51,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, true);
             if (opened)
-                Flash(DO_ITEM.AGV_DiractionLight_Right);
+                FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
             else
             {
                 AbortFlash();
@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
             if (opened)
-                Flash(DO_ITEM.AGV_DiractionLight_Left);
+                FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
             else
             {
                 AbortFlash();

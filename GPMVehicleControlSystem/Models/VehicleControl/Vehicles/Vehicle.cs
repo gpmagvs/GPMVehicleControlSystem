@@ -569,7 +569,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
                 StopAllHandshakeTimer();
-                StatusLighter.Flash(DO_ITEM.AGV_DiractionLight_Y, 600);
+                StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
                 {
                     IsMotorReseting = false;
