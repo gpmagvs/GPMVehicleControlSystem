@@ -40,5 +40,24 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             await WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETRDTestData);
         }
+
+        [HttpPost("IOWriteTest")]
+        public async Task IOWriteTest()
+        {
+            _ = Task.Run(async () =>
+            {
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Back, false);
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Front, true);
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Back, false);
+                Console.WriteLine($"DO_Set1_Write_Done{DateTime.Now}");
+            });
+            _ = Task.Run(async () =>
+            {
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Front, false);
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Back, true);
+                await agv.WagoDO.SetState(VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Front, false);
+                Console.WriteLine($"DO_Set2_Write_Done{DateTime.Now}");
+            });
+        }
     }
 }
