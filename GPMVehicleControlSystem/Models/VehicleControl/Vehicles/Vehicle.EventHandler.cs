@@ -88,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
                             if (isEMOING)
                                 return false;
-                            bool isResetAlarmProcessing = IsResetAlarmWorking;
+                            bool isResetAlarmProcessing = _ResetAlarmSemaphoreSlim.CurrentCount == 0;
                             return !isResetAlarmProcessing;
                         });
                         bool isAlarmNeedAdd = await state;
@@ -468,7 +468,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await Task.Delay(1000).ConfigureAwait(false);
 
-            Task.Run(async() =>
+            Task.Run(async () =>
             {
                 CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
 
@@ -537,7 +537,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             await Task.Delay(200);
 
-            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+            if (!WagoDI.GetState(DI_ITEM.EMO) || _ResetAlarmSemaphoreSlim.CurrentCount == 0)
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;

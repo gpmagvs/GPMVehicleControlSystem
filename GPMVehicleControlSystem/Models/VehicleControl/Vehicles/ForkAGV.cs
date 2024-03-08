@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
-        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true,string callName="")
+        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callName = "")
         {
             try
             {
@@ -96,7 +96,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
                         if (isEMOING)
                             return false;
-                        bool isResetAlarmProcessing = IsResetAlarmWorking;
+                        bool isResetAlarmProcessing = _ResetAlarmSemaphoreSlim.CurrentCount == 0;
                         return !isResetAlarmProcessing;
                     });
                     bool isAlarmNeedAdd = await state;
@@ -221,7 +221,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
         }
 
-      
+
         protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
             if (!status)

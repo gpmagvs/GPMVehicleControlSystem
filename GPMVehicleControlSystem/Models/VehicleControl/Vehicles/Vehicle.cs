@@ -212,7 +212,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public bool IsInitialized { get; internal set; }
         public bool IsSystemInitialized { get; internal set; }
-        protected bool IsResetAlarmWorking = false;
+
         private bool _IsMotorReseting = false;
         protected bool IsMotorReseting
         {
@@ -1041,38 +1041,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
-
+        protected SemaphoreSlim _ResetAlarmSemaphoreSlim = new SemaphoreSlim(1, 1);
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            if (IsResetAlarmWorking)
-                return;
 
-            IsResetAlarmWorking = true;
-            BuzzerPlayer.Stop();
-            AlarmManager.ClearAlarm();
-            AGVAlarmReportable.ResetAlarmCodes();
-            IsMotorReseting = false;
-            await ResetMotor(callerName: "ResetAlarmsAsync");
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+            await _ResetAlarmSemaphoreSlim.WaitAsync().ConfigureAwait(false);
+
+            try
             {
-                bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                BuzzerPlayer.Stop();
+                AlarmManager.ClearAlarm();
+                AGVAlarmReportable.ResetAlarmCodes();
+                IsMotorReseting = false;
+                await ResetMotor(callerName: "ResetAlarmsAsync");
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                {
+                    bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
-                if (isObstacle)
-                {
-                    BuzzerPlayer.Alarm();
-                    return;
-                }
-                else
-                {
-                    if (ExecutingTaskModel.action == ACTION_TYPE.None)
-                        BuzzerPlayer.Move();
+                    if (isObstacle)
+                    {
+                        BuzzerPlayer.Alarm();
+                        return;
+                    }
                     else
-                        BuzzerPlayer.Action();
-                    return;
+                    {
+                        if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                            BuzzerPlayer.Move();
+                        else
+                            BuzzerPlayer.Action();
+                        return;
+                    }
                 }
+                return;
             }
-            IsResetAlarmWorking = false;
-            return;
+            catch (Exception ex)
+            {
+                LOG.ERROR($"ResetAlarmsAsync Exception Occur!!: {ex.Message}", ex);
+            }
+            finally
+            {
+                _ResetAlarmSemaphoreSlim.Release();
+                Console.WriteLine(_ResetAlarmSemaphoreSlim.CurrentCount);
+            }
+
         }
         protected private async Task<bool> SetMotorStateAndDelay(DO_ITEM item, bool state, int delay = 10)
         {

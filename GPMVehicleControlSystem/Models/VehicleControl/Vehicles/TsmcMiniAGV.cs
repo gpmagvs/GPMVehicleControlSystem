@@ -205,7 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await WagoDO.ResetSaftyRelay();
-              
+
                 if (!CheckMotorIOError())
                     return true;
                 bool io_write_success = await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
@@ -403,8 +403,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!status)
                 return;
-            await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+            await _ResetAlarmSemaphoreSlim.WaitAsync();
+            if (!WagoDI.GetState(DI_ITEM.EMO))
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;
@@ -419,6 +419,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (input == DI_ITEM.Horizon_Motor_Error_4)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
             AlarmManager.AddAlarm(alarmCode, false);
+
+            _ResetAlarmSemaphoreSlim.Release();
         }
         protected override async void HandshakeIOOff()
         {

@@ -361,9 +361,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             //安全迴路RELAY
             bool RelayON = false;
-            var do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, true);
+            var do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, true).ConfigureAwait(false);
             await Task.Delay(200);
-            do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false);
+            do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false).ConfigureAwait(false);
             return true;
         }
 
