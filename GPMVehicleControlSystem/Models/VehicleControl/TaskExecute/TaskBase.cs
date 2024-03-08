@@ -113,6 +113,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
+        public TaskBase()
+        {
+
+        }
+
         public TaskBase(Vehicle Agv, clsTaskDownloadData taskDownloadData)
         {
             this.Agv = Agv;
@@ -228,7 +233,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!agvc_response.Accept)
                     {
                         bool _is_agvs_task_cancel_req_raised = agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED;
-                        return _is_agvs_task_cancel_req_raised ? new List<AlarmCodes>() { AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised} :new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
+                        return _is_agvs_task_cancel_req_raised ? new List<AlarmCodes>() { AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised } : new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
                     }
                     else
                     {
@@ -438,7 +443,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return parkingAccqData;
         }
 
-        protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);

@@ -90,7 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// AGV到點後，進行量測
         /// </summary>
         /// <returns></returns>
-        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {

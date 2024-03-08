@@ -26,7 +26,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             REMOVE_BATTERY,
             RELOAD_BATTERY,
         }
+        public ExchangeBatteryTask() : base()
+        {
 
+        }
         public ExchangeBatteryTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             TsmcMiniAGV = Agv as TsmcMiniAGV;
@@ -67,7 +70,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             public int bat_no { get; }
             public byte level { get; internal set; }
         }
-        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             BuzzerPlayer.ExchangeBattery();
             await TsmcMiniAGV.Battery1UnLock();
@@ -128,10 +131,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
             AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
 
-            return (result.Accept, result.Accept? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
+            return (result.Accept, result.Accept ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
         }
 
-        private async Task HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action)
+        internal async Task<bool> HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action, bool debug = false)
         {
             DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_0 : DO_ITEM.AGV_CS_1;
             DO_ITEM LDUDLREQ = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? DO_ITEM.AGV_L_REQ : DO_ITEM.AGV_U_REQ;
@@ -152,8 +155,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (cts.IsCancellationRequested)
                 {
                     throw new HSTimeoutException(AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
-                    return;
                 }
+                if (TsmcMiniAGV.GetSub_Status() == SUB_STATUS.DOWN)
+                    return false;
                 bool IsBatteryOutOfAGV()
                 {
                     if (batNo == BATTERY_LOCATION.RIGHT)
@@ -182,6 +186,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await TsmcMiniAGV.WagoDO.SetState(BES, false);
             await WaitEQSignal(DI_ITEM.EQ_COMPT, false, 3);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
+
+            return true;
 
         }
         private async Task<bool> WaitEQSignal(DI_ITEM input, bool expect_state, int timeout_sec)

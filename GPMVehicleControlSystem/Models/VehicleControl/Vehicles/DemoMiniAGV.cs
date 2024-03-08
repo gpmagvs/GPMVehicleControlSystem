@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task DOSignalDefaultSetting()
         {
-            WagoDO.AllOFF();
+            //WagoDO.AllOFF();
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
@@ -47,6 +47,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, new bool[] { true, true, false, true });
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
             await Laser.ModeSwitch(0);
+        }
+        protected override void SyncHandshakeSignalStates()
+        {
+            //Do NOthing
         }
         protected override void DIOStatusChangedEventRegist()
         {
@@ -72,10 +76,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await WagoDO.ResetSaftyRelay();
-              
+
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
-                if (bypass_when_motor_busy_on & !anyDriverAlarm)
+                if (bypass_when_motor_busy_on && !anyDriverAlarm)
                     return true;
 
                 return true;

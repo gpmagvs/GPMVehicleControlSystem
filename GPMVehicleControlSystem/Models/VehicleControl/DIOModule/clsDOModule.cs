@@ -108,13 +108,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 await Task.Delay(50); // 使用非阻塞的方式等待
                 if (!_Connected)
                 {
-                    if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
-                    {
-                        Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                        await Task.Delay(100); // 非阻塞等待
-                        Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
-                    }
-
                     LOG.WARN("DO Module try reconnecting..");
                     Disconnect();
                     _Connected = await Connect();
@@ -195,6 +188,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public async Task<bool> SetState(string address, bool state)
         {
             clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
+            if (DO.Output == null)
+            {
+                LOG.WARN($"Output-{address} not defined, no write to IO module");
+                return false;
+            }
             return await SetState(DO.Output, new bool[] { state });
         }
 
@@ -204,7 +202,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            await semaphore.WaitAsync().ConfigureAwait(false);
+            await semaphore.WaitAsync();
 
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
@@ -220,7 +218,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         DOCurrentSTate = currentState;
                         writeDone = true;
                     }
-                    var writeState = new clsWriteRequest(DO, writeStates);
+
+                    clsWriteRequest writeState = new clsWriteRequest(DO, writeStates);
                     writeState.OnWriteDone += sdafasdf;
                     OutputWriteRequestQueue.Enqueue(writeState);
                     while (!writeDone)
@@ -229,14 +228,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                     bool success = DOCurrentSTate.SequenceEqual(writeStates);
 
-
                     writeState.Dispose();
 
                     return success;
                 }
                 else
                 {
-                    Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
+                    //Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                     return false;
                 }
             }

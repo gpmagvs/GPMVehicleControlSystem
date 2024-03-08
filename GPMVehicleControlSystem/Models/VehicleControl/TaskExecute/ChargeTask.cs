@@ -49,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.Forward();
         }
 
-        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.WaitingForChargeStatusChangeFlag = true;
             await Task.Delay(1000);

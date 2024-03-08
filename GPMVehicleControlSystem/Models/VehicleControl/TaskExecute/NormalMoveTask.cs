@@ -217,7 +217,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return base.BeforeTaskExecuteActions();
         }
 
-        protected override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             return base.HandleAGVCActionSucceess();
         }

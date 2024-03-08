@@ -30,7 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (value)
                     {
                         Current_Warning_Code = AlarmCodes.Laser_Mode_value_fail;
-                        LogSickRawData(SickRawData);
+                        //LogSickRawData(SickRawData);
                     }
                     _LaserModeSettingError = value;
 
@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (value)
                     {
                         Current_Warning_Code = AlarmCodes.Sick_Lidar_Communication_Error;
-                        LogSickRawData(SickRawData);
+                        //LogSickRawData(SickRawData);
                     }
                     _SickConnectionError = value;
 

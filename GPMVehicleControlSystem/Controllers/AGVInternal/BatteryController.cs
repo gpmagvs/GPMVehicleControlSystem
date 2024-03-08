@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.ViewModels.BatteryQuery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +56,21 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             bool result = StaStored.CurrentVechicle.IsChargeCircuitOpened;
             return Ok(result);
+        }
+
+
+        /// <summary>
+        /// 0:Right,1:Left
+        /// </summary>
+        /// <param name="location">0:Right,1:Left</param>
+        /// <param name="action">0:Remove,1:Reload</param>
+        /// <returns></returns>
+        [HttpPost("ExchangeBatteryTEST")]
+        public async Task<IActionResult> ExchangeBatteryTEST(Models.VehicleControl.VehicleComponent.clsBattery.BATTERY_LOCATION location, ExchangeBatteryTask.EXCHANGE_BAT_ACTION action)
+        {
+            ExchangeBatteryTask _exbatTask = new ExchangeBatteryTask(StaStored.CurrentVechicle, new AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData());
+            (bool success, AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes alarmCode) result = await _exbatTask.HandleAGVCActionSucceess();
+            return Ok(new { confirm = result.success, message = result.alarmCode.ToString() });
         }
     }
 }

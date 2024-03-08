@@ -282,7 +282,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// AGV停車停好在設備後的動作
         /// </summary>
         /// <returns></returns>
-        protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             Agv.DirectionLighter.CloseAll();
             RecordParkLoction();

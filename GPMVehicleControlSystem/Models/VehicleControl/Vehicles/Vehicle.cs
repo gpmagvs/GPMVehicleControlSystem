@@ -344,21 +344,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await Task.Delay(1000);
                     }
-                    await DOSignalDefaultSetting();
-                    await ResetMotor();
-                    WagoDI.RegistSignalEvents();
-                    SyncHandshakeSignalStates();
 
-                    DIOStatusChangedEventRegist();
-                    BuzzerPlayer.Alarm();
-                    AlarmManager.Active = true;
-                    AlarmManager.RecordAlarm(AlarmCodes.None);
-                    if (HasAnyCargoOnAGV() && CSTReader != null)
+                    try
                     {
-                        CSTReader.ReadCSTIDFromLocalStorage();
+                        SyncHandshakeSignalStates();
+                        WagoDI.RegistSignalEvents();
+                        DIOStatusChangedEventRegist();
+                        await DOSignalDefaultSetting();
+                        await ResetMotor();
+                        BuzzerPlayer.Alarm();
+                        AlarmManager.Active = true;
+                        AlarmManager.RecordAlarm(AlarmCodes.None);
+                        if (HasAnyCargoOnAGV() && CSTReader != null)
+                        {
+                            CSTReader.ReadCSTIDFromLocalStorage();
+                        }
+                        LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
+                        IsSystemInitialized = true;
                     }
-                    LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
-                    IsSystemInitialized = true;
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+
                 });
             }
             catch (Exception ex)
@@ -369,7 +377,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-        private void SyncHandshakeSignalStates()
+        protected virtual void SyncHandshakeSignalStates()
         {
             EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = WagoDI.GetState(DI_ITEM.EQ_READY);
             EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = WagoDI.GetState(DI_ITEM.EQ_BUSY);
