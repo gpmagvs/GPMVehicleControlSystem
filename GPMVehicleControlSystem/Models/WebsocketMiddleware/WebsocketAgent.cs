@@ -127,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 while (true)
                 {
-                    await Task.Delay(10);
+                    await Task.Delay(100);
                     try
                     {
                         var ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM();
