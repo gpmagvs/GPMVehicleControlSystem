@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private DateTime previousStartMeasureTime = DateTime.MinValue;
         private ManualResetEvent batteryLockManualResetEvent = new ManualResetEvent(false);
         public string InstrumentMeasureServiceName => "/command_action";
-        public string BatteryLockControlServiceName => "/command_action";
+        public string BatteryLockControlServiceName => "/command_actionm";
 
         public InspectorAGVCarController()
         {
