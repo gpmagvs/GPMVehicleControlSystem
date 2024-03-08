@@ -20,6 +20,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
     {
         public event EventHandler OnDisonnected;
         public List<clsIOSignal> VCSOutputs = new List<clsIOSignal>();
+        private SemaphoreSlim _writeStateSemaphoreSlim = new SemaphoreSlim(1, 1);
         public clsDOModule() : base()
         {
 
@@ -97,21 +98,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         private async void OutputWriteWorker()
         {
-            int reconnect_cnt = 0;
-            DateTime lastWriteTime = DateTime.MinValue;
-
             while (true)
             {
                 await Task.Delay(50); // 使用非阻塞的方式等待
                 if (!_Connected)
                 {
-                    if ((DateTime.Now - lastWriteTime).TotalSeconds < 1)
-                    {
-                        Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
-                        await Task.Delay(100); // 非阻塞等待
-                        Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
-                    }
-
                     LOG.WARN("DO Module try reconnecting..");
                     Disconnect();
                     _Connected = await Connect();
@@ -138,7 +129,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     try
                     {
                         await WriteToDeviceAsync(to_handle_obj);
-                        lastWriteTime = DateTime.Now;
                     }
                     catch (Exception ex)
                     {
@@ -158,7 +148,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             bool[] rollback = writeStates.Select(s => !s).ToArray();
             ushort count = (ushort)writeStates.Length;
             CancellationTokenSource tim = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            while (!rollback.SequenceEqual(writeStates))
+            while (!(rollback = master?.ReadCoils(startAddress, count)).SequenceEqual(writeStates))
             {
                 if (tim.IsCancellationRequested)
                 {
@@ -166,7 +156,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     throw new Exception($"DO Write Timeout.");
                 }
                 master?.WriteMultipleCoils(startAddress, writeStates);
-                rollback = master?.ReadCoils(startAddress, count);
                 await Task.Delay(50); // 使用非阻塞的方式等待
             }
             for (int i = 0; i < writeStates.Length; i++)
@@ -180,6 +169,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(string address, bool state)
         {
+            await _writeStateSemaphoreSlim.WaitAsync();
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
             try
@@ -215,11 +205,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
+            finally
+            {
+                _writeStateSemaphoreSlim.Release();
+            }
         }
 
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
-            await Task.Delay(1).ConfigureAwait(false);
+            await _writeStateSemaphoreSlim.WaitAsync();
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
             try
@@ -252,6 +246,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
+            finally
+            {
+                _writeStateSemaphoreSlim.Release();
+            }
         }
         class clsWriteRequest
         {
@@ -267,6 +265,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
+            await _writeStateSemaphoreSlim.WaitAsync();
             if (Current_Alarm_Code != AlarmCodes.None)
                 return false;
             try
@@ -313,6 +312,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 LOG.Critical(ex);
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
+            }
+            finally
+            {
+                _writeStateSemaphoreSlim.Release();
             }
         }
         public new bool GetState(DO_ITEM signal)
