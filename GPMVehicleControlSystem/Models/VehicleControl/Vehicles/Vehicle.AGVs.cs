@@ -147,7 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual (bool report_allow, clsRunningStatus running_status) HandleWebAPIProtocolGetRunningStatus()
         {
-           
+
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
@@ -257,11 +257,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
                 {
                     AGVC.OnAGVCActionChanged = null;
-                    AGV_Reset_Flag = false;
                     LOG.WARN($"AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, delay: 10, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                    AGVSResetCmdFlag = false;
                     AGV_Reset_Flag = true;
                     //Sub_Status = SUB_STATUS.IDLE;
                     return true;
@@ -271,6 +271,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     bool result = await AGVC.ResetTask(mode);
                     if (mode == RESET_MODE.ABORT)
                     {
+
                         _ = Task.Factory.StartNew(async () =>
                         {
                             if (!normal_state)
@@ -279,7 +280,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 Sub_Status = SUB_STATUS.DOWN;
                             }
                             ExecutingTaskModel.Abort();
-                        });
+                        }); 
+                        AGVSResetCmdFlag = false;
+                        AGV_Reset_Flag = true;
                     }
                     return result;
                 }

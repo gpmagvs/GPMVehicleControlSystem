@@ -481,9 +481,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     }
                     else
                     {
-                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
-                        actionClient.goal = new TaskCommandGoal();
-                        actionClient.SendGoal();
+                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控已停止({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
+                        AbortTask();
                     }
                 }
 

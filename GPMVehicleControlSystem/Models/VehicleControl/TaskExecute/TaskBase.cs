@@ -184,7 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     if (action != ACTION_TYPE.Unpark && action != ACTION_TYPE.Discharge && ForkLifter != null)
                     {
-                        if (!Agv.Parameters.LDULD_Task_No_Entry | action == ACTION_TYPE.Charge)
+                        if (!Agv.Parameters.LDULD_Task_No_Entry || action == ACTION_TYPE.Charge)
                         {
 
                             var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_);
@@ -214,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else
                 {
                     LOG.TRACE($"任務發送至車控前停等");
-                    await Task.Delay(100);
+                    await Task.Delay(500);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {
@@ -295,10 +295,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
-                    if (Agv.AGVSResetCmdFlag)
-                    {
-                        Agv.AGV_Reset_Flag = true;
-                    }
+                    Agv.AGV_Reset_Flag = true;
                     AGVCActionStatusChaged = null;
                     return;
                 }
@@ -320,11 +317,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 else if (status == ActionStatus.SUCCEEDED)
                 {
 
-                    if (Agv.AGVSResetCmdFlag)
-                    {
-                        Agv.AGV_Reset_Flag = true;
-                        //因為
-                    }
+                    Agv.AGV_Reset_Flag = true;
                     AGVCActionStatusChaged = null;
 
                     if (Agv.Sub_Status == SUB_STATUS.DOWN)
@@ -376,7 +369,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-
+            Agv.AGVSResetCmdFlag = false;
             Agv.Sub_Status = SUB_STATUS.IDLE;
             await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);

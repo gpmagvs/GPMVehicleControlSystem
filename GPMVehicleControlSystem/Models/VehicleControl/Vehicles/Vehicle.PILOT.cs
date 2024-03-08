@@ -193,6 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     var result = await ExecutingTaskModel.Execute();
                     if (result != AlarmCodes.None)
                     {
+                        AGVSResetCmdFlag = false;
                         Sub_Status = SUB_STATUS.DOWN;
                         LOG.Critical($"{action} 任務失敗:Alarm:{result}");
                         AlarmManager.AddAlarm(result, false);
