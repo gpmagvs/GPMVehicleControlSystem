@@ -13,6 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             RIGHT = 0,
             LEFT = 1,
+            NAN = 404
         }
         public clsStateCheckSpec ChargingCheckSpec = new clsStateCheckSpec { };
 

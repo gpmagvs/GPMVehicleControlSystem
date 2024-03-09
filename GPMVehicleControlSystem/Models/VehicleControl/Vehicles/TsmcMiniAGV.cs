@@ -160,7 +160,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.SoftwareEMO();
         }
+        internal override async void ResetHandshakeSignals()
+        {
+            base.ResetHandshakeSignals();
+            await WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);
+            await WagoDO.SetState(DO_ITEM.AGV_CS_1, false);
+            await WagoDO.SetState(DO_ITEM.AGV_Check_REQ, false);
 
+        }
         protected override bool CheckMotorIOError()
         {
             return WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_2) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Error_4);
@@ -199,14 +208,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, "");
         }
 
-        internal override async void ResetHandshakeSignals()
-        {
-            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
-            await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);
-            await WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
-            await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
-            await WagoDO.SetState(DO_ITEM.AGV_READY, false);
-        }
         public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
         {
             try

@@ -107,7 +107,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsHasCSTReader => CSTReader != null;
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
-        internal string HandshakeStatusText = "";
+        private string _HandshakeStatusText = "";
+        internal string HandshakeStatusText
+        {
+            get => _HandshakeStatusText;
+            set
+            {
+                if (_HandshakeStatusText != value)
+                {
+                    _HandshakeStatusText = value;
+                    LOG.TRACE(_HandshakeStatusText);
+                }
+            }
+        }
         internal string InitializingStatusText = "";
         /// <summary>
         /// 里程數

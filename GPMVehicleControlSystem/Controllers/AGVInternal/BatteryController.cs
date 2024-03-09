@@ -62,14 +62,21 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         /// <summary>
         /// 0:Right,1:Left
         /// </summary>
-        /// <param name="location">0:Right,1:Left</param>
-        /// <param name="action">0:Remove,1:Reload</param>
+        /// <param name="location">要交換的電池位置 | 0:Right,1:Left,404:全部</param>
+        /// <param name="action">動作| 0:Remove out,1:Reload in,404:Exchange</param>
         /// <returns></returns>
         [HttpPost("ExchangeBatteryTEST")]
         public async Task<IActionResult> ExchangeBatteryTEST(Models.VehicleControl.VehicleComponent.clsBattery.BATTERY_LOCATION location, ExchangeBatteryTask.EXCHANGE_BAT_ACTION action)
         {
-            ExchangeBatteryTask _exbatTask = new ExchangeBatteryTask(StaStored.CurrentVechicle, new AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData());
+            StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN);
+            ExchangeBatteryTask _exbatTask = new ExchangeBatteryTask(StaStored.CurrentVechicle, new AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData())
+            {
+                Inspefic_Bat_loc = location,
+                Inspefic_Action = action,
+                Debugging = true,
+            };
             (bool success, AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes alarmCode) result = await _exbatTask.HandleAGVCActionSucceess();
+            StaStored.CurrentVechicle.SetSub_Status(result.success ? AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE : AGVSystemCommonNet6.clsEnums.SUB_STATUS.ALARM);
             return Ok(new { confirm = result.success, message = result.alarmCode.ToString() });
         }
     }

@@ -5,6 +5,9 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using RosSharp.RosBridgeClient.Actionlib;
+using System;
+using System.Diagnostics;
+using System.Security.Cryptography;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsBattery;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -20,11 +23,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private bool IsBat1Lock => TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Lock_Sensor);
         private bool IsBat2Lock => TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Lock_Sensor);
 
-
+        public BATTERY_LOCATION Inspefic_Bat_loc = BATTERY_LOCATION.NAN;
+        public EXCHANGE_BAT_ACTION Inspefic_Action = EXCHANGE_BAT_ACTION.BOTH;
+        public bool Debugging = false;
         public enum EXCHANGE_BAT_ACTION
         {
             REMOVE_BATTERY,
             RELOAD_BATTERY,
+            BOTH = 404,
         }
         public ExchangeBatteryTask() : base()
         {
@@ -72,13 +78,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+            TsmcMiniAGV.IsHandshaking = true;
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換任務開始";
             BuzzerPlayer.ExchangeBattery();
-            await TsmcMiniAGV.Battery1UnLock();
-            if (!IsBat1Unlock)
-                return (false, AlarmCodes.Battery1_Not_UnLock);
-            await TsmcMiniAGV.Battery2UnLock();
-            if (!IsBat2Unlock)
-                return (false, AlarmCodes.Battery2_Not_UnLock);
 
             try
             {
@@ -97,46 +99,103 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 };
 
-                batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level <= Agv.Parameters.InspectionAGV.ExchangeBatLevelThresholdVal).ToArray();
+
+                if (Inspefic_Bat_loc != BATTERY_LOCATION.NAN)
+                {
+                    ushort _id = (ushort)(((int)Inspefic_Bat_loc) + 1);
+
+                    batInfos = new clsBatInfo[]
+                    {
+                         new clsBatInfo(TsmcMiniAGV, (int)Inspefic_Bat_loc)
+                         {
+                             location = Inspefic_Bat_loc,
+                             level   = TsmcMiniAGV.Batteries[_id].Data.batteryLevel
+                         }
+                    };
+                }
+                else
+                {
+                    batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level <= Agv.Parameters.InspectionAGV.ExchangeBatLevelThresholdVal).ToArray();
+                }
+                string _batNosString = string.Join("&", batInfos.Select(bat => bat.bat_no));
+                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}交換電池 : {_batNosString}";
+                await Task.Delay(1000);
 
                 foreach (var bat in batInfos)
                 {
-                    if (bat.IsExist)
-                        await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
-                    await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
-                    LOG.INFO($"電池-{bat.bat_no} 交換完成");
+                    if (bat.location == BATTERY_LOCATION.RIGHT)
+                    {
+                        TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}{bat.location}-解鎖中";
+                        await TsmcMiniAGV.Battery1UnLock();
+                        if (!IsBat1Unlock)
+                            return (false, AlarmCodes.Battery1_Not_UnLock);
+                    }
+                    else
+                    {
+                        TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}{bat.location}-解鎖中";
+                        await TsmcMiniAGV.Battery2UnLock();
+                        if (!IsBat2Unlock)
+                            return (false, AlarmCodes.Battery2_Not_UnLock);
+                    }
+
+
+                    if (Inspefic_Action == EXCHANGE_BAT_ACTION.BOTH)
+                    {
+                        if (bat.IsExist)
+                            await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+                        await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                    }
+                    else
+                    {
+                        if (Inspefic_Action == EXCHANGE_BAT_ACTION.RELOAD_BATTERY)
+                            await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.RELOAD_BATTERY);
+                        else
+                            await HandshakeWithExchanger(bat.location, EXCHANGE_BAT_ACTION.REMOVE_BATTERY);
+
+                    }
+                    TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池-{bat.bat_no} 交換完成";
+                    if (bat.location == BATTERY_LOCATION.RIGHT)
+                    {
+                        await TsmcMiniAGV.Battery1Lock();
+                        if (!IsBat1Lock)
+                            return (false, AlarmCodes.Battery1_Not_Lock);
+                    }
+                    else
+                    {
+                        await TsmcMiniAGV.Battery2Lock();
+                        if (!IsBat2Lock)
+                            return (false, AlarmCodes.Battery2_Not_Lock);
+                    }
+
                 }
 
             }
             catch (HandshakeException ex)
             {
+                TsmcMiniAGV.IsHandshaking = false;
                 return (false, ex.alarm_code);
             }
             catch (HSTimeoutException ex)
             {
-
+                TsmcMiniAGV.IsHandshaking = false;
                 return (false, ex.alarm_code);
             }
 
-            await TsmcMiniAGV.Battery1Lock();
-            if (!IsBat1Lock)
-                return (false, AlarmCodes.Battery1_Not_Lock);
-            await TsmcMiniAGV.Battery2Lock();
-            if (!IsBat2Lock)
-                return (false, AlarmCodes.Battery2_Not_Lock);
-
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換完成，退至定位點..";
             //退至二次定位點
             BuzzerPlayer.Action();
+
             AGVCActionStatusChaged += OnAGVCBackToEntryPoint;
             var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
             AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
+            TsmcMiniAGV.IsHandshaking = false;
 
             return (result.Accept, result.Accept ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
         }
 
-        internal async Task<bool> HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action, bool debug = false)
+        internal async Task<bool> HandshakeWithExchanger(BATTERY_LOCATION batNo, EXCHANGE_BAT_ACTION action)
         {
-            DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_0 : DO_ITEM.AGV_CS_1;
+            DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_1 : DO_ITEM.AGV_CS_0;
             DO_ITEM LDUDLREQ = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? DO_ITEM.AGV_L_REQ : DO_ITEM.AGV_U_REQ;
 
             await WaitEQSignal(DI_ITEM.EQ_VALID, true, 3);
@@ -148,17 +207,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await WaitEQSignal(DI_ITEM.EQ_BUSY, true, 10);
 
             CancellationTokenSource cts = new CancellationTokenSource();
-            cts.CancelAfter(TimeSpan.FromSeconds(30)); //TP3
+            TimeSpan timeoutSpan = TimeSpan.FromSeconds(Debugging ? 10 : 90);
+            cts.CancelAfter(timeoutSpan); //TP3
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo} Removed By Exchanger ...";
+            Stopwatch _stopwatch = Stopwatch.StartNew();
             while (TsmcMiniAGV.WagoDI.GetState(DI_ITEM.EQ_BUSY))
             {
+                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo} Removed By Exchanger ...{_stopwatch.Elapsed}/{timeoutSpan}";
                 await Task.Delay(10);
                 if (cts.IsCancellationRequested)
                 {
-                    throw new HSTimeoutException(AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
+                    if (!Debugging)
+                        throw new HSTimeoutException(AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
+                    else
+                        break;
                 }
                 if (TsmcMiniAGV.GetSub_Status() == SUB_STATUS.DOWN)
                     return false;
-                bool IsBatteryOutOfAGV()
+
+                if (_IsBatteryOutOfAGV())
+                {
+                    break;
+                }
+
+                bool _IsBatteryOutOfAGV()
                 {
                     if (batNo == BATTERY_LOCATION.RIGHT)
                     {
@@ -173,20 +245,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return !bat2_exist1 && !bat2_exist2;
                     }
                 }
-                if (IsBatteryOutOfAGV())
-                {
-                    await TsmcMiniAGV.WagoDO.SetState(LDUDLREQ, false);
-                    break;
-                }
             }
 
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Battery-{batNo} Leaved AGV By Exchanger!";
+            await TsmcMiniAGV.WagoDO.SetState(LDUDLREQ, false);
             await WaitEQSignal(DI_ITEM.EQ_BUSY, false, 30);
-            await WaitEQSignal(DI_ITEM.EQ_COMPT, true, 3);
+            await WaitEQSignal(DI_ITEM.EQ_COMPT, true, Debugging? 30: 8);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await TsmcMiniAGV.WagoDO.SetState(BES, false);
-            await WaitEQSignal(DI_ITEM.EQ_COMPT, false, 3);
+            await WaitEQSignal(DI_ITEM.EQ_COMPT, false, Debugging ? 30 : 8);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
-
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Battery-{batNo} {action} By Exchanger Success!";
+            await Task.Delay(1000);
             return true;
 
         }
@@ -194,9 +264,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             CancellationTokenSource cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(timeout_sec));
+            Stopwatch _sw = Stopwatch.StartNew();
             while (Agv.WagoDI.GetState(input) != expect_state)
             {
                 await Task.Delay(10);
+
+                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Wait Exchanger-{input}-{(expect_state ? "ON" : "OFF")}...{_sw.Elapsed}";
+
                 if (cts.IsCancellationRequested)
                 {
                     AlarmCodes alarm_code = AlarmCodes.Handshake_Fail;
@@ -208,12 +282,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         alarm_code = expect_state ? AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_ON : AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_OFF;
                     if (input == DI_ITEM.EQ_COMPT)
                         alarm_code = expect_state ? AlarmCodes.Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON : AlarmCodes.Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF;
-
                     throw new HSTimeoutException(alarm_code);
                 }
-
             }
-
             return true;
 
         }

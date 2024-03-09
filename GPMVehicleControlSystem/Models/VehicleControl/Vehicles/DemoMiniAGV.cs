@@ -52,6 +52,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //Do NOthing
         }
+
+      
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
