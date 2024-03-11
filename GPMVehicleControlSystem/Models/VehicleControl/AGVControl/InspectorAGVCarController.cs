@@ -1,7 +1,9 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using RosSharp.RosBridgeClient;
 using System.Diagnostics.Metrics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
@@ -19,6 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private COMMANDS battery_lock_action_command;
         private DateTime previousStartMeasureTime = DateTime.MinValue;
         private ManualResetEvent batteryLockManualResetEvent = new ManualResetEvent(false);
+        private string IOListsTopicID = "";
         public string InstrumentMeasureServiceName => "/command_action";
         public string BatteryLockControlServiceName => "/command_actionm";
 
@@ -32,7 +35,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override void AdertiseROSServices()
         {
+            IOListsTopicID = rosSocket.Advertise<IOlistsMsg>("IOlists");
+            Console.WriteLine(IOListsTopicID);
             rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", InstrumentMeasureDone);
+        }
+
+        internal void IOListMsgPublisher(IOlistsMsg payload)
+        {
+            rosSocket.Publish(IOListsTopicID, payload);
         }
 
         /// <summary>

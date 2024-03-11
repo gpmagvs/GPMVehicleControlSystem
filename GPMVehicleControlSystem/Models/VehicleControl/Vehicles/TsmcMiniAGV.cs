@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -10,6 +11,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
@@ -64,6 +66,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 巡檢AGV沒有充電迴路
         /// </summary>
         public override bool IsChargeCircuitOpened => false;
+
+        protected internal override async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
+        {
+            await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
+            StartPublishIOListsMsg();
+        }
+
+        private async void StartPublishIOListsMsg()
+        {
+            await Task.Delay(10);
+            _ = Task.Run(async () =>
+            {
+                LOG.TRACE($"Start publish IOLists!");
+                while (true)
+                {
+                    await Task.Delay(1);
+
+                    IOlistsMsg payload = new IOlistsMsg();
+
+                    payload.IOtable = WagoDI.VCSInputs.Select(signal => new IOlistMsg("X", signal.State ? 1 : 0, WagoDI.VCSInputs.IndexOf(signal))).ToArray();
+                    MiniAgvAGVC?.IOListMsgPublisher(payload);
+                    payload.IOtable = WagoDO.VCSOutputs.Select(signal => new IOlistMsg("Y", signal.State ? 1 : 0, WagoDO.VCSOutputs.IndexOf(signal))).ToArray();
+                    MiniAgvAGVC?.IOListMsgPublisher(payload);
+                }
+            });
+        }
+
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
