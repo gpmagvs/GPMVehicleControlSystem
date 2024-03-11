@@ -11,9 +11,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     public class WebsocketController : ControllerBase
     {
         [HttpGet("/ws")]
-        public async Task Get()
+        public async Task Get(string user_id)
         {
-            await WebsocketAgent.Middleware.HandleWebsocketClientConnectIn(HttpContext);
+            await WebsocketAgent.Middleware.HandleWebsocketClientConnectIn(HttpContext, user_id);
         }
     }
 }
