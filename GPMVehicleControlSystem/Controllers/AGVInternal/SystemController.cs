@@ -47,13 +47,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("RestartSystem")]
         public async Task<IActionResult> RestartSystem()
         {
-            if (agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN|| agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+            if (agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.RUN || agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
                 return Ok(new { confirm = false, message = $"AGV當前狀態({agv.GetSub_Status()})禁止重新啟動系統!" });
             StaSysControl.SystemRestart();
             return Ok(new { confirm = true, message = "" });
         }
 
-      
+
         private Vehicle agv => StaStored.CurrentVechicle;
+        [HttpPost("GCCollection")]
+        public async Task GCCollect()
+        {
+            GC.Collect();
+        }
     }
 }
