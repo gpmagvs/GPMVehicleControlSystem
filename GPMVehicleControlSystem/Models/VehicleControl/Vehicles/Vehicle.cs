@@ -589,6 +589,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _RunTaskData = new clsTaskDownloadData();
             SaveParameters(Parameters);
             HandshakeStatusText = "";
+            IsHandshaking = false;
             return await Task.Run(async () =>
             {
 
