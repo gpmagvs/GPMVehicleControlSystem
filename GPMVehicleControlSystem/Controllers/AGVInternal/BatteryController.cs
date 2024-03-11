@@ -76,7 +76,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Debugging = true,
             };
             (bool success, AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes alarmCode) result = await _exbatTask.HandleAGVCActionSucceess();
-            StaStored.CurrentVechicle.SetSub_Status(result.success ? AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE : AGVSystemCommonNet6.clsEnums.SUB_STATUS.ALARM);
+           
             return Ok(new { confirm = result.success, message = result.alarmCode.ToString() });
         }
     }
