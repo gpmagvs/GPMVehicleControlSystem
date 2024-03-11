@@ -282,7 +282,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     module_info = module_information;
                 }, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: QueueSize_of_Topic_ModuleInfo);
                 rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
-                rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
+                //rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
             });
         }
 

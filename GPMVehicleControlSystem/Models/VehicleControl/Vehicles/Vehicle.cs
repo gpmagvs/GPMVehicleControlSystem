@@ -340,7 +340,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 AGVSInit();
                 StartConfigChangedWatcher();
-                WebsocketAgent.StartViewDataCollect();
+                WebsocketAgent.Middleware.Initialize();
 
                 Task.Factory.StartNew(async () =>
                 {
