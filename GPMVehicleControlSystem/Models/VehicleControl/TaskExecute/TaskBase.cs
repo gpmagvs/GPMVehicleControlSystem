@@ -227,8 +227,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    LOG.TRACE($"任務發送至車控前停等");
-                    await Task.Delay(50);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {
