@@ -235,7 +235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, new RunningStatus());
             }
         }
-
+        private SemaphoreSlim taskExecuteSlim = new SemaphoreSlim(1, 1);
         /// <summary>
         /// 處理任務取消請求
         /// </summary>
@@ -244,14 +244,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
-            if (AGVSResetCmdFlag)
-                return true;
-
-            AGVSResetCmdFlag = true;
-            IsWaitForkNextSegmentTask = false;
+            await taskExecuteSlim.WaitAsync();
 
             try
             {
+                if (AGVSResetCmdFlag)
+                    return true;
+
+                AGVSResetCmdFlag = true;
+                IsWaitForkNextSegmentTask = false;
+
                 LOG.WARN($"AGVS TASK Cancel Request ({mode}),Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {Sub_Status}");
 
                 if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING && mode == RESET_MODE.CYCLE_STOP)
@@ -280,21 +282,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 Sub_Status = SUB_STATUS.DOWN;
                             }
                             ExecutingTaskModel.Abort();
-                        }); 
+                        });
                         AGVSResetCmdFlag = false;
                         AGV_Reset_Flag = true;
                     }
                     return result;
                 }
+
             }
             catch (Exception ex)
             {
                 LOG.Critical(ex);
-                if (mode == RESET_MODE.CYCLE_STOP)
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
-                else
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
                 return false;
+                Sub_Status = SUB_STATUS.DOWN;
+            }
+            finally
+            {
+                taskExecuteSlim.Release();
             }
 
         }

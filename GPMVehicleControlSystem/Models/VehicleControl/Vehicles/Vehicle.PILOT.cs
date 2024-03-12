@@ -80,130 +80,143 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
         {
-            AGV_Reset_Flag = AGVSResetCmdFlag = false;
-            Thread _executingTaskThread = new Thread(async (_taskDownloadData) =>
+            await taskExecuteSlim.WaitAsync();
+            try
             {
-                clsTaskDownloadData _downloadedData = (clsTaskDownloadData)_taskDownloadData;
                 AGV_Reset_Flag = AGVSResetCmdFlag = false;
-                if (IsActionFinishTaskFeedbackExecuting)
+                Thread _executingTaskThread = new Thread(async (_taskDownloadData) =>
                 {
-                    LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
-                }
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                while (IsActionFinishTaskFeedbackExecuting)
-                {
-                    if (cts.IsCancellationRequested)
+                    clsTaskDownloadData _downloadedData = (clsTaskDownloadData)_taskDownloadData;
+                    AGV_Reset_Flag = AGVSResetCmdFlag = false;
+                    if (IsActionFinishTaskFeedbackExecuting)
                     {
-                        taskfeedbackCanceTokenSoruce?.Cancel();
-                        IsActionFinishTaskFeedbackExecuting = false;
-                        break;
+                        LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
                     }
-                    await Task.Delay(1);
-                }
-                LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
-                clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-                AGVC.OnAGVCActionChanged = null;
-                if (ExecutingTaskModel != null)
-                {
-                    ExecutingTaskModel.Dispose();
-                }
-
-                _RunTaskData = _downloadedData.Clone();
-                _RunTaskData.IsEQHandshake = false;
-                _RunTaskData.IsActionFinishReported = false;
-                _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
-
-                AlarmManager.ClearAlarm();
-                Sub_Status = SUB_STATUS.RUN;
-                await Laser.AllLaserActive();
-                WriteTaskNameToFile(_downloadedData.Task_Name);
-                LOG.INFO($"Task Download: Task Name = {_downloadedData.Task_Name} , Task Simple = {_downloadedData.Task_Simplex}", false);
-                LOG.WARN($"{_downloadedData.Task_Simplex},Trajectory: {string.Join("->", _downloadedData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
-                ACTION_TYPE action = _downloadedData.Action_Type;
-                IsWaitForkNextSegmentTask = false;
-
-                LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
-                await Task.Run(async () =>
-                {
-                    if (action == ACTION_TYPE.None)
+                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    while (IsActionFinishTaskFeedbackExecuting)
                     {
-                        ExecutingTaskModel = new NormalMoveTask(this, _downloadedData);
+                        if (cts.IsCancellationRequested)
+                        {
+                            taskfeedbackCanceTokenSoruce?.Cancel();
+                            IsActionFinishTaskFeedbackExecuting = false;
+                            break;
+                        }
+                        await Task.Delay(1);
                     }
-                    else
+                    LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
+                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                    AGVC.OnAGVCActionChanged = null;
+                    if (ExecutingTaskModel != null)
                     {
-                        if (_downloadedData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                            _downloadedData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
-                        if (action == ACTION_TYPE.Charge)
-                            ExecutingTaskModel = new ChargeTask(this, _downloadedData);
-                        else if (action == ACTION_TYPE.Discharge)
-                            ExecutingTaskModel = new DischargeTask(this, _downloadedData);
-                        else if (action == ACTION_TYPE.Load)
+                        ExecutingTaskModel.Dispose();
+                    }
+
+                    _RunTaskData = _downloadedData.Clone();
+                    _RunTaskData.IsEQHandshake = false;
+                    _RunTaskData.IsActionFinishReported = false;
+                    _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
+
+                    AlarmManager.ClearAlarm();
+                    Sub_Status = SUB_STATUS.RUN;
+                    await Laser.AllLaserActive();
+                    WriteTaskNameToFile(_downloadedData.Task_Name);
+                    LOG.INFO($"Task Download: Task Name = {_downloadedData.Task_Name} , Task Simple = {_downloadedData.Task_Simplex}", false);
+                    LOG.WARN($"{_downloadedData.Task_Simplex},Trajectory: {string.Join("->", _downloadedData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+                    ACTION_TYPE action = _downloadedData.Action_Type;
+                    IsWaitForkNextSegmentTask = false;
+
+                    LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
+                    await Task.Run(async () =>
+                    {
+                        if (action == ACTION_TYPE.None)
                         {
-                            ExecutingTaskModel = new LoadTask(this, _downloadedData);
-                            (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
-
-                            if (_RunTaskData.CST.Length > 0)
-                            {
-                                (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
-                            }
-
+                            ExecutingTaskModel = new NormalMoveTask(this, _downloadedData);
                         }
-                        else if (action == ACTION_TYPE.Unload)
-                        {
-                            ExecutingTaskModel = new UnloadTask(this, _downloadedData);
-                            (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
-
-                            if (_RunTaskData.CST.Length > 0)
-                            {
-                                (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
-                            }
-                        }
-                        else if (action == ACTION_TYPE.Park)
-                            ExecutingTaskModel = new ParkTask(this, _downloadedData);
-                        else if (action == ACTION_TYPE.Unpark)
-                            ExecutingTaskModel = new UnParkTask(this, _downloadedData);
-                        else if (action == ACTION_TYPE.Measure)
-                            ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
-                        else if (action == ACTION_TYPE.ExchangeBattery)
-                            ExecutingTaskModel = new ExchangeBatteryTask(this, _downloadedData);
                         else
                         {
-                            throw new NotImplementedException();
-                        }
-                    }
-                    previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
-                    ExecutingTaskModel.ForkLifter = ForkLifter;
-                    IsLaserRecoveryHandled = false;
-                    _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
-
-                    if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
-                    {
-                        if (_downloadedData.Action_Type == ACTION_TYPE.None)
-                            orderInfoViewModel = _downloadedData.OrderInfo;
-                        else
-                        {
-                            orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
+                            if (_downloadedData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                                _downloadedData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                            if (action == ACTION_TYPE.Charge)
+                                ExecutingTaskModel = new ChargeTask(this, _downloadedData);
+                            else if (action == ACTION_TYPE.Discharge)
+                                ExecutingTaskModel = new DischargeTask(this, _downloadedData);
+                            else if (action == ACTION_TYPE.Load)
                             {
-                                ActionName = _downloadedData.Action_Type,
-                                DestineName = DestinationMapPoint == null ? _downloadedData.Destination.ToString() : DestinationMapPoint.Name
-                            };
-                        }
-                    }
+                                ExecutingTaskModel = new LoadTask(this, _downloadedData);
+                                (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
-                    var result = await ExecutingTaskModel.Execute();
-                    if (result != AlarmCodes.None)
-                    {
-                        AGVSResetCmdFlag = false;
-                        Sub_Status = SUB_STATUS.DOWN;
-                        LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                        AlarmManager.AddAlarm(result, false);
-                        AGVC.OnAGVCActionChanged = null;
-                    }
+                                if (_RunTaskData.CST.Length > 0)
+                                {
+                                    (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                                }
+
+                            }
+                            else if (action == ACTION_TYPE.Unload)
+                            {
+                                ExecutingTaskModel = new UnloadTask(this, _downloadedData);
+                                (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+
+                                if (_RunTaskData.CST.Length > 0)
+                                {
+                                    (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                                }
+                            }
+                            else if (action == ACTION_TYPE.Park)
+                                ExecutingTaskModel = new ParkTask(this, _downloadedData);
+                            else if (action == ACTION_TYPE.Unpark)
+                                ExecutingTaskModel = new UnParkTask(this, _downloadedData);
+                            else if (action == ACTION_TYPE.Measure)
+                                ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
+                            else if (action == ACTION_TYPE.ExchangeBattery)
+                                ExecutingTaskModel = new ExchangeBatteryTask(this, _downloadedData);
+                            else
+                            {
+                                throw new NotImplementedException();
+                            }
+                        }
+                        previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
+                        ExecutingTaskModel.ForkLifter = ForkLifter;
+                        IsLaserRecoveryHandled = false;
+                        _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
+
+                        if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
+                        {
+                            if (_downloadedData.Action_Type == ACTION_TYPE.None)
+                                orderInfoViewModel = _downloadedData.OrderInfo;
+                            else
+                            {
+                                orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
+                                {
+                                    ActionName = _downloadedData.Action_Type,
+                                    DestineName = DestinationMapPoint == null ? _downloadedData.Destination.ToString() : DestinationMapPoint.Name
+                                };
+                            }
+                        }
+
+                        var result = await ExecutingTaskModel.Execute();
+                        if (result != AlarmCodes.None)
+                        {
+                            AGVSResetCmdFlag = false;
+                            Sub_Status = SUB_STATUS.DOWN;
+                            LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                            AlarmManager.AddAlarm(result, false);
+                            AGVC.OnAGVCActionChanged = null;
+                        }
+                    });
+
                 });
+                _executingTaskThread.IsBackground = true;
+                _executingTaskThread.Start(taskDownloadData);
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+            }
+            finally
+            {
+                taskExecuteSlim.Release();
+            }
 
-            });
-            _executingTaskThread.IsBackground = true;
-            _executingTaskThread.Start(taskDownloadData);
         }
 
         private async void TryGetTransferInformationFromCIM(string task_Name)
