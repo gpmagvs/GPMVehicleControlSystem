@@ -489,7 +489,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (!CstBarcodeCheckResult.success)
                 {
                     AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
-                    AlarmManager.AddAlarm(cst_read_fail_alarm, false);
                     //向派車詢問虛擬ID
                     //cst 類型
                     CST_TYPE cst_type = RunningTaskData.CST.First().CST_Type;
@@ -516,6 +515,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.SetSub_Status(Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE);
                     if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
                         await WaitCSTIDReported();
+                    AlarmManager.AddAlarm(cst_read_fail_alarm, false);
                     //await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                 }
                 else
