@@ -124,11 +124,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return false;
             }
         }
-        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
         {
             try
             {
-                await base.ResetMotor(bypass_when_motor_busy_on);
+                await base.ResetMotor(triggerByResetButtonPush,bypass_when_motor_busy_on);
 
                 if (WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy))
                     return true;

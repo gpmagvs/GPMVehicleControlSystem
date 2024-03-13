@@ -45,6 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
+        private SemaphoreSlim modeSwitchSemaphoresSlim = new SemaphoreSlim(1, 1);
         private int _CurrentLaserModeOfSick = -1;
         internal int CurrentLaserModeOfSick
         {
@@ -206,27 +207,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
         {
-            if (isSettingByAGVS)
-                AgvsLsrSetting = mode_int;
-            int retry_times_limit = 300;
-            int try_count = 0;
-            bool[] writeBools = mode_int.ToLaserDOSettingBits();
-            while (true)
+            try
             {
-                await Task.Delay(10);
-                bool success = !IsLaserModeNeedChange(mode_int);
-                if (success)
+                await modeSwitchSemaphoresSlim.WaitAsync();
+                if (isSettingByAGVS)
+                    AgvsLsrSetting = mode_int;
+                int retry_times_limit = 300;
+                int try_count = 0;
+                bool[] writeBools = mode_int.ToLaserDOSettingBits();
+                while (true)
                 {
-                    break;
+                    await Task.Delay(10);
+                    bool success = !IsLaserModeNeedChange(mode_int);
+                    if (success)
+                    {
+                        break;
+                    }
+                    LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
+                    if (try_count > retry_times_limit)
+                        return false;
+                    await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+                    try_count++;
                 }
-                LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
-                if (try_count > retry_times_limit)
-                    return false;
-                await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
-                try_count++;
+                LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
+                return true;
             }
-            LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
-            return true;
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+                return false;
+            }
+            finally
+            {
+                modeSwitchSemaphoresSlim.Release();
+            }
+
         }
 
         private bool IsLaserModeNeedChange(int toSetMode)

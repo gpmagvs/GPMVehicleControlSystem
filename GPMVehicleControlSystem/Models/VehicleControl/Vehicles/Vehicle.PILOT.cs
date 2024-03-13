@@ -76,6 +76,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
+
             LOG.TRACE($"Start Execute Task-{taskDownloadData.Task_Simplex}", color: ConsoleColor.Green);
             //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             _RunTaskData = taskDownloadData.Clone();
@@ -97,6 +99,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             ExecutingTaskEntity.ForkLifter = ForkLifter;
+
+            TaskDispatchFlowControlSemaphoreSlim.Release();
             await Task.Run(async () =>
             {
                 //LDULDRecord

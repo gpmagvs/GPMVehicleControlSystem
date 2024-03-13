@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
 
         private Queue<FeedbackData> ActionFinishReportFailQueue = new Queue<FeedbackData>();
+        private SemaphoreSlim TaskDispatchFlowControlSemaphoreSlim = new SemaphoreSlim(1, 1);
         private async void AGVSInit()
         {
             string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
@@ -360,6 +361,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
+            await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
+
             LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Red);
 
             if (AGVSResetCmdFlag)
@@ -411,6 +414,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
                 return false;
+            }
+            finally
+            {
+                TaskDispatchFlowControlSemaphoreSlim.Release();
             }
 
         }

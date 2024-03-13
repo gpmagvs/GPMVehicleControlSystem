@@ -106,7 +106,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected async override Task DOSignalDefaultSetting()
         {
-            WagoDO.AllOFF();
+            //WagoDO.AllOFF();
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
@@ -115,7 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_3, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_4, true);
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-            await Laser.ModeSwitch(0);
+            await Laser.ModeSwitch(16);
         }
         protected virtual void EMOButtonPressedHandler(object? sender, EventArgs e)
         {
@@ -152,7 +152,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (result_success)
                 {
                     LOG.WARN($"[TSMC Inspection AGV] Safty relay reset done.");
-                    result_success = await ResetMotor();
+                    result_success = await ResetMotor(false);
                     if (result_success)
                     {
                         await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? CarController.SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : CarController.SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
@@ -237,7 +237,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, "");
         }
 
-        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush,bool bypass_when_motor_busy_on = true)
         {
             try
             {

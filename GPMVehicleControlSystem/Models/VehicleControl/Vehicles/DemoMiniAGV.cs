@@ -46,7 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, new bool[] { true, true, false, true });
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-            await Laser.ModeSwitch(0);
+            await Laser.ModeSwitch(16);
         }
         protected override void SyncHandshakeSignalStates()
         {
@@ -73,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
         }
-        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
         {
             try
             {
