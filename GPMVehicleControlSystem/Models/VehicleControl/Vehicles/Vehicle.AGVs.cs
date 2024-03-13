@@ -176,7 +176,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
         }
 
-        private void ReloadLocalMap()
+        internal void ReloadLocalMap()
         {
             if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
             {
@@ -192,9 +192,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.ERROR($"Local map file dosen't exist({Parameters.MapParam.LocalMapFileFullName})");
             }
         }
-        internal async Task DownloadMapFromServer()
+        internal async Task<(bool confirm, Map map)> DownloadMapFromServer()
         {
-            await Task.Run(async () =>
+            return await Task.Run(async () =>
             {
                 try
                 {
@@ -206,16 +206,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         MapStore.SaveCurrentMap(_NavingMap, out string map_file_saved_path);
                         NavingMap = _NavingMap;
                         LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                        return (true, NavingMap);
+
                     }
                     else
                     {
                         LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl})");
+                        return (false, null);
                     }
                 }
                 catch (Exception ex)
                 {
 
                     LOG.Critical($"Map Download Fail....{ex.Message}", ex);
+                    return (false, null);
                 }
             });
         }

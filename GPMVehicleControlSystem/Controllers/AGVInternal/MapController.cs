@@ -45,5 +45,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             datas = datas.OrderBy(pt => pt.tag).ToList();
             return Ok(datas);
         }
+
+        [HttpGet("ReloadMapFromAGVS")]
+        public async Task<IActionResult> ReloadMapFromAGVS(string mapName = "")
+        {
+            (bool confirm, Map map) result = await StaStored.CurrentVechicle.DownloadMapFromServer();
+            return Ok(new { confirm = result.confirm, map = result.map });
+        }
     }
 }
