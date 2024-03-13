@@ -119,7 +119,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     BuzzerPlayer.Handshaking();
 
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
-                await Task.Delay(1000);
                 if (!HSResult.eqready)
                 {
                     return (false, HSResult.alarmCode);
@@ -150,6 +149,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.HandshakeStatusText = "AGV進入設備中...";
                     await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
                     await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
+                }
+                else
+                {
+                    await Task.Delay(1000);
                 }
 
 
@@ -377,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             while (Agv.Laser.CurrentLaserModeOfSick != _laserModeNumber)
             {
                 await Agv.Laser.ModeSwitch(_laserModeNumber);
-                await Task.Delay(500);
+                await Task.Delay(100);
             }
             await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, false);
 
