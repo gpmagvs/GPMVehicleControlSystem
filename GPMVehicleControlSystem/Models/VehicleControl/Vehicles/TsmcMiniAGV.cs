@@ -200,7 +200,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
         }
-        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callName = "")
+        public override async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callName = "", bool IsTriggerByButton = false)
         {
             try
             {

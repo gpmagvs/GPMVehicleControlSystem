@@ -548,21 +548,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
+            AlarmManager.AddAlarm(alarmCode, false);
+            //暫時移除
+            //bool IsAGVAtChargeStation = lastVisitedMapPoint.IsCharge;
+            //if (!IsAGVAtChargeStation)
+            //{
+            //    AlarmManager.AddAlarm(alarmCode, false);
+            //    return;
+            //}
 
+            //if (AutoResetMotorTaskExecution != null && !AutoResetMotorTaskExecution.IsCompleted)
+            //{
+            //    await AutoResetMotorTaskExecution;
+            //}
 
-            bool IsAGVAtChargeStation = lastVisitedMapPoint.IsCharge;
-            if (!IsAGVAtChargeStation)
-            {
-                AlarmManager.AddAlarm(alarmCode, false);
-                return;
-            }
-
-            if (AutoResetMotorTaskExecution != null && !AutoResetMotorTaskExecution.IsCompleted)
-            {
-                await AutoResetMotorTaskExecution;
-            }
-
-            AutoResetMotorTaskExecution = AutoResetMotorAtChargeStationAsync(alarmCode, signal);
+            //AutoResetMotorTaskExecution = AutoResetMotorAtChargeStationAsync(alarmCode, signal);
 
 
         }

@@ -1067,7 +1067,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
                 IsMotorReseting = false;
-                await ResetMotor(callerName: "ResetAlarmsAsync");
+                await ResetMotor(callerName: "ResetAlarmsAsync", IsTriggerByButton: IsTriggerByButton);
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                 {
                     bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
@@ -1106,7 +1106,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(delay);
             return true;
         }
-        public virtual async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callerName = "")
+        public virtual async Task<bool> ResetMotor(bool bypass_when_motor_busy_on = true, string callerName = "", bool IsTriggerByButton = false)
         {
             try
             {
@@ -1116,7 +1116,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return false;
                 }
                 IsMotorReseting = true;
-                await WagoDO.ResetSaftyRelay();
+                if (!IsTriggerByButton)
+                {
+                    await WagoDO.ResetSaftyRelay();
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                }
                 if (bypass_when_motor_busy_on && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                 {
                     IsMotorReseting = false;
