@@ -30,7 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnRemoteModeChanged = HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
             AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
-            AGVS.OnTaskDownloadFeekbackDone += ExecuteAGVSTask;
+            AGVS.OnTaskDownloadFeekbackDone += HandleAGVsTaskDownloaded;
             AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
             AGVS.OnDisconnected += AGVS_OnDisconnected;
             AGVS.OnPingFail += (sender, arg) =>
@@ -248,9 +248,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                if (AGVSResetCmdFlag)
-                    return true;
-
                 AGVSResetCmdFlag = true;
                 IsWaitForkNextSegmentTask = false;
 

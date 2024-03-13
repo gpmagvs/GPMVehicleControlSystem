@@ -78,135 +78,126 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="taskDownloadData"></param>
-        internal async void ExecuteAGVSTask(object? sender, clsTaskDownloadData taskDownloadData)
+        internal async void HandleAGVsTaskDownloaded(object? sender, clsTaskDownloadData taskDownloadData)
         {
+            LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence}) 接收");
+            ExecuteAGVsTask(taskDownloadData);
+
+        }
+
+        private async Task ExecuteAGVsTask(clsTaskDownloadData taskDownloadData)
+        {
+            LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence}) taskExecuteSlim.WaitAsync()");
             await taskExecuteSlim.WaitAsync();
+            LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence}) taskExecuteSlim.released {taskExecuteSlim.CurrentCount}");
             try
             {
                 AGV_Reset_Flag = AGVSResetCmdFlag = false;
-                Thread _executingTaskThread = new Thread(async (_taskDownloadData) =>
+
+                clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                AGVC.OnAGVCActionChanged = null;
+                if (ExecutingTaskModel != null)
                 {
-                    clsTaskDownloadData _downloadedData = (clsTaskDownloadData)_taskDownloadData;
-                    AGV_Reset_Flag = AGVSResetCmdFlag = false;
-                    if (IsActionFinishTaskFeedbackExecuting)
+                    ExecutingTaskModel.Dispose();
+                }
+
+                _RunTaskData = taskDownloadData.Clone();
+                _RunTaskData.IsEQHandshake = false;
+                _RunTaskData.IsActionFinishReported = false;
+                _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
+
+                AlarmManager.ClearAlarm();
+                Sub_Status = SUB_STATUS.RUN;
+                await Laser.AllLaserActive();
+                WriteTaskNameToFile(taskDownloadData.Task_Name);
+                LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+                LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+                ACTION_TYPE action = taskDownloadData.Action_Type;
+                IsWaitForkNextSegmentTask = false;
+
+                LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
+                await Task.Run(async () =>
+                {
+                    if (action == ACTION_TYPE.None)
                     {
-                        LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
+                        ExecutingTaskModel = new NormalMoveTask(this, taskDownloadData);
                     }
-                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    while (IsActionFinishTaskFeedbackExecuting)
+                    else
                     {
-                        if (cts.IsCancellationRequested)
+                        if (taskDownloadData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
+                            taskDownloadData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
+                        if (action == ACTION_TYPE.Charge)
+                            ExecutingTaskModel = new ChargeTask(this, taskDownloadData);
+                        else if (action == ACTION_TYPE.Discharge)
+                            ExecutingTaskModel = new DischargeTask(this, taskDownloadData);
+                        else if (action == ACTION_TYPE.Load)
                         {
-                            taskfeedbackCanceTokenSoruce?.Cancel();
-                            IsActionFinishTaskFeedbackExecuting = false;
-                            break;
+                            ExecutingTaskModel = new LoadTask(this, taskDownloadData);
+                            (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+
+                            if (_RunTaskData.CST.Length > 0)
+                            {
+                                (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                            }
+
                         }
-                        await Task.Delay(1);
-                    }
-                    LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
-                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-                    AGVC.OnAGVCActionChanged = null;
-                    if (ExecutingTaskModel != null)
-                    {
-                        ExecutingTaskModel.Dispose();
-                    }
-
-                    _RunTaskData = _downloadedData.Clone();
-                    _RunTaskData.IsEQHandshake = false;
-                    _RunTaskData.IsActionFinishReported = false;
-                    _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
-
-                    AlarmManager.ClearAlarm();
-                    Sub_Status = SUB_STATUS.RUN;
-                    await Laser.AllLaserActive();
-                    WriteTaskNameToFile(_downloadedData.Task_Name);
-                    LOG.INFO($"Task Download: Task Name = {_downloadedData.Task_Name} , Task Simple = {_downloadedData.Task_Simplex}", false);
-                    LOG.WARN($"{_downloadedData.Task_Simplex},Trajectory: {string.Join("->", _downloadedData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
-                    ACTION_TYPE action = _downloadedData.Action_Type;
-                    IsWaitForkNextSegmentTask = false;
-
-                    LOG.TRACE($"IsLocal Task ? => {_RunTaskData.IsLocalTask}");
-                    await Task.Run(async () =>
-                    {
-                        if (action == ACTION_TYPE.None)
+                        else if (action == ACTION_TYPE.Unload)
                         {
-                            ExecutingTaskModel = new NormalMoveTask(this, _downloadedData);
+                            ExecutingTaskModel = new UnloadTask(this, taskDownloadData);
+                            (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
+
+                            if (_RunTaskData.CST.Length > 0)
+                            {
+                                (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
+                            }
                         }
+                        else if (action == ACTION_TYPE.Park)
+                            ExecutingTaskModel = new ParkTask(this, taskDownloadData);
+                        else if (action == ACTION_TYPE.Unpark)
+                            ExecutingTaskModel = new UnParkTask(this, taskDownloadData);
+                        else if (action == ACTION_TYPE.Measure)
+                            ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
+                        else if (action == ACTION_TYPE.ExchangeBattery)
+                            ExecutingTaskModel = new ExchangeBatteryTask(this, taskDownloadData);
                         else
                         {
-                            if (_downloadedData.CST.Length == 0 && Remote_Mode == REMOTE_MODE.OFFLINE)
-                                _downloadedData.CST = new clsCST[1] { new clsCST { CST_ID = $"TAEMU{DateTime.Now.ToString("mmssfff")}" } };
-                            if (action == ACTION_TYPE.Charge)
-                                ExecutingTaskModel = new ChargeTask(this, _downloadedData);
-                            else if (action == ACTION_TYPE.Discharge)
-                                ExecutingTaskModel = new DischargeTask(this, _downloadedData);
-                            else if (action == ACTION_TYPE.Load)
-                            {
-                                ExecutingTaskModel = new LoadTask(this, _downloadedData);
-                                (ExecutingTaskModel as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
-
-                                if (_RunTaskData.CST.Length > 0)
-                                {
-                                    (ExecutingTaskModel as LoadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
-                                }
-
-                            }
-                            else if (action == ACTION_TYPE.Unload)
-                            {
-                                ExecutingTaskModel = new UnloadTask(this, _downloadedData);
-                                (ExecutingTaskModel as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
-
-                                if (_RunTaskData.CST.Length > 0)
-                                {
-                                    (ExecutingTaskModel as UnloadTask).lduld_record.CargoID_FromAGVS = _RunTaskData.CST.First().CST_ID;
-                                }
-                            }
-                            else if (action == ACTION_TYPE.Park)
-                                ExecutingTaskModel = new ParkTask(this, _downloadedData);
-                            else if (action == ACTION_TYPE.Unpark)
-                                ExecutingTaskModel = new UnParkTask(this, _downloadedData);
-                            else if (action == ACTION_TYPE.Measure)
-                                ExecutingTaskModel = new MeasureTask(this, taskDownloadData);
-                            else if (action == ACTION_TYPE.ExchangeBattery)
-                                ExecutingTaskModel = new ExchangeBatteryTask(this, _downloadedData);
-                            else
-                            {
-                                throw new NotImplementedException();
-                            }
+                            throw new NotImplementedException();
                         }
-                        previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
-                        ExecutingTaskModel.ForkLifter = ForkLifter;
-                        IsLaserRecoveryHandled = false;
-                        _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
+                    }
+                    previousTagPoint = ExecutingTaskModel?.RunningTaskData.ExecutingTrajecory[0];
+                    ExecutingTaskModel.ForkLifter = ForkLifter;
+                    IsLaserRecoveryHandled = false;
+                    _RunTaskData.IsEQHandshake = ExecutingTaskModel.eqHandshakeMode == WorkStation.WORKSTATION_HS_METHOD.HS;
 
-                        if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
+                    if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
+                    {
+                        if (taskDownloadData.Action_Type == ACTION_TYPE.None)
+                            orderInfoViewModel = taskDownloadData.OrderInfo;
+                        else
                         {
-                            if (_downloadedData.Action_Type == ACTION_TYPE.None)
-                                orderInfoViewModel = _downloadedData.OrderInfo;
-                            else
+                            orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
                             {
-                                orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
-                                {
-                                    ActionName = _downloadedData.Action_Type,
-                                    DestineName = DestinationMapPoint == null ? _downloadedData.Destination.ToString() : DestinationMapPoint.Name
-                                };
-                            }
+                                ActionName = taskDownloadData.Action_Type,
+                                DestineName = DestinationMapPoint == null ? taskDownloadData.Destination.ToString() : DestinationMapPoint.Name
+                            };
                         }
+                    }
 
-                        var result = await ExecutingTaskModel.Execute();
-                        if (result != AlarmCodes.None)
-                        {
-                            AGVSResetCmdFlag = false;
-                            Sub_Status = SUB_STATUS.DOWN;
-                            LOG.Critical($"{action} 任務失敗:Alarm:{result}");
-                            AlarmManager.AddAlarm(result, false);
-                            AGVC.OnAGVCActionChanged = null;
-                        }
-                    });
-
+                    var result = await ExecutingTaskModel.Execute();
+                    if (result != AlarmCodes.None)
+                    {
+                        AGVSResetCmdFlag = false;
+                        Sub_Status = SUB_STATUS.DOWN;
+                        LOG.Critical($"{action} 任務失敗:Alarm:{result}");
+                        AlarmManager.AddAlarm(result, false);
+                        AGVC.OnAGVCActionChanged = null;
+                    }
+                    else
+                    {
+                        LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence})開始");
+                    }
                 });
-                _executingTaskThread.IsBackground = true;
-                _executingTaskThread.Start(taskDownloadData);
+
             }
             catch (Exception ex)
             {
@@ -216,7 +207,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 taskExecuteSlim.Release();
             }
-
         }
 
         private async void TryGetTransferInformationFromCIM(string task_Name)
