@@ -22,16 +22,25 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         {
             "/ws"
         };
-
+        public override void Initialize()
+        {
+            base.Initialize();
+            CurrentViewModelDataOfAllChannel[channelMaps[0]] = new Dictionary<string, object>()
+            {
+                {"ConnectionStatesVM",new object() },
+                {"VMSStatesVM",new object() },
+                {"DIOTableVM",new object() },
+                {"RDTestData",new object() },
+            };
+        }
         protected override async Task CollectViewModelData()
         {
-            CurrentViewModelDataOfAllChannel[channelMaps[0]] = new
-            {
-                ConnectionStatesVM = ViewModelFactory.GetConnectionStatesVM(),
-                VMSStatesVM = ViewModelFactory.GetVMSStatesVM(),
-                DIOTableVM = ViewModelFactory.GetDIOTableVM(),
-                RDTestData = ViewModelFactory.GetRDTestData(),
-            };
+
+            var _ws_data_store = CurrentViewModelDataOfAllChannel[channelMaps[0]] as Dictionary<string, object>;
+            _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
+            _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
+            _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
+            _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
         }
     }
 }
