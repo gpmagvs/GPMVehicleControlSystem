@@ -9,10 +9,11 @@ using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
-Console.Title = "GPM AGV ó更╰参";
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+Console.Title = $"ó更╰参-V{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>

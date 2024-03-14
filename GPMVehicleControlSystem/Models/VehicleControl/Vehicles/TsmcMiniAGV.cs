@@ -118,8 +118,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 void PublishIOListsMsg(IOlistMsg[] IOTable)
                 {
                     Console.WriteLine($"IO-Key:{IOTable.First().Key} has element Changed,Publish Out");
-                    payload.IOtable = lastOutputsIOTable;
+                    payload.IOtable = IOTable;
                     MiniAgvAGVC?.IOListMsgPublisher(payload);
+                    Console.WriteLine($"{payload.ToJson()}");
                 }
                 bool IsIOChanged(IOlistMsg[] table1, IOlistMsg[] table2)
                 {
