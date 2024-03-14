@@ -296,17 +296,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 BuzzerPlayer.Alarm();
                             DirectionLighter.CloseAll(1000);
                             StatusLighter.DOWN();
+                            TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
                         }
                         else if (value == SUB_STATUS.IDLE)
                         {
                             BuzzerPlayer.Stop();
                             StatusLighter.IDLE();
                             DirectionLighter.CloseAll(1000);
+                            TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
+
                         }
                         else if (value == SUB_STATUS.RUN)
                         {
                             StatusLighter.RUN();
-
                             //if (!IMU.IsAccSensorError)
                             //    IMU.OnAccelermeterDataChanged += HandleIMUVibrationDataChanged;
                         }
@@ -930,7 +932,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 AGVSTaskFeedBackReportAndOffline(alarmCode);
 
-                _ = Task.Run(async() =>
+                _ = Task.Run(async () =>
                 {
                     if (AGVC.ActionStatus != ActionStatus.NO_GOAL)
                     {

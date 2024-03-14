@@ -152,7 +152,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           if (agv.Sub_Status == clsEnums.SUB_STATUS.DOWN)
                               return;
                           _taskDataDto.OrderInfo = _OrderInfo;
-                          agv.ExecuteAGVSTask(this, _taskDataDto);
+                          agv.HandleAGVsTaskDownloaded(this, _taskDataDto);
                           await Task.Delay(200);
                           LOG.WARN($"[Local Task Dispather] Wait AGVC Active");
                           while (IsStartTask(_taskDataDto))

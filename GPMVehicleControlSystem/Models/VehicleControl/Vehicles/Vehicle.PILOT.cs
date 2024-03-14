@@ -18,6 +18,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
         internal bool AutoOnlineRaising = false;
         internal clsParkingAccuracy lastParkingAccuracy;
+        private TASK_DISPATCH_STATUS _TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
+        public TASK_DISPATCH_STATUS TaskDispatchStatusCode
+        {
+            get => _TaskDispatchStatusCode;
+            set
+            {
+                if (_TaskDispatchStatusCode != value)
+                {
+                    _TaskDispatchStatusCode = value;
+                    LOG.TRACE($"TaskDispatchStatusCode changed to : {_TaskDispatchStatusCode}");
+                }
+            }
+        }
         public enum EQ_HS_METHOD
         {
             PIO,
@@ -87,6 +100,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async Task ExecuteAGVsTask(clsTaskDownloadData taskDownloadData)
         {
+
+            TaskDispatchStatusCode = TASK_DISPATCH_STATUS.PENDING;
+
             LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence}) taskExecuteSlim.WaitAsync()");
             await taskExecuteSlim.WaitAsync();
             LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence}) taskExecuteSlim.released {taskExecuteSlim.CurrentCount}");
@@ -188,6 +204,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         AGVSResetCmdFlag = false;
                         Sub_Status = SUB_STATUS.DOWN;
+
                         LOG.Critical($"{action} 任務失敗:Alarm:{result}");
                         AlarmManager.AddAlarm(result, false);
                         AGVC.OnAGVCActionChanged = null;
@@ -195,6 +212,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                     {
                         LOG.INFO($"任務-{taskDownloadData.Task_Simplex}-({taskDownloadData.Task_Sequence})開始");
+                        TaskDispatchStatusCode = TASK_DISPATCH_STATUS.RUNNING;
                     }
                 });
 

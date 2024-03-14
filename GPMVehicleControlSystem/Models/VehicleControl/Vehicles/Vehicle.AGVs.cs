@@ -244,10 +244,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
-            await taskExecuteSlim.WaitAsync();
 
             try
             {
+                await WaitTaskDispatchStatusNotEqualPendingAsync("HandleAGVSTaskCancelRequest");
+
                 AGVSResetCmdFlag = true;
                 IsWaitForkNextSegmentTask = false;
 
@@ -295,9 +296,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-                taskExecuteSlim.Release();
             }
 
+        }
+
+        /// <summary>
+        /// 等待任務派送狀態不為PENDING
+        /// </summary>
+        /// <returns></returns>
+        private async Task WaitTaskDispatchStatusNotEqualPendingAsync(string triggerReason = "")
+        {
+            LOG.TRACE($"Start WaitTaskDispatchStatusNotEqualPendingAsync. {triggerReason}");
+            while (TaskDispatchStatusCode == AGVSystemCommonNet6.Vehicle_Control.Models.TASK_DISPATCH_STATUS.PENDING)
+            {
+                await Task.Delay(1);
+            }
+
+            LOG.TRACE($"WaitTaskDispatchStatusNotEqualPendingAsync Done. Now is {TaskDispatchStatusCode}");
         }
 
         private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()

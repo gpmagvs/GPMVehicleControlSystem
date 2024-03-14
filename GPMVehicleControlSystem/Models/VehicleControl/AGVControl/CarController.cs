@@ -491,6 +491,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+            _ActionStatus = ActionStatus.NO_GOAL;
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             if (isEmptyPathPlan)
@@ -498,21 +499,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
             }
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-            while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
+            while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED && _ActionStatus != ActionStatus.PENDING)
             {
-                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
+                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {_ActionStatus}");
                 await Task.Delay(1);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
                     wait_agvc_execute_action_cts.Dispose();
-                    string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
+                    string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}";
                     LOG.Critical(error_msg);
                     AbortTask();
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                 }
             }
             wait_agvc_execute_action_cts.Dispose();
-            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {_ActionStatus},Path Tracking = {new_path}", true);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
 
         }

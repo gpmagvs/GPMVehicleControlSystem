@@ -222,6 +222,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     else
                     {
+                        if (AGVCActionStatusChaged != null)
+                            AGVCActionStatusChaged = null;
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
@@ -239,8 +241,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                                 #endregion
                             }
-                            if (AGVCActionStatusChaged != null)
-                                AGVCActionStatusChaged = null;
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
@@ -295,6 +295,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
+                    Agv.TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
+
                     Agv.AGV_Reset_Flag = true;
                     AGVCActionStatusChaged = null;
                     return;
@@ -302,6 +304,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
+                    Agv.TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
+
                     AGVCActionStatusChaged = null;
                     LOG.ERROR($"存在貨物傾倒異常");
                     IsCargoBiasTrigger = IsCargoBiasDetecting = false;
@@ -316,6 +320,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else if (status == ActionStatus.SUCCEEDED)
                 {
+                    Agv.TaskDispatchStatusCode = TASK_DISPATCH_STATUS.IDLE;
 
                     Agv.AGV_Reset_Flag = true;
                     AGVCActionStatusChaged = null;
