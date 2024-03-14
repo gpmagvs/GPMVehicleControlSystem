@@ -95,8 +95,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     IOlistMsg[] _currentInputsIOTable = GetCurrentInputIOTable();
                     IOlistMsg[] _currentOutputsIOTable = GetCurrentOutputIOTable();
 
-                    bool _isInputsChanged = !_currentInputsIOTable.SequenceEqual(lastInputsIOTable);
-                    bool _isOutputsChanged = !_currentOutputsIOTable.SequenceEqual(lastOutputsIOTable);
+                    bool _isInputsChanged = IsIOChanged(_currentInputsIOTable, lastInputsIOTable);
+                    bool _isOutputsChanged = IsIOChanged(_currentOutputsIOTable, lastOutputsIOTable);
 
                     if (_isInputsChanged)
                         PublishIOListsMsg(_currentInputsIOTable);
@@ -120,6 +120,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Console.WriteLine($"IO-Key:{IOTable.First().Key} has element Changed,Publish Out");
                     payload.IOtable = lastOutputsIOTable;
                     MiniAgvAGVC?.IOListMsgPublisher(payload);
+                }
+                bool IsIOChanged(IOlistMsg[] table1, IOlistMsg[] table2)
+                {
+                    return !table1.Select(io => io.Coil).SequenceEqual(table2.Select(io => io.Coil));
                 }
             });
         }
