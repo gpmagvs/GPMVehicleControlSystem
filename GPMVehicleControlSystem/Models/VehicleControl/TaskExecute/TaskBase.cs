@@ -34,7 +34,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
-            set => Agv.AGVC.OnAGVCActionChanged = value;
+            set
+            {
+                Agv.AGVC.OnAGVCActionChanged = value;
+                LOG.TRACE($"[{(value == null ? "解除" : "註冊")}]車控Action Status監聽");
+            }
         }
 
         public clsTaskDownloadData RunningTaskData
@@ -195,9 +199,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
-                if (AGVCActionStatusChaged != null)
-                    AGVCActionStatusChaged = null;
-
 
                 if (Agv.Sub_Status == SUB_STATUS.DOWN)
                 {
@@ -238,7 +239,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                                 #endregion
                             }
-
+                            if (AGVCActionStatusChaged != null)
+                                AGVCActionStatusChaged = null;
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
