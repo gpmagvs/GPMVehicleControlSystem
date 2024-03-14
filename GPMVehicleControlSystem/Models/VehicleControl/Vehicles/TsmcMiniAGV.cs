@@ -79,15 +79,46 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _ = Task.Run(async () =>
             {
                 LOG.TRACE($"Start publish IOLists!");
+
+                IOlistsMsg payload = new IOlistsMsg();
+
+                IOlistMsg[] lastInputsIOTable = GetCurrentInputIOTable();
+                IOlistMsg[] lastOutputsIOTable = GetCurrentInputIOTable();
+
+                PublishIOListsMsg(lastInputsIOTable);
+                PublishIOListsMsg(lastOutputsIOTable);
+
                 while (true)
                 {
                     await Task.Delay(1);
 
-                    IOlistsMsg payload = new IOlistsMsg();
+                    IOlistMsg[] _currentInputsIOTable = GetCurrentInputIOTable();
+                    IOlistMsg[] _currentOutputsIOTable = GetCurrentOutputIOTable();
 
-                    payload.IOtable = WagoDI.VCSInputs.Select(signal => new IOlistMsg("X", signal.State ? 1 : 0, WagoDI.VCSInputs.IndexOf(signal))).ToArray();
-                    MiniAgvAGVC?.IOListMsgPublisher(payload);
-                    payload.IOtable = WagoDO.VCSOutputs.Select(signal => new IOlistMsg("Y", signal.State ? 1 : 0, WagoDO.VCSOutputs.IndexOf(signal))).ToArray();
+                    bool _isInputsChanged = !_currentInputsIOTable.SequenceEqual(lastInputsIOTable);
+                    bool _isOutputsChanged = !_currentOutputsIOTable.SequenceEqual(lastOutputsIOTable);
+
+                    if (_isInputsChanged)
+                        PublishIOListsMsg(_currentInputsIOTable);
+                    if (_isOutputsChanged)
+                        PublishIOListsMsg(_currentOutputsIOTable);
+
+                    lastInputsIOTable = _currentInputsIOTable;
+                    lastOutputsIOTable = _currentOutputsIOTable;
+
+                }
+                IOlistMsg[] GetCurrentInputIOTable()
+                {
+                    return WagoDI.VCSInputs.Select(signal => new IOlistMsg("X", signal.State ? 1 : 0, WagoDI.VCSInputs.IndexOf(signal))).ToArray();
+                }
+                IOlistMsg[] GetCurrentOutputIOTable()
+                {
+                    return WagoDO.VCSOutputs.Select(signal => new IOlistMsg("Y", signal.State ? 1 : 0, WagoDO.VCSOutputs.IndexOf(signal))).ToArray();
+                }
+                void PublishIOListsMsg(IOlistMsg[] IOTable)
+                {
+                    Console.WriteLine($"IO-Key:{IOTable.First().Key} has element Changed,Publish Out");
+                    payload.IOtable = lastOutputsIOTable;
                     MiniAgvAGVC?.IOListMsgPublisher(payload);
                 }
             });
@@ -237,7 +268,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, "");
         }
 
-        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush,bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
         {
             try
             {
