@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 是否偵測雷測觸發
         /// </summary>
-        private bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
+        protected bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
 
         public bool ModuleInformationUpdatedInitState { get; private set; } = false;
 
