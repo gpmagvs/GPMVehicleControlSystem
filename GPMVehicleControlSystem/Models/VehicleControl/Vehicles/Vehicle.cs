@@ -447,7 +447,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
-              
+
                 tasks.Add(WagoDIInit());
                 RosConnTask.Start();
                 tasks.Add(RosConnTask);
@@ -461,6 +461,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 Task.WhenAll(tasks).ContinueWith(t =>
                 {
+
+                    if (CSTReader != null)
+                    {
+                        CSTReader.ValidCSTID = Parameters.lastCstIDStore;
+                        LOG.INFO($"從參數檔回復CSTReader貨物ID --> {CSTReader.ValidCSTID}");
+                        CSTReader.OnCSTIDUpdated += (sender, newCstID) =>
+                        {
+                            Parameters.lastCstIDStore = newCstID;
+                            SaveParameters(Parameters);
+                            LOG.INFO($"更新貨物ID --> {(Parameters.lastCstIDStore==""?"(空白)":Parameters.lastCstIDStore)} 並儲存於參數檔成功");
+                        };
+                    }
+
                     LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
                     while (!ModuleInformationUpdatedInitState)
                     {

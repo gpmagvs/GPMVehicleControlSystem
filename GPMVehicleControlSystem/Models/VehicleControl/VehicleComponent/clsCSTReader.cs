@@ -7,6 +7,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public partial class clsCSTReader : CarComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.CST_READER;
+        public event EventHandler<string> OnCSTIDUpdated;
         public new CSTReaderState Data => StateData == null ? new CSTReaderState() : (CSTReaderState)StateData;
 
         private int _State = -1;
@@ -38,6 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                     LOG.TRACE($"CST ID CHANGED TO {value} (Old= {_ValidCSTID})");
                     _ValidCSTID = value;
+                    OnCSTIDUpdated?.Invoke(this, _ValidCSTID);
                 }
             }
         }
@@ -47,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override async Task<bool> CheckStateDataContent()
         {
 
-            if (! await base.CheckStateDataContent())
+            if (!await base.CheckStateDataContent())
                 return false;
             State = Data.state;
             return true;

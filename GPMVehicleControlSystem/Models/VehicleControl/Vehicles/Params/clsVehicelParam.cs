@@ -78,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </remarks>
         public int ModuleInfoTopicRevHandlePeriod { get; set; } = 10;
         public int ModuleInfoTopicRevQueueSize { get; set; } = 5;
-
+        public string lastCstIDStore { get; set; } = "";
         public string AGVsMessageEncoding { get; set; } = "UTF-8";
 
         /// <summary>
