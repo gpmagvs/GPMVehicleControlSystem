@@ -134,7 +134,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await BatteryUnLockSemaphoreSlim.WaitAsync();
             try
             {
-
+                if (!IsUnlockActionAllow(1, out string rejectReason))
+                {
+                    return false;
+                }
                 LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
                 DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
                 return WaitBatteryUnLocked(1);
@@ -153,6 +156,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await BatteryUnLockSemaphoreSlim.WaitAsync();
             try
             {
+                if (!IsUnlockActionAllow(1, out string rejectReason))
+                {
+                    return false;
+                }
                 LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
                 DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
                 return WaitBatteryUnLocked(2);

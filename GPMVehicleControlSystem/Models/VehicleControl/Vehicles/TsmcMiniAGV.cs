@@ -373,6 +373,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery1UnLock()
         {
+            if (!IsUnlockActionAllow(1, out string rejectReason))
+            {
+                return false;
+            }
             LOG.TRACE("Mini AGV- Try Unlock Battery No.1");
             return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.UNLOCK);
         }
@@ -382,10 +386,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery2UnLock()
         {
+            if(!IsUnlockActionAllow(2,out string rejectReason))
+            {
+                return false;
+            }
             LOG.TRACE("Mini AGV- Try Unlock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.UNLOCK);
         }
-
+        protected bool IsUnlockActionAllow(int toLockBatNumber,out string rejectReason)
+        {
+            rejectReason = "";
+            return true;
+        }
         /// <summary>
         /// 等待電池完成鎖定
         /// </summary>
