@@ -114,6 +114,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     master?.ReadCoils(0, 1);
                     Current_Alarm_Code = AlarmCodes.None;
                 }
+                catch (Modbus.SlaveException ex)
+                {
+                    Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
+                    break;
+                }
                 catch (Exception ex)
                 {
                     LOG.ERROR($"DO Read Coils Fail: {ex.Message}");

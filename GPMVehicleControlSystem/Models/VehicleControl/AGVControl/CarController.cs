@@ -11,6 +11,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
@@ -115,7 +116,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
         public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
-        public Action<ActionStatus> OnAGVCActionChanged;
+        private Action<ActionStatus> _OnAGVCActionChanged;
+        public Action<ActionStatus> OnAGVCActionChanged
+        {
+            get => _OnAGVCActionChanged;
+            set
+            {
+                _OnAGVCActionChanged = value;
+                LOG.TRACE($"[{(value == null ? "解除" : "註冊")}]車控Action Status監聽");
+            }
+        }
         internal bool CycleStopActionExecuting = false;
         internal TaskCommandActionClient actionClient;
 
@@ -127,9 +137,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    LOG.TRACE($"Action Status Changed To : {value}");
-                    if (OnAGVCActionChanged != null)
-                        OnAGVCActionChanged(value);
+                    LOG.TRACE($"Action Status Changed To : {value}", color: ConsoleColor.Green);
+
                     _ActionStatus = value;
                 }
             }
@@ -278,7 +287,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     module_info = module_information;
                 }, throttle_rate: Throttle_rate_of_Topic_ModuleInfo, queue_length: QueueSize_of_Topic_ModuleInfo);
                 rosSocket.Subscribe<LocalizationControllerResultMessage0502>("localizationcontroller/out/localizationcontroller_result_message_0502", SickLocalizationStateCallback, throttle_rate: 100, queue_length: 5);
-                rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
+                //rosSocket.Subscribe<RawMicroScanDataMsg>("/sick_safetyscanners/raw_data", SickSaftyScannerRawDataCallback, throttle_rate: 100, queue_length: 1);
             });
         }
 
@@ -347,6 +356,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.OnActionStatusChanged += (sender, status) =>
             {
                 ActionStatus = status;
+                if (OnAGVCActionChanged != null)
+                    OnAGVCActionChanged(status);
             };
             actionClient.Initialize();
         }
@@ -457,10 +468,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             if (isEmptyPathPlan)
                 LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
 
-            SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-
-            if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
-                confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
+            //SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+            //if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
+            //    confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
 
             //if (!confirmResult.Accept)
             //{
@@ -488,7 +498,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
-            _ActionStatus = ActionStatus.NO_GOAL;
+            OnAGVCActionChanged = null;
+            await Task.Delay(isEmptyPathPlan ? 1 : 200);
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
             if (isEmptyPathPlan)
@@ -496,21 +507,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
             }
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-            while (_ActionStatus != ActionStatus.ACTIVE && _ActionStatus != ActionStatus.SUCCEEDED && _ActionStatus != ActionStatus.PENDING)
+            while (ActionStatus != ActionStatus.ACTIVE && ActionStatus != ActionStatus.SUCCEEDED && ActionStatus != ActionStatus.PENDING)
             {
-                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {_ActionStatus}");
-                await Task.Delay(1);
+                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}");
+                await Task.Delay(200);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
                     wait_agvc_execute_action_cts.Dispose();
-                    string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={_ActionStatus}";
+                    string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
                     LOG.Critical(error_msg);
                     AbortTask();
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                 }
             }
             wait_agvc_execute_action_cts.Dispose();
-            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {_ActionStatus},Path Tracking = {new_path}", true);
+            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
 
         }

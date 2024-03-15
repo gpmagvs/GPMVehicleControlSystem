@@ -303,7 +303,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             ConnectionWatchDog();
             int error_cnt = 0;
             await Task.Delay(100);
-            Task.Run(async () =>
+            _=Task.Run(async () =>
             {
                 while (true)
                 {
@@ -334,6 +334,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
                         lastReadTime = DateTime.Now;
                         error_cnt = 0;
+                    }
+                    catch (Modbus.SlaveException ex)
+                    {
+                        Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                     }
                     catch (Exception ex)
                     {

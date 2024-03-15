@@ -37,7 +37,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             set
             {
                 Agv.AGVC.OnAGVCActionChanged = value;
-                LOG.TRACE($"[{(value == null ? "解除" : "註冊")}]車控Action Status監聽");
             }
         }
 
@@ -225,8 +224,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (AGVCActionStatusChaged != null)
                             AGVCActionStatusChaged = null;
 
+                        await Task.Delay(100);
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
+                        {
                             HandleAGVActionChanged(ActionStatus.SUCCEEDED);
+                        }
                         else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             if (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload)
@@ -277,7 +279,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected bool IsAGVCActionNoOperate(ActionStatus status, Action<ActionStatus> actionStatusChangedCallback)
         {
-            bool isNoOperate = status == ActionStatus.RECALLING | status == ActionStatus.REJECTED | status == ActionStatus.PREEMPTING | status == ActionStatus.PREEMPTED | status == ActionStatus.ABORTED;
+            bool isNoOperate = status == ActionStatus.RECALLING || status == ActionStatus.REJECTED || status == ActionStatus.PREEMPTING || status == ActionStatus.PREEMPTED || status == ActionStatus.ABORTED;
             if (isNoOperate)
             {
                 AGVCActionStatusChaged -= actionStatusChangedCallback;
