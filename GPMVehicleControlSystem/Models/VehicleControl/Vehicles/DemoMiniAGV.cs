@@ -12,6 +12,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         public InspectorAGVCarController? DemoMiniAGVControl => base.MiniAgvAGVC;
 
+        private SemaphoreSlim BatteryUnLockSemaphoreSlim = new SemaphoreSlim(1,1);
         public override bool IsBattery1Exist
         {
             get
@@ -46,14 +47,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, new bool[] { true, true, false, true });
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
-            await Laser.ModeSwitch(16);
+            await Laser.ModeSwitch(1);
         }
         protected override void SyncHandshakeSignalStates()
         {
             //Do NOthing
         }
 
-      
+
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();
@@ -130,15 +131,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override async Task<bool> Battery1UnLock()
         {
-            LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
-            DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
-            return WaitBatteryUnLocked(1);
+            await BatteryUnLockSemaphoreSlim.WaitAsync();
+            try
+            {
+
+                LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
+                DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
+                return WaitBatteryUnLocked(1);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                BatteryUnLockSemaphoreSlim.Release();
+            }
         }
         public override async Task<bool> Battery2UnLock()
         {
-            LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
-            DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
-            return WaitBatteryUnLocked(2);
+            await BatteryUnLockSemaphoreSlim.WaitAsync();
+            try
+            {
+                LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
+                DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
+                return WaitBatteryUnLocked(2);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                BatteryUnLockSemaphoreSlim.Release();
+            }
         }
 
         internal void BatteryLockActionStop()
