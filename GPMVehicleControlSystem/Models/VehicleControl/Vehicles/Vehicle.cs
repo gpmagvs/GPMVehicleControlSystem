@@ -447,13 +447,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     );
                 });
-                AGVSInit();
+              
                 tasks.Add(WagoDIInit());
-                WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
                 tasks.Add(RosConnTask);
 
-                StartConfigChangedWatcher();
                 Task.Factory.StartNew(async () =>
                 {
                     ReloadLocalMap();
@@ -470,9 +468,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     Thread.Sleep(1000);
                     BuzzerPlayer.Alarm();
-                    IsSystemInitialized = true;
+                    WebsocketAgent.StartViewDataCollect();
+                    StartConfigChangedWatcher();
+                    AGVSInit();
                     AlarmManager.Active = true;
                     AlarmManager.AddAlarm(AlarmCodes.None);
+                    IsSystemInitialized = true;
                 });
             }
             catch (Exception ex)
