@@ -13,7 +13,9 @@ using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -117,10 +119,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 void PublishIOListsMsg(IOlistMsg[] IOTable)
                 {
-                    Console.WriteLine($"IO-Key:{IOTable.First().Key} has element Changed,Publish Out");
                     payload.IOtable = IOTable;
                     MiniAgvAGVC?.IOListMsgPublisher(payload);
-                    Console.WriteLine($"{payload.ToJson()}");
                 }
                 bool IsIOChanged(IOlistMsg[] table1, IOlistMsg[] table2)
                 {
@@ -137,9 +137,71 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_2, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_3, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_4, HandleDriversStatusErrorAsync);
+            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
 
             WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
         }
+
+        private SemaphoreSlim _LaserAreaHhandleslim = new SemaphoreSlim(1, 1);
+
+        bool Laser3rdTriggerHandlerFlag = false;
+        private async void HandleLaserTriggerSaftyRelay(object? sender, bool state)
+        {
+            await _LaserAreaHhandleslim.WaitAsync();
+            try
+            {
+                if (!IsLaserMonitorActived)
+                    return;
+
+                bool LaserTrigger = !state;
+                if (LaserTrigger)
+                {
+                    Laser3rdTriggerHandlerFlag = true;
+                    while (!await IsAllLaserNoTrigger())
+                    {
+                        LOG.TRACE($"等待障礙物移除");
+                        await Task.Delay(1000);
+                    }
+
+                    var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
+                    if (safty_relay_reset_result)
+                    {
+                        LOG.WARN($"[TSMC Inspection AGV] Safty relay reset done.");
+                        safty_relay_reset_result = await ResetMotor(false);
+                        if (safty_relay_reset_result)
+                        {
+                            LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
+                            AlarmManager.ClearAlarm();
+                            AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
+                            await Task.Delay(1000);
+                            await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
+                            BuzzerPlayer.Move();
+                        }
+                        else
+                        {
+                            LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
+                        }
+                    }
+                    else
+                        LOG.WARN($"[TSMC Inspection AGV] Safty relay reset 失敗");
+                    Laser3rdTriggerHandlerFlag = false;
+
+                }
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+            }
+            finally
+            {
+                _LaserAreaHhandleslim.Release();
+            }
+
+        }
+
         protected async override Task DOSignalDefaultSetting()
         {
             //WagoDO.AllOFF();
@@ -157,54 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.EMO_Button);
         }
-        bool Laser3rdTriggerHandlerFlag = false;
-        protected override async void HandleLaserArea3SinalChange(object? sender, bool di_state)
-        {
-            if (Operation_Mode == OPERATOR_MODE.MANUAL)
-                return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE)
-                return;
 
-
-            clsIOSignal diState = (clsIOSignal)sender;
-            base.HandleLaserArea3SinalChange(sender, di_state);
-            bool isLaserTrigger = !di_state;
-            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_3;
-            if (isLaserTrigger && !Laser3rdTriggerHandlerFlag)
-            {
-                Laser3rdTriggerHandlerFlag = true;
-                bool result_success;
-                Stopwatch sw = Stopwatch.StartNew();
-                LOG.WARN($"[TSMC Inspection AGV] Laser 第三段觸發,等待障礙物清除後 Reset Motors");
-                while (!WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3))
-                {
-                    await Task.Delay(1);
-                    if (GetSub_Status() == SUB_STATUS.DOWN)
-                        return;
-                }
-                await Task.Delay(3000);
-                LOG.WARN($"[TSMC Inspection AGV] Reset Motors[After {sw.ElapsedMilliseconds} ms]");
-                result_success = await WagoDO.ResetSaftyRelay();
-                if (result_success)
-                {
-                    LOG.WARN($"[TSMC Inspection AGV] Safty relay reset done.");
-                    result_success = await ResetMotor(false);
-                    if (result_success)
-                    {
-                        await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? CarController.SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : CarController.SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
-                        LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
-                        AlarmManager.ClearAlarm();
-                    }
-                    else
-                    {
-                        LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
-                    }
-                }
-                else
-                    LOG.WARN($"[TSMC Inspection AGV] Safty relay reset 失敗");
-                Laser3rdTriggerHandlerFlag = false;
-            }
-        }
         protected override void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
             if (Laser3rdTriggerHandlerFlag)
