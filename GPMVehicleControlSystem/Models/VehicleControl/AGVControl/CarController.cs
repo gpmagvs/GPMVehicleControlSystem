@@ -57,6 +57,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             RIGHT_LASER_RECOVERY,
             LEFT_LASER_TRIGGER,
             LEFT_LASER_RECOVERY,
+            LASER_RECOVERY,
             IO_MODULE_DISCONNECTED,
             IO_MODULE_RECOVERY,
             CYCLE_STOP,
