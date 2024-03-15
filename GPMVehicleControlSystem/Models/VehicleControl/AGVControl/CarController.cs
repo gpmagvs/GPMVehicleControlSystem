@@ -284,15 +284,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             });
         }
 
-        private void SickSaftyScannerRawDataCallback(RawMicroScanDataMsg sick_scanner_raw_data)
-        {
-            Task.Factory.StartNew(() =>
-            {
-                // LogSickRawData(sick_scanner_raw_data);
-                OnSickRawDataUpdated?.Invoke(this, sick_scanner_raw_data);
-            });
-        }
-
 
         /// <summary>
         /// 建立車載端的ROS Service server 
