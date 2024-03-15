@@ -128,11 +128,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (_ActionStatus != value)
                 {
                     LOG.TRACE($"Action Status Changed To : {value}");
-                    Task.Factory.StartNew(() =>
-                    {
-                        if (OnAGVCActionChanged != null)
-                            OnAGVCActionChanged(value);
-                    });
+                    if (OnAGVCActionChanged != null)
+                        OnAGVCActionChanged(value);
                     _ActionStatus = value;
                 }
             }
