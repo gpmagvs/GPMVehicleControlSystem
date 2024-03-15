@@ -448,7 +448,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     );
                 });
                 AGVSInit();
-                EmulatorInitialize();
                 tasks.Add(WagoDIInit());
                 WebsocketAgent.StartViewDataCollect();
                 RosConnTask.Start();
@@ -488,48 +487,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void AGVC_OnRosSocketReconnected(object? sender, EventArgs e)
         {
             Laser.rosSocket = BuzzerPlayer.rossocket = (RosSocket)sender;
-        }
-
-
-
-
-        private void EmulatorInitialize()
-        {
-            //if (Parameters.SimulationMode)
-            //{
-            //    try
-            //    {
-            //        StaEmuManager.StartAGVROSEmu(Parameters.AgvType);
-            //        StaEmuManager.agvRosEmu.SetInitTag(Parameters.LastVisitedTag);
-            //        StaEmuManager.agvRosEmu.OnChargeSimulationRequesting += (tag) =>
-            //        {
-            //            return lastVisitedMapPoint.TagNumber == tag && lastVisitedMapPoint.IsCharge && IsChargeCircuitOpened;
-            //        };
-            //    }
-            //    catch (SocketException)
-            //    {
-            //        LOG.ERROR("模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        LOG.ERROR("\"模擬器無法啟動 : 異常訊息\" + ex.Message"); ;
-            //    }
-            //}
-            //if (Parameters.MeasureServiceSimulator)
-            //{
-            //    try
-            //    {
-            //        StaEmuManager.StartMeasureROSEmu();
-            //    }
-            //    catch (SocketException)
-            //    {
-            //        LOG.ERROR("量測服務模擬器無法啟動 (無法建立服務器): 請嘗試使用系統管理員權限開啟程式");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        LOG.ERROR("\"量測服務模擬器無法啟動 : 異常訊息\" + ex.Message");
-            //    }
-            //}
         }
 
 
