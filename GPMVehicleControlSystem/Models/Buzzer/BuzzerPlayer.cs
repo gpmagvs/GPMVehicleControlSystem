@@ -14,7 +14,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
     public class BuzzerPlayer
     {
         public static RosSocket rossocket;
-
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
         internal static bool IsMovingPlaying = false;
@@ -25,7 +24,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         public static OnBuzzerPlayDelate OnBuzzerPlay;
         public delegate SOUNDS BuzzerMovePlayDelate();
         public static BuzzerMovePlayDelate BeforeBuzzerMovePlay;
-
+        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         public static void Alarm()
         {
             if (IsAlarmPlaying)
@@ -82,33 +81,44 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             Play(SOUNDS.Stop);
         }
 
-        public static void Play(SOUNDS sound)
+        public static async void Play(SOUNDS sound)
         {
-            LOG.WARN($"Playing Sound : {sound}");
-            Thread playsound_thred = new Thread(() =>
+            try
             {
-                try
+                await semaphore.WaitAsync();
+                LOG.WARN($"Playing Sound : {sound}");
+                Thread playsound_thred = new Thread(() =>
                 {
-                    if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                    try
                     {
-                        bool confirm = OnBuzzerPlay.Invoke();
-                        if (!confirm)
+                        if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                        {
+                            bool confirm = OnBuzzerPlay.Invoke();
+                            if (!confirm)
+                                return;
+                        }
+                        if (rossocket == null)
                             return;
+                        PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                        {
+                            file_path = sound.ToString().ToLower()
+                        }).Result;
                     }
-                    if (rossocket == null)
-                        return;
-                    PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                    catch (Exception ex)
                     {
-                        file_path = sound.ToString().ToLower()
-                    }).Result;
-                }
-                catch (Exception ex)
-                {
-                    LOG.ERROR(ex);
-                }
-            });
-            playsound_thred.IsBackground = false;
-            playsound_thred.Start();
+                        LOG.ERROR(ex);
+                    }
+                });
+                playsound_thred.IsBackground = false;
+                playsound_thred.Start();
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
 
     }
