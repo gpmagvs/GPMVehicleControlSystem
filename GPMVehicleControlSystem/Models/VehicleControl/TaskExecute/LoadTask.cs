@@ -233,6 +233,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         protected override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+            await Task.Delay(500);
             Agv.DirectionLighter.CloseAll();
             RecordParkLoction();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
@@ -247,8 +248,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                 }
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                while ((checkstatus_alarm_code = CheckAGVStatus()) != AlarmCodes.None)
+                using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                while ((checkstatus_alarm_code = CheckAGVStatus(this.destineTag)) != AlarmCodes.None)
                 {
                     await Task.Delay(100);
                     if (cts.IsCancellationRequested)
@@ -314,7 +315,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             try
             {
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
-                if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
+                if ((checkstatus_alarm_code = CheckAGVStatus(this.destineTag, check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
                     Agv.SetAGV_TR_REQ(false);
                     return (false, checkstatus_alarm_code);
@@ -519,9 +520,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)
+        private AlarmCodes CheckAGVStatus(int expectDestineTag, bool check_park_position = true, bool check_cargo_exist_state = false)
         {
-            LOG.INFO($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
+            LOG.INFO($"Check AGV Status->(Current Tag Read:{Agv.BarcodeReader.CurrentTag}/Expect Tag Should Read:{expectDestineTag})");
 
             //檢查在席
             if (check_cargo_exist_state)
@@ -538,17 +539,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             AlarmCodes alarm_code = AlarmCodes.None;
             if (Agv.Sub_Status == SUB_STATUS.DOWN)
-                alarm_code = AlarmCodes.AGV_State_Cant_Move;
-
-            else if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
+                alarm_code = AlarmCodes.Handshake_Fail_AGV_DOWN;
+            else if (check_park_position && Agv.BarcodeReader.CurrentTag != expectDestineTag)
                 alarm_code = AlarmCodes.AGV_BarcodeReader_Not_Match_Tag_of_Destination;
             else if (check_park_position && Agv.BarcodeReader.DistanceToTagCenter > Agv.Parameters.TagParkingTolerance)
                 alarm_code = AlarmCodes.AGV_Park_Position_Too_Far_From_Tag_Of_Destination;
             else
                 alarm_code = AlarmCodes.None;
-
             if (alarm_code != AlarmCodes.None)
-                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.Sub_Status}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={expectDestineTag}");
 
             return alarm_code;
         }
@@ -573,11 +572,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (status == ActionStatus.SUCCEEDED)
                 {
 
-
-                    if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
+                    using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    while (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                     {
-                        AlarmManager.AddAlarm(AlarmCodes.AGV_Location_Not_Secondary, false);
-                        return;
+                        await Task.Delay(200);
+                        LOG.TRACE($"AGV Back to Home Success(Current Map Point={Agv.lastVisitedMapPoint.TagNumber}_Station Type:{Agv.lastVisitedMapPoint.StationType})");
+                        if (cts.IsCancellationRequested)
+                        {
+                            AlarmManager.AddAlarm(AlarmCodes.AGV_Location_Not_Secondary, false);
+                            return;
+                        }
                     }
                     AGVCActionStatusChaged = null;
                     back_to_secondary_flag = true;
