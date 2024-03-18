@@ -7,5 +7,9 @@
         /// 低於此電量不換電池
         /// </summary>
         public byte ExchangeBatLevelThresholdVal { get; set; } = 100;
+
+        public bool MeasureSimulation { get; set; } = true;
+
+        public bool BatteryExhcnageSimulation { get; set; } = true;
     }
 }

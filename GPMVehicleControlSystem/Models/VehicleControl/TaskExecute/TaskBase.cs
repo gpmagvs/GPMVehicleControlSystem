@@ -47,11 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 try
                 {
-                    var mapPoints = Agv.NavingMap.Points;
-                    IEnumerable<MapPoint> charge_stations = mapPoints.Values.Where(station => station.IsCharge);
-                    KeyValuePair<int, MapPoint> destinStation = mapPoints.FirstOrDefault(pt => pt.Value.TagNumber == destineTag);
-                    var targetStations = destinStation.Value.Target.Keys.Select(index => mapPoints[index]);
-                    return targetStations.Any(station => station.IsCharge);
+                    return _RunningTaskData.Task_Name.ToUpper().Contains("CHARGE");
                 }
                 catch (Exception ex)
                 {

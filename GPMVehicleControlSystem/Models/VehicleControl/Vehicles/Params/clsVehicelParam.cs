@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             {  clsConnectionParam.CONNECTION_ITEM.Wago , new clsConnectionParam
                 {
                      IP = "127.0.0.1",
-                     Port = 9999,
+                     Port = 502,
                      Protocol_Interval_ms =50
                 }
             },

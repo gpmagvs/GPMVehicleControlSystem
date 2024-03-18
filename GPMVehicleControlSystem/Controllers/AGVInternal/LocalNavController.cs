@@ -32,8 +32,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
 
             //重新下載圖資
-            if (agv.AGVS.Connected)
-                await agv.DownloadMapFromServer();
+            //if (agv.AGVS.Connected)
+            //    await agv.DownloadMapFromServer();
 
             if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
             {

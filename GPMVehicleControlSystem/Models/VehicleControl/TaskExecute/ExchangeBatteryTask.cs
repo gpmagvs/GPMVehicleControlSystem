@@ -56,6 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
+            Agv.Laser.AllLaserDisable();
             return await Agv.Laser.ModeSwitch(VehicleComponent.clsLaser.LASER_MODE.Bypass);
         }
         private class clsBatInfo
@@ -80,7 +81,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             TsmcMiniAGV.IsHandshaking = true;
-            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換任務開始";
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換開始";
             BuzzerPlayer.ExchangeBattery();
 
             try
@@ -165,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (!IsBat1Lock)
                             return (false, AlarmCodes.Battery1_Not_Lock);
                     }
-                    else if(bat.location == BATTERY_LOCATION.LEFT && _isReloadACtion)
+                    else if (bat.location == BATTERY_LOCATION.LEFT && _isReloadACtion)
                     {
                         await TsmcMiniAGV.Battery2Lock();
                         if (!IsBat2Lock)
@@ -200,21 +201,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             TsmcMiniAGV.IsHandshaking = false;
             TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換完成，退至定位點..";
             //退至二次定位點
+            BuzzerPlayer.Stop();
             BuzzerPlayer.Action();
 
             if (Debugging)
             {
-                StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE );
-
+                StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE);
                 await Task.Delay(3000);
                 BuzzerPlayer.Stop();
                 return (true, AlarmCodes.None);
             }
             else
             {
-                AGVCActionStatusChaged += OnAGVCBackToEntryPoint;
+                ManualResetEvent _waitReachHomeDone = new ManualResetEvent(false);
+                AGVCActionStatusChaged += (status) =>
+                {
+                    if (status == ActionStatus.SUCCEEDED)
+                        _waitReachHomeDone.Set();
+                };
                 var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
                 AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
+                if (!result.Accept)
+                    return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
+
+                _waitReachHomeDone.WaitOne();
+                LOG.INFO($"退出至定位點,電池交換完成");
+                Agv.SetSub_Status(SUB_STATUS.IDLE);
                 return (result.Accept, result.Accept ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
             }
         }
@@ -316,6 +328,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             CancellationTokenSource cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(timeout_sec));
             Stopwatch _sw = Stopwatch.StartNew();
+
+            if (TsmcMiniAGV.Parameters.InspectionAGV.BatteryExhcnageSimulation)
+            {
+                await Task.Delay(1000);
+                return true;
+            }
             while (Agv.WagoDI.GetState(input) != expect_state)
             {
                 await Task.Delay(10);
@@ -341,22 +359,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return true;
 
-        }
-        private void OnAGVCBackToEntryPoint(ActionStatus status)
-        {
-            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-            {
-                AGVCActionStatusChaged -= OnAGVCBackToEntryPoint;
-                return;
-            }
-            LOG.WARN($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Entry Point of Bat-Exanger] AGVC Action Status Changed: {status}.");
-
-            if (status == ActionStatus.SUCCEEDED)
-            {
-                AGVCActionStatusChaged = null;
-                LOG.INFO($"電池交換完成");
-                base.HandleAGVCActionSucceess();
-            }
         }
 
     }

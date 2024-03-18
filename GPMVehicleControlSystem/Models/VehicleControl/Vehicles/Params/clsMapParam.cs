@@ -2,7 +2,7 @@
 {
     public class clsMapParam
     {
-        public string LocalMapFileName { get; set; } = "local-Map_UMTC_3F_Yellow.json";
+        public string LocalMapFileName { get; set; } = "temp/3FDemoRoom.json";
         internal string LocalMapFileFullName
         {
             get

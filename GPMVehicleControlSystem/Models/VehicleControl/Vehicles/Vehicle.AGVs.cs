@@ -12,6 +12,7 @@ using System.Diagnostics;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using System.Threading.Tasks;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -365,7 +366,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
-            await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
 
             LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Red);
 
@@ -373,6 +373,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 LOG.INFO($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Yellow);
                 return true;
+            }
+
+            while (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
+            {
+                await Task.Delay(1);
             }
 
             AGVSResetCmdFlag = true;
@@ -390,7 +395,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
-                    //Sub_Status = SUB_STATUS.IDLE;
                     return true;
                 }
                 else
@@ -421,7 +425,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-                TaskDispatchFlowControlSemaphoreSlim.Release();
             }
 
         }

@@ -42,6 +42,7 @@ namespace GPMVehicleControlSystem.Models.NaviMap
             {
                 using (HttpClient client = new HttpClient())
                 {
+                    client.Timeout = TimeSpan.FromSeconds(3);
                     var response = await client.GetAsync(GetMapUrl);
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {

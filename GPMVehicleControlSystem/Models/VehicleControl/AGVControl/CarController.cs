@@ -11,6 +11,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
@@ -115,7 +116,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
         public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
-        public Action<ActionStatus> OnAGVCActionChanged;
+        private Action<ActionStatus> _OnAGVCActionChanged;
+        public Action<ActionStatus> OnAGVCActionChanged
+        {
+            get => _OnAGVCActionChanged;
+            set
+            {
+                _OnAGVCActionChanged = value;
+                LOG.TRACE($"{(value == null ? "取消註冊" : "新增註冊")} Action Server Status 變化監視");
+            }
+        }
         internal bool CycleStopActionExecuting = false;
         internal TaskCommandActionClient actionClient;
 
@@ -127,9 +137,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    LOG.TRACE($"車控-ActionServer: Action Status Changed To : {value}");
-                    if (OnAGVCActionChanged != null)
-                        OnAGVCActionChanged(value);
                     _ActionStatus = value;
                 }
             }
@@ -329,6 +336,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
             actionClient.OnActionStatusChanged += (sender, status) =>
             {
+                LOG.TRACE($"車控-ActionServer: Action Status Changed To : {status}");
+                if (OnAGVCActionChanged != null)
+                    OnAGVCActionChanged(status);
                 ActionStatus = status;
             };
             actionClient.Initialize();
@@ -444,32 +454,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
             else
                 _IsEmergencyStopFlag = false;
-            SendActionCheckResult confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-
-            if (!isEmptyPathPlan && OnActionSendToAGVCRaising != null)
-                confirmResult = OnActionSendToAGVCRaising();//非取消任務需確認是否可以下發任務
-
-            if (!confirmResult.Accept)
-            {
-                if (confirmResult.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED)
-                {
-                    //如果當下AGV正在移動，
-                    if (ActionStatus != ActionStatus.ACTIVE)
-                    {
-                        actionClient.goal = new TaskCommandGoal();
-                        actionClient.SendGoal();
-                        LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控停止中({ActionStatus})=>發送空的Action Goal並停在原地等待AGVs任務");
-                    }
-                    else
-                    {
-                        if (CycleStopActionExecuting)
-                            LOG.WARN($"任務取消發送至車控,因為AGVs已經發起任務取消請求,且車控正在執行Cycle Stop動作({ActionStatus})");
-                        else
-                            await CycleStop();
-                    }
-                }
-                return confirmResult;
-            }
 
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);

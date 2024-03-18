@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -68,6 +69,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsActionFinishReported = true
         };
 
+        public enum TASK_DISPATCH_STATUS
+        {
+            IDLE,
+            Pending,
+            Running,
+        }
+
+        public TASK_DISPATCH_STATUS TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
 
         /// <summary>
         /// 執行派車系統任務
@@ -76,8 +85,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
             await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
-
             LOG.TRACE($"Start Execute Task-{taskDownloadData.Task_Simplex}", color: ConsoleColor.Green);
             //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
             _RunTaskData = taskDownloadData.Clone();
@@ -112,7 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _orderInfoViewModel = taskDownloadData.OrderInfo;
                 }
 
-
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
 
                 LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
@@ -153,6 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     });
                     _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
                     LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+                    TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                 }
                 else if (action != ACTION_TYPE.Charge)
                 {

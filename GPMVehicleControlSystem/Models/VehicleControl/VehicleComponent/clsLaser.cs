@@ -121,9 +121,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }
+
+        private DateTime lastSickOutputPathDataUpdateTime = DateTime.MinValue;
+        private bool isSickOutputPathDataNotUpdate
+        {
+            get
+            {
+                double period = (DateTime.Now - lastSickOutputPathDataUpdateTime).TotalSeconds;
+                LOG.TRACE($"{period},lastSickOutputPathDataUpdateTime:{lastSickOutputPathDataUpdateTime.ToString("yyyy-MM-dd HH:mm:ss.ffff")}");
+                return period > 1;
+            }
+        }
         private void SickSaftyScannerOutputDataCallback(OutputPathsMsg sick_scanner_out_data)
         {
             CurrentLaserModeOfSick = sick_scanner_out_data.active_monitoring_case;
+            lastSickOutputPathDataUpdateTime = DateTime.Now;
         }
 
         internal async Task FrontBackLasersEnable(bool front_active, bool back_active)
@@ -226,10 +238,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
                     if (try_count > retry_times_limit)
                         return false;
-                    await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+                    bool writeSuccess = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+
+                    if (isSickOutputPathDataNotUpdate && writeSuccess)
+                    {
+                        _CurrentLaserModeOfSick = mode_int;
+                        break;
+                    }
+
                     try_count++;
                 }
+                if (isSickOutputPathDataNotUpdate)
+                    AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_But_SICK_OUPUT_NOT_UPDATE);
                 LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
+
                 return true;
             }
             catch (Exception ex)
@@ -246,6 +268,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private bool IsLaserModeNeedChange(int toSetMode)
         {
+            if (isSickOutputPathDataNotUpdate)
+                return true;
             if (toSetMode == 0 || toSetMode == 16)
             {
                 return CurrentLaserModeOfSick != 16 && CurrentLaserModeOfSick != 0;

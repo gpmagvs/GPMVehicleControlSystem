@@ -105,11 +105,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 });
                 return (true, AlarmCodes.None);
             }
-            TsmcMiniAGV.OnMeasureComplete += TsmcMiniAGV_OnMeasureComplete;
             await Task.Delay(1000);
             FlashDirectorLighter();
+            BuzzerPlayer.Stop();
             BuzzerPlayer.Measure();
             LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
+
+            if (TsmcMiniAGV.Parameters.InspectionAGV.MeasureSimulation)
+            {
+                LOG.TRACE($"模擬量測，三秒後量測結束");
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    TsmcMiniAGV.SetSub_Status(SUB_STATUS.RUN);
+                    TsmcMiniAGV.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
+                    await Task.Delay(3000);
+                    TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                    {
+                        TaskName = RunningTaskData.Task_Name,
+                        result = "done",
+                        IPA = DateTime.Now.Second,
+                        StartTime = DateTime.Now,
+                        Acetone = DateTime.Now.Second,
+                        illuminance = DateTime.Now.Minute,
+                    });
+                });
+                TsmcMiniAGV.SetSub_Status(SUB_STATUS.IDLE);
+                return (true, AlarmCodes.None);
+            }
+
+            TsmcMiniAGV.OnMeasureComplete += TsmcMiniAGV_OnMeasureComplete;
             (bool confirm, string message) response = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
             if (!response.confirm)
             {
@@ -117,10 +142,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     result = "error",
                 });
+                TsmcMiniAGV.SetSub_Status(SUB_STATUS.IDLE);
                 return (true, AlarmCodes.None);
             }
             else
+            {
+                TsmcMiniAGV.SetSub_Status(SUB_STATUS.IDLE);
                 return (true, AlarmCodes.None);
+            }
         }
 
         private async void TsmcMiniAGV_OnMeasureComplete(object? sender, clsMeasureResult measure_result)
@@ -143,21 +172,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     Agv.DirectionLighter.Forward();
                 }
+                BuzzerPlayer.Stop();
                 BuzzerPlayer.Move();
                 LOG.INFO($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
-                AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
+                //Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+                Agv._RunTaskData.IsActionFinishReported = false;
+                AGVCActionStatusChaged = null;
+                AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
             }
             else //移動到下一個點
             {
                 clsTaskDownloadData taskData = RunningTaskData.Splice(completed_point_index_, 2, true);
-                AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
+                BuzzerPlayer.Stop();
                 BuzzerPlayer.Move();
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(taskData);
+                AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
+
             }
         }
 
@@ -167,13 +201,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
+                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
                 AGVCActionStatusChaged -= HandleAGVCBackToEntryPointDone;
                 return;
             }
             if (status == ActionStatus.SUCCEEDED)
             {
-                AGVCActionStatusChaged = null;
                 Agv.SetSub_Status(SUB_STATUS.IDLE);
+                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
+                AGVCActionStatusChaged -= HandleAGVCBackToEntryPointDone;
             }
         }
         private async void HandleAGVCReachMeasurePoint(ActionStatus status)
@@ -186,34 +222,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             if (status == ActionStatus.SUCCEEDED)
             {
-                AGVCActionStatusChaged = null;
+                AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
                 await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                 await Task.Delay(1000);
-                if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
-                {
-                    LOG.INFO($"模擬量測完成");
-                    TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
-                    {
-                        TaskName = RunningTaskData.Task_Name,
-                        result = "done",
-                        IPA = DateTime.Now.Second,
-                        StartTime = DateTime.Now,
-                        Acetone = DateTime.Now.Second,
-                        illuminance = DateTime.Now.Minute,
-                    });
-                    return;
-                }
+
                 FlashDirectorLighter();
                 BuzzerPlayer.Measure();
                 LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
-                (bool confirm, string message) result = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
-                if (!result.confirm)
+
+                if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV || Agv.Parameters.InspectionAGV.MeasureSimulation)
                 {
-                    LOG.ERROR($"AGV Measure service callback fail.");
-                    TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                    _ = Task.Run(async () =>
                     {
-                        result = "error",
+                        await Task.Delay(3000);
+                        LOG.INFO($"模擬量測完成");
+                        TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                        {
+                            TaskName = RunningTaskData.Task_Name,
+                            result = "done",
+                            IPA = DateTime.Now.Second,
+                            StartTime = DateTime.Now,
+                            Acetone = DateTime.Now.Second,
+                            illuminance = DateTime.Now.Minute,
+                        });
                     });
+
+                }
+                else
+                {
+                    (bool confirm, string message) result = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
+                    if (!result.confirm)
+                    {
+                        LOG.ERROR($"AGV Measure service callback fail.");
+                        TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                        {
+                            result = "error",
+                        });
+                    }
                 }
             }
         }

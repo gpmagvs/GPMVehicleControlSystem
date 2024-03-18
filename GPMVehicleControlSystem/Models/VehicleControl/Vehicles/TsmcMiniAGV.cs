@@ -153,7 +153,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await _LaserAreaHhandleslim.WaitAsync();
             try
             {
+
                 if (!IsLaserMonitorActived)
+                    return;
+
+                clsIOSignal inputIO = (clsIOSignal)sender;
+
+                bool IsLaserBypass(clsIOSignal input)
+                {
+                    if (input.Input == DI_ITEM.RightProtection_Area_Sensor_3)
+                        return WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+
+                    else if (input.Input == DI_ITEM.LeftProtection_Area_Sensor_3)
+                        return WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+
+                    else if (input.Input == DI_ITEM.FrontProtection_Area_Sensor_3)
+                        return WagoDO.GetState(DO_ITEM.Front_LsrBypass);
+                    else if (input.Input == DI_ITEM.BackProtection_Area_Sensor_3)
+                        return WagoDO.GetState(DO_ITEM.Back_LsrBypass);
+                    return true;
+                }
+                if (IsLaserBypass(inputIO))
                     return;
 
                 bool LaserTrigger = !state;
@@ -163,9 +183,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     while (!await IsAllLaserNoTrigger())
                     {
                         LOG.TRACE($"等待障礙物移除");
+                        if (IsLaserBypass(inputIO) || !IsLaserMonitorActived)
+                            break;
                         await Task.Delay(1000);
                     }
-
+                    await Task.Delay(1000);
                     var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
                     if (safty_relay_reset_result)
                     {
@@ -175,10 +197,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
                             AlarmManager.ClearAlarm();
-                            AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
-                            await Task.Delay(1000);
+                            BuzzerPlayer.Stop();
+                            await Task.Delay(100);
+
+                            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            {
+                                BuzzerPlayer.Move();
+                                await Task.Delay(1000);
+                            }
                             await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
-                            BuzzerPlayer.Move();
+
                         }
                         else
                         {
@@ -386,14 +414,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery2UnLock()
         {
-            if(!IsUnlockActionAllow(2,out string rejectReason))
+            if (!IsUnlockActionAllow(2, out string rejectReason))
             {
                 return false;
             }
             LOG.TRACE("Mini AGV- Try Unlock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.UNLOCK);
         }
-        protected bool IsUnlockActionAllow(int toLockBatNumber,out string rejectReason)
+        protected bool IsUnlockActionAllow(int toLockBatNumber, out string rejectReason)
         {
             rejectReason = "";
             return true;

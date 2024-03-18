@@ -64,7 +64,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             OnParamEdited += (param) => { this.Parameters = param; };
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>
             {
-                if (ExecutingTaskEntity != null && ExecutingTaskEntity.isMoveToChargeStationTask)
+                if (_RunTaskData.Task_Name.ToUpper().Contains("CHARGE"))
                     return SOUNDS.GoToChargeStation;
                 else
                     return SOUNDS.Move;
