@@ -88,6 +88,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             /// </summary>
             DECELERATE_SECONDARY_LOCALIZATION = 21,
             /// <summary>
+            /// 避災訊號清除(包括火災/地震)
+            /// </summary>
+            Disaster_Avoidance_SIGNAL_CLEAR = 97,
+            /// <summary>
+            /// 地震避災訊號
+            /// </summary>
+            Earthquake_Disaster_Avoidance_SIGNAL = 98,
+            /// <summary>
+            /// 火災避災訊號
+            /// </summary>
+            Fire_Disaster_Avoidance_SIGNAL = 99,
+            /// <summary>
             /// 請求停止或到目標點停止，清空當前車控軌跡任務，需附帶任務ID
             /// </summary>
             STOP_WHEN_REACH_GOAL = 100,
