@@ -621,7 +621,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        private async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             await Task.Run(() =>
             {

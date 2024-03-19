@@ -74,7 +74,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
             StartPublishIOListsMsg();
         }
+        protected override async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        {
 
+            bool frontLaserActive = direction != clsNavigation.AGV_DIRECTION.BACKWARD &&
+                direction != clsNavigation.AGV_DIRECTION.BACKWARD_OBSTACLE &&
+                direction != clsNavigation.AGV_DIRECTION.AVOID_OBSTACLE;
+
+            bool backLaserActive = direction == clsNavigation.AGV_DIRECTION.BACKWARD;
+
+            await Laser.FrontBackLasersEnable(frontLaserActive, backLaserActive);
+
+            base.Navigation_OnDirectionChanged(sender, direction);
+
+        }
         private async void StartPublishIOListsMsg()
         {
             await Task.Delay(10);

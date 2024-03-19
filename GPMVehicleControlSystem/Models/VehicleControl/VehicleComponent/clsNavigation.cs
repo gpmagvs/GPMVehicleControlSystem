@@ -15,11 +15,71 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public enum AGV_DIRECTION : ushort
         {
-            FORWARD,
-            LEFT,
-            RIGHT,
-            STOP,
-            BYPASS = 11
+            /// <summary>
+            /// 直走
+            /// </summary>
+            FORWARD = 0,
+            /// <summary>
+            /// 左轉
+            /// </summary>
+            LEFT = 1,
+            /// <summary>
+            /// 右轉
+            /// </summary>
+            RIGHT = 2,
+            /// <summary>
+            /// 電池交換橫向移動
+            /// </summary>
+            BAT_EXCHANGE_TRANSVERSE = 3,
+            /// <summary>
+            /// 後退
+            /// </summary>
+            BACKWARD = 4,
+            /// <summary>
+            /// 電梯
+            /// </summary>
+            ELEVATOR = 5,
+            /// <summary>
+            /// 向左橫移
+            /// </summary>
+            LEFT_TRANSVERSE = 6,
+            /// <summary>
+            /// 向右橫移
+            /// </summary>
+            RIGHT_TRANSVERSE = 7,
+            /// <summary>
+            /// 障礙物偵測停止移動
+            /// </summary>
+            STOP_OBSTACLE_DETECTED = 8,
+            /// <summary>
+            /// 抵達目標點
+            /// </summary>
+            REACH_GOAL = 9,
+            /// <summary>
+            /// 進出port位
+            /// </summary>
+            PORT = 10,
+            BYPASS = 11,
+            /// <summary>
+            /// 過自動門向左切
+            /// </summary>
+            PASS_AUTO_DOOR_TURN_LEFT = 12,
+            /// <summary>
+            /// 過自動門向右切
+            /// </summary>
+            PASS_AUTO_DOOR_TURN_RIGHT = 13,
+            /// <summary>
+            /// 進出特定PORT位
+            /// </summary>
+            SPFIEC_PORT = 20,
+            /// <summary>
+            /// 遇到障礙物後退
+            /// </summary>
+            BACKWARD_OBSTACLE = 98,
+            /// <summary>
+            /// 遇到障礙物避障
+            /// </summary>
+            AVOID_OBSTACLE = 99,
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.NAVIGATION;
 
