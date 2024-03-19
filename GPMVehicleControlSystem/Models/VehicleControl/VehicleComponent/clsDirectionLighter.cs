@@ -104,7 +104,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 TurnRight();
             else if (direction == clsNavigation.AGV_DIRECTION.LEFT)
                 TurnLeft();
-            else if (direction == clsNavigation.AGV_DIRECTION.STOP)
+            else if (direction == clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 CloseAll();
 
         }

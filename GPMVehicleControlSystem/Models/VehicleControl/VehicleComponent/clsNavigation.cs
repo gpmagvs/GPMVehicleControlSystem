@@ -95,7 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private Point last_position { get; set; } = new Point();
         private double last_theta { get; set; } = 0;
 
-        private AGV_DIRECTION _previousDirection = AGV_DIRECTION.STOP;
+        private AGV_DIRECTION _previousDirection = AGV_DIRECTION.REACH_GOAL;
         public AGV_DIRECTION Direction
         {
             get => _previousDirection;

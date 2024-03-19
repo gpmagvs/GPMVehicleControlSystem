@@ -34,16 +34,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <returns></returns>
         public static AGV_DIRECTION ToAGVDirection(this ushort agvc_direction)
         {
-            if (agvc_direction == 0)
-                return AGV_DIRECTION.FORWARD;
-            else if (agvc_direction == 1)
-                return AGV_DIRECTION.LEFT;
-            else if (agvc_direction == 2)
-                return AGV_DIRECTION.RIGHT;
-            else if (agvc_direction == 11)
-                return AGV_DIRECTION.BYPASS;
+
+            var map =Enum.GetValues(typeof(AGV_DIRECTION)).Cast<AGV_DIRECTION>().ToDictionary(item => (ushort)item, item => item);
+            if (map.TryGetValue(agvc_direction, out var item))
+                return item;
             else
-                return AGV_DIRECTION.STOP;
+                return AGV_DIRECTION.REACH_GOAL;
         }
 
         public static AlarmCodes ToMotionAlarmCode(this ushort code)

@@ -625,7 +625,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await Task.Run(() =>
             {
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.STOP)
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 {
                     Laser.LaserChangeByAGVDirection(sender, direction);
                 }
