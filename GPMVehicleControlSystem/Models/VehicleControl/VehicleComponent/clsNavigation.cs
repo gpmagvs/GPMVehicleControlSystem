@@ -152,7 +152,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             last_position = Data.robotPose.pose.position;
             last_theta = Angle;
             if (Data.errorCode != 0)
-                Current_Alarm_Code = Data.errorCode.ToMotionAlarmCode();
+            {
+                AlarmCodes _Alarm_Code = Data.errorCode.ToMotionAlarmCode();
+                if (_Alarm_Code == AlarmCodes.Task_Path_Road_Closed)
+                    Current_Warning_Code = _Alarm_Code;
+                else
+                    Current_Alarm_Code = _Alarm_Code;
+            }
             else
                 Current_Alarm_Code = AlarmCodes.None;
             return true;
