@@ -38,6 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             IOListsTopicID = rosSocket.Advertise<IOlistsMsg>("IOlists");
             Console.WriteLine(IOListsTopicID);
             rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", InstrumentMeasureDone);
+            rosSocket?.AdvertiseService<Fire_Action_Request, Fire_Action_Response>("/fire_action", FireActionDoneCallback);
         }
 
         internal void IOListMsgPublisher(IOlistsMsg payload)
@@ -178,7 +179,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             return true;
         }
-
+        private bool FireActionDoneCallback(Fire_Action_Request request, out Fire_Action_Response response)
+        {
+            LOG.INFO($"車控端已完成避災動作!", color: ConsoleColor.Red);
+            response = new Fire_Action_Response(true);
+            return true;
+        }
         private async Task<(bool confirm, string message)> CallCommandAction(string service_name, COMMANDS command)
         {
             try
