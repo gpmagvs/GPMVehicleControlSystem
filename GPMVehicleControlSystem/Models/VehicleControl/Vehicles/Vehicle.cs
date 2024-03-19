@@ -23,6 +23,7 @@ using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Drawing;
 using System.Net.Sockets;
+using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -333,14 +334,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
+
                 List<Task> WagoAndRosInitTasks = new List<Task>();
                 WagoAndRosInitTasks.Add(WagoDIInit());
                 WagoAndRosInitTasks.Add(RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag));
-
-
-                AGVSInit();
-                StartConfigChangedWatcher();
-                WebsocketAgent.Middleware.Initialize();
 
                 Task.Factory.StartNew(async () =>
                 {
@@ -351,33 +348,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
-                    CommonEventsRegist();
-                    while (!ModuleInformationUpdatedInitState)
+
+                    while (!ModuleInformationUpdatedInitState && Parameters.AgvType != AGV_TYPE.SUBMERGED_SHIELD_Parts)
                     {
                         await Task.Delay(1000);
                     }
-
-                    try
-                    {
-                        SyncHandshakeSignalStates();
-                        WagoDI.RegistSignalEvents();
-                        await DOSignalDefaultSetting();
-                        await ResetMotor(false);
-                        DIOStatusChangedEventRegist();
-                        BuzzerPlayer.Alarm();
-                        AlarmManager.Active = true;
-                        AlarmManager.RecordAlarm(AlarmCodes.None);
-                        if (HasAnyCargoOnAGV() && CSTReader != null)
-                        {
-                            CSTReader.ReadCSTIDFromLocalStorage();
-                        }
-                        LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
-                        IsSystemInitialized = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
+                    await Startup();
 
                 });
             }
@@ -389,6 +365,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
+        private async Task Startup()
+        {
+            CommonEventsRegist();
+            AGVSInit();
+            StartConfigChangedWatcher();
+            WebsocketAgent.Middleware.Initialize();
+
+            try
+            {
+                SyncHandshakeSignalStates();
+                WagoDI.RegistSignalEvents();
+                await DOSignalDefaultSetting();
+                await ResetMotor(false);
+                DIOStatusChangedEventRegist();
+                BuzzerPlayer.Alarm();
+                AlarmManager.Active = true;
+                AlarmManager.RecordAlarm(AlarmCodes.None);
+                if (HasAnyCargoOnAGV() && CSTReader != null)
+                {
+                    CSTReader.ReadCSTIDFromLocalStorage();
+                }
+                LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
+                IsSystemInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex.Message, ex);
+            }
+        }
+
         protected virtual void SyncHandshakeSignalStates()
         {
             EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = WagoDI.GetState(DI_ITEM.EQ_READY);

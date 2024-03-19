@@ -36,6 +36,8 @@ void VehicheAndWagoIOConfiguraltion()
             src_ini_file_name = "IO_Wago_Fork_AGV.ini";
         if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
+        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+            src_ini_file_name = "IO_Wago_Submarine_AGV_Parts.ini";
         if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
         {
             src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
@@ -47,7 +49,7 @@ void VehicheAndWagoIOConfiguraltion()
     {
         StaStored.CurrentVechicle = new ForkAGV();
     }
-    else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+    else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
     {
         StaStored.CurrentVechicle = new SubmarinAGV();
     }
