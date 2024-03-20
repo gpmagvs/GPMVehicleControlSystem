@@ -470,15 +470,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             Parameters.lastCstIDStore = newCstID;
                             SaveParameters(Parameters);
-                            LOG.INFO($"更新貨物ID --> {(Parameters.lastCstIDStore==""?"(空白)":Parameters.lastCstIDStore)} 並儲存於參數檔成功");
+                            LOG.INFO($"更新貨物ID --> {(Parameters.lastCstIDStore == "" ? "(空白)" : Parameters.lastCstIDStore)} 並儲存於參數檔成功");
                         };
                     }
 
                     LOG.INFO($"設備交握通訊方式:{Parameters.EQHandshakeMethod}");
+                    LOG.INFO($"等待車控數據接收...");
                     while (!ModuleInformationUpdatedInitState)
                     {
                         Thread.Sleep(1);
                     }
+                    LOG.INFO($"車控數據已接收..!.");
                     Thread.Sleep(1000);
                     BuzzerPlayer.Alarm();
                     WebsocketAgent.StartViewDataCollect();

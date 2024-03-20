@@ -59,6 +59,11 @@ void VehicheAndWagoIOConfiguraltion()
         else
             StaStored.CurrentVechicle = new DemoMiniAGV();
     }
+    if(StaStored.CurrentVechicle==null)
+    {
+        Console.WriteLine($"車輛建構初始化異常異常");
+        Environment.Exit(1);
+    }
     LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created！！");
     LinuxTools.SysLoadingLogProcess();
 }
