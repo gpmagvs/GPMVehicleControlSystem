@@ -483,7 +483,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.INFO($"車控數據已接收..!.");
                     Thread.Sleep(1000);
                     BuzzerPlayer.Alarm();
-                    WebsocketAgent.StartViewDataCollect();
+                    WebsocketAgent.Middleware.Initialize();
                     StartConfigChangedWatcher();
                     AGVSInit();
                     AlarmManager.Active = true;

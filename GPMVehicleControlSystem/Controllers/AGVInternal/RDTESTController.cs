@@ -35,12 +35,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             StaRDTestManager.StopMoveTest();
             return Ok();
         }
-        [HttpGet("/ws/RDTestData")]
-        public async Task ConnectionStateEcho()
-        {
-            await WebsocketAgent.ClientRequest(HttpContext, WebsocketAgent.WEBSOCKET_CLIENT_ACTION.GETRDTestData);
-        }
-
+       
         [HttpPost("IOWriteTest")]
         public async Task IOWriteTest()
         {
