@@ -419,6 +419,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
+                WebsocketAgent.Middleware.Initialize();
                 List<Task> tasks = new List<Task>();
                 Task RosConnTask = new Task(async () =>
                 {
@@ -483,7 +484,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.INFO($"車控數據已接收..!.");
                     Thread.Sleep(1000);
                     BuzzerPlayer.Alarm();
-                    WebsocketAgent.Middleware.Initialize();
                     StartConfigChangedWatcher();
                     AGVSInit();
                     AlarmManager.Active = true;

@@ -12,10 +12,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
 
         [HttpGet("/ws")]
-        public async Task Get(string user_id = "")
+        public async Task WsGet(string user_id)
         {
             await WebsocketAgent.Middleware.HandleWebsocketClientConnectIn(HttpContext, user_id);
         }
-       
+
     }
 }
