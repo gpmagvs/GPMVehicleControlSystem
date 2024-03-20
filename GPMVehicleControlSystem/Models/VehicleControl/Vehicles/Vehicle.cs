@@ -591,24 +591,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async Task<bool> IsAllLaserNoTrigger()
         {
-            var FrontArea1 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
-            var FrontArea2 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
-            var FrontArea3 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+            var _isFrontLaserBypass = WagoDO.GetState(DO_ITEM.Front_LsrBypass);
+            var _isBackLaserBypass = WagoDO.GetState(DO_ITEM.Back_LsrBypass);
+            var _isRightLaserBypass = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+            var _isLeftLaserBypass = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
 
-            var BackArea1 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1);
-            var BackArea2 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2);
-            var BackArea3 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3);
+            var FrontArea1Safe = _isFrontLaserBypass ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            var FrontArea2Safe = _isFrontLaserBypass ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+            var FrontArea3Safe = _isFrontLaserBypass ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
 
-            var RightArea = WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
-            var LeftArea = WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+            var BackArea1Safe = _isBackLaserBypass ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1);
+            var BackArea2Safe = _isBackLaserBypass ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2);
+            var BackArea3Safe = _isBackLaserBypass ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3);
+
+            var RightAreaSafe = _isRightLaserBypass ? true : WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+            var LeftAreaSafe = _isLeftLaserBypass ? true : WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
             LOG.INFO($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
-                        $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
-                        $"Back_Area  1->3 ={BackArea1.ToSymbol("O", "X")}|{BackArea2.ToSymbol("O", "X")}|{BackArea3.ToSymbol("O", "X")}\r\n" +
-                        $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
-                        $"Left_Area       ={LeftArea.ToSymbol("O", "X")}");
+                        $"Front_Area 1->3 ={FrontArea1Safe.ToSymbol("O", "X")}|{FrontArea2Safe.ToSymbol("O", "X")}|{FrontArea3Safe.ToSymbol("O", "X")}\r\n" +
+                        $"Back_Area  1->3 ={BackArea1Safe.ToSymbol("O", "X")}|{BackArea2Safe.ToSymbol("O", "X")}|{BackArea3Safe.ToSymbol("O", "X")}\r\n" +
+                        $"Right_Area      ={RightAreaSafe.ToSymbol("O", "X")}\r\n" +
+                        $"Left_Area       ={LeftAreaSafe.ToSymbol("O", "X")}");
 
-            return FrontArea1 && FrontArea2 && FrontArea3 && BackArea1 && BackArea2 && BackArea3 && RightArea && LeftArea;
+            return FrontArea1Safe && FrontArea2Safe && FrontArea3Safe && BackArea1Safe && BackArea2Safe && BackArea3Safe && RightAreaSafe && LeftAreaSafe;
         }
 
         protected virtual async Task DOSignalDefaultSetting()
