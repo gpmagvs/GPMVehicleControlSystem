@@ -20,10 +20,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string LogFolder { get; set; } = "GPM_AGV_LOG";
         public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
         public int Version { get; set; } = 1;
-        public string SID { get; set; } = "SID";
-        public string VehicleName { get; set; } = "EQName";
+        public string SID { get; set; } = "001:001:001";
+        public string VehicleName { get; set; } = "AGV_001";
         public bool SimulationMode { get; set; } = false;
-        public bool WagoSimulation { get; set; } = true;
+        public bool WagoSimulation { get; set; } = false;
         public bool ActiveTrafficControl { get; set; } = false;
         public bool EQHandshakeBypass { get; set; } = false;
         public bool CST_READER_TRIGGER { get; set; } = false;
