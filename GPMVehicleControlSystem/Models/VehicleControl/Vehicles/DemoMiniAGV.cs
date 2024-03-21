@@ -78,10 +78,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+
+                //await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
+                //await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
+                //await WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
+                //await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
+
                 await WagoDO.ResetSaftyRelay();
 
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
+
                 if (bypass_when_motor_busy_on && !anyDriverAlarm)
                     return true;
 

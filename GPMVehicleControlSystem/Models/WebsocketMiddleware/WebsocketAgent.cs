@@ -32,15 +32,23 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 {"DIOTableVM",new object() },
                 {"RDTestData",new object() },
             };
+            Console.WriteLine("Websocket Agent init done.");
         }
         protected override async Task CollectViewModelData()
         {
-
-            var _ws_data_store = CurrentViewModelDataOfAllChannel[channelMaps[0]] as Dictionary<string, object>;
-            _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
-            _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
-            _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
-            _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
+            try
+            {
+                var _ws_data_store = CurrentViewModelDataOfAllChannel[channelMaps[0]] as Dictionary<string, object>;
+                _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
+                _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
+                _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
+                _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message + ex.StackTrace);
+                return;
+            }
         }
     }
 }

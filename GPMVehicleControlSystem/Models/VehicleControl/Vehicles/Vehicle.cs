@@ -334,6 +334,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
+                WebsocketAgent.Middleware.Initialize();
 
                 List<Task> WagoAndRosInitTasks = new List<Task>();
                 WagoAndRosInitTasks.Add(WagoDIInit());
@@ -371,7 +372,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CommonEventsRegist();
             AGVSInit();
             StartConfigChangedWatcher();
-            WebsocketAgent.Middleware.Initialize();
 
             try
             {
@@ -522,16 +522,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<bool> IsAllLaserNoTrigger()
         {
             await Task.Delay(10);
-            var FrontArea1 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
-            var FrontArea2 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
-            var FrontArea3 = WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
 
-            var BackArea1 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1);
-            var BackArea2 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2);
-            var BackArea3 = WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3);
+            bool LLsrBypassState = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+            bool RLsrBypassState = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+            bool FLsrBypassState = WagoDO.GetState(DO_ITEM.Front_LsrBypass);
+            bool BLsrBypassState = WagoDO.GetState(DO_ITEM.Back_LsrBypass);
 
-            var RightArea = WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
-            var LeftArea = WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+
+            var FrontArea1 = FLsrBypassState ? true: WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            var FrontArea2 = FLsrBypassState ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
+            var FrontArea3 = FLsrBypassState ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
+
+            var BackArea1 = BLsrBypassState ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_1);
+            var BackArea2 = BLsrBypassState ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2);
+            var BackArea3 = BLsrBypassState ? true : WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3);
+
+            var RightArea = RLsrBypassState ? true : WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+            var LeftArea = LLsrBypassState ? true : WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
             LOG.INFO($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
                         $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +

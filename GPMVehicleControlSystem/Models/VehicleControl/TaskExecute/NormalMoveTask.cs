@@ -217,9 +217,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return base.BeforeTaskExecuteActions();
         }
 
-        internal override Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
+        internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            return base.HandleAGVCActionSucceess();
+            await Agv.Laser.AllLaserDisable();
+            return await base.HandleAGVCActionSucceess();
         }
         /// <summary>
         /// 偵測貨物傾倒

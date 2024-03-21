@@ -227,15 +227,28 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {
-            if (AGV == null)
-                return new ConnectionStateVM();
-            ConnectionStateVM data_view_model = new ConnectionStateVM()
+            try
             {
-                RosbridgeServer = AGV.AGVC == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-                VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-                WAGO = AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-            };
-            return data_view_model;
+                if (AGV == null)
+                    return new ConnectionStateVM();
+                ConnectionStateVM data_view_model = new ConnectionStateVM()
+                {
+                    RosbridgeServer = AGV.AGVC == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                    VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                    WAGO = AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                };
+                return data_view_model;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("尚無法取得連線狀態:" + ex.Message);
+                return new ConnectionStateVM()
+                {
+                    RosbridgeServer = ConnectionStateVM.CONNECTION.DISCONNECT,
+                    VMS = ConnectionStateVM.CONNECTION.DISCONNECT,
+                    WAGO = ConnectionStateVM.CONNECTION.DISCONNECT,
+                };
+            }
         }
 
         internal static DIOTableVM GetDIOTableVM()
