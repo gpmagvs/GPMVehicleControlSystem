@@ -213,7 +213,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> LaserMode(int mode)
         {
             await Task.Delay(1);
-            await agv.Laser.ModeSwitch(mode);
+            if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                await agv.Laser.ModeSwitch(mode);
+            else
+            {
+                await agv.Laser.ModeSwitch(mode);
+                await (agv.Laser as clsAMCLaser).SideLaserModeSwitch(mode);
+            }
             return Ok();
         }
 

@@ -142,6 +142,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
+        internal override void CreateLaserInstance()
+        {
+            Laser = new clsAMCLaser(WagoDO, WagoDI)
+            {
+                Spin_Laser_Mode = Parameters.Spin_Laser_Mode
+            };
+        }
+
         protected override void DIOStatusChangedEventRegist()
         {
             base.DIOStatusChangedEventRegist();

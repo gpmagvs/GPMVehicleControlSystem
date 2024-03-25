@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
-        private SemaphoreSlim modeSwitchSemaphoresSlim = new SemaphoreSlim(1, 1);
+        protected SemaphoreSlim modeSwitchSemaphoresSlim = new SemaphoreSlim(1, 1);
         private int _CurrentLaserModeOfSick = -1;
         internal int CurrentLaserModeOfSick
         {
@@ -83,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-        public LASER_MODE Mode
+        public virtual LASER_MODE Mode
         {
             get
             {
@@ -193,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-        internal async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
+        internal virtual async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
@@ -213,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
         }
-        public async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
+        public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
         {
             return await ModeSwitch((int)mode, isSettingByAGVS);
         }

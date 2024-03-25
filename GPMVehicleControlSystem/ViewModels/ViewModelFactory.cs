@@ -13,6 +13,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Tools;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -72,7 +73,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
 
                     },
-                    Current_LASER_MODE = AGV.Laser.Mode.ToString() + $"({(int)AGV.Laser.CurrentLaserModeOfSick})",
+                    Current_LASER_MODE = GetLaserModeDescription(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.HasAnyCargoOnAGV(),
@@ -149,6 +150,11 @@ namespace GPMVehicleControlSystem.ViewModels
                 };
             }
 
+            static string GetLaserModeDescription()
+            {
+                string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.Mode.ToString();
+                return $"{laserModeText}({(int)AGV.Laser.CurrentLaserModeOfSick})";
+            }
         }
 
         private static string CreateAPPVersionString()

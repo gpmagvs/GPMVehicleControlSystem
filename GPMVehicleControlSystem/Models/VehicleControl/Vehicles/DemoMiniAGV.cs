@@ -127,6 +127,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsLockActionAllow(1, out string rejectReason))
             {
+                LOG.Critical(rejectReason);
                 return false;
             }
             LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.1 [call service]");
@@ -137,6 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsLockActionAllow(2, out string rejectReason))
             {
+                LOG.Critical(rejectReason);
                 return false;
             }
             LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.2 [call service]");
@@ -148,6 +150,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsUnlockActionAllow(2, out string rejectReason))
             {
+                LOG.Critical(rejectReason);
                 return false;
             }
             await BatteryUnLockSemaphoreSlim.WaitAsync();
@@ -171,6 +174,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsUnlockActionAllow(2, out string rejectReason))
             {
+                LOG.Critical(rejectReason);
                 return false;
             }
             await BatteryUnLockSemaphoreSlim.WaitAsync();
@@ -232,7 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             GetExistSensorState(toLockBatNumber, out bool exist1_front, out bool exist2_back, out bool exist3_docked);
 
-            if (exist1_front)
+            if (exist1_front && !exist3_docked)
             {
                 rejectReason = $"電池-{toLockBatNumber}電池目前的位置-不可進行鎖定動作";
                 return false;

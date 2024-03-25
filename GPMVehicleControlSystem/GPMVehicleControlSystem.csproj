@@ -3,8 +3,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>03.11.1</AssemblyVersion>
-    <InformationalVersion>23.7.7.1</InformationalVersion>
+    <AssemblyVersion>2.5.1</AssemblyVersion>
+    <InformationalVersion>2.5.1</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
 

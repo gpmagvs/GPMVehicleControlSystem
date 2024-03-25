@@ -15,10 +15,12 @@ namespace GPMVehicleControlSystem.Controllers
         public class UploadController : ControllerBase
         {
             private readonly string _uploadFolderPath;
+            private readonly string _frontendUploadFolderPath;
 
             public UploadController()
             {
                 _uploadFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+                _frontendUploadFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                 Directory.CreateDirectory(_uploadFolderPath);
             }
 
@@ -41,6 +43,32 @@ namespace GPMVehicleControlSystem.Controllers
                         await file.CopyToAsync(stream);
                     }
                     LOG.INFO($"接收到{Request.Form.Files.Count}筆更新檔案");
+                    return Ok("檔案上傳成功。");
+                }
+
+                return BadRequest("未接收到任何檔案。");
+            }
+
+
+            [HttpPost("UploadFrontendWebsiteFile")]
+            [DisableRequestSizeLimit]
+            public async Task<IActionResult> UploadFrontendWebsiteFile()
+            {
+                var file = Request.Form.Files[0];
+                if (file.Length > 100 * 1024 * 1024) // 100MB
+                {
+                    return BadRequest("檔案大小超過 100MB。");
+                }
+
+                if (file.Length > 0)
+                {
+                    var filePath = Path.Combine(_frontendUploadFolderPath, file.FileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Append))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+                    LOG.INFO($"接收到{Request.Form.Files.Count}筆前端更新檔案");
                     return Ok("檔案上傳成功。");
                 }
 

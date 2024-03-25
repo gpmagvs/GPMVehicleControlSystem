@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
@@ -72,7 +73,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            await Agv.Laser.ModeSwitch(VehicleComponent.clsLaser.LASER_MODE.Normal);
+            clsAMCLaser laser = (Agv.Laser as clsAMCLaser);
+            await laser.ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bay4);
+            await laser.SideLaserModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bay4);
             return true;
         }
 

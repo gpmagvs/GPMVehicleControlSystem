@@ -329,10 +329,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 DirectionLighter.DOModule = WagoDO;
 
                 StatusLighter = new clsStatusLighter(WagoDO);
-                Laser = new clsLaser(WagoDO, WagoDI)
-                {
-                    Spin_Laser_Mode = Parameters.Spin_Laser_Mode
-                };
+                CreateLaserInstance();
 
                 WebsocketAgent.Middleware.Initialize();
 
@@ -365,6 +362,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 throw ex;
             }
 
+        }
+
+        internal virtual void CreateLaserInstance()
+        {
+            Laser = new clsLaser(WagoDO, WagoDI)
+            {
+                Spin_Laser_Mode = Parameters.Spin_Laser_Mode
+            };
         }
 
         private async Task Startup()
@@ -529,7 +534,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool BLsrBypassState = WagoDO.GetState(DO_ITEM.Back_LsrBypass);
 
 
-            var FrontArea1 = FLsrBypassState ? true: WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
+            var FrontArea1 = FLsrBypassState ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
             var FrontArea2 = FLsrBypassState ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
             var FrontArea3 = FLsrBypassState ? true : WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
 
@@ -639,7 +644,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(500);
                     InitializingStatusText = "雷射模式切換(Bypass)..";
                     await Task.Delay(200);
-                    await Laser.ModeSwitch(LASER_MODE.Bypass);
+
+                    if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                        await (Laser as clsAMCLaser).ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bypass16);
+                    else
+                        await Laser.ModeSwitch(LASER_MODE.Bypass);
+
+
                     await Laser.AllLaserDisable();
 
                     StatusLighter.AbortFlash();

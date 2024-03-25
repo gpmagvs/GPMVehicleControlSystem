@@ -213,6 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     LOG.WARN($"貨物傾倒偵測已在執行中!!");
                 }
             }
+            Agv.TryControlAutoDoor(Agv.Navigation.LastVisitedTag);
             //Task.Run(() => WatchVirtualPtAndStopWorker());
             return base.BeforeTaskExecuteActions();
         }

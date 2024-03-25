@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -298,7 +299,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 TaskName = File.ReadAllText("task_name.txt");
         }
 
-        private void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
+        internal virtual void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
             Task.Run(async () =>
             {
@@ -309,10 +310,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTaskEntity == null)
                     return;
 
+
                 var _newTagPoint = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+
 
                 if (_RunTaskData.Action_Type == ACTION_TYPE.None && _newTagPoint != null)
                 {
+
+                    if (GetSub_Status() == SUB_STATUS.RUN && AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                    {
+                        TryControlAutoDoor(newVisitedNodeTag);
+                    }
+
                     var laser_mode = _newTagPoint.Laser;
                     await Laser.ModeSwitch(laser_mode, true);
                 }
@@ -322,6 +331,50 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 }
             });
+        }
+
+        internal void TryControlAutoDoor(int newVisitedNodeTag)
+        {
+
+            clsMapPoint? currentPt = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+            if (currentPt == null)
+                return;
+
+            int indexOfCurrentPt = _RunTaskData.ExecutingTrajecory.ToList().IndexOf(currentPt);
+
+            if (indexOfCurrentPt + 1 == _RunTaskData.ExecutingTrajecory.Length) //最後一點
+                return;
+
+            bool isCurrentPtAutoDoor = NavingMap.Points.First(p => p.Value.TagNumber == currentPt.Point_ID).Value.IsAutoDoor;
+
+            if (!isCurrentPtAutoDoor)
+                return;
+
+            var nextPt = _RunTaskData.ExecutingTrajecory.ToList()[indexOfCurrentPt + 1];//0,1,2,3
+            bool isNextPtAutoDoor = NavingMap.Points.First(p => p.Value.TagNumber == nextPt.Point_ID).Value.IsAutoDoor;
+
+            if (!isNextPtAutoDoor)
+            {
+                CloseAutoDoor();
+                return;
+            }
+            OpenAutoDoor();
+        }
+
+        protected virtual bool GetAutoDoorOpenControl()
+        {
+            return WagoDO.GetState(DO_ITEM.Infrared_Door_1);
+        }
+
+        protected virtual void OpenAutoDoor()
+        {
+            LOG.INFO($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
+            WagoDO.SetState(DO_ITEM.Infrared_Door_1, true);
+        }
+        protected virtual void CloseAutoDoor()
+        {
+            LOG.INFO($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
+            WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
         }
 
         private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
