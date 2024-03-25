@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using AGVSystemCommonNet6.HttpTools;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
@@ -24,7 +25,10 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         };
         public override void Initialize()
         {
-            base.Initialize();
+
+
+            ClientsOfAllChannel = channelMaps.ToDictionary(str => str, str => new List<clsWebsocktClientHandler>());
+            CurrentViewModelDataOfAllChannel = channelMaps.ToDictionary(str => str, str => new object());
             CurrentViewModelDataOfAllChannel[channelMaps[0]] = new Dictionary<string, object>()
             {
                 {"ConnectionStatesVM",new object() },
@@ -32,15 +36,27 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 {"DIOTableVM",new object() },
                 {"RDTestData",new object() },
             };
+            StartCollectViewModelDataAndPublishOutAsync();
+           
         }
         protected override async Task CollectViewModelData()
         {
-
-            var _ws_data_store = CurrentViewModelDataOfAllChannel[channelMaps[0]] as Dictionary<string, object>;
-            _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
-            _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
-            _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
-            _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
+            try
+            {
+                var _ws_data_store = CurrentViewModelDataOfAllChannel[channelMaps[0]] as Dictionary<string, object>;
+                _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
+                _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
+                _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
+                _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("CollectViewModelData Error" + ex.ToString());
+                if (CurrentViewModelDataOfAllChannel.TryGetValue(channelMaps[0], out var val))
+                {
+                    CurrentViewModelDataOfAllChannel[channelMaps[0]] = null;
+                }
+            }
         }
     }
 }

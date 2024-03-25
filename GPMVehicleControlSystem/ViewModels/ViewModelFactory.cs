@@ -119,11 +119,6 @@ namespace GPMVehicleControlSystem.ViewModels
                         },
                         new clsAlarmCode
                         {
-
-
-
-
-
                             Time=DateTime.Now,
 
                              Code =  (int)AlarmCodes.Code_Error_In_System,
@@ -237,8 +232,8 @@ namespace GPMVehicleControlSystem.ViewModels
             ConnectionStateVM data_view_model = new ConnectionStateVM()
             {
                 RosbridgeServer = AGV.AGVC==null? ConnectionStateVM.CONNECTION.DISCONNECT: AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-                VMS = AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
-                WAGO = AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                VMS = AGV.AGVS == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                WAGO = AGV.WagoDI == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
             };
             return data_view_model;
         }
