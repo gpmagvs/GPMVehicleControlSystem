@@ -43,6 +43,12 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 Start = ushort.Parse(iniHelper.GetValue("OUTPUT", "Start"));
                 Size = ushort.Parse(iniHelper.GetValue("OUTPUT", "Size"));
+
+                int.TryParse(iniHelper.GetValue("OUTPUT", "ShiftStart"), out ShiftStart);
+                int.TryParse(iniHelper.GetValue("OUTPUT", "ShiftSize"), out ShiftSize);
+
+                LOG.INFO($"DO Shift Start = {ShiftStart}, Shift Size = {ShiftSize}");
+
                 var do_names = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().Select(i => i.ToString()).ToList();
                 for (ushort i = 0; i < Size; i++)
                 {
@@ -152,7 +158,15 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
         private async Task WriteToDeviceAsync(clsWriteRequest to_handle_obj)
         {
+
+
             ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
+
+            if (to_handle_obj.signal.index >= ShiftStart)
+            {
+                startAddress += (ushort)ShiftSize;
+            }
+
             bool[] writeStates = to_handle_obj.writeStates;
             bool[] rollback = writeStates.Select(s => !s).ToArray();
             ushort count = (ushort)writeStates.Length;
