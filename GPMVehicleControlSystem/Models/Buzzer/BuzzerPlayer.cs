@@ -8,6 +8,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Protocols;
+using AGVSystemCommonNet6;
 
 namespace GPMVehicleControlSystem.Models.Buzzer
 {
@@ -29,21 +30,18 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsAlarmPlaying)
                 return;
-            IsAlarmPlaying = true;
             Play(SOUNDS.Alarm);
         }
         public static void Action()
         {
             if (IsActionPlaying)
                 return;
-            IsActionPlaying = true;
             Play(SOUNDS.Action);
         }
         public static void Move()
         {
             if (IsMovingPlaying)
                 return;
-            IsMovingPlaying = true;
             var _sound = SOUNDS.Move;
             if (BeforeBuzzerMovePlay != null)
                 _sound = BeforeBuzzerMovePlay();
@@ -56,7 +54,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsHandshakingPlaying)
                 return;
-            IsHandshakingPlaying = true;
             Play(SOUNDS.Handshaking);
         }
 
@@ -64,7 +61,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsMeasurePlaying)
                 return;
-            IsMeasurePlaying = true;
             Play(SOUNDS.Measure);
         }
 
@@ -73,19 +69,37 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             if (IsExchangeBatteryPlaying)
                 return;
             Play(SOUNDS.Exchange);
-            IsExchangeBatteryPlaying = true;
         }
         internal static void Stop()
         {
-            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
             Play(SOUNDS.Stop);
         }
-
+        public static async Task<bool> UpdateMusicService(SOUNDS sound)
+        {
+            var request = new UpdateMusicRequest(sound.ToString().ToLower());
+            LOG.INFO($"Call /update_music :{request.ToJson()}");
+            UpdateMusicResponse response = await rossocket.CallServiceAndWait<UpdateMusicRequest, UpdateMusicResponse>("/update_music", request);
+            return response != null ? response.success : false;
+        }
         public static async void Play(SOUNDS sound)
         {
             try
             {
                 await semaphore.WaitAsync();
+
+                if (sound == SOUNDS.Stop)
+                {
+                    IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+                }
+                else
+                {
+                    IsMovingPlaying = sound == SOUNDS.Move;
+                    IsActionPlaying = sound == SOUNDS.Action;
+                    IsAlarmPlaying = sound == SOUNDS.Alarm;
+                    IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
+                    IsHandshakingPlaying = sound == SOUNDS.Handshaking;
+                }
+
                 LOG.WARN($"Playing Sound : {sound}");
                 Thread playsound_thred = new Thread(() =>
                 {

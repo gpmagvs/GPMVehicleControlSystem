@@ -1,8 +1,10 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using Newtonsoft.Json;
 using RosSharp.RosBridgeClient;
 using System.Diagnostics.Metrics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
@@ -145,7 +147,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             throw new NotImplementedException("巡檢AGV不具有CST Reader 功能");
         }
 
+        internal override async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
+        {
+            RunningTaskData = taskDownloadData;
+            AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal rosgoal = RunningTaskData.RosTaskCommandGoal;
 
+            rosgoal.pathInfo = JsonConvert.DeserializeObject<AMCPathInfo[]>(rosgoal.pathInfo.ToJson());
+            
+            return await SendGoal(rosgoal, action_timeout);
+        }
         #region Private Methods
 
         /// <summary>

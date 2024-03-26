@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models.Buzzer;
+﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models.Buzzer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,6 +32,42 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             BuzzerPlayer.Stop();
             return Ok();
+        }
+
+        /// <summary>
+        /// 0:Alarm,1:Move,2:Action,3:Stop,4:Measuer,5:Exchange,6:Handshaking,7:GoToChargeStation
+        /// </summary>
+        /// <param name="sound"></param>
+        /// <returns></returns>
+        [HttpPost("UploadMusicFile")]
+        [DisableRequestSizeLimit]
+        public async Task<IActionResult> UploadMusicFile(SOUNDS sound = SOUNDS.Move)
+        {
+            var file = Request.Form.Files[0];
+            if (file.Length > 100 * 1024 * 1024) // 100MB
+            {
+                return BadRequest("檔案大小超過 100MB。");
+            }
+
+            if (file.Length > 0)
+            {
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/sounds/{sound.ToString().ToLower()}.wav");
+
+                using (var stream = new FileStream(filePath, FileMode.OpenOrCreate))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                bool updateSuccess = await BuzzerPlayer.UpdateMusicService(sound);
+
+                return Ok(new
+                {
+                    success= updateSuccess,
+                    message = updateSuccess ? "音檔上傳更新成功。" : "音檔上傳更新失敗"
+                });
+            }
+
+            return BadRequest("未接收到任何檔案。");
         }
     }
 }

@@ -171,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public List<AlarmCodes> alarm_codes { get; private set; }
 
-        public clsTaskDownloadData RunningTaskData { get; private set; } = new clsTaskDownloadData();
+        public clsTaskDownloadData RunningTaskData { get; protected set; } = new clsTaskDownloadData();
         /// <summary>
         /// 手動操作控制器
         /// </summary>
@@ -448,7 +448,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return res.confirm;
         }
 
-        internal async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
+        internal virtual async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
             RunningTaskData = taskDownloadData;
             return await SendGoal(RunningTaskData.RosTaskCommandGoal, action_timeout);

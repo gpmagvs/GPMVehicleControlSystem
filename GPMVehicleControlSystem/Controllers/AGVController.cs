@@ -97,7 +97,7 @@ namespace GPMVehicleControlSystem.Controllers
         public async Task<IActionResult> Localization([FromBody] clsLocalizationVM localization)
         {
             LogAsync("Localization");
-            var result = await (agv as TsmcMiniAGV).Localization((ushort)localization.currentID);
+            var result = await (agv as TsmcMiniAGV).Localization((ushort)localization.currentID, localization.x, localization.y);
             var response = new { Success = result.confirm, Message = result.message };
             LogResponseAsync("agv_offline", response: response);
             return Ok(response);
