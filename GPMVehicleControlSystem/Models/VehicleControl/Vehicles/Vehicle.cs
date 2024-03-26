@@ -13,6 +13,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -1158,14 +1159,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal virtual bool HasAnyCargoOnAGV()
         {
-            try
+            bool _hasRack = false;
+            bool _hasTray = false;
+
+            if (Parameters.CargoExistSensorParams.RackSensorMounted)
             {
-                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
+                {
+                    _hasRack = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                }
+                else
+                {
+                    _hasRack = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                }
             }
-            catch (Exception)
+            if (Parameters.CargoExistSensorParams.TraySensorMounted)
             {
-                return false;
+                if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
+                    _hasTray = WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                else
+                    _hasTray = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
             }
+            return _hasRack || _hasTray;
         }
 
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)

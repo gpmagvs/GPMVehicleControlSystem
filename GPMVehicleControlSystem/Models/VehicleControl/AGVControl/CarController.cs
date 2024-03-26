@@ -468,7 +468,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 _IsEmergencyStopFlag = false;
 
             CycleStopActionExecuting = false;
-            LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
+            LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: true, color: ConsoleColor.Green);
             actionClient.goal = rosGoal;
             actionClient?.SendGoal();
             if (isEmptyPathPlan)
@@ -491,13 +491,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-        }
-
-
-        internal void Replan(clsTaskDownloadData taskDownloadData)
-        {
-            actionClient.goal = taskDownloadData.RosTaskCommandGoal;
-            actionClient.SendGoal();
         }
 
         public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();

@@ -234,6 +234,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (task_abort_alarmcode != AlarmCodes.None)
                             return new List<AlarmCodes> { task_abort_alarmcode };
 
+                        await Agv.Laser.AllLaserDisable();
+                        await Task.Delay(100);
+                        await LaserSettingBeforeTaskExecute();
+                        
                         _wait_agvc_action_done_pause.Reset();
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
