@@ -271,7 +271,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
-            if (Laser3rdTriggerHandlerFlag && alarm_code != AlarmCodes.Bumper)
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && Laser3rdTriggerHandlerFlag && alarm_code != AlarmCodes.Bumper)
                 return;
             base.AlarmManager_OnUnRecoverableAlarmOccur(sender, alarm_code);
         }
