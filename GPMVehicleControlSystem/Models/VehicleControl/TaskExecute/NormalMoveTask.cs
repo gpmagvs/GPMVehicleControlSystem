@@ -31,6 +31,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
             }
+
         }
         protected override Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
         {
@@ -213,8 +214,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     LOG.WARN($"貨物傾倒偵測已在執行中!!");
                 }
             }
-            Agv.TryControlAutoDoor(Agv.Navigation.LastVisitedTag);
             //Task.Run(() => WatchVirtualPtAndStopWorker());
+            Agv.TryControlAutoDoor(Agv.Navigation.LastVisitedTag);
             return base.BeforeTaskExecuteActions();
         }
 

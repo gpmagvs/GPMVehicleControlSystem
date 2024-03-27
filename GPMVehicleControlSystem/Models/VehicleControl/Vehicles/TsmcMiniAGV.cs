@@ -204,11 +204,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     while (!await IsAllLaserNoTrigger())
                     {
                         LOG.TRACE($"等待障礙物移除");
+
+                        if (GetSub_Status() == SUB_STATUS.DOWN)
+                            return;
+
                         if (IsLaserBypass(inputIO) || !IsLaserMonitorActived)
                             break;
+
                         await Task.Delay(1000);
                     }
                     await Task.Delay(1000);
+
+                    if (GetSub_Status() == SUB_STATUS.DOWN)
+                        return;
+
                     var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
                     if (safty_relay_reset_result)
                     {

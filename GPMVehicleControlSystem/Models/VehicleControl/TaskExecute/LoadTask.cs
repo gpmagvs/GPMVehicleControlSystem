@@ -51,11 +51,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal bool back_to_secondary_flag = false;
         internal WORKSTATION_HS_METHOD _eqHandshakeMode;
 
-
+        internal clsCST CstInformation = new clsCST() { CST_Type = CST_TYPE.None };
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             DetermineHandShakeSetting();
+
+            HandleCSTType();
         }
+
+        private void HandleCSTType()
+        {
+            clsCST[] cst_info = this.RunningTaskData.CST;
+            if (cst_info == null || cst_info.Length == 0)
+            {
+                CstInformation.CST_Type = CST_TYPE.None;
+                return;
+            }
+            CstInformation = cst_info.First();
+        }
+
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
             try
@@ -744,7 +758,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
         {
-            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader();
+            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(CstInformation.CST_Type);
             if (!result.request_success || !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

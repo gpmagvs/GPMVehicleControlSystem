@@ -296,9 +296,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                                                 || request.command == "down" || request.command == "down_search";
         }
 
-        public override Task<(bool request_success, bool action_done)> TriggerCSTReader()
+
+        public override Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
-            return base.TriggerCSTReader(CST_TYPE.Rack);
+            return base.TriggerCSTReader(cst_type == CST_TYPE.None ? CST_TYPE.Rack : cst_type);//cargo 類型未知則預設使用 read rack
         }
     }
 }

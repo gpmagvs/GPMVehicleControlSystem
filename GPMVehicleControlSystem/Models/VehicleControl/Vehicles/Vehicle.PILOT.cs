@@ -8,6 +8,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using MathNet.Numerics;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
@@ -335,30 +336,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void TryControlAutoDoor(int newVisitedNodeTag)
         {
-
-            clsMapPoint? currentPt = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
+            clsMapPoint[] trajectory = ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory;
+            LOG.INFO($"Try Control Auto Door in Tag {newVisitedNodeTag}(Full Traj: {string.Join(",", trajectory.Select(pt => pt.Point_ID))})");
+            //剩餘路徑包含自動門 則將 IO ON著 反之 OFF
+            clsMapPoint? currentPt = trajectory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
             if (currentPt == null)
-                return;
-
-            int indexOfCurrentPt = _RunTaskData.ExecutingTrajecory.ToList().IndexOf(currentPt);
-
-            if (indexOfCurrentPt + 1 == _RunTaskData.ExecutingTrajecory.Length) //最後一點
-                return;
-
-            bool isCurrentPtAutoDoor = NavingMap.Points.First(p => p.Value.TagNumber == currentPt.Point_ID).Value.IsAutoDoor;
-
-            if (!isCurrentPtAutoDoor)
-                return;
-
-            var nextPt = _RunTaskData.ExecutingTrajecory.ToList()[indexOfCurrentPt + 1];//0,1,2,3
-            bool isNextPtAutoDoor = NavingMap.Points.First(p => p.Value.TagNumber == nextPt.Point_ID).Value.IsAutoDoor;
-
-            if (!isNextPtAutoDoor)
             {
                 CloseAutoDoor();
                 return;
             }
-            OpenAutoDoor();
+            //0,1,2,3
+            int indexOfCurrentPt = trajectory.ToList().IndexOf(currentPt);
+
+            if (indexOfCurrentPt + 1 == trajectory.Length) //最後一點
+            {
+                CloseAutoDoor();
+                return;
+            }
+
+            IEnumerable<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt));
+            IEnumerable<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID);
+            LOG.TRACE($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
+            bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2;
+            if (_isAutoDoorInRemainTraj)
+                OpenAutoDoor();
+            else
+                CloseAutoDoor();
+
+            bool _IsAutoDoor(clsMapPoint traj_point)
+            {
+                KeyValuePair<int, AGVSystemCommonNet6.MAP.MapPoint> mapPt = NavingMap.Points.FirstOrDefault(p => p.Value.TagNumber == currentPt.Point_ID);
+                if (mapPt.Value == null)
+                    return false;
+
+                return mapPt.Value.IsAutoDoor;
+            }
         }
 
         protected virtual bool GetAutoDoorOpenControl()
