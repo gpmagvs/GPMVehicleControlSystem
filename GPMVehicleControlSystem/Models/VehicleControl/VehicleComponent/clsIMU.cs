@@ -1,18 +1,30 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Log;
+using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using MathNet.Numerics.LinearAlgebra;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
+using SQLitePCL;
 using System.Text.Json.Serialization;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsIMU;
+using WebSocketSharp;
+using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsIMU : CarComponent
     {
+        public clsIMU()
+        {
+            LoadMaxMiniRecords();
+        }
+
         public enum PITCH_STATES
         {
             /// <summary>
@@ -42,10 +54,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
+        public string MinMaxRecordFilePath => Path.Combine(Environment.CurrentDirectory, "IMU_MaxMin_Record.json");
+
+        public clsMaxMinGvalDataSaveModel MaxMinGValRecord = new clsMaxMinGvalDataSaveModel();
+
         public event EventHandler<IMUStateErrorEventData> OnImuStatesError;
         internal delegate clsImpactDetectionParams OptionsFetchDelegate();
         internal OptionsFetchDelegate OnOptionsFetching;
         internal event EventHandler<Vector3> OnAccelermeterDataChanged;
+        public delegate (Point coordination, SUB_STATUS sub_status, clsTaskDownloadData taskData) GValMaxMinValChange();
+        internal GValMaxMinValChange OnMaxMinGvalChanged;
         public override COMPOENT_NAME component_name => COMPOENT_NAME.IMU;
         private Vector3 _AccData;
         public Vector3 AccData
@@ -59,7 +77,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
         public Vector3 GyroData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.angular_velocity;
-        public bool IsAccSensorError => AccData == null ? true : AccData.x == 0 && AccData.y == 0 && AccData.z == 0;
+        public bool IsAccSensorError => AccData == null ? false : (AccData.x == 0 && AccData.y == 0 && AccData.z == 0);
 
         private PITCH_STATES _PitchState = PITCH_STATES.NORMAL;
         public PITCH_STATES PitchState
@@ -98,7 +116,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task<bool> CheckStateDataContent()
         {
-
             if (!await base.CheckStateDataContent())
                 return false;
 
@@ -109,48 +126,116 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
+                LOG.Critical(ex.Message, ex);
                 _AccData = new Vector3(0, 0, 0);
                 return false;
             }
-            if (_imu_state.state != 0)
+            Current_Warning_Code = _imu_state.state != 0 ? AlarmCodes.IMU_Module_Error : AlarmCodes.None;
+            try
             {
-                Current_Warning_Code = AlarmCodes.IMU_Module_Error;
-            }
-            else
-            {
-                Current_Warning_Code = AlarmCodes.None;
-            }
-            AccData = _imu_state == null ? new Vector3(0, 0, 0) : _imu_state.imuData.linear_acceleration;
-            if (IsAccSensorError) //加速規異常
-            {
+                AccData = _imu_state == null ? new Vector3(0, 0, 0) : _imu_state.imuData.linear_acceleration;
+                if (!IsAccSensorError) //加速規異常
+                {
+                    PitchState = DeterminePitchState(AccData);
+                    IsImpacting = ImpactDetection(AccData, out var mag);
+                    IMUData = _imu_state.imuData;
 
+                    MaxAndMiniGValueUpdate(IMUData.linear_acceleration);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PitchState = DeterminePitchState(AccData, Options.PitchErrorThresHold);
-                IsImpacting = ImpactDetection(AccData, Options.ThresHold, out var mag);
+                LOG.Critical(ex.Message, ex);
             }
-            IMUData = _imu_state.imuData;
             return true;
         }
+        public void ResetMaxAndMinGvalRecord()
+        {
+            MaxMinGValRecord.Reset(new Vector3(AccData.x / 9.8, AccData.y / 9.8, AccData.z / 9.8));
+            SaveRecordValue(MaxMinGValRecord);
+            LOG.TRACE($"IMU最大最小值紀錄已重置...{MaxMinGValRecord.ToJson()}");
+        }
+        private void MaxAndMiniGValueUpdate(Vector3 accData)
+        {
+            double currentGx = Math.Abs(accData.x / 9.8);
+            double currentGy = Math.Abs(accData.y / 9.8);
+            double currentGz = Math.Abs(accData.z / 9.8);
+            double currentMag = Vector<double>.Build.DenseOfArray(new double[] { currentGx, currentGy, currentGz }).L2Norm();
+            bool IsAnyMaxGValChanged = currentMag > MaxMinGValRecord.MaxMag;
+            if (IsAnyMaxGValChanged)
+            {
+                MaxMinGValRecord.AccVal = new Vector3(currentGx, currentGy, currentGz);
+                Task.Factory.StartNew(() =>
+                {
+                    Point _happen_corrdination = new Point();
+                    if (OnMaxMinGvalChanged != null)
+                    {
+                        (Point coordination, SUB_STATUS sub_status, clsTaskDownloadData taskData) agv_status = OnMaxMinGvalChanged();
+                        _happen_corrdination = agv_status.coordination;
+                        MaxMinGValRecord.AGV_Status = agv_status.sub_status.ToString();
+                        MaxMinGValRecord.AGV_TaskName = agv_status.taskData.Task_Name;
+                        MaxMinGValRecord.AGV_Action = agv_status.taskData.Action_Type.ToString();
+                    }
+                    MaxMinGValRecord.Coordination = _happen_corrdination;
+                    MaxMinGValRecord.Time = DateTime.Now;
+                    SaveRecordValue(MaxMinGValRecord);
+                });
+            }
 
-        private bool ImpactDetection(Vector3 acc_raw, double threshold, out double mag)
+        }
+        public class clsMaxMinGvalDataSaveModel
+        {
+            public DateTime Time { get; set; } = DateTime.MinValue;
+            public string AGV_Status { get; set; } = "";
+            public string AGV_TaskName { get; set; } = "";
+            public string AGV_Action { get; set; } = "";
+            public Point Coordination { get; set; } = new Point();
+            public Vector3 AccVal { get; set; } = new Vector3();
+            public double MaxMag => Vector<double>.Build.DenseOfArray(new double[] { AccVal.x, AccVal.y, AccVal.z }).L2Norm();
+
+            public void Reset(Vector3 defaultVal)
+            {
+                Time = DateTime.Now;
+                Coordination = new Point();
+                AGV_Status = AGV_TaskName = AGV_Action = "";
+                AccVal = defaultVal;
+            }
+        }
+        private void LoadMaxMiniRecords()
+        {
+            if (File.Exists(MinMaxRecordFilePath))
+            {
+                MaxMinGValRecord = JsonConvert.DeserializeObject<clsMaxMinGvalDataSaveModel>(File.ReadAllText(MinMaxRecordFilePath));
+                LOG.TRACE($"IMU Max/Min GVal Record Loaded.{MaxMinGValRecord.ToJson()}");
+            }
+        }
+
+        private void SaveRecordValue(clsMaxMinGvalDataSaveModel record)
+        {
+            try
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(record, Formatting.Indented);
+                LOG.TRACE($"Save IMU Max/Min Record:{json} to : {MinMaxRecordFilePath} ");
+                File.WriteAllText(MinMaxRecordFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"Exception happen when save IMU Max/Min Records({ex.Message})", ex);
+            }
+        }
+
+        private bool ImpactDetection(Vector3 acc_raw, out double mag)
         {
             double[] raw = new double[] { acc_raw.x, acc_raw.y, acc_raw.z };//9.8 m/s2
             mag = Vector<double>.Build.DenseOfArray(raw).L2Norm() / 9.8;
-            return mag > threshold;
+            return mag > Options.ThresHold;
         }
 
-        private PITCH_STATES DeterminePitchState(Vector3 AccData, double pitchErrorThresHold = 0.5)
+        private PITCH_STATES DeterminePitchState(Vector3 AccData)
         {
-
-            double Xaxis_g_error = Math.Abs(Math.Abs(AccData.x) - 9.8);
-            double Yaxis_g_error = Math.Abs(Math.Abs(AccData.y) - 9.8);
-            double Zaxis_g_error = Math.Abs(Math.Abs(AccData.z) - 9.8);
-
-            if ((Xaxis_g_error < pitchErrorThresHold || Yaxis_g_error < pitchErrorThresHold) && Zaxis_g_error > (9.8 - pitchErrorThresHold))
-                return PITCH_STATES.SIDE_FLIP;
-            else if (Zaxis_g_error > pitchErrorThresHold && AccData.z < 9.8)
+            var threshold = Options.PitchErrorThresHold;
+            double Zaxis_Gval_abs = Math.Abs(AccData.z / 9.8); //轉換成G值
+            if (Zaxis_Gval_abs <= threshold)
                 return PITCH_STATES.INCLINED;
             else
                 return PITCH_STATES.NORMAL;
@@ -159,7 +244,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             public AlarmCodes Imu_AlarmCode { get; }
             public Vector3 AccRaw { get; }
-            [JsonConverter(typeof(StringEnumConverter))]
+            [System.Text.Json.Serialization.JsonConverter(typeof(StringEnumConverter))]
             public PITCH_STATES PitchState { get; } = PITCH_STATES.NORMAL;
             public double Mag => Vector<double>.Build.DenseOfArray(new double[] { AccRaw.x, AccRaw.y, AccRaw.z }).L2Norm() / 9.8;
 

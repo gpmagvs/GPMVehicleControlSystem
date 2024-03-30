@@ -638,21 +638,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             // LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
             CancellationTokenSource _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+            Stopwatch stopwatch = Stopwatch.StartNew();
             while (_GetState(Signal) != (EXPECTED_State == HS_SIGNAL_STATE.ON) ? true : false)
             {
                 Thread.Sleep(1);
+                _HandshakeStatusText += $"-{stopwatch.Elapsed}";
                 if (cancellation != null && cancellation.IsCancellationRequested)
                 {
                     //LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Interupt!!!!!");
+                    stopwatch.Stop();
                     return false;
                 }
                 if (_cts.IsCancellationRequested)
                 {
                     //LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Timeout!!!!!");
+                    stopwatch.Stop();
                     return false;
                 }
             }
             //LOG.TRACE($"[交握訊號變化等待] {Signal} changed to {EXPECTED_State}!");
+            stopwatch.Stop();
             return true;
 
             ///private local function
