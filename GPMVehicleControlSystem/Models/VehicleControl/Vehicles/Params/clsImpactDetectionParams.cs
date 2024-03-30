@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 碰撞偵測閥值(單位:G)
         /// </summary>
         public double ThresHold { get; set; } = 2;
-        public double PitchErrorThresHold { get; set; } = 2;
+        public double PitchErrorThresHold { get; set; } = 0.707;
 
         public ALARM_LEVEL PitchErrorAlarmLevel { get; set; } = ALARM_LEVEL.WARNING;
 

@@ -99,7 +99,9 @@ namespace GPMVehicleControlSystem.ViewModels
                     OrderInfo = AGV.orderInfoViewModel,
                     IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
                     InitializingStatusText = AGV.InitializingStatusText,
-                    AMCAGVSensorState = GetSensorsActiveState()
+                    AMCAGVSensorState = GetSensorsActiveState(),
+                    IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord
+
 
                 };
                 return data_view_model;
