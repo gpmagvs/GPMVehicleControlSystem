@@ -101,6 +101,9 @@ namespace GPMVehicleControlSystem.ViewModels
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
         public clsEQHandshake HandshakeStatus { get; set; } = new clsEQHandshake();
         public clsTaskDownloadData.clsOrderInfo OrderInfo { get; set; } = new clsTaskDownloadData.clsOrderInfo();
+
+        public Dictionary<string, bool> AMCAGVSensorState { get; set; } = new Dictionary<string, bool>();
+
         public class clsTransferInfoViewModel
         {
             public string Action { get; set; } = "";

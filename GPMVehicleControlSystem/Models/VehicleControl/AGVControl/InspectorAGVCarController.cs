@@ -1,18 +1,36 @@
-﻿using AGVSystemCommonNet6;
+﻿//#define ServiceTest
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using Microsoft.AspNetCore.Components;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient;
 using System.Diagnostics.Metrics;
+using static AGVSystemCommonNet6.GPMRosMessageNet.Services.EquipmentStateRequest;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
     public partial class InspectorAGVCarController : CarController
     {
+
+        public Dictionary<EquipmentStateRequest.EQUIPMENTS, bool> EquipmentAvtiveState = new Dictionary<EquipmentStateRequest.EQUIPMENTS, bool>()
+        {
+            {  EQUIPMENTS.decibel,true},
+            {  EQUIPMENTS.temperature,true},
+            {  EQUIPMENTS.PID,true},
+            {  EQUIPMENTS.illuminance,true},
+            {  EQUIPMENTS.humidity,true},
+            {  EQUIPMENTS.instrument,true}
+        };
+        public Dictionary<SensorStateStateRequest.SENSORS, bool> SensorAvtiveState = new Dictionary<SensorStateStateRequest.SENSORS, bool>()
+        {
+            { SensorStateStateRequest.SENSORS.Ultrasonic,true },
+            { SensorStateStateRequest.SENSORS.GroundHoleCamera,true }
+        };
         public class clsMeasureDone
         {
             public string result_cmd { get; set; } = "";
@@ -153,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal rosgoal = RunningTaskData.RosTaskCommandGoal;
 
             rosgoal.pathInfo = JsonConvert.DeserializeObject<AMCPathInfo[]>(rosgoal.pathInfo.ToJson());
-            
+
             return await SendGoal(rosgoal, action_timeout);
         }
         #region Private Methods
@@ -244,6 +262,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
         #endregion
+
+
+        internal async Task<bool> EquipmentStateControl(EQUIPMENTS equipment, bool state)
+        {
+#if ServiceTest
+            bool confirm = true;
+            EquipmentAvtiveState[equipment] = confirm ? state : EquipmentAvtiveState[equipment];
+            return confirm;
+#else
+            var request = new EquipmentStateRequest(equipment, state);
+            LOG.TRACE($"call service : /equipment_state , request={request.ToJson()}");
+            var response = await rosSocket.CallServiceAndWait<EquipmentStateRequest, EquipmentStateResponse>("/equipment_state", request);
+            LOG.TRACE($"/equipment_state , response={response.ToJson()}");
+            bool confirm = response == null ? false : response.confirm;
+            EquipmentAvtiveState[equipment] = confirm ? state : EquipmentAvtiveState[equipment];
+            return confirm;
+#endif
+        }
+
+        internal async Task<bool> SensorStateControl(SensorStateStateRequest.SENSORS sensor, bool state)
+        {
+            var request = new SensorStateStateRequest(sensor, state);
+            LOG.TRACE($"call service : /sensor_state, request={request.ToJson()}");
+            var response = await rosSocket.CallServiceAndWait<SensorStateStateRequest, SensorStateStateResponse>("/sensor_state", request);
+            LOG.TRACE($"/sensor_state, response={response.ToJson()}");
+            bool confirm = response == null ? false : response.confirm;
+            SensorAvtiveState[sensor] = confirm ? state : SensorAvtiveState[sensor];
+            return confirm;
+
+        }
 
     }
 }

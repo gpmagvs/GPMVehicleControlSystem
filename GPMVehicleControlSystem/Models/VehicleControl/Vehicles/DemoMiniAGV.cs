@@ -5,6 +5,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using System.Net.Sockets;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.Buzzer;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -74,6 +75,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
         }
+
+        internal override async Task ResetAlarmsAsync(bool IsTriggerByButton)
+        {
+            await base.ResetAlarmsAsync(IsTriggerByButton);
+            if (GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+            {
+                await AGVC.EmergencyStop(bypass_stopped_check: true);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Brake, true);
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Brake, false);
+
+            }
+            BuzzerPlayer.Stop();
+
+        }
+
         public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
         {
             try
@@ -88,10 +105,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
-
-                if (bypass_when_motor_busy_on && !anyDriverAlarm)
-                    return true;
-
+                
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 return true;
             }
             catch (SocketException ex)

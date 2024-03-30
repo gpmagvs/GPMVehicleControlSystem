@@ -1024,7 +1024,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
         protected SemaphoreSlim _ResetAlarmSemaphoreSlim = new SemaphoreSlim(1, 1);
-        internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
+        internal virtual async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
             await _ResetAlarmSemaphoreSlim.WaitAsync();
             try
@@ -1041,10 +1041,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _ = Task.Factory.StartNew(async () =>
                 {
                     await Task.Delay(1000);
-                    if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                    if (AGVC.ActionStatus == ActionStatus.ACTIVE && GetSub_Status() != SUB_STATUS.DOWN && GetSub_Status() != SUB_STATUS.IDLE)
                     {
                         bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-
                         if (isObstacle)
                         {
                             BuzzerPlayer.Alarm();

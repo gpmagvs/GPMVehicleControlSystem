@@ -163,7 +163,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
             WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
 
+            WagoDI.SubsSignalStateChange(DI_ITEM.Front_Right_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Back_Left_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
+
             WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
+        }
+
+        private async void HandleUltrasoundSensorTrigger(object? sender, bool state)
+        {
+            if (!IsSaftyProtectActived)
+                return;
+            clsIOSignal signal = (clsIOSignal)sender;
+            var input = signal.Input;
+            if (state)
+            {
+                LOG.TRACE($"{input} Trigger! AGV STOP");
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor, false);
+            }
+            else
+            {
+                LOG.TRACE($"{input} Recovery! AGV Speed Recovery");
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery, true);
+
+            }
+
         }
 
         private SemaphoreSlim _LaserAreaHhandleslim = new SemaphoreSlim(1, 1);
@@ -175,7 +198,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
 
-                if (!IsLaserMonitorActived)
+                if (!IsSaftyProtectActived)
                     return;
 
                 clsIOSignal inputIO = (clsIOSignal)sender;
@@ -208,7 +231,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (GetSub_Status() == SUB_STATUS.DOWN)
                             return;
 
-                        if (IsLaserBypass(inputIO) || !IsLaserMonitorActived)
+                        if (IsLaserBypass(inputIO) || !IsSaftyProtectActived)
                             break;
 
                         await Task.Delay(1000);
@@ -232,7 +255,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                             {
-                                BuzzerPlayer.Move();
+                                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                    BuzzerPlayer.Move();
+                                else
+                                    BuzzerPlayer.Action();
+
                                 await Task.Delay(1000);
                             }
                             await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);

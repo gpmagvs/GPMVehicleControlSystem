@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 是否偵測雷測觸發
         /// </summary>
-        protected bool IsLaserMonitorActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
+        protected bool IsSaftyProtectActived => Operation_Mode == OPERATOR_MODE.AUTO && AGVC.ActionStatus == ActionStatus.ACTIVE;
 
         public bool ModuleInformationUpdatedInitState { get; private set; } = false;
 
@@ -295,7 +295,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="di_state"></param>
         private async void HandleSideLaserSignal(object? sender, bool di_state)
         {
-            if (!IsLaserMonitorActived)
+            if (!IsSaftyProtectActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -349,7 +349,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="e"></param>
         private async void HandleLaserArea1SinalChange(object? sender, bool e)
         {
-            if (!IsLaserMonitorActived)
+            if (!IsSaftyProtectActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -391,7 +391,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void HandleLaserArea2SinalChange(object? sender, bool e)
         {
 
-            if (!IsLaserMonitorActived)
+            if (!IsSaftyProtectActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;
@@ -428,7 +428,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="di_state"></param>
         protected virtual void HandleLaserArea3SinalChange(object? sender, bool di_state)
         {
-            if (!IsLaserMonitorActived)
+            if (!IsSaftyProtectActived)
                 return;
 
             clsIOSignal diState = (clsIOSignal)sender;

@@ -64,6 +64,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             CYCLE_STOP,
             BACK_TO_SECONDARY_POINT,
             NEW_TASK_START_EXECUTING,
+            UltrasoundSensor,
+            UltrasoundSensorRecovery,
         }
         public enum ROBOT_CONTROL_CMD : byte
         {

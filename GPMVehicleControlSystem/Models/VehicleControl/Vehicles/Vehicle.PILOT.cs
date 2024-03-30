@@ -318,7 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (_RunTaskData.Action_Type == ACTION_TYPE.None && _newTagPoint != null)
                 {
 
-                    if (GetSub_Status() == SUB_STATUS.RUN && AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                    if (AGVC.ActionStatus == RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                     {
                         TryControlAutoDoor(newVisitedNodeTag);
                     }
@@ -359,13 +359,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LOG.TRACE($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
             bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2;
             if (_isAutoDoorInRemainTraj)
-                OpenAutoDoor();
+            {
+                int index_of_first_auto_door_pt = trajectory.ToList().FindIndex(pt => pt.Point_ID == autoDoorPoints.First().Point_ID);
+                if (indexOfCurrentPt == index_of_first_auto_door_pt || indexOfCurrentPt == index_of_first_auto_door_pt - 1)
+                    OpenAutoDoor();
+            }
             else
                 CloseAutoDoor();
 
             bool _IsAutoDoor(clsMapPoint traj_point)
             {
-                KeyValuePair<int, AGVSystemCommonNet6.MAP.MapPoint> mapPt = NavingMap.Points.FirstOrDefault(p => p.Value.TagNumber == currentPt.Point_ID);
+                KeyValuePair<int, AGVSystemCommonNet6.MAP.MapPoint> mapPt = NavingMap.Points.FirstOrDefault(p => p.Value.TagNumber == traj_point.Point_ID);
                 if (mapPt.Value == null)
                     return false;
 

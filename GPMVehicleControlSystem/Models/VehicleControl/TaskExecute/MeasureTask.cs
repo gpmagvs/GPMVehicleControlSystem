@@ -108,18 +108,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 });
                 return (true, AlarmCodes.None);
             }
+            
+            LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
             await Task.Delay(1000);
             FlashDirectorLighter();
-            BuzzerPlayer.Stop();
             BuzzerPlayer.Measure();
-            LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
 
             if (TsmcMiniAGV.Parameters.InspectionAGV.MeasureSimulation)
             {
                 LOG.TRACE($"模擬量測，三秒後量測結束");
                 _ = Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(500);
+                    BuzzerPlayer.Measure();
                     TsmcMiniAGV.SetSub_Status(SUB_STATUS.RUN);
                     TsmcMiniAGV.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                     await Task.Delay(3000);

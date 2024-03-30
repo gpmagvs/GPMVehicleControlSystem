@@ -14,6 +14,7 @@ using GPMVehicleControlSystem.Tools;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -97,7 +98,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     OrderInfo = AGV.orderInfoViewModel,
                     IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
-                    InitializingStatusText = AGV.InitializingStatusText
+                    InitializingStatusText = AGV.InitializingStatusText,
+                    AMCAGVSensorState = GetSensorsActiveState()
 
                 };
                 return data_view_model;
@@ -155,6 +157,21 @@ namespace GPMVehicleControlSystem.ViewModels
                 string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.Mode.ToString();
                 return $"{laserModeText}({(int)AGV.Laser.CurrentLaserModeOfSick})";
             }
+        }
+
+        private static Dictionary<string, bool> GetSensorsActiveState()
+        {
+            if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.INSPECTION_AGV)
+                return new Dictionary<string, bool>();
+
+            var amc_agv_con = (AGV.AGVC as InspectorAGVCarController);
+            var equipmentActiveStates = amc_agv_con.EquipmentAvtiveState.ToDictionary(eq => eq.Key.ToString(), eq => eq.Value);
+            var sensorActiveStates = amc_agv_con.SensorAvtiveState.ToDictionary(sensor => sensor.Key.ToString(), sensor => sensor.Value);
+            // 使用LINQ合併兩個字典，後者的鍵值將覆蓋前者的
+            var mergedDict = equipmentActiveStates.Concat(sensorActiveStates)
+                                  .GroupBy(kvp => kvp.Key)
+                                  .ToDictionary(group => group.Key, group => group.Last().Value);
+            return mergedDict;
         }
 
         private static string CreateAPPVersionString()
