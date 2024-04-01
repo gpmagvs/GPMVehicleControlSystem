@@ -215,3 +215,4 @@ VCS_Release
 /GPMVehicleControlSystem/uploads
 /GPMVehicleControlSystem/cst_read_id.txt
 /.editorconfig
+/GPMVehicleControlSystem/IMU_MaxMin_Record.json

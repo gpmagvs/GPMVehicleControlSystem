@@ -84,6 +84,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGV_Reset_Flag = AGVSResetCmdFlag = false;
             ACTION_TYPE action_type = taskDownloadData.Action_Type;
             MapPoint? destineStation = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == taskDownloadData.Destination);
+            if (destineStation == null) //表示派車有新增點位 但本地圖資尚未更新
+                return TASK_DOWNLOAD_RETURN_CODES.OK;
+
             bool isMoveOrderButDestineIsWorkStation = destineStation?.StationType != STATION_TYPE.Normal && action_type == ACTION_TYPE.None;
             if (GetSub_Status() == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
