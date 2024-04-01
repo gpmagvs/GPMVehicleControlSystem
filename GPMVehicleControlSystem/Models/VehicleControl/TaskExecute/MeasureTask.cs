@@ -227,7 +227,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (status == ActionStatus.SUCCEEDED)
             {
                 AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
-                await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
+                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                 await Task.Delay(1000);
 
                 FlashDirectorLighter();

@@ -169,7 +169,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return new List<AlarmCodes> { AlarmCodes.Laser_Mode_value_fail };
                 }
-                await Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+                Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
@@ -237,7 +237,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         await Agv.Laser.AllLaserDisable();
                         await Task.Delay(100);
                         await LaserSettingBeforeTaskExecute();
-                        
+
                         _wait_agvc_action_done_pause.Reset();
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)

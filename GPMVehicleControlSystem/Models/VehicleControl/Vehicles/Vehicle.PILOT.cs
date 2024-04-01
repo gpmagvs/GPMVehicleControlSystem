@@ -171,7 +171,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //Sub_Status = SUB_STATUS.IDLE;
                 }
                 AGVC.OnAGVCActionChanged = null;
-                await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
+                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
             });
         }
 
@@ -382,15 +382,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return WagoDO.GetState(DO_ITEM.Infrared_Door_1);
         }
 
-        protected virtual void OpenAutoDoor()
+        protected virtual async Task OpenAutoDoor()
         {
             LOG.INFO($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
-            WagoDO.SetState(DO_ITEM.Infrared_Door_1, true);
+            bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, true);
+            if (!success)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
+            }
         }
-        protected virtual void CloseAutoDoor()
+        protected virtual async Task CloseAutoDoor()
         {
             LOG.INFO($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
-            WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
+            bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
+            if (!success)
+                AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
         }
 
         private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
