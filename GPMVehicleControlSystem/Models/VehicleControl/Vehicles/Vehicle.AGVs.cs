@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private Queue<FeedbackData> ActionFinishReportFailQueue = new Queue<FeedbackData>();
         private SemaphoreSlim TaskDispatchFlowControlSemaphoreSlim = new SemaphoreSlim(1, 1);
-        private async void AGVSInit()
+        private async Task AGVSInit()
         {
             string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
             int vms_port = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].Port;
@@ -43,12 +43,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnRunningStatusReport_T1Timeout += Handle_AGVS_RunningStatusReport_T1Timeout;
             AGVS.OnPingFail += AGVSPingFailHandler;
             AGVS.OnPingSuccess += AGVSPingSuccessHandler;
-            AGVS.Start();
-            AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
+
+            ReloadLocalMap();
+            await Task.Delay(1000);
+            await DownloadMapFromServer();
 
             if (Parameters.SyncEQInfoFromAGVS)
             {
-                var eqinfomations = await GetWorkStationEQInformation();
+                var eqinfomations = await GetWorkStationEQInformation(this.NavingMap.Points.Values.Where(st => st.StationType != STATION_TYPE.Normal).Select(st => st.TagNumber).ToList());
                 if (eqinfomations != null)
                 {
                     WorkStations.SyncInfo(eqinfomations);
@@ -56,6 +58,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
 
+            AGVS.Start();
+            AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
 
         private async void AGVSPingSuccessHandler()
@@ -235,6 +239,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
+        public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation(List<int> eqTags)
+        {
+            try
+            {
+                List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(eqTags.ToArray());
+                LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
+                return eqOptions;
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
+                return null;
+            }
+        }
 
         public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation()
         {

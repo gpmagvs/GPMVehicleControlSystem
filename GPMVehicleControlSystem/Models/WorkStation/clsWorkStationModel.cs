@@ -27,14 +27,25 @@ namespace GPMVehicleControlSystem.Models.WorkStation
 
         public Dictionary<int, clsWorkStationData> Stations { get; set; } = new Dictionary<int, clsWorkStationData>();
 
+
+
         internal void SyncInfo(List<clsAGVSConnection.clsEQOptions> eqinfomations)
         {
+
             foreach (var item in eqinfomations)
             {
-                if (Stations.TryGetValue(item.Tag, out var workstation))
+                if (Stations.TryGetValue(item.Tag, out clsWorkStationData? workstation))
                 {
                     workstation.Name = item.EqName;
                     workstation.ModbusTcpPort = item.AGVModbusGatewayPort;
+                }
+                else
+                {
+                    Stations.Add(item.Tag, new clsWorkStationData()
+                    {
+                        Name = item.EqName,
+                        ModbusTcpPort = item.AGVModbusGatewayPort,
+                    });
                 }
             }
         }

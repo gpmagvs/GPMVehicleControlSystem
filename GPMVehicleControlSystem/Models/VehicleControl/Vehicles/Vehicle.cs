@@ -338,12 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoAndRosInitTasks.Add(WagoDIInit());
                 WagoAndRosInitTasks.Add(RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag));
 
-                Task.Factory.StartNew(async () =>
-                {
-                    ReloadLocalMap();
-                    await Task.Delay(1000);
-                    await DownloadMapFromServer();
-                });
+               
 
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
