@@ -41,16 +41,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTaskFeedBack_T1Timeout += Handle_AGVS_TaskFeedBackT1Timeout;
             AGVS.OnOnlineModeQuery_T1Timeout += Handle_AGVS_OnlineModeQuery_T1Timeout;
             AGVS.OnRunningStatusReport_T1Timeout += Handle_AGVS_RunningStatusReport_T1Timeout;
-            AGVS.OnPingFail += (sender, arg) =>
-            {
-                LOG.TRACE($"AGVS Network Ping Fail.... ");
-                AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
-            };
-            AGVS.OnPingSuccess += (sender, arg) =>
-            {
-                LOG.TRACE($"AGVS Network restored. ");
-                AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
-            };
+            AGVS.OnPingFail += AGVSPingFailHandler;
+            AGVS.OnPingSuccess += AGVSPingSuccessHandler;
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
 
@@ -64,6 +56,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
 
+        }
+
+        private async void AGVSPingSuccessHandler()
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            LOG.TRACE($"AGVS Network restored. ");
+            AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
+        }
+
+        private async void AGVSPingFailHandler()
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            LOG.TRACE($"AGVS Network Ping Fail.... ");
+            AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
         }
 
         /// <summary>

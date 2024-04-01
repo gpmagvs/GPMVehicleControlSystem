@@ -1036,6 +1036,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 BuzzerPlayer.Stop();
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
+                AGVS.ResetErrors();
                 IsMotorReseting = false;
                 await ResetMotor(IsTriggerByButton);
                 _ = Task.Factory.StartNew(async () =>
