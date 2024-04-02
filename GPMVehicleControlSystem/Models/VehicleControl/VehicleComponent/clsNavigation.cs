@@ -139,10 +139,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public override async Task<bool> CheckStateDataContent()
+        public override bool  CheckStateDataContent()
         {
 
-            if (!await base.CheckStateDataContent())
+            if (! base.CheckStateDataContent())
                 return false;
 
             LastVisitedTag = Data.lastVisitedNode.data;

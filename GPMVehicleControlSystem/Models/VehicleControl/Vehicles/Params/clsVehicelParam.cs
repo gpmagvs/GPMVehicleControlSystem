@@ -108,8 +108,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// <remarks>
         /// 單位:毫秒(ms)
         /// </remarks>
-        public int ModuleInfoTopicRevHandlePeriod { get; set; } = 10;
-        public int ModuleInfoTopicRevQueueSize { get; set; } = 5;
+        public int ModuleInfoTopicRevHandlePeriod { get; set; } = 0;
+        public int ModuleInfoTopicRevQueueSize { get; set; } = 1;
 
         public string AGVsMessageEncoding { get; set; } = "UTF-8";
 

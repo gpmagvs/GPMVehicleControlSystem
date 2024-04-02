@@ -12,7 +12,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public event EventHandler OnAGVReachingTag;
         public event EventHandler<uint> OnAGVLeavingTag;
 
-        public new BarcodeReaderState Data => StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)StateData;
+        public new BarcodeReaderState Data => _StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)_StateData;
         public int CurrentTag => Data == null ? 0 : (int)Data.tagID;
 
         /// <summary>
@@ -35,9 +35,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override string alarm_locate_in_name => component_name.ToString();
 
         private uint PreviousTag = 0;
-        public override async Task<bool> CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
-            if (!await base.CheckStateDataContent())
+            if (!base.CheckStateDataContent())
                 return false;
 
             BarcodeReaderState _brState = (BarcodeReaderState)StateData;

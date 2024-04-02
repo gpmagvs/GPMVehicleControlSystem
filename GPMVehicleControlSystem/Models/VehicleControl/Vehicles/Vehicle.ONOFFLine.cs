@@ -77,7 +77,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool RemoteModeRequestingflag = false;
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode, bool bypassStatusCheck = false)
         {
-            var currentTag = BarcodeReader.CurrentTag;
+            int currentTag = BarcodeReader.CurrentTag;
+            LOG.TRACE($"Online_Mode_Switch, current tag = {currentTag}");
             if (mode == REMOTE_MODE.ONLINE && Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 if (!IsInitialized)

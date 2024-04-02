@@ -32,10 +32,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             return Data.chargeCurrent > 650;
         }
-        public override async Task<bool> CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
 
-            if (!await base.CheckStateDataContent())
+            if (! base.CheckStateDataContent())
                 return false;
 
             var error_code = Data.errorCode;

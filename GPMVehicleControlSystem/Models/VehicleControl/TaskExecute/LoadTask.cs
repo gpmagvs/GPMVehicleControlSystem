@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -385,14 +386,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async Task<(bool success, AlarmCodes alarmCode)> StartBackToHome()
         {
+
             try
             {
+
+
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
                 if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
                     return (false, checkstatus_alarm_code);
                 }
                 RecordExistSensorState();
+
+                if (Agv.Parameters.LDULDParams.LeaveWorkStationNeedSendRequestToAGVS)
+                {
+                    bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
+                    if (!accept)
+                    {
+                        Agv.SetSub_Status(SUB_STATUS.DOWN);
+                        return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
+                    }
+                }
+
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
 
@@ -449,6 +464,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Console.WriteLine(ex.Message + ex.StackTrace);
                 throw;
             }
+        }
+
+        private async Task<bool> WaitAGVSAcceptLeaveWorkStationAsync(int timeout = 300)
+        {
+            bool accept = false;
+            Agv.HandshakeStatusText = $"等待派車允許AGV退出設備..";
+            using CancellationTokenSource cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            while (!accept)
+            {
+                await Task.Delay(1000);
+                if (cancelCts.IsCancellationRequested)
+                    break;
+                accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
+                Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
+            }
+
+            return accept;
         }
 
         private void BackToHomeActionDoneCallback(ActionStatus status)

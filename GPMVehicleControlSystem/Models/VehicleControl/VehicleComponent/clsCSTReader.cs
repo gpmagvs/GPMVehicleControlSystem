@@ -45,10 +45,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override async Task<bool> CheckStateDataContent()
+        public override  bool CheckStateDataContent()
         {
 
-            if (!await base.CheckStateDataContent())
+            if (! base.CheckStateDataContent())
                 return false;
             State = Data.state;
             return true;

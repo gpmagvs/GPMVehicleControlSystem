@@ -183,9 +183,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private ForkAGV forkAGV;
 
-        public override async Task<bool> CheckStateDataContent()
+        public override  bool CheckStateDataContent()
         {
-            return await base.CheckStateDataContent();
+            return  base.CheckStateDataContent();
         }
 
         /// <summary>
