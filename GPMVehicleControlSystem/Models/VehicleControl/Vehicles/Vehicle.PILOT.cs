@@ -395,8 +395,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             LOG.INFO($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
             bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
-            if (!success)
-                AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
+            //if (!success)
+            //    AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
         }
 
         private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
