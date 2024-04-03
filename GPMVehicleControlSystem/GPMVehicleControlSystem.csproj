@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>3.6.1</AssemblyVersion>
-    <InformationalVersion>3.6.1</InformationalVersion>
+    <AssemblyVersion>3.6.2.0</AssemblyVersion>
+    <InformationalVersion>3.6.2.0</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -19,6 +19,7 @@
   </PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
+		<Version>3.6.2.0</Version>
 	</PropertyGroup>
   <ItemGroup>
     <None Remove="src\IO_Wago.ini" />
