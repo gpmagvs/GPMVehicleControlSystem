@@ -647,14 +647,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.INFO($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
                 await Task.Delay(1000);
                 //check arm position 
-                (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
-                if (!fork_height_change_result.success)
-                    return (false, fork_height_change_result.alarm_code);
 
-                //檢查在席
-                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
-                if (!CstExistCheckResult.confirm)
-                    return (false, CstExistCheckResult.alarmCode);
+                return (true, AlarmCodes.None);
+            }
+
+
+            (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+            if (!fork_height_change_result.success)
+                return (false, fork_height_change_result.alarm_code);
+
+            //檢查在席
+            (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
+            if (!CstExistCheckResult.confirm)
+                return (false, CstExistCheckResult.alarmCode);
+
+            if (isNeedArmExtend)
+            {
                 await Task.Delay(700);
                 var FormArmShortenTask = Task.Run(async () =>
                 {
@@ -686,12 +694,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await FormArmShortenTask;
                     await Task.Delay(1000);
                 }
-                return (true, AlarmCodes.None);
             }
-            else
-            {
-                return (true, AlarmCodes.None);
-            }
+
+            return (true, AlarmCodes.None);
         }
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)

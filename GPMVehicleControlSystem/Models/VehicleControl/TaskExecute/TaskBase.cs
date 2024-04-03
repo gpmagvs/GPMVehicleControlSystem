@@ -84,6 +84,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public abstract ACTION_TYPE action { get; set; }
         public List<int> TrackingTags { get; private set; } = new List<int>();
         public clsForkLifter ForkLifter { get; internal set; }
+        public clsPin PinHardware => (Agv as ForkAGV).PinHardware;
         public int destineTag => _RunningTaskData == null ? -1 : _RunningTaskData.Destination;
         public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
         public bool IsNeedHandshake = false;
@@ -324,6 +325,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
 
                 }));
+
+                //Pin Release
+                if (PinHardware != null)
+                {
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        await PinHardware.Release();
+                    }));
+                }
             }
 
             LOG.INFO($"等待牙叉動作(動作數:{tasks.Count})...", color: ConsoleColor.Green);
@@ -485,6 +495,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             IsNeedWaitForkHome = action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload;
             forkGoHomeTask = await Task.Factory.StartNew(async () =>
             {
+                if (PinHardware != null)
+                {
+                    PinHardware.Lock();
+                }
                 if (need_reach_secondary)
                 {
                     LOG.TRACE($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.");
