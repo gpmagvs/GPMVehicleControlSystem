@@ -295,7 +295,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             }
         }
-
+        public bool IsForkExtenable
+        {
+            get
+            {
+                try
+                {
+                    return WagoDO.VCSOutputs.Any(item => item.Output is DO_ITEM.Fork_Extend);
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+        }
         public Vehicle()
         {
             try
@@ -338,7 +351,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoAndRosInitTasks.Add(WagoDIInit());
                 WagoAndRosInitTasks.Add(RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag));
 
-               
+
 
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
@@ -389,6 +402,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     CSTReader.ReadCSTIDFromLocalStorage();
                 }
                 LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
+                LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
                 IsSystemInitialized = true;
             }
             catch (Exception ex)
