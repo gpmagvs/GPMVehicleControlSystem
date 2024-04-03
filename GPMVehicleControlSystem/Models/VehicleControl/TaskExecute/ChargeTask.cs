@@ -43,7 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, open_charge_circuit);
             return await base.BeforeTaskExecuteActions();
         }
-
+        protected override void BuzzerPlayMusic(ACTION_TYPE action)
+        {
+            BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+        }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
             Agv.DirectionLighter.Forward();

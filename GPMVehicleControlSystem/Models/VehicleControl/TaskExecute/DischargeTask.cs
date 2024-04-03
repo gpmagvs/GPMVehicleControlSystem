@@ -33,6 +33,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return false;
             }
         }
+        protected override void BuzzerPlayMusic(ACTION_TYPE action)
+        {
+            BuzzerPlayer.Play(SOUNDS.Action);
+        }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
             Task.Factory.StartNew(async () =>

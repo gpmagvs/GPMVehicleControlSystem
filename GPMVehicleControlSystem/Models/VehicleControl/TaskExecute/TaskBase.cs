@@ -333,9 +333,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (alarmCodes.Count == 0, alarmCodes);
         }
 
-        private void BuzzerPlayMusic(ACTION_TYPE action)
+        protected virtual void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            if (action == ACTION_TYPE.None || action == ACTION_TYPE.Charge)
+            if (action == ACTION_TYPE.None)
             {
                 BuzzerPlayer.Move();
             }

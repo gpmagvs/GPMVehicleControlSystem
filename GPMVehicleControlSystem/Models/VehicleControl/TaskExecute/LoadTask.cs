@@ -142,31 +142,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
-                if (Agv.Parameters.LDULDParams.LsrObstacleDetectionEnable)
-                {
-                    Agv.IsHandshaking = true;
-                    Agv.HandshakeStatusText = "設備內障礙物檢查..";
-                    LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
-                    bool _HasObstacle = await CheckPortObstacleViaLaser();
-                    if (_HasObstacle)
-                    {
-                        Agv.HandshakeStatusText = "偵測到設備內有障礙物";
-                        if (Agv.Parameters.LDULDParams.LsrObsDetectedAlarmLevel == ALARM_LEVEL.ALARM)
-                        {
-                            LOG.ERROR($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
-                            return (false, AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
-                        }
-                        else
-                        {
-                            LOG.WARN($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
-                            AlarmManager.AddWarning(AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
-                        }
-                    }
-                    else
-                    {
-                        LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
-                    }
-                }
                 if (IsNeedHandshake)
                 {
                     _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: false);
@@ -184,8 +159,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 #endregion
 
             }
+
+            var lsrDetectionResult = await TryDetectObstacleInEQPort();
+            if (lsrDetectionResult.alarm_code != AlarmCodes.None)
+            {
+                if (Agv.Parameters.LDULDParams.LsrObsDetectedAlarmLevel == ALARM_LEVEL.ALARM)
+                {
+                    LOG.ERROR($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
+                    return (false, AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                }
+                else
+                {
+                    LOG.WARN($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
+                    AlarmManager.AddWarning(AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
+                }
+            }
+            else
+            {
+                LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
+            }
             return await base.BeforeTaskExecuteActions();
         }
+
+        private async Task<(bool confirm, AlarmCodes alarm_code)> TryDetectObstacleInEQPort()
+        {
+            if (Agv.Parameters.LDULDParams.LsrObstacleDetectionEnable)
+            {
+                Agv.IsHandshaking = true;
+                Agv.HandshakeStatusText = "設備內障礙物檢查..";
+                LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
+                bool _HasObstacle = await CheckPortObstacleViaLaser();
+
+                return (!_HasObstacle, _HasObstacle ? AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR : AlarmCodes.None);
+            }
+            else
+            {
+                return (true, AlarmCodes.None);
+            }
+        }
+
         protected override Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";

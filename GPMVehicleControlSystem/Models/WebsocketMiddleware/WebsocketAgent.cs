@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using AGVSystemCommonNet6.HttpTools;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
@@ -24,7 +25,10 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         };
         public override void Initialize()
         {
-            base.Initialize();
+
+
+            ClientsOfAllChannel = channelMaps.ToDictionary(str => str, str => new List<clsWebsocktClientHandler>());
+            CurrentViewModelDataOfAllChannel = channelMaps.ToDictionary(str => str, str => new object());
             CurrentViewModelDataOfAllChannel[channelMaps[0]] = new Dictionary<string, object>()
             {
                 {"ConnectionStatesVM",new object() },
@@ -32,7 +36,8 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 {"DIOTableVM",new object() },
                 {"RDTestData",new object() },
             };
-            Console.WriteLine("Websocket Agent init done.");
+            StartCollectViewModelDataAndPublishOutAsync();
+
         }
         protected override async Task CollectViewModelData()
         {
@@ -46,8 +51,11 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + ex.StackTrace);
-                return;
+                Console.WriteLine("CollectViewModelData Error" + ex.ToString());
+                if (CurrentViewModelDataOfAllChannel.TryGetValue(channelMaps[0], out var val))
+                {
+                    CurrentViewModelDataOfAllChannel[channelMaps[0]] = null;
+                }
             }
         }
     }
