@@ -163,6 +163,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
             WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
 
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+
             WagoDI.SubsSignalStateChange(DI_ITEM.Front_Right_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
             WagoDI.SubsSignalStateChange(DI_ITEM.Back_Left_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
 

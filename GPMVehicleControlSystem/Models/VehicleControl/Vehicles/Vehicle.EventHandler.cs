@@ -347,7 +347,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void HandleLaserArea1SinalChange(object? sender, bool e)
+        protected async void HandleLaserArea1SinalChange(object? sender, bool e)
         {
             if (!IsSaftyProtectActived)
                 return;
@@ -388,7 +388,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void HandleLaserArea2SinalChange(object? sender, bool e)
+        protected void HandleLaserArea2SinalChange(object? sender, bool e)
         {
 
             if (!IsSaftyProtectActived)
