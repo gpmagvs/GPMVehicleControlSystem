@@ -65,47 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return GetCargoStatus();
             }
         }
-        protected override CARGO_STATUS GetCargoStatus()
-        {
-            CARGO_STATUS _tray_cargo_status = CARGO_STATUS.NO_CARGO;
-            CARGO_STATUS _rack_cargo_status = CARGO_STATUS.NO_CARGO;
-
-            CARGO_STATUS _GetCargoStatus(DI_ITEM sensor1, DI_ITEM sensor2, IO_CONEECTION_POINT_TYPE sensor1_connect_type, IO_CONEECTION_POINT_TYPE sensor2_connect_type)
-            {
-                bool existSensor_1 = sensor1_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor1) : !WagoDI.GetState(sensor1);
-                bool existSensor_2 = sensor2_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor2) : !WagoDI.GetState(sensor2);
-                if (existSensor_1 && existSensor_2)
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-                if (!existSensor_1 && !existSensor_2)
-                    return CARGO_STATUS.NO_CARGO;
-                if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
-                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                else
-                    return CARGO_STATUS.NO_CARGO;
-            }
-
-            if (Parameters.CargoExistSensorParams.TraySensorMounted)
-            {
-                var _connect_io_AB_type = Parameters.CargoExistSensorParams.TraySensorPointType;
-                _tray_cargo_status = _GetCargoStatus(DI_ITEM.Fork_TRAY_Left_Exist_Sensor, DI_ITEM.Fork_TRAY_Right_Exist_Sensor, _connect_io_AB_type, _connect_io_AB_type);
-            }
-            if (Parameters.CargoExistSensorParams.RackSensorMounted)
-            {
-                var _connect_io_AB_type = Parameters.CargoExistSensorParams.RackSensorPointType;
-                _rack_cargo_status = _GetCargoStatus(DI_ITEM.Fork_RACK_Left_Exist_Sensor, DI_ITEM.Fork_RACK_Right_Exist_Sensor, _connect_io_AB_type, _connect_io_AB_type);
-            }
-            CARGO_STATUS[] status_collection = new CARGO_STATUS[] { _tray_cargo_status, _rack_cargo_status };
-
-            if (status_collection.All(status => status == CARGO_STATUS.NO_CARGO))
-                return CARGO_STATUS.NO_CARGO;
-            else
-            {
-                if (status_collection.Any(status => status == CARGO_STATUS.HAS_CARGO_BUT_BIAS))
-                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                else
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-            }
-        }
+        
         public async Task<bool> ResetVerticalDriver()
         {
             try
@@ -128,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                await base.ResetMotor(triggerByResetButtonPush,bypass_when_motor_busy_on);
+                await base.ResetMotor(triggerByResetButtonPush, bypass_when_motor_busy_on);
 
                 if (WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy))
                     return true;
@@ -489,19 +449,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
                     {
-                        _hasRack = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                        _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
                     }
                     else
                     {
-                        _hasRack = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                        _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
                     }
                 }
                 if (Parameters.CargoExistSensorParams.TraySensorMounted)
                 {
                     if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                        _hasTray = WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+                        _hasTray = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
                     else
-                        _hasTray = !WagoDI.GetState(DI_ITEM.Fork_TRAY_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_TRAY_Right_Exist_Sensor);
+                        _hasTray = !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
 
                 }
 
@@ -516,8 +476,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override int GetCargoType()
         {
-            var rack_sensor1 = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-            var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+            var rack_sensor1 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
+            var rack_sensor2 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
             if (rack_sensor2 || rack_sensor1)
                 return 1;
             else return 0;

@@ -376,7 +376,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 while (!_isInitializeDone)
                 {
-                    bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) || !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+                    bool hasCargo = !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_1) || !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_2);
 
                     SEARCH_DIRECTION search_direction = DetermineSearchDirection(CurrentForkLocation);
 

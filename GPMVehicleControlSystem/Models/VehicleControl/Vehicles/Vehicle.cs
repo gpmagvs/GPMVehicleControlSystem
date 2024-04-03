@@ -1175,19 +1175,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
                 {
-                    _hasRack = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                    _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
                 }
                 else
                 {
-                    _hasRack = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                    _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
                 }
             }
             if (Parameters.CargoExistSensorParams.TraySensorMounted)
             {
                 if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                    _hasTray = WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                    _hasTray = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
                 else
-                    _hasTray = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                    _hasTray = !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
             }
             return _hasRack || _hasTray;
         }

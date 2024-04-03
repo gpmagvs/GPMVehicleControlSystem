@@ -21,23 +21,10 @@
             /// 牙叉電動缸_縮回到位檢
             /// </summary>
             Fork_Short_Exist_Sensor,
-            /// <summary>
-            /// 牙叉_左在席檢知(框)
-            /// </summary>
-            Fork_RACK_Left_Exist_Sensor,
-            /// <summary>
-            /// 牙叉_右在席檢知(框)
-            /// </summary>
-            Fork_RACK_Right_Exist_Sensor,
-
-            /// <summary>
-            /// 牙叉_左在席檢知(TRAY)
-            /// </summary>
-            Fork_TRAY_Left_Exist_Sensor,
-            /// <summary>
-            /// 牙叉_右在席檢知(TRAY)
-            /// </summary>
-            Fork_TRAY_Right_Exist_Sensor,
+            RACK_Exist_Sensor_1,
+            RACK_Exist_Sensor_2,
+            TRAY_Exist_Sensor_1,
+            TRAY_Exist_Sensor_2,
             /// <summary>
             /// 牙叉_障礙檢知 (前方)
             /// </summary>
@@ -99,8 +86,6 @@
             EQ_TR_REQ,
             EQ_Check_Result,
             EQ_Check_Ready,
-            Cst_Sensor_1,
-            Cst_Sensor_2,
             FrontProtection_Obstacle_Sensor,
             FrontProtection_Area_Sensor_1,
             FrontProtection_Area_Sensor_2,

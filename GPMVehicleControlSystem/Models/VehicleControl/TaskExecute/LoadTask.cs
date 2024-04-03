@@ -608,13 +608,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {
-                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
-                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1);
+                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
             }
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
-                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                lduld_record.ExistSensor1_State = Agv.WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
+                lduld_record.ExistSensor2_State = Agv.WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
             }
 
             DBhelper.ModifyUDLUDRecord(lduld_record);
