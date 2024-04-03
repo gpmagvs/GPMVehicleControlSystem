@@ -110,8 +110,7 @@ public class OtaUpdater
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"{ex.Message}");
-            throw ex;
+            Console.WriteLine($"備份失敗!-{ex.Message}");
         }
     }
     private void ExtractAndReplaceFiles(string zipFilePath)
