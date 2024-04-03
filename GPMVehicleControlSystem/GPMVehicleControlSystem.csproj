@@ -3,8 +3,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>3.6.2.0</AssemblyVersion>
-    <InformationalVersion>3.6.2.0</InformationalVersion>
+    <AssemblyVersion>3.6.2.2</AssemblyVersion>
+    <InformationalVersion>3.6.2.2</InformationalVersion>
     <AssemblyName>GPM_VCS</AssemblyName>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
@@ -19,7 +19,7 @@
   </PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<Version>3.6.2.0</Version>
+		<Version>3.6.2.2</Version>
 	</PropertyGroup>
   <ItemGroup>
     <None Remove="src\IO_Wago.ini" />
