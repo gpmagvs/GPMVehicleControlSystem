@@ -105,7 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 bool anyDriverAlarm = WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                     WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
-                
+
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
                 return true;
             }
@@ -168,6 +168,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.Critical(rejectReason);
                 return false;
             }
+
+
             await BatteryUnLockSemaphoreSlim.WaitAsync();
             try
             {
@@ -227,9 +229,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             GetExistSensorState(1, out bool bat1_exist1_front, out bool bat1_exist2_back, out bool bat1_exist3_docked);
             GetExistSensorState(2, out bool bat2_exist1_front, out bool bat2_exist2_back, out bool bat2_exist3_docked);
 
+            bool _isToUnlockBatIsNotExist = toUnlockBatNumber == 1 ? !bat1_exist3_docked : !bat2_exist3_docked;
+
             bool _isOnlyOneBatteryDocked = (bat1_exist3_docked && !bat2_exist3_docked) || !bat1_exist3_docked && bat2_exist3_docked;
 
-            if (_isOnlyOneBatteryDocked)
+            if (_isOnlyOneBatteryDocked && !_isToUnlockBatIsNotExist)
             {
                 rejectReason = "當前只有一顆電池";
                 return false;

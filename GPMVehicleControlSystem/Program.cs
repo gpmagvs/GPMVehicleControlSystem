@@ -9,10 +9,11 @@ using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
+using System.Runtime.InteropServices;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-
+OTAHelper.TryStartOTAServiceAPP();
 Console.Title = $"¨®¸ü¨t²Î-V{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
