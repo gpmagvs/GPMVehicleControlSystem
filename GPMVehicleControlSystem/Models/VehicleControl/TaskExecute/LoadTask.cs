@@ -586,6 +586,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 lduld_record.CargoID_Reader = Agv.CSTReader.ValidCSTID;
                 lduld_record.EndTime = DateTime.Now;
                 DBhelper.ModifyUDLUDRecord(lduld_record);
+                Agv.IsHandshaking = false;
                 return AlarmCodes.None;
             }
             else

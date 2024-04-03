@@ -126,6 +126,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler OnRosSocketReconnected;
         public event EventHandler OnRosSocketDisconnected;
         public event EventHandler OnSTOPCmdRequesting;
+        public delegate CST_TYPE delgateOnCstTypeUnknown();
+        public delgateOnCstTypeUnknown OnCstTriggerButTypeUnknown;
         public delegate bool SpeedRecoveryRequestingDelegate();
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();

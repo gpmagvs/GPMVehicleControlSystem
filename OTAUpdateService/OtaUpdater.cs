@@ -104,14 +104,13 @@ public class OtaUpdater
     {
         try
         {
-            string backupFilePath = Path.Combine(_extractionFolderPath, $"VCSBackup-{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}.zip");
+            string backupFilePath = Path.Combine(_extractionFolderPath, $"VCSBackup-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}.zip");
             Console.WriteLine("備份車載程式程序開始..compress destine ->" + backupFilePath);
             ZipFile.CreateFromDirectory(_extractionFolderPath, backupFilePath, CompressionLevel.SmallestSize, false);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"{ex.Message}");
-            throw ex;
+            Console.WriteLine($"備份失敗!-{ex.Message}");
         }
     }
     private void ExtractAndReplaceFiles(string zipFilePath)

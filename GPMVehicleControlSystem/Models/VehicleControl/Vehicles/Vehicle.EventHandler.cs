@@ -52,6 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.OnBuzzerPlay += () => { return Parameters.BuzzerOn; };
             AlarmManager.OnUnRecoverableAlarmOccur += AlarmManager_OnUnRecoverableAlarmOccur;
             AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
+            AGVC.OnCstTriggerButTypeUnknown += HandleCstTriggerButTrayKnownEvent;
             AGVC.OnActionSendToAGVCRaising += HandleSendActionGoalToAGVCRaised;
             ChargeTask.OnChargeCircuitOpening += HandleChargeTaskTryOpenChargeCircuit;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
@@ -97,6 +98,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return true;
                     }
                 };
+            }
+        }
+
+        private CST_TYPE HandleCstTriggerButTrayKnownEvent()
+        {
+            if (Parameters.HasRackCstReader)
+            {
+                return CST_TYPE.Rack;
+            }
+            else
+            {
+                return CST_TYPE.Tray;
             }
         }
 

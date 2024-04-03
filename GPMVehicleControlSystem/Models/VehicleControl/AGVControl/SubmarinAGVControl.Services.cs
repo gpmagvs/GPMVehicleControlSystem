@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using RosSharp.RosBridgeClient.MessageTypes.Tf2;
+using System.Reflection.Metadata;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -55,16 +56,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
-           
+
             Thread.Sleep(1);
             wait_cst_ack_MRE = new ManualResetEvent(false);
             cst_reader_confirm_ack = null;
+            var cst_reader_command = "read_try";
             int retry_cnt = 0;
-            var cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
             if (cst_type == CST_TYPE.None)
             {
-                AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
+                if (OnCstTriggerButTypeUnknown == null)
+                    AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
+                else
+                {
+                    cst_type = OnCstTriggerButTypeUnknown();
+                }
             }
+            cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
             while (cst_reader_confirm_ack == null)
             {
                 Thread.Sleep(1);
