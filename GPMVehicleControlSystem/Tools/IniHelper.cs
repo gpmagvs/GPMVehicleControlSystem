@@ -1,39 +1,72 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using IniParser;
+using IniParser.Parser;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 
 namespace GPMVehicleControlSystem.Tools
 {
     public class IniHelper
     {
-        private ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-        private IConfigurationRoot configuration;
+        private FileIniDataParser _iniParser = new FileIniDataParser();
         public string FilePath { get; }
         public IniHelper(string iniFilePath)
         {
             FilePath = iniFilePath;
-            configurationBuilder.AddIniFile(iniFilePath);
-            configuration = configurationBuilder.Build();
-
         }
         public bool SetValue(string section, string key, string value, out string error_msg)
         {
             error_msg = "";
             try
             {
-                if (configuration == null)
+                IniParser.Model.IniData data = _iniParser.ReadFile(FilePath);
+                if (data[section][key] != null)
                 {
-                    error_msg = "configuration is null";
-                    return false;
+                    data[section][key] = value;
                 }
+                else
+                {
+                    data[section].AddKey(key, value);
+                    IniParser.Model.KeyData[] sorted = data[section].OrderBy(i => i.KeyName).ToArray();
+                    data.Sections.RemoveSection(section);
+                    data.Sections.AddSection(section);
+                    for (int i = 0; i < sorted.Length; i++)
+                    {
+                        data.Sections[section].SetKeyData(sorted[i]);
+                    }
+                }
+                _iniParser.WriteFile(FilePath, data);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error_msg = ex.Message;
+                return false;
+            }
+        }
+        public string GetValue(string section, string key)
+        {
+            try
+            {
+                IniParser.Model.IniData data = _iniParser.ReadFile(FilePath);
+                return data[section][key];
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return null;
+            }
+        }
 
-                configuration.GetSection(section)[key] = value;
-                var content = File.ReadAllText(FilePath);
-                var regex = new Regex($@"^{key}\s*=\s*(.*)$", RegexOptions.Multiline);
-                var replacement = $"{key}={value}";
-                content = regex.Replace(content, replacement);
 
-                File.WriteAllText(FilePath, content);
-                //}
+        public bool RemoveKey(string section, string key, out string error_msg)
+        {
+            error_msg = "";
+            try
+            {
+                IniParser.Model.IniData data = _iniParser.ReadFile(FilePath);
+                data[section].RemoveKey(key);
+                _iniParser.WriteFile(FilePath, data);
                 return true;
             }
             catch (Exception ex)
@@ -43,29 +76,6 @@ namespace GPMVehicleControlSystem.Tools
             }
 
         }
-        public string GetValue(string section, string key)
-        {
-            if (configuration == null)
-            {
-                return "";
-            }
-            else
-            {   //12,23#ddd
-                string str = configuration[$"{section}:{key}"];
-                if (str == null)
-                {
-                    return "";
-                }
-                if (str.Contains("#"))
-                {
-                    int comment_char_start_index = str.IndexOf('#');
-                    return str.Substring(0, comment_char_start_index).TrimEnd();
-                }
-                else
-                {
-                    return str.TrimEnd();
-                }
-            }
-        }
+
     }
 }

@@ -38,7 +38,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override void ReadIOSettingsFromIniFile()
         {
-            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
             try
             {
                 Start = ushort.Parse(iniHelper.GetValue("OUTPUT", "Start"));
@@ -262,8 +261,28 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 semaphore.Release();
             }
         }
-
-
+        internal override (bool confirm, string message) UpdateSignalMap(Dictionary<int, string> newOutputMap)
+        {
+            var newCoolection = newOutputMap.Select(x => new clsIOSignal(x.Value, $"Y{x.Key.ToString("X4")}")
+            {
+                index = (ushort)x.Key
+            }).ToList();
+            VCSOutputs = newCoolection;
+            UpdateIniFile();
+            return (true, "");
+        }
+        protected override bool UpdateIniFile()
+        {
+            for (int i = 0; i < VCSOutputs.Count; i++)
+            {
+                var input = VCSOutputs[i];
+                if (input.Name == "")
+                    iniHelper.RemoveKey("OUTPUT", input.Address, out string errMsg);
+                else
+                    iniHelper.SetValue("OUTPUT", input.Address, input.Name, out string errMsg);
+            }
+            return true;
+        }
         class clsWriteRequest : IDisposable
         {
             public readonly clsIOSignal signal;

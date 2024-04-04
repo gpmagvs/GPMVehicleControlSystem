@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Net;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -111,5 +113,29 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             agv.WagoDO.SetState(address, state);
             return Ok();
         }
+
+        [HttpPost("UpdateINPUTSettings")]
+        public async Task<IActionResult> UpdateINPUTSettings([FromBody] Dictionary<int, string> newInputMap)
+        {
+            (bool confirm, string message) result = agv.WagoDI.UpdateSignalMap(newInputMap);
+            return Ok(new
+            {
+                confirm = result.confirm,
+                message = result.message
+            });
+        }
+
+        [HttpPost("UpdateOUTPUTSettings")]
+        public async Task<IActionResult> UpdateOUTPUTSettings([FromBody] Dictionary<int, string> newOutputMap)
+        {
+
+            (bool confirm, string message) result = agv.WagoDO.UpdateSignalMap(newOutputMap);
+            return Ok(new
+            {
+                confirm = result.confirm,
+                message = result.message
+            });
+        }
+
     }
 }

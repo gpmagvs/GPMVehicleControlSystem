@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Tools;
+using MathNet.Numerics;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
 using System.Diagnostics;
@@ -16,6 +17,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
     public partial class clsDIModule : Connection
     {
+        protected IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
+
         TcpClient client;
         public int IO_Interval_ms { get; }
         protected ModbusIpMaster? master;
@@ -114,7 +117,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         virtual public void ReadIOSettingsFromIniFile()
         {
             DI_ITEM di_item;
-            IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
             var di_names = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().Select(i => i.ToString()).ToList();
             try
             {
@@ -352,5 +354,28 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             });
         }
 
+        internal virtual (bool confirm, string message) UpdateSignalMap(Dictionary<int, string> newInputMap)
+        {
+            var newCoolection = newInputMap.Select(x => new clsIOSignal(x.Value, $"X{x.Key.ToString("X4")}")
+            {
+                index = (ushort)x.Key
+            }).ToList();
+            VCSInputs = newCoolection;
+            UpdateIniFile();
+            return (true, "");
+        }
+
+        protected virtual bool UpdateIniFile()
+        {
+            for (int i = 0; i < VCSInputs.Count; i++)
+            {
+                var input = VCSInputs[i];
+                if (input.Name == "")
+                    iniHelper.RemoveKey("INPUT", input.Address, out string errMsg);
+                else
+                    iniHelper.SetValue("INPUT", input.Address, input.Name, out string errMsg);
+            }
+            return true;
+        }
     }
 }
