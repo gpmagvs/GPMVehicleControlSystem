@@ -25,6 +25,8 @@
             RACK_Exist_Sensor_2,
             TRAY_Exist_Sensor_1,
             TRAY_Exist_Sensor_2,
+            TRAY_Exist_Sensor_3,
+            TRAY_Exist_Sensor_4,
             /// <summary>
             /// 牙叉_障礙檢知 (前方)
             /// </summary>
