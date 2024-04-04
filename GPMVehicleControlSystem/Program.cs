@@ -28,41 +28,49 @@ _ = Task.Run(() =>
 
 void VehicheAndWagoIOConfiguraltion()
 {
-
-    var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
-    if (!File.Exists(iniFilePath))
+    try
     {
-        string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
-        if (param.AgvType == AGV_TYPE.FORK)
-            src_ini_file_name = "IO_Wago_Fork_AGV.ini";
-        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
-            src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
-        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
-            src_ini_file_name = "IO_Wago_Submarine_AGV_Parts.ini";
-        if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+
+        var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
+        if (!File.Exists(iniFilePath))
         {
-            src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
+            string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
+            if (param.AgvType == AGV_TYPE.FORK)
+                src_ini_file_name = "IO_Wago_Fork_AGV.ini";
+            if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+                src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
+            if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+                src_ini_file_name = "IO_Wago_Submarine_AGV_Parts.ini";
+            if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+            {
+                src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
+            }
+            File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
         }
-        File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
-    }
 
-    if (param.AgvType == AGV_TYPE.FORK)
-    {
-        StaStored.CurrentVechicle = new ForkAGV();
+        if (param.AgvType == AGV_TYPE.FORK)
+        {
+            StaStored.CurrentVechicle = new ForkAGV();
+        }
+        else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+        {
+            StaStored.CurrentVechicle = new SubmarinAGV();
+        }
+        else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+        {
+            if (param.Version == 1)
+                StaStored.CurrentVechicle = new TsmcMiniAGV();
+            else
+                StaStored.CurrentVechicle = new DemoMiniAGV();
+        }
+        LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
+        LinuxTools.SysLoadingLogProcess();
     }
-    else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+    catch (Exception ex)
     {
-        StaStored.CurrentVechicle = new SubmarinAGV();
+        Console.WriteLine(ex.Message + ex.StackTrace);
+        Environment.Exit(4);
     }
-    else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
-    {
-        if (param.Version == 1)
-            StaStored.CurrentVechicle = new TsmcMiniAGV();
-        else
-            StaStored.CurrentVechicle = new DemoMiniAGV();
-    }
-    LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
-    LinuxTools.SysLoadingLogProcess();
 }
 
 var builder = WebApplication.CreateBuilder(args);
