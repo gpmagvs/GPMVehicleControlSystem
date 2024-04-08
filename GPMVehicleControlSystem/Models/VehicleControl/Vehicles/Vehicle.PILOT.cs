@@ -110,7 +110,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             ExecutingTaskEntity.ForkLifter = ForkLifter;
-
+            orderInfoViewModel = taskDownloadData.OrderInfo;
+            Console.WriteLine(orderInfoViewModel.ToJson());
             TaskDispatchFlowControlSemaphoreSlim.Release();
             await Task.Run(async () =>
             {
@@ -118,10 +119,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsLaserRecoveryHandled = false;
                 bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
                 _RunTaskData.IsEQHandshake = _isNeedHandshaking;
-                if (Parameters.OrderInfoFetchSource == ORDER_INFO_FETCH_SOURCE.FROM_TASK_DOWNLOAD_CONTENT)
-                {
-                    _orderInfoViewModel = taskDownloadData.OrderInfo;
-                }
 
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
@@ -422,29 +419,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private bool IsActionFinishTaskFeedbackExecuting = false;
         private CancellationTokenSource taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
-        private clsTaskDownloadData.clsOrderInfo _orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo();
-        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel
-        {
-            get => _orderInfoViewModel;
-            internal set
-            {
-                if (value.ActionName == ACTION_TYPE.Carry)//搬運任務但是當下的任務不是在移動
-                {
-                    _orderInfoViewModel = new clsTaskDownloadData.clsOrderInfo
-                    {
-                        DestineName = value.DestineName,
-                        SourceName = value.SourceName,
-                        ActionName = _RunTaskData.Action_Type,
-                        IsTransferTask = true
-                    };
-                }
-                else
-                {
-                    _orderInfoViewModel = value;
-                    _orderInfoViewModel.IsTransferTask = false;
-                }
-            }
-        }
+        public clsTaskDownloadData.clsOrderInfo orderInfoViewModel { get; set; } = new clsTaskDownloadData.clsOrderInfo();
 
         /// <summary>
         /// 上報任務狀態
@@ -459,7 +434,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
-                _orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
+                orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
             if (_RunTaskData.IsLocalTask)
             {
