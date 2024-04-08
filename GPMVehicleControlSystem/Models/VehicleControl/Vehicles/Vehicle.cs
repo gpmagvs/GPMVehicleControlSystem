@@ -118,7 +118,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (_HandshakeStatusText != value)
                 {
                     _HandshakeStatusText = value;
-                    LOG.TRACE(_HandshakeStatusText);
+                    //LOG.TRACE(_HandshakeStatusText);
                 }
             }
         }
