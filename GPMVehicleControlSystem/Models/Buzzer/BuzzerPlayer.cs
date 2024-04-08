@@ -18,6 +18,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
         internal static bool IsMovingPlaying = false;
+        internal static bool IsGotoChargeStationPlaying = false;
         internal static bool IsMeasurePlaying = false;
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
@@ -89,11 +90,12 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
                 if (sound == SOUNDS.Stop)
                 {
-                    IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+                    IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
                 }
                 else
                 {
                     IsMovingPlaying = sound == SOUNDS.Move;
+                    IsGotoChargeStationPlaying = sound == SOUNDS.GoToChargeStation;
                     IsActionPlaying = sound == SOUNDS.Action;
                     IsAlarmPlaying = sound == SOUNDS.Alarm;
                     IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
