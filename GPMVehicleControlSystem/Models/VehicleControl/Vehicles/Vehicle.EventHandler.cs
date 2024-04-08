@@ -514,7 +514,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.RUN();
                     try
                     {
-                        BuzzerPlayer.Stop();
                         if (_RunTaskData.Action_Type == ACTION_TYPE.None)
                             BuzzerPlayer.Move();
                         else

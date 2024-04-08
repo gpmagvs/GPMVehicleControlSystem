@@ -255,19 +255,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
                             AlarmManager.ClearAlarm();
-                            BuzzerPlayer.Stop();
-                            await Task.Delay(100);
+                            //BuzzerPlayer.Stop();
+                            //await Task.Delay(100);
 
-                            if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            {
-                                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                                    BuzzerPlayer.Move();
-                                else
-                                    BuzzerPlayer.Action();
+                            //if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                            //{
+                            //    if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                            //        BuzzerPlayer.Move();
+                            //    else
+                            //        BuzzerPlayer.Action();
 
-                                await Task.Delay(1000);
-                            }
-                            await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
+                            //    await Task.Delay(1000);
+                            //}
+                            //await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
 
                         }
                         else
