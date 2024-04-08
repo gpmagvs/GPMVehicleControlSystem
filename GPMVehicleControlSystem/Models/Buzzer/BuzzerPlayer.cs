@@ -46,8 +46,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             var _sound = SOUNDS.Move;
             if (BeforeBuzzerMovePlay != null)
                 _sound = BeforeBuzzerMovePlay();
-            if (_sound == SOUNDS.GoToChargeStation)
-                LOG.WARN($"Play Go to charge station sound because destine is front of charge station.");
+            if (_sound == SOUNDS.GoToChargeStation && IsGotoChargeStationPlaying) return;
+
             Play(_sound);
         }
 
