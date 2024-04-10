@@ -151,7 +151,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             clsIOSignal signalObj = (clsIOSignal)sender;
             var sensorName = signalObj.Name;
-            var isTriggered = input_status; //TODO 確認 A接點或B接點
+            var isTriggered = !input_status; //TODO 確認 A接點或B接點
             bool isLDULDActionRunning = _RunTaskData.IsLDULDAction() && AGVC.ActionStatus == ActionStatus.ACTIVE;
 
             if (!isTriggered || !isLDULDActionRunning)
@@ -396,6 +396,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        protected async void HandleSideLaserArea1SinalChange(object? sender, bool e)
+        {
+            if (!IsSaftyProtectActived)
+                return;
+
+            clsIOSignal diState = (clsIOSignal)sender;
+            bool isRightLaser = diState.Input == DI_ITEM.RightProtection_Area_Sensor_1;
+            bool isLsrBypass = isRightLaser ? WagoDO.GetState(DO_ITEM.Right_LsrBypass) : WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+
+            if (isLsrBypass)
+                return;
+            var alarm_code = isRightLaser ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2;
+            if (!diState.State)
+            {
+                LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
+                LogStatausWhenLaserTrigger(alarm_code);
+                AlarmManager.AddWarning(alarm_code);
+                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
+            }
+            else
+            {
+                IsLaserRecoveryHandled = false;
+                AlarmManager.ClearAlarm(alarm_code);
+
+                while (!await IsAllLaserNoTrigger())
+                {
+                    await Task.Delay(100);
+                }
+                LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
+                Task.Factory.StartNew(() =>
+                {
+                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
+                });
+            }
+        }
+
+
+
         /// <summary>
         /// 處理雷射第二段觸發
         /// </summary>
@@ -558,6 +596,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
             _Sub_Status = SUB_STATUS.ALARM;
+            BuzzerPlayer.Stop();
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
         }
