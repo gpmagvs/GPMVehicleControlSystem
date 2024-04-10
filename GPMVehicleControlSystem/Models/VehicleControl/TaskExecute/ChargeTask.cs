@@ -23,9 +23,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-                await Agv.Laser.FrontBackLasersEnable(false);
+                await Agv.Laser.FrontBackLasersEnable(true, false);
                 await Agv.Laser.SideLasersEnable(false);
-                await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+                await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
                 return true;
             }
             catch (Exception ex)

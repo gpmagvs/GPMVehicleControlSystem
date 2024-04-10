@@ -77,9 +77,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 //啟用前後雷射偵測 + Loading 組數
                 await Agv.Laser.SideLasersEnable(false);
-                await Agv.Laser.FrontBackLasersEnable(false);
+                await Agv.Laser.FrontBackLasersEnable(true, false);
+
                 await Task.Delay(200);
-                return await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+
+                return await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
+
             }
             catch (Exception ex)
             {
@@ -214,10 +217,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
             bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
             bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
-
-            await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
-            await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
-
+            await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
+            await Agv.Laser.FrontBackLasersEnable(true, false);
             return _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
         }
 
@@ -401,8 +402,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             try
             {
-
-
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
                 if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
@@ -422,11 +421,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-
-                await Agv.Laser.AllLaserDisable();
-                await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
                 await Agv.Laser.FrontBackLasersEnable(false, true);
-
                 SendActionCheckResult send_task_result = await TransferTaskToAGVC();
                 if (!send_task_result.Accept)
                 {
