@@ -437,43 +437,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return base.CheckHardwareStatus();
         }
-        internal override bool HasAnyCargoOnAGV()
-        {
-            try
-            {
-
-                bool _hasRack = false;
-                bool _hasTray = false;
-
-                if (Parameters.CargoExistSensorParams.RackSensorMounted)
-                {
-                    if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                    {
-                        _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
-                    }
-                    else
-                    {
-                        _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
-                    }
-                }
-                if (Parameters.CargoExistSensorParams.TraySensorMounted)
-                {
-                    if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                        _hasTray = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-                    else
-                        _hasTray = !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-
-                }
-
-                return _hasRack || _hasTray;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-
+      
         protected override int GetCargoType()
         {
             var rack_sensor1 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
