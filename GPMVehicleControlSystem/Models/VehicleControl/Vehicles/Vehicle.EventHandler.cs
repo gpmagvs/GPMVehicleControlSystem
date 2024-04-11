@@ -672,7 +672,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
-            AGVC.EmergencyStop();
+            _ = Task.Run(async () =>
+            {
+                await AGVC.EmergencyStop(true);
+            });
             SoftwareEMO(alarm_code);
         }
 

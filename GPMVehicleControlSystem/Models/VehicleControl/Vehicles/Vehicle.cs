@@ -1175,11 +1175,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
                 {
-                    _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
+                    _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
                 }
                 else
                 {
-                    _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
+                    _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
                 }
             }
             if (Parameters.CargoExistSensorParams.TraySensorMounted)

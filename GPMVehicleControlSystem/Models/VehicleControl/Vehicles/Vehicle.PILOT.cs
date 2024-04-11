@@ -165,6 +165,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else if (action != ACTION_TYPE.Charge)
                 {
+                    AlarmManager.ClearAlarm();
                     //Sub_Status = SUB_STATUS.IDLE;
                 }
                 AGVC.OnAGVCActionChanged = null;
