@@ -643,8 +643,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 LOG.INFO($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
                 await Task.Delay(1000);
                 //check arm position 
-
-                return (true, AlarmCodes.None);
             }
 
 

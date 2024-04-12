@@ -883,10 +883,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMOFromUI()
         {
-            _ = Task.Run(() =>
-            {
-                AGVC.EmergencyStop(bypass_stopped_check: true); //
-            });
             LOG.Critical($"Software EMO By User!!!");
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
@@ -894,6 +890,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            _ = Task.Run(() =>
+            {
+                AGVC.EmergencyStop(bypass_stopped_check: true); //
+            });
             await _softwareEmoSemaphoreSlim.WaitAsync();
             try
             {
