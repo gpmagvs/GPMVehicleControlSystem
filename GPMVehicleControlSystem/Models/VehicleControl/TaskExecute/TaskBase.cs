@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 try
                 {
-                    if (_RunningTaskData == null | value.Task_Name != _RunningTaskData?.Task_Name)
+                    if (_RunningTaskData == null || value.Task_Name != _RunningTaskData?.Task_Name)
                     {
                         TrackingTags = value.TagsOfTrajectory;
                     }
@@ -416,7 +416,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 IsNeedWaitForkHome = false;
                 return;
             }
-            if (!Agv.Parameters.LDULD_Task_No_Entry | (action == ACTION_TYPE.Discharge | action == ACTION_TYPE.Unpark))
+            if (!Agv.Parameters.LDULD_Task_No_Entry || (action == ACTION_TYPE.Discharge || action == ACTION_TYPE.Unpark))
             {
                 IsNeedWaitForkHome = true;
                 forkGoHomeTask = await Task.Factory.StartNew(async () =>

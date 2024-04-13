@@ -286,7 +286,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) | !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
+                return !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor) || !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
             }
             catch (Exception)
             {
@@ -299,7 +299,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             var rack_sensor1 = WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
             var rack_sensor2 = WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
-            if (rack_sensor2 | rack_sensor1)
+            if (rack_sensor2 || rack_sensor1)
                 return 1;
             else return 0;
         }

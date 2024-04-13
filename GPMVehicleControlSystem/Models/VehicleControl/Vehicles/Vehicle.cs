@@ -288,7 +288,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     try
                     {
-                        if (value == SUB_STATUS.DOWN | value == SUB_STATUS.ALARM | value == SUB_STATUS.Initializing)
+                        if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
                         {
                             if (value == SUB_STATUS.DOWN)
                                 HandshakeIOOff();
@@ -638,14 +638,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, $"當前狀態不可進行初始化(任務執行中)");
             }
 
-            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE | Sub_Status == SUB_STATUS.Initializing))
+            if (Sub_Status != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || Sub_Status == SUB_STATUS.Initializing))
             {
                 string reason_string = Sub_Status != SUB_STATUS.RUN ? (Sub_Status == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
 
-            if ((Parameters.AgvType == AGV_TYPE.FORK | Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
+            if ((Parameters.AgvType == AGV_TYPE.FORK || Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
             {
                 if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
                 {
@@ -988,7 +988,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!_RunTaskData.IsLocalTask && !_RunTaskData.IsActionFinishReported)
             {
-                if ((_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) | !_RunTaskData.IsEQHandshake) //非取放貨任務 一律上報任務完成
+                if ((_RunTaskData.Action_Type != ACTION_TYPE.Load && _RunTaskData.Action_Type != ACTION_TYPE.Unload) || !_RunTaskData.IsEQHandshake) //非取放貨任務 一律上報任務完成
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: alarmCode);
                 else //取放貨任務僅等交握異常的AlarmCode觸發才上報任務完成
                 {
@@ -1170,7 +1170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) | !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
             }
             catch (Exception)
             {

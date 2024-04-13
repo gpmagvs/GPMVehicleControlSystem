@@ -136,7 +136,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if ((forkAgv.AGVC as ForkAGVController).WaitActionDoneFlag && action != "stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
-            if (action == "home" | action == "orig")
+            if (action == "home" || action == "orig")
             {
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
                 return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });

@@ -134,7 +134,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (Sub_Status == SUB_STATUS.IDLE | Sub_Status == SUB_STATUS.Charging))
+                if (RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE && !IsActionFinishTaskFeedbackExecuting && (Sub_Status == SUB_STATUS.IDLE || Sub_Status == SUB_STATUS.Charging))
                 {
                     HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE);
                 }

@@ -78,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         LOG.WARN($"貨物傾倒偵測結束-AGV Move Finish");
                         return;
                     }
-                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS | Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
+                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS || Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
                     {
                         LOG.WARN($"貨物傾倒偵測觸發-Check1");
                         await Task.Delay(500); //避免訊號瞬閃導致誤偵測

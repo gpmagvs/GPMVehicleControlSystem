@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.Analysis
                     sec = (int)period,
                     status = init_status.Status
                 });
-                if (init_status.Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE | init_status.Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
+                if (init_status.Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE || init_status.Status == AGVSystemCommonNet6.clsEnums.SUB_STATUS.Initializing)
                 {
                     result.IDLE_Sec += period;
                     result.IDLE_Times.Add(timeRange);

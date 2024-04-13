@@ -355,7 +355,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 ForkHomeProcess();
                             HandleBackToHomeActionStatusChanged(ActionStatus.SUCCEEDED);
                         }
-                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE | Agv.AGVC.ActionStatus == ActionStatus.PENDING)
+                        else if (Agv.AGVC.ActionStatus == ActionStatus.ACTIVE || Agv.AGVC.ActionStatus == ActionStatus.PENDING)
                         {
                             if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                                 ForkHomeProcess();
@@ -430,7 +430,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async Task<(bool success, AlarmCodes alarmcode)> ForkActionsInWorkStation()
         {
-            if (ForkLifter == null | Agv.Parameters.LDULD_Task_No_Entry)
+            if (ForkLifter == null || Agv.Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
 
 
@@ -739,7 +739,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
         {
             (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader();
-            if (!result.request_success | !result.action_done)
+            if (!result.request_success || !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
@@ -769,7 +769,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            if (reader_valid_id == "ERROR" | reader_actual_read_id == "ERROR" | reader_valid_id == "TrayUnknow")
+            if (reader_valid_id == "ERROR" || reader_actual_read_id == "ERROR" || reader_valid_id == "TrayUnknow")
             {
                 LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);

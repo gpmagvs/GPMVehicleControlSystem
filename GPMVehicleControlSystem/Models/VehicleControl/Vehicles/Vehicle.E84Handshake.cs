@@ -283,7 +283,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 while (!IsULReqOn(action) && !isEQGoOff)
                 {
-                    if (waitEQSignalCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
+                    if (waitEQSignalCST.IsCancellationRequested || Sub_Status == SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
                     Thread.Sleep(1);
                 }
@@ -293,7 +293,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while (!IsEQReadyOn() && !isEQGoOff)
                 {
                     Thread.Sleep(1);
-                    if (waitEQReadyOnCST.IsCancellationRequested | Sub_Status == SUB_STATUS.DOWN)
+                    if (waitEQReadyOnCST.IsCancellationRequested || Sub_Status == SUB_STATUS.DOWN)
                         throw new OperationCanceledException();
 
                     if (!IsULReqOn(action))
@@ -484,7 +484,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (Exception ex)
             {
                 StopAllHandshakeTimer();
-                bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag | AGVAlarmWhenEQBusyFlag;
+                bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag || AGVAlarmWhenEQBusyFlag;
                 LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
                 LOG.Critical(ex);
                 AlarmCodes _alarm = AlarmCodes.None;
@@ -689,13 +689,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     ////AGV作動中發生AGV異常
                     if (Sub_Status == SUB_STATUS.DOWN && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
                     {
-                        if (isEQReadyOff | isEQBusyOn | !IsEQGOOn())
+                        if (isEQReadyOff || isEQBusyOn || !IsEQGOOn())
                             return;
                         RaiseAGVAlarmWhenHS();
                         return;
                     }
 
-                    if ((isEQReadyOff | isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && !AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY])//AGV作動中發生EQ異常
+                    if ((isEQReadyOff || isEQBusyOn) && AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] && !AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY])//AGV作動中發生EQ異常
                     {
                         EQAlarmWhenAGVBusyFlag = true;
                         AGVC.AbortTask();

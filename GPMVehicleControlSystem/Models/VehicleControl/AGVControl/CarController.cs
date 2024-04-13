@@ -122,8 +122,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             get => _OnAGVCActionChanged;
             set
             {
+                if (_OnAGVCActionChanged != value)
+                    LOG.TRACE($"[{(value == null ? "解除" : "註冊")}]車控Action Status監聽");
                 _OnAGVCActionChanged = value;
-                LOG.TRACE($"[{(value == null ? "解除" : "註冊")}]車控Action Status監聽");
             }
         }
         internal bool CycleStopActionExecuting = false;

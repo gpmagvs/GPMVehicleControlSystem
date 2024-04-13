@@ -130,7 +130,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
 
-            bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 | pt.Y > 100));
+            bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 || pt.Y > 100));
             if (isPointCoordinationNotDefined)
             {
                 return Ok(new TaskActionResult
@@ -380,7 +380,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 normal_move_task.Trajectory.Last().Theta = destineStation.Direction; //移動的終點要與機台同向
             }
-            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag | CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
+            if (normal_move_task.Destination != agv.Navigation.LastVisitedTag || CalculateThetaError(normal_move_task.Trajectory.Last().Theta) > 5)
                 taskList.Add(normal_move_task);
             seq += 1;
 

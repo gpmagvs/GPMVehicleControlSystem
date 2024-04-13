@@ -162,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                             Current_Alarm_Code = AlarmCodes.Belt_Sensor_Error;
                         }
                     }
-                    else if (!state && (DI?.Input == DI_ITEM.Fork_Short_Exist_Sensor | DI?.Input == DI_ITEM.Fork_Extend_Exist_Sensor)) //牙叉伸縮極限Sensor
+                    else if (!state && (DI?.Input == DI_ITEM.Fork_Short_Exist_Sensor || DI?.Input == DI_ITEM.Fork_Extend_Exist_Sensor)) //牙叉伸縮極限Sensor
                     {
                         ForkARMStop();
                     }
@@ -359,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
             try
             {
-                bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) | !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
+                bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) || !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
                 this.InitForkSpeed = InitForkSpeed;
                 IsInitialized = false;
                 IsInitialing = true;
@@ -457,7 +457,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     (bool confirm, string message) response = (false, "");
                     CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    while (!response.confirm | Math.Abs(Driver.CurrentPosition - 0) > 0.1)
+                    while (!response.confirm || Math.Abs(Driver.CurrentPosition - 0) > 0.1)
                     {
                         await Task.Delay(200);
                         if (cancellation.IsCancellationRequested)
@@ -538,7 +538,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (!belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
                         return (false, AlarmCodes.Belt_Sensor_Error);
 
-                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN | forkAGV.Sub_Status == SUB_STATUS.Initializing)
+                    if (forkAGV.Sub_Status == SUB_STATUS.DOWN || forkAGV.Sub_Status == SUB_STATUS.Initializing)
                     {
                         LOG.ERROR($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
                         return (false, AlarmCodes.None);

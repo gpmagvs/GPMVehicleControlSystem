@@ -172,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 bool Battery1LockNG = IsBattery1Exist && !IsBattery1Locked;
                 bool Battery2LockNG = IsBattery2Exist && !IsBattery2Locked;
-                if (Battery1LockNG | Battery2LockNG)
+                if (Battery1LockNG || Battery2LockNG)
                 {
                     string err_msg = "";
                     if (IsBattery1Exist)
