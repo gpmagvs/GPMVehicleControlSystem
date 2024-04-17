@@ -684,6 +684,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (!workStation.LayerDatas.TryGetValue(height, out clsStationLayerData? teach))
                     return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
 
+                if (teach.Down_Pose == 0 && teach.Up_Pose == 0)
+                    return (false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
+
                 (bool confirm, string message) forkMoveResult = (false, "");
                 double target = 0;
 
@@ -721,7 +724,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return (false, AlarmCodes.Fork_Action_Aborted);
 
                     LOG.WARN($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
-                    forkMoveResult = await ForkPose(target, speed);
+                    forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
                     LOG.WARN($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
                     if (!forkMoveResult.confirm)
                     {

@@ -80,7 +80,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             DoActionTag = nextWorkStationPointTag = -1;
 
-            var _next_action = taskDownloadData.OrderInfo.ActionName;
+            var _next_action = taskDownloadData.OrderInfo.NextAction;
             bool _need = _next_action == ACTION_TYPE.Load || _next_action == ACTION_TYPE.Unload || _next_action == ACTION_TYPE.Charge || _next_action == ACTION_TYPE.LoadAndPark;
             if (_need)
             {
@@ -143,8 +143,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         {
                             break;
                         }
-                        var isunLoad = Agv._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Unload;
-                        var ischarge = Agv._RunTaskData.OrderInfo.ActionName == ACTION_TYPE.Charge;
+                        var isunLoad = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
+                        var ischarge = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
 
                         LOG.WARN($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
                         try
@@ -152,11 +152,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             double _position_aim = 0;
                             if (Agv.WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
                             {
-                                if (_stationData.LayerDatas.TryGetValue(Agv._RunTaskData.Height, out WorkStation.clsStationLayerData? _settings))
+                                var orderInfo = Agv._RunTaskData.OrderInfo;
+                                bool isCarryOrder = orderInfo.ActionName == ACTION_TYPE.Carry;
+                                var height = 0;
+                                if (isCarryOrder)
+                                {
+                                    bool isNextGoalEqualSource = orderInfo.NextAction == ACTION_TYPE.Unload;
+                                    if (isNextGoalEqualSource)
+                                        height = orderInfo.SourceSlot;
+                                    else
+                                        height = orderInfo.DestineSlot;
+                                }
+                                else
+                                {
+                                    height = orderInfo.NextAction == ACTION_TYPE.Charge ? 0 : orderInfo.DestineSlot;
+                                }
+
+                                if (_stationData.LayerDatas.TryGetValue(height, out WorkStation.clsStationLayerData? _settings))
                                 {
                                     _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
                                     var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
-                                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至({_Height_PreAction}cm)");
+                                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
 
                                     Task.Run(async () =>
                                     {

@@ -108,12 +108,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 });
                 return (true, AlarmCodes.None);
             }
-            
+
             LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
             await Task.Delay(1000);
             FlashDirectorLighter();
             BuzzerPlayer.Measure();
-
+            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
             if (TsmcMiniAGV.Parameters.InspectionAGV.MeasureSimulation)
             {
                 LOG.TRACE($"模擬量測，三秒後量測結束");
@@ -122,8 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(500);
                     BuzzerPlayer.Measure();
                     TsmcMiniAGV.SetSub_Status(SUB_STATUS.RUN);
-                    TsmcMiniAGV.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
-                    await Task.Delay(3000);
+                    await Task.Delay(5000);
                     TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
                     {
                         TaskName = RunningTaskData.Task_Name,
@@ -227,18 +226,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (status == ActionStatus.SUCCEEDED)
             {
                 AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
-                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
                 await Task.Delay(1000);
 
                 FlashDirectorLighter();
                 BuzzerPlayer.Measure();
                 LOG.WARN($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
+                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
 
                 if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV || Agv.Parameters.InspectionAGV.MeasureSimulation)
                 {
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(3000);
+                        await Task.Delay(5000);
                         LOG.INFO($"模擬量測完成");
                         TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
                         {

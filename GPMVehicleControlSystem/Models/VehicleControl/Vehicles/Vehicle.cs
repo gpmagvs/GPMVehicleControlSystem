@@ -345,13 +345,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StatusLighter = new clsStatusLighter(WagoDO);
                 CreateLaserInstance();
 
-                WebsocketAgent.Middleware.Initialize();
 
                 List<Task> WagoAndRosInitTasks = new List<Task>();
                 WagoAndRosInitTasks.Add(WagoDIInit());
                 WagoAndRosInitTasks.Add(RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag));
-
-
 
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
@@ -403,6 +400,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                 LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
+
+                WebsocketAgent.Middleware.Initialize();
                 IsSystemInitialized = true;
             }
             catch (Exception ex)
@@ -597,7 +596,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (false, $"當前狀態不可進行初始化({reason_string})");
             }
 
-            if (lastVisitedMapPoint.IsEquipment)
+            if (lastVisitedMapPoint.IsEquipment && lastVisitedMapPoint.StationType != STATION_TYPE.Elevator)
             {
                 return (false, "AGV位於設備內禁止初始化，請將AGV移動至道路Tag上");
             }
@@ -621,8 +620,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IsHandshaking = false;
             return await Task.Run(async () =>
             {
-
-
                 StopAllHandshakeTimer();
                 StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
                 try
@@ -670,6 +667,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(500);
                     SetSub_Status(SUB_STATUS.IDLE);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                    CarController.AGVS_SPEED_CONTROL_REQUEST = CarController.ROBOT_CONTROL_CMD.NONE;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
                     return (true, "");

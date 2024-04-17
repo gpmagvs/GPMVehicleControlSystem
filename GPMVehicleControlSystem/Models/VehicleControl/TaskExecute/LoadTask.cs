@@ -56,8 +56,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             DetermineHandShakeSetting();
-
             HandleCSTType();
+            height = taskDownloadData.Height;
         }
 
         private void HandleCSTType()
@@ -779,7 +779,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.HandshakeStatusText = $"AGV牙叉下降至放貨高度..({ForkLifter.CurrentHeightPosition} cm)";
                 }
             });
-            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return result;
 

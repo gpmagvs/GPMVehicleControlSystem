@@ -25,8 +25,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
         };
         public override void Initialize()
         {
-
-
             ClientsOfAllChannel = channelMaps.ToDictionary(str => str, str => new List<clsWebsocktClientHandler>());
             CurrentViewModelDataOfAllChannel = channelMaps.ToDictionary(str => str, str => new object());
             CurrentViewModelDataOfAllChannel[channelMaps[0]] = new Dictionary<string, object>()
@@ -37,7 +35,6 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
                 {"RDTestData",new object() },
             };
             StartCollectViewModelDataAndPublishOutAsync();
-
         }
         protected override async Task CollectViewModelData()
         {

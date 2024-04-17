@@ -122,7 +122,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 string _batNosString = string.Join("&", batInfos.Select(bat => bat.bat_no));
                 TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}交換電池 : {_batNosString}";
                 await Task.Delay(1000);
-
+                if (Agv.Parameters.InspectionAGV.BatteryChangeNum < 2 && batInfos.Count() == 2)
+                {
+                    batInfos = new clsBatInfo[1] { batInfos[0] };
+                }
                 foreach (var bat in batInfos)
                 {
                     if (bat.location == BATTERY_LOCATION.RIGHT)

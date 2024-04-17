@@ -95,7 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (GetSub_Status() == SUB_STATUS.DOWN) //TODO More Status Confirm when recieve AGVS Task
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_STATUS_DOWN;
 
-            if (isMoveOrderButDestineIsWorkStation)
+            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && isMoveOrderButDestineIsWorkStation)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
 
             LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");

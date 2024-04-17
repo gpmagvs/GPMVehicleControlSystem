@@ -11,5 +11,7 @@
         public bool MeasureSimulation { get; set; } = true;
 
         public bool BatteryExhcnageSimulation { get; set; } = true;
+
+        public int BatteryChangeNum { get; set; } = 1;
     }
 }

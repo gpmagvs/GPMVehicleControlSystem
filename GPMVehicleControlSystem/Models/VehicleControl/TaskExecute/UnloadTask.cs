@@ -73,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.HandshakeStatusText = $"AGV牙叉上升至取貨高度...({ForkLifter.CurrentHeightPosition} cm)";
                 }
             });
-            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, this.RunningTaskData.Height, FORK_HEIGHT_POSITION.UP_, 0.5);
+            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return forkHeightChangeReuslt;
         }

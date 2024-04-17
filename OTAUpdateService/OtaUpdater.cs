@@ -37,7 +37,7 @@ public class OtaUpdater
         _ = Task.Run(async () =>
         {
             await WaitVCSClosed();
-            BackupFiles();
+            //BackupFiles();
             ExtractAndReplaceFiles(zipFilePath);
             LaunchApplication();
         });
