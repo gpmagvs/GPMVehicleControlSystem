@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -62,12 +63,32 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
                 return Ok(new
                 {
-                    success= updateSuccess,
+                    success = updateSuccess,
                     message = updateSuccess ? "音檔上傳更新成功。" : "音檔上傳更新失敗"
                 });
             }
 
             return BadRequest("未接收到任何檔案。");
+        }
+
+        [HttpGet("VolumeIncrease")]
+        public async Task<IActionResult> VolumeIncrease(int percentage)
+        {
+            StaStored.VolumnAdjuster.VolumeControl(Tools.SystemVolumnAdjuster.ADJUST_ACTION.INCREASE, percentage);
+            return Ok();
+        }
+        [HttpGet("VolumeDecrease")]
+        public async Task<IActionResult> VolumeDecrease(int percentage)
+        {
+            StaStored.VolumnAdjuster.VolumeControl(Tools.SystemVolumnAdjuster.ADJUST_ACTION.DECREASE, percentage);
+            return Ok();
+        }
+
+        [HttpGet("VolumeSet")]
+        public async Task<IActionResult> VolumeSet(int percentage)
+        {
+            StaStored.VolumnAdjuster.VolumeControl(Tools.SystemVolumnAdjuster.ADJUST_ACTION.SET, percentage);
+            return Ok();
         }
     }
 }

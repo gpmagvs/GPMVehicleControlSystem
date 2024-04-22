@@ -1,5 +1,6 @@
 ﻿using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models
 {
@@ -8,5 +9,6 @@ namespace GPMVehicleControlSystem.Models
         public static string APPVersion = "10.28.1";
         public static Vehicle CurrentVechicle;
         public static clsEQHandshakeModbusTcp ConnectingEQHSModbus { get; internal set; } = new clsEQHandshakeModbusTcp();
+        public static SystemVolumnAdjuster VolumnAdjuster { get; internal set; }
     }
 }

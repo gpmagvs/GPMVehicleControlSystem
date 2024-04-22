@@ -16,6 +16,10 @@ StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToStrin
 OTAHelper.TryStartOTAServiceAPP();
 Console.Title = $"¨®¸ü¨t²Î-V{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+{
+    StaStored.VolumnAdjuster = new LinuxVolumeAdjuster();
+}
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
 {
