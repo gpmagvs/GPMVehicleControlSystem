@@ -13,5 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public bool LeaveWorkStationNeedSendRequestToAGVS { get; set; } = false;
         public int LeaveWorkStationRequestTimeout { get; set; } = 3;
+
+        public bool BypassFrontLaserWhenEntryEQ { get; set; } = true;
     }
 }
