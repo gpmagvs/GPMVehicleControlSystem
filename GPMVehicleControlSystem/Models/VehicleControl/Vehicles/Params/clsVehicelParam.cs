@@ -128,10 +128,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public LASER_MODE LDULD_Laser_Mode { get; set; } = LASER_MODE.Bypass;
         public LASER_MODE Spin_Laser_Mode { get; set; } = LASER_MODE.Turning;
         public List<int> StationNeedQueryVirtualID { get; set; } = new List<int>();
-        /// <summary>
-        /// 侵入設備取放或的前後雷射Bypass
-        /// </summary>
-        public bool LDULD_FrontBackLaser_Bypass { get; set; } = true;
 
         public clsMapParam MapParam { get; set; } = new clsMapParam();
         public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.PIO;
