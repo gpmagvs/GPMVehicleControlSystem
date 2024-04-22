@@ -140,6 +140,51 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        internal async Task<(bool confirm, string message)> TryTemporaryStopWhenReachTag(int stopTag)
+        {
+            if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING)
+                return (false, "No Task");
+
+            List<clsMapPoint> currentTraj = _RunTaskData.ExecutingTrajecory.ToList();
+            clsMapPoint? stopPoint = currentTraj.FirstOrDefault(pt => pt.Point_ID == stopTag);
+            if (stopPoint == null)
+                return (false, $"Request Stop Tag:{stopTag} no in trajectory");
+
+            int indexOfStopPoint = currentTraj.IndexOf(stopPoint);
+            if (indexOfStopPoint == currentTraj.Count - 1) //要求停車的位置是任務軌跡終點
+                return (true, $"Stop Tag {stopTag} equal trajectory goal.");
+            //int indexOfSpeedDecreaseStartPoint = indexOfStopPoint - 1;
+
+            _ = Task.Run(async () =>
+            {
+                double goal_x = stopPoint.X;
+                double goal_y = stopPoint.Y;
+                double distance = 0;
+                while ((distance = _calculateDistance(Navigation.Data.robotPose.pose.position.x, Navigation.Data.robotPose.pose.position.y, goal_x, goal_y)) > 3.0)
+                {
+                    await Task.Delay(1000);
+                    LOG.TRACE($"[TryTemporaryStopWhenReachTag] Wait AGV Reach in to Decrease Speed Region..{distance} m");
+                }
+                LOG.TRACE($"[TryTemporaryStopWhenReachTag] AGV Reach in to Decrease Speed Region, Send DECELERATE request to AGVC.");
+                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.DECELERATE, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
+
+                LOG.TRACE($"[TryTemporaryStopWhenReachTag] Wait AGV Reach Tag {stopPoint.Point_ID}");
+                while (Navigation.Data.lastVisitedNode.data != stopPoint.Point_ID)
+                {
+                    await Task.Delay(100);
+                }
+
+                LOG.TRACE($"[TryTemporaryStopWhenReachTag] AGV Reach Stop Tag {stopTag}, Send STOP request to AGVC.");
+                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.STOP, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
+
+                double _calculateDistance(double x1, double y1, double x2, double y2)
+                {
+                    return Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+                }
+
+            });
+            return (true, "");
+        }
         private async Task CheckActionFinishFeedbackFinish()
         {
             if (!IsActionFinishTaskFeedbackExecuting)

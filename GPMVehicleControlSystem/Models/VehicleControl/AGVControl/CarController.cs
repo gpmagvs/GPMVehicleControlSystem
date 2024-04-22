@@ -425,26 +425,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public static ROBOT_CONTROL_CMD AGVS_SPEED_CONTROL_REQUEST = ROBOT_CONTROL_CMD.NONE;
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
-            if (moment == SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST)
-                AGVS_SPEED_CONTROL_REQUEST = cmd;
-            else if (AGVS_SPEED_CONTROL_REQUEST == ROBOT_CONTROL_CMD.DECELERATE)
-            {
-                LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控 {cmd} 但派車請求減速中...");
-                cmd = AGVS_SPEED_CONTROL_REQUEST;
-            }
-
             if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery & OnSpeedRecoveryRequesting != null)
             {
-                var speed_recoverable = OnSpeedRecoveryRequesting();
 
-                if (moment == SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST && CheckLaserStatus)
-                {
-                    while (!OnSpeedRecoveryRequesting())
-                    {
-                        await Task.Delay(10);
-                    }
-                }
-                else if (!speed_recoverable && CheckLaserStatus)
+                var speed_recoverable = OnSpeedRecoveryRequesting();
+                if (!speed_recoverable && CheckLaserStatus)
                 {
                     LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控速度恢復但尚有雷射觸發中");
                     return false;
