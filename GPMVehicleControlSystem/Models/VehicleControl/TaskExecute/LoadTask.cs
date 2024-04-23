@@ -204,10 +204,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
-           
+
             return base.TransferTaskToAGVC();
         }
-     
+
 
         private async Task<bool> CheckPortObstacleViaLaser()
         {
@@ -650,6 +650,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
 
             (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+            ExpectedForkPostionWhenEntryWorkStation = fork_height_change_result.position;
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 

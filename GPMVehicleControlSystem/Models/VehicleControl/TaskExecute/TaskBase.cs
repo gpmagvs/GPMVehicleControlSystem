@@ -380,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             await Task.Delay(1);
             LOG.WARN($"Start Monitor Fork Position before AGV Reach in WorkStation(Fork Position should be : {ExpectedForkPostionWhenEntryWorkStation})");
-            while (Agv.BarcodeReader.CurrentTag != this.destineTag)
+            while (Agv.BarcodeReader.CurrentTag != this.RunningTaskData.Homing_Trajectory.Last().Point_ID)
             {
                 await Task.Delay(1);
                 double _error = 0;
