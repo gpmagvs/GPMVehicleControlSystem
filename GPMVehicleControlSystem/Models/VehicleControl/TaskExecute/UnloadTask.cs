@@ -62,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
 
-        protected override async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
+        protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
             _ = Task.Factory.StartNew(() =>

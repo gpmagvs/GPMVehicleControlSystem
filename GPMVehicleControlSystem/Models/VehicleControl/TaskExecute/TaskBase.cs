@@ -22,6 +22,7 @@ using RosSharp.RosBridgeClient.MessageTypes.Sensor;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using AGVSystemCommonNet6;
 using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -36,6 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public CancellationTokenSource TaskCancelByReplan = new CancellationTokenSource();
         private bool disposedValue;
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
+        protected double ExpectedForkPostionWhenEntryWorkStation = 0;
         public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
@@ -325,8 +327,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (!forkGoTeachPositionResult.success)
                         alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
                     else
-                        LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
-
+                    {
+                        ExpectedForkPostionWhenEntryWorkStation = forkGoTeachPositionResult.position;
+                        LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度({ExpectedForkPostionWhenEntryWorkStation})-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
+                    }
                 }));
 
                 //Pin Release
@@ -360,10 +364,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;
         protected virtual async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
+            bool IsForkAction()
+            {
+                return action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.Charge || action == ACTION_TYPE.LoadAndPark || action == ACTION_TYPE.Park;
+            }
+            if (Agv.Parameters.AgvType == AGV_TYPE.FORK && IsForkAction())
+            {
+                _ = ForkPositionSaftyMonitor();
+            }
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
         }
 
 
+        private async Task ForkPositionSaftyMonitor()
+        {
+            await Task.Delay(1);
+            LOG.WARN($"Start Monitor Fork Position before AGV Reach in WorkStation(Fork Position should be : {ExpectedForkPostionWhenEntryWorkStation})");
+            while (Agv.BarcodeReader.CurrentTag != this.destineTag)
+            {
+                await Task.Delay(1);
+                double _error = 0;
+                if ((_error = _ForkHeightErrorWithExpected()) > 0.5)
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.Fork_Height_Setting_Error, false);
+                    LOG.Critical($"Fork Position Incorrect. Error={_error}cm ({Agv.ForkLifter.CurrentHeightPosition}/{ExpectedForkPostionWhenEntryWorkStation})");
+                    return;
+                }
+            }
+            LOG.INFO($"Fork Position Monitor done=>Safe");
+
+            double _ForkHeightErrorWithExpected()
+            {
+                return Math.Abs(Agv.ForkLifter.CurrentHeightPosition - ExpectedForkPostionWhenEntryWorkStation);
+            }
+        }
 
         protected bool IsAGVCActionNoOperate(ActionStatus status)
         {
@@ -567,7 +601,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
-        public async Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(int Height, FORK_HEIGHT_POSITION position)
+        public async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(int Height, FORK_HEIGHT_POSITION position)
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
@@ -582,7 +616,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
 
             LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-            (bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1).Result;
+            (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1).Result;
             _wait_fork_reach_position_cst.Cancel();
             return result;
         }
