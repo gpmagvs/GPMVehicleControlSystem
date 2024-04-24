@@ -574,7 +574,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Signal.GetType().Name == "EQ_HSSIGNAL")
                 HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
             StartTimer(Timer);
-            bool changed_done = WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts);
+            bool changed_done = WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts, HandshakeStatusText);
             LOG.WARN($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
             AlarmCodes _alarmcode = AlarmCodes.None;
@@ -634,7 +634,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return $"等待 {signal} 訊號 {eXPECTED_State}";
         }
 
-        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null)
+        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null, string handshakeText = "")
         {
             // LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
             CancellationTokenSource _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
@@ -642,7 +642,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             while (_GetState(Signal) != (EXPECTED_State == HS_SIGNAL_STATE.ON) ? true : false)
             {
                 Thread.Sleep(1);
-                _HandshakeStatusText += $"-{stopwatch.Elapsed}";
+                _HandshakeStatusText = handshakeText + $"-{stopwatch.Elapsed}";
                 if (cancellation != null && cancellation.IsCancellationRequested)
                 {
                     //LOG.Critical($"[交握訊號變化等待] {Signal} Wait changed to {EXPECTED_State} Interupt!!!!!");
