@@ -192,23 +192,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await ModeSwitch(AgvsLsrSetting);
         }
 
-
+        public clsNavigation.AGV_DIRECTION agvDirection { get; internal set; } = clsNavigation.AGV_DIRECTION.FORWARD;
         internal virtual async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
                 LOG.INFO($"雷射設定組 =Bypass , AGVC Direction 11", true);
+                //await FrontBackLasersEnable(false);
                 await ModeSwitch(LASER_MODE.Bypass);
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    if (agvDirection == clsNavigation.AGV_DIRECTION.LEFT || agvDirection == clsNavigation.AGV_DIRECTION.RIGHT)
+                        await ModeSwitch(LASER_MODE.Turning);
+                    else
+                        await ModeSwitch(AgvsLsrSetting);
+                });
+
                 return;
             }
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
+                await FrontBackLasersEnable(true);
                 await ModeSwitch(AgvsLsrSetting);
                 LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", true);
                 LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
             }
             else // 左.右轉
             {
+                await FrontBackLasersEnable(true);
                 await ModeSwitch(Spin_Laser_Mode);
                 LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
@@ -222,6 +234,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 await modeSwitchSemaphoresSlim.WaitAsync();
+                bool isModeAllowSetting = mode_int == (int)LASER_MODE.Turning || mode_int == (int)LASER_MODE.Bypass;
+                if ((agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT) && !isModeAllowSetting)
+                {
+                    LOG.Critical($"AGV旋轉中,雷射切換為 =>{mode_int} 請求已被Bypass");
+                    return true;
+                }
                 if (isSettingByAGVS)
                     AgvsLsrSetting = mode_int;
                 int retry_times_limit = 300;
