@@ -2,6 +2,7 @@
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using GPMVehicleControlSystem.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -59,6 +60,17 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task GCCollect()
         {
             GC.Collect();
+        }
+
+        [HttpPost("ShutDownPC")]
+        public async Task<IActionResult> ShutDownPC()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                PCShutDownHelper.Shutdown();
+            });
+            return Ok("PC Will Shutdown after 1 sec...");
         }
     }
 }
