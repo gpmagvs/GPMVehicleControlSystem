@@ -28,8 +28,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string LogFolder { get; set; } = "GPM_AGV_LOG";
         public AGV_TYPE AgvType { get; set; } = AGV_TYPE.SUBMERGED_SHIELD;
         public int Version { get; set; } = 1;
-        public string SID { get; set; } = "SID";
-        public string VehicleName { get; set; } = "EQName";
+        public string SID { get; set; } = "001:001:001";
+        public string VehicleName { get; set; } = "AGV_001";
 
 
         public Dictionary<clsConnectionParam.CONNECTION_ITEM, clsConnectionParam> Connections { get; set; } = new Dictionary<clsConnectionParam.CONNECTION_ITEM, clsConnectionParam>()
