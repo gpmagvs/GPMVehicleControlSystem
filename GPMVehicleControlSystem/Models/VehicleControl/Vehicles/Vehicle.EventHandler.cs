@@ -20,6 +20,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using MathNet.Numerics;
 using AGVSystemCommonNet6.Alarm;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -99,6 +100,63 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 };
             }
+
+            if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+                clsBattery.OnBatteryUnderVoltage += HandleBatteryUnderVoltage;
+
+        }
+
+        private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
+        {
+            if (Parameters.Advance.ShutDownPCWhenLowBatteryLevel)
+            {
+                ShutdownPCTask();
+            }
+        }
+
+        internal void ShutdownPCTask()
+        {
+            PCShutDownHelper.CancelPCShutdownFlag = false;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    bool IsCurrentStatusCanShutdown()
+                    {
+                        if (GetSub_Status() == SUB_STATUS.RUN ||
+                            AGVC._ActionStatus == ActionStatus.ACTIVE ||
+                            AGVC._ActionStatus == ActionStatus.PENDING ||
+                            WheelDrivers.Any(driver => driver.Data.speed != 0))
+                            return false;
+                        return true;
+                    }
+
+                    while (!IsCurrentStatusCanShutdown())
+                    {
+                        await Task.Delay(1000);
+                        if (PCShutDownHelper.CancelPCShutdownFlag)
+                        {
+                            LOG.INFO($"User cancel PC Shutdwon when wait status change to shutdownable.");
+                            return;
+                        }
+                    }
+                    await AGVC.EmergencyStop(true);
+                    bool shutdownReady = await PCShutDownHelper.ShutdownAsync();
+                    if (shutdownReady)
+                        AlarmManager.AddAlarm(AlarmCodes.Battery_Low_Level_Auto_PC_Shutdown, false);
+
+                }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.Message);
+                }
+                finally
+                {
+                    PCShutDownHelper.CancelPCShutdownFlag = false;
+                }
+            });
+
         }
 
         private CST_TYPE HandleCstTriggerButTrayKnownEvent()

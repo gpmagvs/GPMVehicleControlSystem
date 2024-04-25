@@ -67,10 +67,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(1000);
-                PCShutDownHelper.Shutdown();
+                PCShutDownHelper.ShutdownAsync();
             });
-            return Ok("PC Will Shutdown after 1 sec...");
+            return Ok($"PC Will Shutdown after {PCShutDownHelper.ShutdownDelayTimeSec} sec...");
         }
+
+
     }
 }

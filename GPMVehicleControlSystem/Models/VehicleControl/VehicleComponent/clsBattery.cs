@@ -1,11 +1,13 @@
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsBattery : CarComponent
     {
+        public static event EventHandler<clsBattery> OnBatteryUnderVoltage;
         /// <summary>
         /// 電池位置(面向電池Port左/右)
         /// </summary>
@@ -27,6 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
+
         public int ChargeAmpThreshold { get; internal set; } = 650;
         public bool IsCharging()
         {
@@ -35,12 +38,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override bool CheckStateDataContent()
         {
 
-            if (! base.CheckStateDataContent())
+            if (!base.CheckStateDataContent())
                 return false;
 
             var error_code = Data.errorCode;
             Current_Warning_Code = error_code.ToBatteryAlarmCode();
             return true;
+        }
+        public override AlarmCodes Current_Warning_Code
+        {
+            get => base.Current_Warning_Code;
+            set
+            {
+                bool hasChanged = base.Current_Warning_Code != value;
+                if (hasChanged && value == AlarmCodes.Under_Voltage)
+                {
+                    OnBatteryUnderVoltage?.Invoke(this, this);
+                }
+                base.Current_Warning_Code = value;
+            }
         }
     }
 

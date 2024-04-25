@@ -1,12 +1,18 @@
-﻿using System.Diagnostics;
+﻿using AGVSystemCommonNet6.Log;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Tools
 {
     public static class PCShutDownHelper
     {
-        public static void Shutdown()
+        internal static bool IsInPCShutdownProcess { get; private set; } = false;
+        internal static bool CancelPCShutdownFlag { get; set; } = false;
+
+        internal static int ShutdownDelayTimeSec = 5;
+        public static async Task<bool> ShutdownAsync()
         {
+            IsInPCShutdownProcess = true;
             try
             {
                 // Create a new process to run the shutdown command
@@ -19,17 +25,40 @@ namespace GPMVehicleControlSystem.Tools
                 // Start the process
                 Process proc = new Process();
                 proc.StartInfo = procStartInfo;
-                proc.Start();
-                // Read the output (if any)
-                string result = proc.StandardOutput.ReadToEnd();
-                Console.WriteLine(result);
 
-                // Wait for process to finish
-                proc.WaitForExit();
+
+                Stopwatch sw = Stopwatch.StartNew();
+                while (sw.Elapsed.Seconds < ShutdownDelayTimeSec)
+                {
+                    if (CancelPCShutdownFlag)
+                    {
+                        LOG.INFO($"User cancel PC Shutdwon when shutdown countdown...");
+                        return false;
+                    }
+                    await Task.Delay(1000);
+                }
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    proc.Start();
+                    // Read the output (if any)
+                    string result = proc.StandardOutput.ReadToEnd();
+                    Console.WriteLine(result);
+                    // Wait for process to finish
+                    proc.WaitForExit();
+                });
+
+                return true;
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error: " + ex.Message);
+                return false;
+            }
+            finally
+            {
+                CancelPCShutdownFlag = IsInPCShutdownProcess = false;
             }
         }
 
