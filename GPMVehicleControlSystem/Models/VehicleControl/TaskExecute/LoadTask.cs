@@ -204,8 +204,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
+
             return base.TransferTaskToAGVC();
         }
+
+
         private async Task<bool> CheckPortObstacleViaLaser()
         {
             var _laserModeNumber = Agv.Parameters.LDULDParams.LsrObsLaserModeNumber;
@@ -646,7 +649,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            (bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+            (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+            ExpectedForkPostionWhenEntryWorkStation = fork_height_change_result.position;
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 
@@ -767,7 +771,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             LOG.TRACE($"CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS SUCCESS");
         }
 
-        protected async virtual Task<(bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
+        protected async virtual Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();

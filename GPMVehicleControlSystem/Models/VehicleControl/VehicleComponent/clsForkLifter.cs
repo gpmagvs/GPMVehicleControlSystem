@@ -183,9 +183,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private ForkAGV forkAGV;
 
-        public override  bool CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
-            return  base.CheckStateDataContent();
+            return base.CheckStateDataContent();
         }
 
         /// <summary>
@@ -673,22 +673,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <param name="height">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed)
+        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed)
         {
+            double target = 0;
             try
             {
                 fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
-                    return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
+                    return (target, false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
                 if (!workStation.LayerDatas.TryGetValue(height, out clsStationLayerData? teach))
-                    return (false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
+                    return (target, false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
 
                 if (teach.Down_Pose == 0 && teach.Up_Pose == 0)
-                    return (false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
+                    return (target, false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
 
                 (bool confirm, string message) forkMoveResult = (false, "");
-                double target = 0;
+               
 
                 if (position == FORK_HEIGHT_POSITION.UP_)
                     target = teach.Up_Pose;
@@ -712,16 +713,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(1, fork_ros_controller.wait_action_down_cts.Token);
 
                     if (AGVBeltStatusError())
-                        return (false, AlarmCodes.Belt_Sensor_Error);
+                        return (target, false, AlarmCodes.Belt_Sensor_Error);
 
                     if (AGVStatusError())
                     {
                         LOG.ERROR($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
-                        return (false, AlarmCodes.None);
+                        return (target, false, AlarmCodes.None);
                     }
                     tryCnt++;
                     if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
-                        return (false, AlarmCodes.Fork_Action_Aborted);
+                        return (target, false, AlarmCodes.Fork_Action_Aborted);
 
                     LOG.WARN($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
                     forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
@@ -729,16 +730,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (!forkMoveResult.confirm)
                     {
                         AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
-                        return (false, _alarm_code);
+                        return (target, false, _alarm_code);
                     }
                 }
 
                 LOG.TRACE($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
                 //Final Check
                 if (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
-                    return (false, AlarmCodes.Fork_Height_Setting_Error);
+                    return (target, false, AlarmCodes.Fork_Height_Setting_Error);
 
-                return (true, AlarmCodes.None);
+                return (target, true, AlarmCodes.None);
 
                 #region Local Functions
                 //計算牙叉當前位置距離目標位置的誤差值
@@ -760,17 +761,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             catch (TaskCanceledException ex)
             {
                 LOG.ERROR(ex);
-                return (false, AlarmCodes.Fork_Action_Aborted);
+                return (target,false, AlarmCodes.Fork_Action_Aborted);
             }
             catch (OperationCanceledException ex)
             {
                 LOG.ERROR(ex);
-                return (false, AlarmCodes.Fork_Action_Aborted);
+                return (target, false, AlarmCodes.Fork_Action_Aborted);
             }
             catch (Exception ex)
             {
                 LOG.Critical(ex);
-                return (false, AlarmCodes.Code_Error_In_System);
+                return (target, false, AlarmCodes.Code_Error_In_System);
             }
 
         }
