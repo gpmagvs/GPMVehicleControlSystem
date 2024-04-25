@@ -21,6 +21,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using MathNet.Numerics;
 using AGVSystemCommonNet6.Alarm;
 using GPMVehicleControlSystem.Tools;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -250,7 +251,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool HandleSpeedReconveryRequesetRaised()
         {
-            return IsAllLaserNoTrigger().Result;
+            return IsAllLaserNoTrigger();
         }
 
         /// <summary>
@@ -403,7 +404,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                IsLaserRecoveryHandled = false;
+                if (IsLaserRecoveryHandled)
+                    return;
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
@@ -439,16 +441,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                IsLaserRecoveryHandled = false;
-                AlarmManager.ClearAlarm(alarm_code);
-
-                while (!await IsAllLaserNoTrigger())
-                {
-                    await Task.Delay(100);
-                }
+                if (IsLaserRecoveryHandled)
+                    return;
                 LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                Task.Factory.StartNew(() =>
+                _ = Task.Run(async () =>
                 {
+                    IsLaserRecoveryHandled = false;
+                    AlarmManager.ClearAlarm(alarm_code);
+
+                    while (!IsAllLaserNoTrigger())
+                    {
+                        await Task.Delay(1000);
+                    }
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_RECOVERY);
                 });
             }
@@ -475,16 +479,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                IsLaserRecoveryHandled = false;
-                AlarmManager.ClearAlarm(alarm_code);
-
-                while (!await IsAllLaserNoTrigger())
+                if (IsLaserRecoveryHandled)
+                    return;
+                _ = Task.Run(async () =>
                 {
-                    await Task.Delay(100);
-                }
-                LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                Task.Factory.StartNew(() =>
-                {
+                    AlarmManager.ClearAlarm(alarm_code);
+                    while (!IsAllLaserNoTrigger())
+                    {
+                        await Task.Delay(1000);
+                    }
+                    LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                 });
             }
@@ -520,7 +524,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                IsLaserRecoveryHandled = false;
+                if (IsLaserRecoveryHandled)
+                    return;
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
@@ -558,7 +563,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                IsLaserRecoveryHandled = false;
+                if (IsLaserRecoveryHandled)
+                    return;
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
@@ -593,62 +599,73 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
         {
-            await Task.Delay(1000).ConfigureAwait(false);
             _ = Task.Run(async () =>
             {
-                CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
-
-                while (!await IsAllLaserNoTrigger())
+                IsLaserRecoveryHandled = true;
+                try
                 {
-                    await Task.Delay(100);
-                }
+                    CancellationTokenSource waitNoObstacleCTS = new CancellationTokenSource();
 
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE && !IsLaserRecoveryHandled)
-                {
-                    IsLaserRecoveryHandled = true;
-                    _Sub_Status = SUB_STATUS.RUN;
-                    StatusLighter.RUN();
-                    try
+                    while (!IsAllLaserNoTrigger())
                     {
-                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                            BuzzerPlayer.Move();
-                        else
-                            BuzzerPlayer.Action();
-                    }
-                    catch (Exception ex)
-                    {
-                        LOG.ERROR(ex);
+                        await Task.Delay(1000);
                     }
 
-                }
-                if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                {
-                    LOG.TRACE($"速度恢復-減速後加速");
-
-                    AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
-
-                    while (!await IsAllLaserNoTrigger())
+                    if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                     {
-                        await Task.Delay(100);
-                        if (waitNoObstacleCTS.IsCancellationRequested)
+                        _Sub_Status = SUB_STATUS.RUN;
+                        StatusLighter.RUN();
+                        try
                         {
-                            AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
-                            LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
-                            return;
+                            if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                BuzzerPlayer.Move();
+                            else
+                                BuzzerPlayer.Action();
                         }
-                    }
-                    AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
-                    await Task.Delay(1000);
-                    if (!await IsAllLaserNoTrigger())
-                        return;
-                }
-                await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
+                        catch (Exception ex)
+                        {
+                            LOG.ERROR(ex);
+                        }
 
-                void HandleSTOPCmdRequesting(object sender, EventArgs arg)
-                {
-                    waitNoObstacleCTS.Cancel();
+                    }
+                    if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                    {
+                        LOG.TRACE($"速度恢復-減速後加速");
+
+                        AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
+                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
+
+                        while (!IsAllLaserNoTrigger())
+                        {
+                            await Task.Delay(100);
+                            if (waitNoObstacleCTS.IsCancellationRequested)
+                            {
+                                AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
+                                LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
+                                return;
+                            }
+                        }
+                        AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
+                        await Task.Delay(1000);
+                        if (!IsAllLaserNoTrigger())
+                            return;
+                    }
+                    await AGVC.CarSpeedControl(speed_control, sPEED_CONTROL_REQ_MOMENT);
+
+                    void HandleSTOPCmdRequesting(object sender, EventArgs arg)
+                    {
+                        waitNoObstacleCTS.Cancel();
+                    }
                 }
+                catch (Exception ex)
+                {
+                    LOG.ERROR(ex.StackTrace);
+                }
+                finally
+                {
+                    IsLaserRecoveryHandled = false;
+                }
+
             });
         }
         protected void AGVStatusChangeToAlarmWhenLaserTrigger()

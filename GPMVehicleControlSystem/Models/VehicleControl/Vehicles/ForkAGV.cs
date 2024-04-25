@@ -192,7 +192,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
 
-            bool _isForkRunningPreActionAndNoObstacleArround = ForkLifter.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger().Result;
+            bool _isForkRunningPreActionAndNoObstacleArround = ForkLifter.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger();
 
             if (_isLoadUnloadTaskRunning || _isForkRunningPreActionAndNoObstacleArround)
             {

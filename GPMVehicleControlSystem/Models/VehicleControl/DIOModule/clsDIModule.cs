@@ -221,13 +221,21 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             try
             {
-                VCSInputs[Indexs[signal]].OnStateChanged += handler;
+                void _HandleInputStateChanged(object? sender, bool e)
+                {
+                    Task.Run(() =>
+                    {
+                        handler.Invoke(sender, e);
+                    });
+                }
+                VCSInputs[Indexs[signal]].OnStateChanged += _HandleInputStateChanged; ;
             }
             catch (Exception ex)
             {
                 LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
             }
         }
+
 
         public virtual void UnRegistSignalStateChange(Enum signal, EventHandler<bool> handler)
         {

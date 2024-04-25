@@ -229,7 +229,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (LaserTrigger)
                 {
                     Laser3rdTriggerHandlerFlag = true;
-                    while (!await IsAllLaserNoTrigger())
+                    while (!IsAllLaserNoTrigger())
                     {
                         LOG.TRACE($"等待障礙物移除");
 

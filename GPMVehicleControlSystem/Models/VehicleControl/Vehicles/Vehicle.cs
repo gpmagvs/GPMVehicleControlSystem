@@ -533,10 +533,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal async Task<bool> IsAllLaserNoTrigger()
+        internal bool IsAllLaserNoTrigger()
         {
-            await Task.Delay(10);
-
             bool LLsrBypassState = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
             bool RLsrBypassState = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
             bool FLsrBypassState = WagoDO.GetState(DO_ITEM.Front_LsrBypass);
