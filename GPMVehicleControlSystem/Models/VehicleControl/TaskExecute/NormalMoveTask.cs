@@ -294,10 +294,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
+            await Agv.Laser.AllLaserActive();
             var _agvcActionStatus = Agv.AGVC.ActionStatus;
             if (_agvcActionStatus == ActionStatus.ACTIVE || _agvcActionStatus == ActionStatus.PENDING)
                 return true;
-            await Agv.Laser.AllLaserActive();
             return await Agv.Laser.ModeSwitch(this.RunningTaskData.ExecutingTrajecory.First().Laser, true);
         }
 
