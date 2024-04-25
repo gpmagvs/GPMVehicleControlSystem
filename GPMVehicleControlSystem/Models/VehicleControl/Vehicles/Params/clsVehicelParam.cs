@@ -170,5 +170,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsLDULDParams LDULDParams { get; set; } = new clsLDULDParams();
 
         public clsCargoExistSensorParams CargoExistSensorParams { get; set; } = new clsCargoExistSensorParams();
+        public clsAdvanceParams Advance { get; set; } = new clsAdvanceParams();
     }
 }
