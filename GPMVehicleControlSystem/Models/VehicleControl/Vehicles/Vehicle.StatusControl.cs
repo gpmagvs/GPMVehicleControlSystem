@@ -20,53 +20,53 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             return _Sub_Status;
         }
-        private object lock_obj = new object();
+        private SemaphoreSlim subStatusSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// 設定AGV目前的子狀態
         /// </summary>
         /// <param name="value"></param>
-        public void SetSub_Status(SUB_STATUS value, bool auto_stop_buzzer = true)
+        public async void SetSub_Status(SUB_STATUS value, bool auto_stop_buzzer = true)
         {
-            lock (lock_obj)
+            if (_Sub_Status != value)
             {
-
-                if (_Sub_Status != value)
+                await subStatusSemaphore.WaitAsync();
+                try
                 {
-                    var _caller = GetCallerClassName();
-                    try
+                    //var _caller = GetCallerClassName();
+                    if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
                     {
-                        if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
-                        {
-                            if (value == SUB_STATUS.DOWN)
-                                HandshakeIOOff();
-                            if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
-                                BuzzerPlayer.Alarm();
-                            DirectionLighter.CloseAll();
-                            StatusLighter.DOWN();
-                        }
-                        else if (value == SUB_STATUS.IDLE)
-                        {
-                            if (auto_stop_buzzer)
-                                BuzzerPlayer.Stop();
-                            StatusLighter.IDLE();
-                            DirectionLighter.CloseAll();
-                        }
-                        else if (value == SUB_STATUS.RUN)
-                        {
-                            StatusLighter.RUN();
-                        }
-
+                        if (value == SUB_STATUS.DOWN)
+                            HandshakeIOOff();
+                        if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
+                            BuzzerPlayer.Alarm();
+                        DirectionLighter.CloseAll();
+                        StatusLighter.DOWN();
                     }
-                    catch (Exception ex)
+                    else if (value == SUB_STATUS.IDLE)
                     {
+                        if (auto_stop_buzzer)
+                            BuzzerPlayer.Stop();
+                        StatusLighter.IDLE();
+                        DirectionLighter.CloseAll();
                     }
-
+                    else if (value == SUB_STATUS.RUN)
+                    {
+                        StatusLighter.RUN();
+                    }
+                }
+                catch (Exception ex)
+                {
+                }
+                finally
+                {
                     _Sub_Status = value;
-                    LOG.TRACE($"Sub_Status change to {value} (caller:{_caller})");
+                    LOG.TRACE($"Sub_Status change to {value}");
                     StoreStatusToDataBase();
+                    subStatusSemaphore.Release();
                 }
             }
+
             string GetCallerClassName()
             {
                 var caller_class_declaring = new StackTrace().GetFrame(2).GetMethod().DeclaringType;

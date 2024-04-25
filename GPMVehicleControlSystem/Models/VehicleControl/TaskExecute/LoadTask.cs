@@ -478,20 +478,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private async Task<bool> WaitAGVSAcceptLeaveWorkStationAsync(int timeout = 300)
         {
-            bool accept = false;
-            Agv.HandshakeStatusText = $"等待派車允許AGV退出設備..";
-            using CancellationTokenSource cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            while (!accept)
+            try
             {
-                await Task.Delay(1000);
-                if (cancelCts.IsCancellationRequested)
-                    break;
-                accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
-                Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
+                bool accept = false;
+                Agv.HandshakeStatusText = $"等待派車允許AGV退出設備..";
+                using CancellationTokenSource cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Agv.DirectionLighter.WaitPassLights(300);
+                while (!accept)
+                {
+                    await Task.Delay(1000);
+                    if (cancelCts.IsCancellationRequested)
+                        break;
+                    accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
+                    Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
+                }
+
+                return accept;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            finally
+            {
+                Agv.DirectionLighter.AbortFlash();
             }
 
-            return accept;
         }
 
         private void BackToHomeActionDoneCallback(ActionStatus status)

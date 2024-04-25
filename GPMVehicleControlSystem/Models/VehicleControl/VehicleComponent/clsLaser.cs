@@ -1,12 +1,14 @@
 ﻿
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Abstracts;
+using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using RosSharp.RosBridgeClient;
 using System.Reflection;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -200,14 +202,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.INFO($"雷射設定組 =Bypass , AGVC Direction 11", true);
                 //await FrontBackLasersEnable(false);
                 await ModeSwitch(LASER_MODE.Bypass);
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(500);
-                    if (agvDirection == clsNavigation.AGV_DIRECTION.LEFT || agvDirection == clsNavigation.AGV_DIRECTION.RIGHT)
-                        await ModeSwitch(LASER_MODE.Turning);
-                    else
-                        await ModeSwitch(AgvsLsrSetting);
-                });
 
                 return;
             }
@@ -297,5 +291,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 return toSetMode != CurrentLaserModeOfSick;
             }
         }
+
+
+       
     }
 }

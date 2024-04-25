@@ -157,8 +157,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
         private async Task WriteToDeviceAsync(clsWriteRequest to_handle_obj)
         {
-
-
             ushort startAddress = (ushort)(Start + to_handle_obj.signal.index);
 
             if (to_handle_obj.signal.index >= ShiftStart)
@@ -178,24 +176,31 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
             while (!(rollback = await ReadFromModule(startAddress, count)).SequenceEqual(writeStates))
             {
-                await Task.Delay(1);
+                await master?.WriteMultipleCoilsAsync(startAddress, writeStates);
                 if (tim.IsCancellationRequested)
                 {
                     LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
                     throw new Exception($"DO Write Timeout.");
                 }
-                master?.WriteMultipleCoils(startAddress, writeStates);
             }
-            for (int i = 0; i < writeStates.Length; i++)
-            {
-                clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == to_handle_obj.signal.index + i);
-                if (_DO != null)
-                {
-                    _DO.State = writeStates[i];
-                }
-            }
+            updateDOState();
             if (to_handle_obj.OnWriteDone != null)
                 to_handle_obj.OnWriteDone(rollback);
+
+
+            async Task updateDOState()
+            {
+
+                for (int i = 0; i < writeStates.Length; i++)
+                {
+                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == to_handle_obj.signal.index + i);
+                    if (_DO != null)
+                    {
+                        _DO.State = writeStates[i];
+                    }
+                }
+            }
+           
         }
 
         public async Task<bool> SetState(string address, bool state)

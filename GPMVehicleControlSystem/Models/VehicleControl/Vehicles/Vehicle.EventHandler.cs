@@ -22,6 +22,8 @@ using MathNet.Numerics;
 using AGVSystemCommonNet6.Alarm;
 using GPMVehicleControlSystem.Tools;
 using Microsoft.EntityFrameworkCore.Internal;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -187,14 +189,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
             {
-                { DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal},
-                { DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal},
-                { DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
-                { DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
-                { DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
-                { DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
-                { DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
-                { DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
+                //{ DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal},
+                //{ DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal},
+                //{ DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
+                //{ DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
+                //{ DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
+                //{ DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
+                //{ DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
+                //{ DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
                 { DI_ITEM.Limit_Switch_Sensor, HandleLimitSwitchSensorSignalChange},
             };
             foreach (KeyValuePair<DI_ITEM, Action<object, bool>> item in InputsEventsMap)
@@ -758,11 +760,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             Laser.agvDirection = direction;
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 {
                     Laser.LaserChangeByAGVDirection(sender, direction);
+                    if (direction == AGV_DIRECTION.BYPASS)
+                    {
+                        while (!IsAllLaserNoTrigger())
+                        {
+                            await Task.Delay(100);
+                        }
+                        if (Navigation.Direction == AGV_DIRECTION.LEFT || Navigation.Direction == AGV_DIRECTION.RIGHT)
+                        {
+                            LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
+                            await Laser.ModeSwitch(LASER_MODE.Turning);
+                        }
+                        else
+                        {
+                            await Laser.ModeSwitch(Laser.AgvsLsrSetting);
+                            LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
+                        }
+                    }
                 }
             }).ContinueWith(t =>
             {

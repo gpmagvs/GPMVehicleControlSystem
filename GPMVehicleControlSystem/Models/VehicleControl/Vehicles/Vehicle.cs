@@ -603,7 +603,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (false, "IO 模組異常");
             }
-
+            EndLaserObstacleMonitor();
             BuzzerPlayer.Stop();
             DirectionLighter.CloseAll();
             orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
@@ -886,6 +886,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            EndLaserObstacleMonitor();
             _ = Task.Run(() =>
             {
                 AGVC.EmergencyStop(bypass_stopped_check: true); //
