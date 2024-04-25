@@ -519,5 +519,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             _ActionStatus = ActionStatus.NO_GOAL;
             _IsEmergencyStopFlag = true;
         }
+
+        /// <summary>
+        ///  由車載畫面設定機器人目前位置。
+        /// </summary>
+        /// <param name="tagID"></param>
+        /// <param name="map_name"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="theta"></param>
+        /// <returns></returns>
+        public async Task<(bool confrim, string message)> SetCurrentTagID(ushort tagID, string map_name, double x, double y, double theta)
+        {
+            SetcurrentTagIDResponse response = await rosSocket.CallServiceAndWait<SetcurrentTagIDRequest, SetcurrentTagIDResponse>("/set_currentTagID",
+
+                new SetcurrentTagIDRequest
+                {
+                    tagID = tagID,
+                    map = map_name,
+                    X = x,
+                    Y = y,
+                    angle = theta
+                }
+                );
+
+            return (response == null ? false : response.confirm, response == null ? "Call Service Error" : "");
+        }
     }
 }

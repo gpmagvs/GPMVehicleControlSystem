@@ -1268,5 +1268,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
                 SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status(), false);
         }
+
+
+        /// <summary>
+        /// 進行定位
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<(bool confirm, string message)> Localization(ushort tagID, double x = -1, double y = -1)
+        {
+            double current_loc_x = x == -1 ? Navigation.Data.robotPose.pose.position.x : x;
+            double current_loc_y = y == -1 ? Navigation.Data.robotPose.pose.position.y : y;
+            double theta = Navigation.Angle;
+            (bool confrim, string message) result = await AGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
+            if (!result.confrim)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
+            }
+            return result;
+        }
     }
 }

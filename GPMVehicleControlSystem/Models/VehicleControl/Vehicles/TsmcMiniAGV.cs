@@ -555,22 +555,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return init_result;
         }
 
-        /// <summary>
-        /// 進行定位
-        /// </summary>
-        /// <returns></returns>
-        internal async Task<(bool confirm, string message)> Localization(ushort tagID, double x = -1, double y = -1)
-        {
-            double current_loc_x = x == -1 ? Navigation.Data.robotPose.pose.position.x : x;
-            double current_loc_y = y == -1 ? Navigation.Data.robotPose.pose.position.y : y;
-            double theta = Navigation.Angle;
-            (bool confrim, string message) result = await MiniAgvAGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
-            if (!result.confrim)
-            {
-                AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
-            }
-            return result;
-        }
         protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
             if (!status)
