@@ -13,6 +13,7 @@ using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using MathNet.Numerics;
 using System.Diagnostics;
 using System.Reflection;
+using System.Security.Claims;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
@@ -627,19 +628,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             SetSub_Status(SUB_STATUS.ALARM);
                             BuzzerPlayer.Alarm();
                         }
-                        foreach (var alarm in _CurrentAlarmCodeCollection)
-                        {
-                            AlarmManager.ClearAlarm(alarm);
-                        }
-                        foreach (var alarm in alarmCodeCollection)
-                        {
-                            if (alarm == AlarmCodes.RightProtection_Area3 || alarm == AlarmCodes.LeftProtection_Area3 || alarm == AlarmCodes.BackProtection_Area3 || alarm == AlarmCodes.FrontProtection_Area3)
-                                AlarmManager.AddAlarm(alarm, true);
-                            else
-                                AlarmManager.AddWarning(alarm);
-                        }
 
-
+                        //已無異常清空所有雷射異常
+                        if (!alarmCodeCollection.Any())
+                            AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
+                        else
+                        {
+                            HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
+                        }
                         if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
                         {
                             DecreaseSpeedAndRecovery();
@@ -654,6 +650,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(10);
                 }
             });
+        }
+
+        private static void HandleLaserAlarmCodes(AlarmCodes[] _CurrentAlarmCodeCollection, AlarmCodes[] alarmCodeCollection)
+        {
+            //把已不存在的異常清除，並添加新的異常
+            //Find not exist alarm
+            var alarmsNotExist = _CurrentAlarmCodeCollection.Where(alarm => !alarmCodeCollection.Contains(alarm));
+            if (alarmsNotExist.Any())
+                AlarmManager.ClearAlarm(alarmsNotExist.ToArray());
+            //Find new alarm
+            var alarmsNewCreated = alarmCodeCollection.Where(alarm => !_CurrentAlarmCodeCollection.Contains(alarm));
+
+            if (alarmsNewCreated.Any())
+            {
+                bool isAlarm(AlarmCodes alarm)
+                {
+                    return alarm == AlarmCodes.RightProtection_Area3 || alarm == AlarmCodes.LeftProtection_Area3 || alarm == AlarmCodes.BackProtection_Area3 || alarm == AlarmCodes.FrontProtection_Area3;
+                }
+                var newAlarms = alarmsNewCreated.Where(alarm => isAlarm(alarm));
+                AlarmManager.AddAlarm(newAlarms.Select(alarm => Tuple.Create(alarm, true)));
+                var newWarnings = alarmsNewCreated.Where(alarm => !isAlarm(alarm));
+                AlarmManager.AddWarning(newWarnings);
+            }
         }
 
         private ROBOT_CONTROL_CMD GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodes)
