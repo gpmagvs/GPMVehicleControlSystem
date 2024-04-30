@@ -147,7 +147,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await AGVC.EmergencyStop(true);
                     bool shutdownReady = await PCShutDownHelper.ShutdownAsync();
                     if (shutdownReady)
+                    {
+                        LOG.Critical($"Low battery level PC whill shutdown ");
                         AlarmManager.AddAlarm(AlarmCodes.Battery_Low_Level_Auto_PC_Shutdown, false);
+                    }
 
                 }
                 catch (Exception ex)
@@ -765,23 +768,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 {
                     Laser.LaserChangeByAGVDirection(sender, direction);
-                    if (direction == AGV_DIRECTION.BYPASS)
-                    {
-                        while (!IsAllLaserNoTrigger())
-                        {
-                            await Task.Delay(100);
-                        }
-                        if (Navigation.Direction == AGV_DIRECTION.LEFT || Navigation.Direction == AGV_DIRECTION.RIGHT)
-                        {
-                            LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
-                            await Laser.ModeSwitch(LASER_MODE.Turning);
-                        }
-                        else
-                        {
-                            await Laser.ModeSwitch(Laser.AgvsLsrSetting);
-                            LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
-                        }
-                    }
+                    //if (direction == AGV_DIRECTION.BYPASS)
+                    //{
+                    //    while (!IsAllLaserNoTrigger())
+                    //    {
+                    //        await Task.Delay(100);
+                    //    }
+                    //    if (Navigation.Direction == AGV_DIRECTION.LEFT || Navigation.Direction == AGV_DIRECTION.RIGHT)
+                    //    {
+                    //        LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
+                    //        await Laser.ModeSwitch(LASER_MODE.Turning);
+                    //    }
+                    //    else
+                    //    {
+                    //        await Laser.ModeSwitch(Laser.AgvsLsrSetting);
+                    //        LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
+                    //    }
+                    //}
                 }
             }).ContinueWith(t =>
             {
