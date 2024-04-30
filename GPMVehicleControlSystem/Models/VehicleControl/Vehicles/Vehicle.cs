@@ -27,6 +27,7 @@ using System.Net.Sockets;
 using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;

@@ -12,6 +12,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using SQLitePCL;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {

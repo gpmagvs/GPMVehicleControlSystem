@@ -13,6 +13,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using System.Threading.Tasks;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {

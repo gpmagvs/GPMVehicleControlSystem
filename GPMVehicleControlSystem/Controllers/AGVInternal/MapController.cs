@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models;
 using AGVSystemCommonNet6.HttpTools;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -39,7 +40,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("GetNormalStations")]
         public async Task<IActionResult> GetNormalStations()
         {
-            var datas = StaStored.CurrentVechicle.NavingMap.Points.Values.Where(pt => pt.StationType == AGVSystemCommonNet6.AGVDispatch.Messages.STATION_TYPE.Normal)
+            var datas = StaStored.CurrentVechicle.NavingMap.Points.Values.Where(pt => pt.StationType ==STATION_TYPE.Normal)
                                                              .Where(pt => !pt.IsVirtualPoint)
                                                              .Select(pt => new { tag = pt.TagNumber, name = pt.Graph.Display }).ToList();
             datas = datas.OrderBy(pt => pt.tag).ToList();
