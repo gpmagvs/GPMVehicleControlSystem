@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\AGVSystemCommonNet6\AGVSystemCommonNet6.csproj" />
-    <ProjectReference Include="..\GPMVehicleControlSystem\GPMVehicleControlSystem.csproj" />
   </ItemGroup>
 
 </Project>

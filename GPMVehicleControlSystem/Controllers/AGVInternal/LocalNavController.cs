@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using GPMVehicleControlSystem.Models.NaviMap;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {

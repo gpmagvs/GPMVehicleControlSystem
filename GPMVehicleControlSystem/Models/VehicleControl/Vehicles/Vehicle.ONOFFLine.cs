@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
