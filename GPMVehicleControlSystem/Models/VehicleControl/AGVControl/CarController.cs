@@ -114,6 +114,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public RosSocket rosSocket;
 
+        public string IOListsTopicID = "";
         /// <summary>
         /// 地圖比對率
         /// </summary>
@@ -312,8 +313,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <summary>
         /// 建立車載端的ROS Service server 
         /// </summary>
-        public abstract void AdertiseROSServices();
+        public virtual void AdertiseROSServices()
+        {
+            IOListsTopicID = rosSocket.Advertise<IOlistsMsg>("IOlists");
+        }
 
+        internal void IOListMsgPublisher(IOlistsMsg payload)
+        {
+            rosSocket.Publish(IOListsTopicID, payload);
+        }
         private void Protocol_OnClosed(object? sender, EventArgs e)
         {
             OnRosSocketDisconnected?.Invoke(this, e);

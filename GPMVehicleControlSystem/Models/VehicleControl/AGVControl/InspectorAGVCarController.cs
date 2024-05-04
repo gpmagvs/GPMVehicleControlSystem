@@ -41,7 +41,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private COMMANDS battery_lock_action_command;
         private DateTime previousStartMeasureTime = DateTime.MinValue;
         private ManualResetEvent batteryLockManualResetEvent = new ManualResetEvent(false);
-        private string IOListsTopicID = "";
         public string InstrumentMeasureServiceName => "/command_action";
         public string BatteryLockControlServiceName => "/command_actionm";
 
@@ -55,17 +54,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override void AdertiseROSServices()
         {
-            IOListsTopicID = rosSocket.Advertise<IOlistsMsg>("IOlists");
+            base.AdertiseROSServices();
+
             string _service_name = rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", InstrumentMeasureDone);
             LOG.TRACE($"Service Advertised: {_service_name}");
             _service_name = rosSocket?.AdvertiseService<Fire_Action_Request, Fire_Action_Response>("/fire_action", FireActionDoneCallback);
             LOG.TRACE($"Service Advertised: {_service_name}");
         }
 
-        internal void IOListMsgPublisher(IOlistsMsg payload)
-        {
-            rosSocket.Publish(IOListsTopicID, payload);
-        }
 
         /// <summary>
         /// 確認儀器狀態

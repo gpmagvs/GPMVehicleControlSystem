@@ -370,6 +370,59 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+        public async void StartPublishIOListsMsg()
+        {
+            await Task.Delay(10);
+            _ = Task.Run(async () =>
+            {
+                LOG.TRACE($"Start publish IOLists!");
+
+                IOlistsMsg payload = new IOlistsMsg();
+
+                IOlistMsg[] lastInputsIOTable = GetCurrentInputIOTable();
+                IOlistMsg[] lastOutputsIOTable = GetCurrentInputIOTable();
+
+                PublishIOListsMsg(lastInputsIOTable);
+                PublishIOListsMsg(lastOutputsIOTable);
+
+                while (true)
+                {
+                    await Task.Delay(1);
+
+                    IOlistMsg[] _currentInputsIOTable = GetCurrentInputIOTable();
+                    IOlistMsg[] _currentOutputsIOTable = GetCurrentOutputIOTable();
+
+                    bool _isInputsChanged = IsIOChanged(_currentInputsIOTable, lastInputsIOTable);
+                    bool _isOutputsChanged = IsIOChanged(_currentOutputsIOTable, lastOutputsIOTable);
+
+                    if (_isInputsChanged)
+                        PublishIOListsMsg(_currentInputsIOTable);
+                    if (_isOutputsChanged)
+                        PublishIOListsMsg(_currentOutputsIOTable);
+
+                    lastInputsIOTable = _currentInputsIOTable;
+                    lastOutputsIOTable = _currentOutputsIOTable;
+
+                }
+                IOlistMsg[] GetCurrentInputIOTable()
+                {
+                    return WagoDI.VCSInputs.Select(signal => new IOlistMsg("X", signal.State ? 1 : 0, WagoDI.VCSInputs.IndexOf(signal))).ToArray();
+                }
+                IOlistMsg[] GetCurrentOutputIOTable()
+                {
+                    return WagoDO.VCSOutputs.Select(signal => new IOlistMsg("Y", signal.State ? 1 : 0, WagoDO.VCSOutputs.IndexOf(signal))).ToArray();
+                }
+                void PublishIOListsMsg(IOlistMsg[] IOTable)
+                {
+                    payload.IOtable = IOTable;
+                    AGVC?.IOListMsgPublisher(payload);
+                }
+                bool IsIOChanged(IOlistMsg[] table1, IOlistMsg[] table2)
+                {
+                    return !table1.Select(io => io.Coil).SequenceEqual(table2.Select(io => io.Coil));
+                }
+            });
+        }
 
         internal virtual void CreateLaserInstance()
         {
@@ -854,6 +907,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             Laser.rosSocket = AGVC.rosSocket;
+            StartPublishIOListsMsg();
 
         }
 

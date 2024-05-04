@@ -17,6 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override void AdertiseROSServices()
         {
+            base.AdertiseROSServices();
             rosSocket.AdvertiseService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_done_action", CSTReaderDoneActionHandle);
         }
 
