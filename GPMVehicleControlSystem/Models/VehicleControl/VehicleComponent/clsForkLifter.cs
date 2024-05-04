@@ -262,7 +262,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <returns></returns>
         public async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
-            await ForkARMStop();
+            bool _checked = await ForkARMStop();
+            if (!_checked)
+                return (true, AlarmCodes.None);
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.END)
                 return (true, AlarmCodes.None);
 
@@ -348,11 +350,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸縮停止動作
         /// </summary>
         /// <returns></returns>
-        public async Task ForkARMStop()
+        public async Task<bool> ForkARMStop()
         {
-            await DOModule.SetState(DO_ITEM.Fork_Extend, false);
-            await Task.Delay(100);
-            await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
+            if (DOModule.VCSOutputs.Any(it => it.Output == DO_ITEM.Fork_Extend))
+            {
+                await DOModule.SetState(DO_ITEM.Fork_Extend, false);
+                await Task.Delay(100);
+                await DOModule.SetState(DO_ITEM.Fork_Shortend, false);
+                return true;
+            }
+            else
+                return false;
         }
 
 
@@ -689,7 +697,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return (target, false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
 
                 (bool confirm, string message) forkMoveResult = (false, "");
-               
+
 
                 if (position == FORK_HEIGHT_POSITION.UP_)
                     target = teach.Up_Pose;
@@ -761,7 +769,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             catch (TaskCanceledException ex)
             {
                 LOG.ERROR(ex);
-                return (target,false, AlarmCodes.Fork_Action_Aborted);
+                return (target, false, AlarmCodes.Fork_Action_Aborted);
             }
             catch (OperationCanceledException ex)
             {

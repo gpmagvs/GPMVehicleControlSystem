@@ -321,19 +321,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
             IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
-            LOG.TRACE($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}");
+            LOG.TRACE($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}|_eqHandshakeMode:{_eqHandshakeMode}|isNeedArmExtend:{isNeedArmExtend}");
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
-                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null)
+                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
                 {
+                    LOG.TRACE($"Cargo Transfer - ForkExtendOutAsync");
                     var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                 }
 
-                if (!TryCheckAGVStatus(out AlarmCodes alarmCode))
-                    return (false, alarmCode);
+                LOG.TRACE($"Cargo Transfer TryCheckAGVStatus");
+                var checkStatusResult = await TryCheckAGVStatus();
+                if (!checkStatusResult.success)
+                    return (false, checkStatusResult.alarmCode);
 
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
                 {
+                    LOG.TRACE($"Cargo Transfer WaitEQBusyOnAndOFF");
                     HSResult = await Agv.WaitEQBusyOnAndOFF(action);
                     if (HSResult.hs_success)
                     {
@@ -362,7 +366,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             back_to_secondary_flag = false;
             await Task.Delay(1000);
 
-            if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null)
+            if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
             {
                 ForkLifter.ForkShortenInAsync();
             }
@@ -386,19 +390,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         }
 
-        private bool TryCheckAGVStatus(out AlarmCodes alarmCode)
+        private async Task<(bool success, AlarmCodes alarmCode)> TryCheckAGVStatus()
         {
-            alarmCode = AlarmCodes.None;
+            var alarmCode = AlarmCodes.None;
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while ((alarmCode = CheckAGVStatus()) != AlarmCodes.None)
             {
-                Thread.Sleep(100);
+                await Task.Delay(1000);
                 if (cts.IsCancellationRequested)
                 {
                     break;
                 }
             }
-            return alarmCode == AlarmCodes.None;
+            return (alarmCode == AlarmCodes.None, alarmCode);
         }
 
         private async Task<(bool success, AlarmCodes alarmCode)> StartBackToHome()
@@ -631,6 +635,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             DBhelper.ModifyUDLUDRecord(lduld_record);
         }
+        private bool isNeedArmExtend => Agv.WorkStations.Stations[destineTag].ForkArmExtend;
 
         private async Task<(bool success, AlarmCodes alarmcode)> ForkActionsInWorkStation()
         {
@@ -640,7 +645,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             bool arm_move_Done = false;
             (bool confirm, string message) armMoveing = (false, "等待DO輸出");
-            var isNeedArmExtend = Agv.WorkStations.Stations[destineTag].ForkArmExtend;
 
             if (isNeedArmExtend)
             {
