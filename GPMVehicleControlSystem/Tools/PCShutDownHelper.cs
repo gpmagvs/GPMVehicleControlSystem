@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Tools
                 Process proc = new Process();
                 proc.StartInfo = procStartInfo;
 
-                LOG.WARN($"PC Will Shutdown after {PCShutDownHelper.ShutdownDelayTimeSec} sec...");
+                LOG.WARN($"PC Will Shutdown after {ShutdownDelayTimeSec} sec...");
                 Stopwatch sw = Stopwatch.StartNew();
                 while (sw.Elapsed.Seconds < ShutdownDelayTimeSec)
                 {

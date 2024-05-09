@@ -111,7 +111,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
         {
-            if (Parameters.Advance.ShutDownPCWhenLowBatteryLevel)
+            bool _isCharging = Batteries.Any(bat => bat.Value.Data.chargeCurrent > 0);
+            if (Parameters.Advance.ShutDownPCWhenLowBatteryLevel && _isCharging)
             {
                 ShutdownPCTask();
             }
@@ -148,6 +149,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     bool shutdownReady = await PCShutDownHelper.ShutdownAsync();
                     if (shutdownReady)
                     {
+                        await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
                         LOG.Critical($"Low battery level PC whill shutdown ");
                         AlarmManager.AddAlarm(AlarmCodes.Battery_Low_Level_Auto_PC_Shutdown, false);
                     }
