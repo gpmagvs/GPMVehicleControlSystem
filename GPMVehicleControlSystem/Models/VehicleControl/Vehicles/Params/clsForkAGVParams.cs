@@ -27,6 +27,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
         public clsForkInit InitParams = new clsForkInit();
+
+        public clsForkSpeedParams ManualModeOperationSpeed { get; set; } = new clsForkSpeedParams();
+        public clsForkSpeedParams AutoModeOperationSpeed { get; set; } = new clsForkSpeedParams();
     }
     public class clsForkInit
     {
@@ -39,5 +42,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// </summary>
         public double ForkInitActionSpeedWithoutCargo { get; set; } = 0.5;
 
+    }
+
+    public class clsForkSpeedParams
+    {
+        /// <summary>
+        /// 0~1 速度比例
+        /// </summary>
+        public double MoveToPoseSpeed { get; set; } = 0.5;
     }
 }

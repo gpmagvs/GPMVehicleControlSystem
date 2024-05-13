@@ -12,6 +12,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     public partial class VMSController
     {
         private ForkAGV forkAgv => agv as ForkAGV;
+        private double MoveToPoseSpeedOfManualMode => forkAgv.Parameters.ForkAGV.ManualModeOperationSpeed.MoveToPoseSpeed;
 
         private object GetMappData()
         {
@@ -128,6 +129,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             if (speed == 0)
                 speed = 1;
+
+            bool _isMoveToPoseOperation = action != "home" && action != "orig";
+
+            if (_isMoveToPoseOperation)
+                speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
 
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
