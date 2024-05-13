@@ -899,7 +899,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     DirectionLighter.CloseAll();
                     DOSettingWhenEmoTrigger();
                 });
-
+                EndLaserObstacleMonitor();
                 RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
                 IsWaitForkNextSegmentTask = false;
                 InitializeCancelTokenResourece.Cancel();

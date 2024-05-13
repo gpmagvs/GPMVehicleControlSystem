@@ -63,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             Agv.Sub_Status = SUB_STATUS.IDLE;
+            Agv.EndLaserObstacleMonitor();
             await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH);
             return (true, AlarmCodes.None);
         }

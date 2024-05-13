@@ -127,14 +127,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange);
+
         }
         private bool HandleChargeTaskTryOpenChargeCircuit()
         {

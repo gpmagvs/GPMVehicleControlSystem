@@ -5,10 +5,13 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -198,13 +201,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             };
                         }
                     }
-
+                    StartLaserObstacleMonitor();
                     var result = await ExecutingTaskModel.Execute();
                     if (result != AlarmCodes.None)
                     {
                         AGVSResetCmdFlag = false;
                         Sub_Status = SUB_STATUS.DOWN;
-
                         LOG.Critical($"{action} 任務失敗:Alarm:{result}");
                         AlarmManager.AddAlarm(result, false);
                         AGVC.OnAGVCActionChanged = null;
@@ -526,6 +528,159 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+        private CancellationTokenSource LaserObsMonitorCancel = new CancellationTokenSource();
+        public bool IsLaserMonitoring => !LaserObsMonitorCancel.IsCancellationRequested;
+        public void EndLaserObstacleMonitor()
+        {
+            LaserObsMonitorCancel.Cancel();
+        }
+        public void StartLaserObstacleMonitor()
+        {
+            if (IsLaserMonitoring)
+                return;
 
+            ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
+            AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
+            LaserObsMonitorCancel = new CancellationTokenSource();
+            Task.Run(async () =>
+            {
+                async Task DecreaseSpeedAndRecovery()
+                {
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                    Stopwatch timer = Stopwatch.StartNew();
+                    while (timer.Elapsed.Seconds < 1)
+                    {
+                        await Task.Delay(1);
+                        if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                            return;
+                    }
+
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                }
+                while (true)
+                {
+                    if (LaserObsMonitorCancel.IsCancellationRequested)
+                        return;
+
+                    var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+                    if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
+                    {
+                        if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
+                        {
+                            Sub_Status=cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING;
+                            if (ExecutingTaskModel.action == ACTION_TYPE.None)
+                                BuzzerPlayer.Move();
+                            else if (ExecutingTaskModel.action == ACTION_TYPE.Charge)
+                                BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                            else
+                                BuzzerPlayer.Action();
+                        }
+                        else
+                        {
+                            Sub_Status=SUB_STATUS.ALARM;
+                            BuzzerPlayer.Alarm();
+                        }
+
+                        //已無異常清空所有雷射異常
+                        if (!alarmCodeCollection.Any())
+                            AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
+                        else
+                        {
+                            HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
+                        }
+                        if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                        {
+                            DecreaseSpeedAndRecovery();
+                        }
+                        else
+                            await AGVC.CarSpeedControl(cmdGet);
+
+
+                        _CurrentRobotControlCmd = cmdGet;
+                        _CurrentAlarmCodeCollection = alarmCodeCollection;
+                    }
+                    await Task.Delay(10);
+                }
+            });
+        }
+
+        private static void HandleLaserAlarmCodes(AlarmCodes[] _CurrentAlarmCodeCollection, AlarmCodes[] alarmCodeCollection)
+        {
+            //把已不存在的異常清除，並添加新的異常
+            //Find not exist alarm
+            var alarmsNotExist = _CurrentAlarmCodeCollection.Where(alarm => !alarmCodeCollection.Contains(alarm));
+            if (alarmsNotExist.Any())
+                AlarmManager.ClearAlarm(alarmsNotExist.ToArray());
+            //Find new alarm
+            var alarmsNewCreated = alarmCodeCollection.Where(alarm => !_CurrentAlarmCodeCollection.Contains(alarm));
+
+            if (alarmsNewCreated.Any())
+            {
+                bool isAlarm(AlarmCodes alarm)
+                {
+                    return alarm == AlarmCodes.RightProtection_Area3 || alarm == AlarmCodes.LeftProtection_Area3 || alarm == AlarmCodes.BackProtection_Area3 || alarm == AlarmCodes.FrontProtection_Area3;
+                }
+                var newAlarms = alarmsNewCreated.Where(alarm => isAlarm(alarm));
+                AlarmManager.AddAlarm(newAlarms.Select(alarm => Tuple.Create(alarm, true)));
+                var newWarnings = alarmsNewCreated.Where(alarm => !isAlarm(alarm));
+                AlarmManager.AddWarning(newWarnings);
+            }
+        }
+
+        private ROBOT_CONTROL_CMD GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodes)
+        {
+            List<AlarmCodes> alarmcodesList = new List<AlarmCodes>();
+
+            bool frontBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Front_LsrBypass);
+            bool backBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Back_LsrBypass);
+            bool rightSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
+            bool leftSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
+
+            bool rightSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
+            bool leftSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);
+
+            bool frontDecreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_1);
+            bool frontStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_3);
+            bool backDecreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_1);
+            bool backStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_3);
+
+            bool rightNearObs = (rightSideOn && !rightSideBypass);
+            bool leftNearObs = (leftSideOn && !leftSideBypass);
+            bool frontNearObs = (frontStopOn && !frontBypass);
+            bool backNearObs = (backStopOn && !backBypass);
+
+            bool frontFarObs = (frontDecreaseOn && !frontBypass);
+            bool backFarObs = (backDecreaseOn && !backBypass);
+
+            if (rightNearObs || leftNearObs || frontNearObs || backNearObs)
+            {
+
+                if (rightNearObs)
+                    alarmcodesList.Add(AlarmCodes.RightProtection_Area3);
+                if (leftNearObs)
+                    alarmcodesList.Add(AlarmCodes.LeftProtection_Area3);
+                if (frontNearObs)
+                    alarmcodesList.Add(AlarmCodes.FrontProtection_Area3);
+                if (backNearObs)
+                    alarmcodesList.Add(AlarmCodes.BackProtection_Area3);
+
+                alarmCodes = alarmcodesList.ToArray();
+                return ROBOT_CONTROL_CMD.STOP;
+            }
+            else if (frontFarObs || backFarObs)
+            {
+                if (frontFarObs)
+                    alarmcodesList.Add(AlarmCodes.FrontProtection_Area2);
+                if (backFarObs)
+                    alarmcodesList.Add(AlarmCodes.BackProtection_Area2);
+                alarmCodes = alarmcodesList.ToArray();
+                return ROBOT_CONTROL_CMD.DECELERATE;
+            }
+            else
+            {
+                alarmCodes = alarmcodesList.ToArray();
+                return ROBOT_CONTROL_CMD.SPEED_Reconvery;
+            }
+        }
     }
 }

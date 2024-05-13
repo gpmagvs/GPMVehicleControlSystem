@@ -418,7 +418,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             OnSickLocalicationDataUpdated?.Invoke(this, _LocalizationControllerResult);
         }
 
-
+        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
+        {
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name, SPEED_CONTROL_REQ_MOMENT.UNKNOWN, true);
+        }
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
             await CarSpeedControl(cmd, RunningTaskData.Task_Name, moment, CheckLaserStatus);
