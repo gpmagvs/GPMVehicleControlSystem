@@ -665,7 +665,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSResetCmdFlag = false;
             InitializeCancelTokenResourece = new CancellationTokenSource();
             AlarmManager.ClearAlarm();
-            clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
             _RunTaskData = new clsTaskDownloadData();
             SaveParameters(Parameters);
             HandshakeStatusText = "";
@@ -722,6 +721,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     CarController.AGVS_SPEED_CONTROL_REQUEST = CarController.ROBOT_CONTROL_CMD.NONE;
                     IsInitialized = true;
                     LOG.INFO("Init done, and Laser mode chaged to Bypass");
+                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
                     return (true, "");
                 }
                 catch (TaskCanceledException ex)
