@@ -259,13 +259,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            if (action == ACTION_TYPE.None)
+            if (action == ACTION_TYPE.None || action == ACTION_TYPE.Charge)
             {
                 BuzzerPlayer.Move();
             }
             else
             {
-                BuzzerPlayer.Action(action == ACTION_TYPE.Charge);
+                BuzzerPlayer.Action();
             }
         }
         public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;

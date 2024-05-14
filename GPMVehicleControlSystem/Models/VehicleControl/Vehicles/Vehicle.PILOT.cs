@@ -533,11 +533,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public void EndLaserObstacleMonitor()
         {
             LaserObsMonitorCancel.Cancel();
+            LOG.WARN($"EndLaserObstacleMonitor");
         }
         public void StartLaserObstacleMonitor()
         {
+            LOG.INFO($"StartLaserObstacleMonitor");
             if (IsLaserMonitoring)
+            {
+                LOG.INFO($"Laser Monitor is already running. ");
                 return;
+            }
 
             ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
             AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
@@ -567,7 +572,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
                         {
-                            Sub_Status=cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING;
+                            Sub_Status = cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING;
                             if (ExecutingTaskModel.action == ACTION_TYPE.None)
                                 BuzzerPlayer.Move();
                             else if (ExecutingTaskModel.action == ACTION_TYPE.Charge)
@@ -577,7 +582,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else
                         {
-                            Sub_Status=SUB_STATUS.ALARM;
+                            Sub_Status = SUB_STATUS.ALARM;
                             BuzzerPlayer.Alarm();
                         }
 

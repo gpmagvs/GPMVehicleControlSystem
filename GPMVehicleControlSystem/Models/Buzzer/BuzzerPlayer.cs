@@ -8,6 +8,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Protocols;
+using AGVSystemCommonNet6;
 
 namespace GPMVehicleControlSystem.Models.Buzzer
 {
@@ -17,6 +18,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
         internal static bool IsMovingPlaying = false;
+        internal static bool IsGotoChargeStationPlaying = false;
         internal static bool IsMeasurePlaying = false;
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
@@ -24,107 +26,108 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         public static OnBuzzerPlayDelate OnBuzzerPlay;
         public delegate SOUNDS BuzzerMovePlayDelate();
         public static BuzzerMovePlayDelate BeforeBuzzerMovePlay;
-
-        public static async void Alarm()
+        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+        public static void Alarm()
         {
             if (IsAlarmPlaying)
                 return;
-            _ = Task.Run(async () =>
-            {
-                await Stop();
-                await Play(SOUNDS.Alarm);
-                IsAlarmPlaying = true;
-            });
+            Play(SOUNDS.Alarm);
         }
-        public static async void Action(bool IsCharge = false)
+        public static void Action()
         {
             if (IsActionPlaying)
                 return;
-            _ = Task.Run(async () =>
-            {
-                await Stop();
-                await Play(IsCharge ? SOUNDS.GoToChargeStation : SOUNDS.Action);
-                IsActionPlaying = true;
-            });
+            Play(SOUNDS.Action);
         }
-        public static async void Move()
+        public static void Move()
         {
             if (IsMovingPlaying)
                 return;
-            _ = Task.Run(async () =>
-            {
-                await Stop();
+            var _sound = SOUNDS.Move;
+            if (BeforeBuzzerMovePlay != null)
+                _sound = BeforeBuzzerMovePlay();
+            if (_sound == SOUNDS.GoToChargeStation && IsGotoChargeStationPlaying) return;
 
-                var _sound = SOUNDS.Move;
-                if (BeforeBuzzerMovePlay != null)
-                    _sound = BeforeBuzzerMovePlay();
-                if (_sound == SOUNDS.GoToChargeStation)
-                    LOG.WARN($"Play Go to charge station sound because destine is front of charge station.");
-
-                await Play(_sound);
-                IsMovingPlaying = true;
-            });
+            Play(_sound);
         }
 
-        public static async void Handshaking()
+        public static void Handshaking()
         {
             if (IsHandshakingPlaying)
                 return;
-            await Stop();
-            await Play(SOUNDS.Handshaking);
-            IsHandshakingPlaying = true;
+            Play(SOUNDS.Handshaking);
         }
 
-        internal static async void Measure()
+        internal static void Measure()
         {
             if (IsMeasurePlaying)
                 return;
-            _ = Task.Run(async () =>
-            {
-                await Stop();
-                await Play(SOUNDS.Measure);
-                IsMeasurePlaying = true;
-            });
+            Play(SOUNDS.Measure);
         }
 
-        internal static async void ExchangeBattery()
+        internal static void ExchangeBattery()
         {
             if (IsExchangeBatteryPlaying)
                 return;
-            _ = Task.Run(async () =>
-            {
-                await Stop();
-                await Play(SOUNDS.Exchange);
-                IsExchangeBatteryPlaying = true;
-            });
+            Play(SOUNDS.Exchange);
         }
-        internal static async Task Stop()
+        internal static void Stop()
         {
-            await Play(SOUNDS.Stop);
-            IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+            Play(SOUNDS.Stop);
         }
-        public static async Task Play(SOUNDS sound)
+
+        public static async void Play(SOUNDS sound)
         {
             try
             {
-                if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
-                {
-                    bool confirm = OnBuzzerPlay.Invoke();
-                    if (!confirm)
-                        return;
-                }
-                if (rossocket == null)
-                    return;
-                await Task.Delay(10);
+                await semaphore.WaitAsync();
 
-                PlayMusicResponse response = await rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                if (sound == SOUNDS.Stop)
                 {
-                    file_path = sound.ToString().ToLower()
+                    IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+                }
+                else
+                {
+                    IsMovingPlaying = sound == SOUNDS.Move;
+                    IsGotoChargeStationPlaying = sound == SOUNDS.GoToChargeStation;
+                    IsActionPlaying = sound == SOUNDS.Action;
+                    IsAlarmPlaying = sound == SOUNDS.Alarm;
+                    IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
+                    IsHandshakingPlaying = sound == SOUNDS.Handshaking;
+                }
+
+                LOG.WARN($"Playing Sound : {sound}");
+                Thread playsound_thred = new Thread(() =>
+                {
+                    try
+                    {
+                        if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                        {
+                            bool confirm = OnBuzzerPlay.Invoke();
+                            if (!confirm)
+                                return;
+                        }
+                        if (rossocket == null)
+                            return;
+                        PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                        {
+                            file_path = sound.ToString().ToLower()
+                        }).Result;
+                    }
+                    catch (Exception ex)
+                    {
+                        LOG.ERROR(ex);
+                    }
                 });
+                playsound_thred.IsBackground = false;
+                playsound_thred.Start();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                LOG.ERROR(ex);
+            }
+            finally
+            {
+                semaphore.Release();
             }
         }
 

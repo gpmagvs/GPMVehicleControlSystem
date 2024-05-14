@@ -12,7 +12,7 @@ using static AGVSystemCommonNet6.clsEnums;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-Console.Title = $"ó更╰参-{StaStored.APPVersion}";
+Console.Title = $"GPMó更-{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 _ = Task.Run(() =>
@@ -59,7 +59,7 @@ void VehicheAndWagoIOConfiguraltion()
         else
             StaStored.CurrentVechicle = new DemoMiniAGV();
     }
-    if(StaStored.CurrentVechicle==null)
+    if (StaStored.CurrentVechicle == null)
     {
         Console.WriteLine($"ó进篶﹍て钵盽钵盽");
         Environment.Exit(1);

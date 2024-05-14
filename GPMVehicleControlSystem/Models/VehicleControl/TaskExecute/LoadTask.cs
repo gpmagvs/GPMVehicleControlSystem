@@ -60,7 +60,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Agv.Laser.SideLasersEnable(false);
                 await Agv.Laser.FrontBackLasersEnable(false);
                 await Task.Delay(200);
-                return await Agv.Laser.ModeSwitch(LASER_MODE.Bypass);
+                return await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
             }
             catch (Exception ex)
             {
@@ -337,9 +337,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
 
                     await Agv.Laser.AllLaserDisable();
-                    await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+                    await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
                     await Agv.Laser.FrontBackLasersEnable(false, true);
-
+                    Agv.StartLaserObstacleMonitor();
                     SendActionCheckResult send_task_result = await TransferTaskToAGVC();
                     if (!send_task_result.Accept)
                     {

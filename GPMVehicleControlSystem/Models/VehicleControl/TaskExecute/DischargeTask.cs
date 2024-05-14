@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             try
             {
                 await Agv.Laser.AllLaserDisable();
-                await Agv.Laser.ModeSwitch(LASER_MODE.Loading);
+                await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
                 await Agv.Laser.FrontBackLasersEnable(false, true);
                 return true;
             }
