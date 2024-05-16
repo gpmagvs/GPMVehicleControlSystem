@@ -687,7 +687,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     {
-                        Thread.Sleep(1);
+                        await Task.Delay(1);
                         if (cts.IsCancellationRequested)
                         {
                             return (false, AlarmCodes.Fork_Arm_Pose_Error);
@@ -793,18 +793,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            _ = Task.Factory.StartNew(() =>
-            {
-                while (!_wait_fork_reach_position_cst.IsCancellationRequested)
-                {
-                    Thread.Sleep(1);
-                    Agv.HandshakeStatusText = $"AGV牙叉下降至放貨高度..({ForkLifter.CurrentHeightPosition} cm)";
-                }
-            });
+            WaitForkReachPoseAndUpdateStatusText(_wait_fork_reach_position_cst);
             var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return result;
 
+        }
+
+        private async Task WaitForkReachPoseAndUpdateStatusText(CancellationTokenSource _wait_fork_reach_position_cst)
+        {
+            while (!_wait_fork_reach_position_cst.IsCancellationRequested)
+            {
+                await Task.Delay(1);
+                Agv.HandshakeStatusText = $"AGV牙叉下降至放貨高度..({ForkLifter.CurrentHeightPosition} cm)";
+            }
         }
 
         protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()

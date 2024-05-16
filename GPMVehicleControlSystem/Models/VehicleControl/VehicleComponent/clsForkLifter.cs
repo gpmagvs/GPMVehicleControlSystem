@@ -276,7 +276,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.WARN($"Wait Fork Extent DO ON..({_DO_USE_TO_EXTEND_FORK})");
                 while (!DOModule.GetState(_DO_USE_TO_EXTEND_FORK))
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     if (cts.IsCancellationRequested)
                         return (false, AlarmCodes.Fork_Arm_Action_Timeout);
                 }
@@ -287,7 +287,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     cts.TryReset();
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                     {
-                        Thread.Sleep(1);
+                        await Task.Delay(1);
                         bool isStopState = !DOModule.GetState(DO_ITEM.Fork_Extend) && !DOModule.GetState(DO_ITEM.Fork_Shortend);
                         if (isStopState)
                             return (true, AlarmCodes.None);
@@ -315,7 +315,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
             ForkARMStop();
-            Thread.Sleep(400);
+            await Task.Delay(400);
             if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
                 return (true, "");
 
@@ -412,7 +412,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                     _isInitializeDone = CurrentForkLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentHeightPosition - 0) < 0.01;
                     await NoBypassLimitSensor();
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
 
 
@@ -438,7 +438,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                     double _pose = CurrentHeightPosition - 0.1;
                     await ForkPose(_pose, 1);
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
                 await ForkPositionInit();
             }
@@ -482,7 +482,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         throw new Exception("AGV Status Down");
                     }
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                 }
 
                 await ForkStopAsync();

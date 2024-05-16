@@ -54,29 +54,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            Agv.WaitingForChargeStatusChangeFlag = true;
+            DelayChargeStatusJudgeWork();
             await Task.Delay(1000);
             Agv._IsCharging = true;
             Agv.SetSub_Status(SUB_STATUS.Charging);
             BuzzerPlayer.Stop();
             //將狀態設為充電中後 ,開始等待電池真正開始充電
 
-            _ = Task.Run(async () =>
-            {
-                var _delayTime = Agv.Parameters.BatteryModule.WaitChargeStartDelayTimeWhenReachChargeTaskFinish;
-                int _time_count_down = _delayTime;
-                Timer timer = new Timer(new TimerCallback((s) =>
-                {
-                    LOG.INFO($"AGV Sub Status Will Changed by charge state after {_time_count_down} second ");
-                    _time_count_down--;
-                }), null, 0, 1000);
-                Thread.Sleep(TimeSpan.FromSeconds(_delayTime));
-                LOG.INFO($"Agv.WaitingForChargeStatusChangeFlag = false");
-                timer.Dispose();
-                Agv.WaitingForChargeStatusChangeFlag = false;
-            });
 
             return (true, AlarmCodes.None);
+        }
+
+        private async Task DelayChargeStatusJudgeWork()
+        {
+            Agv.WaitingForChargeStatusChangeFlag = true;
+            var _delayTime = Agv.Parameters.BatteryModule.WaitChargeStartDelayTimeWhenReachChargeTaskFinish;
+            int _time_count_down = _delayTime;
+            Timer timer = new Timer(new TimerCallback((s) =>
+            {
+                LOG.INFO($"AGV Sub Status Will Changed by charge state after {_time_count_down} second ");
+                _time_count_down--;
+            }), null, 0, 1000);
+            await Task.Delay(TimeSpan.FromSeconds(_delayTime));
+            LOG.INFO($"Agv.WaitingForChargeStatusChangeFlag = false");
+            timer.Dispose();
+            Agv.WaitingForChargeStatusChangeFlag = false;
         }
     }
 }

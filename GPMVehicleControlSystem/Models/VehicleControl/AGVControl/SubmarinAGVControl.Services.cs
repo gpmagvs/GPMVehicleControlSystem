@@ -57,7 +57,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
 
-            Thread.Sleep(1);
+            await Task.Delay(1);
             wait_cst_ack_MRE = new ManualResetEvent(false);
             cst_reader_confirm_ack = null;
             var cst_reader_command = "read_try";
@@ -74,19 +74,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
             while (cst_reader_confirm_ack == null)
             {
-                Thread.Sleep(1);
-                await Task.Run(() =>
+                await Task.Delay(1);
+                LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
+                string id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
                 {
-                    LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
-                    var id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
-                    {
-                        command = cst_reader_command,
-                        model = "FORK"
-                    });
-                    LOG.TRACE($"Call Service /CSTReader_action done. id={id} ", false);
+                    command = cst_reader_command,
+                    model = "FORK"
                 });
-
-                LOG.TRACE($"Call Service /CSTReader_action, command ,WaitOne", false);
                 wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(10));
                 if (cst_reader_confirm_ack != null)
                 {
@@ -128,7 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     {
                         if (waitCstActionDoneCts.IsCancellationRequested)
                             break;
-                        Thread.Sleep(1);
+                        await Task.Delay(1);
                     }
 
                 });
@@ -140,7 +134,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     if (CSTActionResult != "done")
                         AbortCSTReader();
 
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                     var cst_id = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
                     LOG.TRACE($"Inovke CSTReaderAction Done event with CST ID = {cst_id}", false);
                     OnCSTReaderActionDone?.Invoke(this, cst_id);

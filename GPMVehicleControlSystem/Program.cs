@@ -103,11 +103,11 @@ builder.Services.Configure<JsonOptions>(options =>
 });
 AlarmManager.AddAlarm(AlarmCodes.None, true);
 
-_ = Task.Run(() =>
+_ = Task.Run(async () =>
 {
     while (true)
     {
-        Thread.Sleep(1);
+        await Task.Delay(1);
         var _input = Console.ReadLine()?.ToLower();
         Console.WriteLine(_input);
         if (_input == "clear" || _input == "clc")

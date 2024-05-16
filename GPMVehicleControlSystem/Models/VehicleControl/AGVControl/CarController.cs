@@ -274,7 +274,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     rosSocket = null;
                     Console.WriteLine("ROS Bridge Server Connect Fail...Will Retry After 5 Secnonds...Error Message : " + ex.Message);
-                    Thread.Sleep(5000);
+                    await Task.Delay(5000);
                 }
             }
             Connected = true;

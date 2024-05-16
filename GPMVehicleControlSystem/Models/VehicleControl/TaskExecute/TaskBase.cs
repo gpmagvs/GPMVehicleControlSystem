@@ -605,12 +605,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Run(async () =>
             {
                 while (!_wait_fork_reach_position_cst.IsCancellationRequested)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     Agv.HandshakeStatusText = $"AGV牙叉動作中({ForkLifter.CurrentHeightPosition} cm)";
                 }
             });
@@ -662,11 +661,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 while (!cancelDetectCTS.IsCancellationRequested)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                 }
                 if (!detected)
                 {

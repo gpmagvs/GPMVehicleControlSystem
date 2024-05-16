@@ -39,9 +39,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 for (int i = 0; i < 2; i++)
                 {
                     agv.DirectionLighter.OpenAll();
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                     agv.DirectionLighter.CloseAll();
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
             });
             return;

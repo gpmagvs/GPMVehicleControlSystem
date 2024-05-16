@@ -90,7 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 while (!IsPinActionDone)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     if (_wait.IsCancellationRequested)
                     {
                         LOG.ERROR($"Pin-{request.command} request timeout");

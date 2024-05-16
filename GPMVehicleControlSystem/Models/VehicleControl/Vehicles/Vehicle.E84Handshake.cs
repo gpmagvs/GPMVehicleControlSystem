@@ -378,24 +378,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async void StartWatchAGVStatusAsync()
         {
             LOG.TRACE($"Start Watch AGV Status");
-            await Task.Run(() =>
+            while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
             {
-                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
+                await Task.Delay(1);
+                if (GetSub_Status() == SUB_STATUS.DOWN)
                 {
-                    Thread.Sleep(1);
-                    if (GetSub_Status() == SUB_STATUS.DOWN)
+                    if (!IsEQAbnormal_when_handshaking && !IsEQBusy_when_AGV_Busy && !IsEQGoOFF_When_Handshaking && !IsEQREQOFF_when_wait_EQREADY_when_handshaking)
                     {
-                        if (!IsEQAbnormal_when_handshaking && !IsEQBusy_when_AGV_Busy && !IsEQGoOFF_When_Handshaking && !IsEQREQOFF_when_wait_EQREADY_when_handshaking)
-                        {
-                            IsAGVAbnormal_when_handshaking = true;
-                            hs_abnormal_happen_cts.Cancel();
-                            LOG.TRACE($"Watch AGV Status Finish(AGV DOWN)");
-                        }
-                        return;
+                        IsAGVAbnormal_when_handshaking = true;
+                        hs_abnormal_happen_cts.Cancel();
+                        LOG.TRACE($"Watch AGV Status Finish(AGV DOWN)");
                     }
+                    return;
                 }
-                LOG.TRACE($"Watch AGV Status Finish(Handshake Finish)");
-            });
+            }
+            LOG.TRACE($"Watch AGV Status Finish(Handshake Finish)");
         }
 
         private void HandleEQReadOFF(object? sender, EventArgs e)
@@ -574,7 +571,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Signal.GetType().Name == "EQ_HSSIGNAL")
                 HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
             StartTimer(Timer);
-            bool changed_done = WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts, HandshakeStatusText);
+            bool changed_done = await WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts, HandshakeStatusText);
             LOG.WARN($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
             AlarmCodes _alarmcode = AlarmCodes.None;
@@ -634,14 +631,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return $"等待 {signal} 訊號 {eXPECTED_State}";
         }
 
-        private bool WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null, string handshakeText = "")
+        private async Task<bool> WaitHSSignalStateChanged(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, int timeout = 50, CancellationTokenSource cancellation = null, string handshakeText = "")
         {
             // LOG.TRACE($"[交握訊號變化等待] Wait {Signal} change to {EXPECTED_State}...");
             CancellationTokenSource _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             Stopwatch stopwatch = Stopwatch.StartNew();
             while (_GetState(Signal) != (EXPECTED_State == HS_SIGNAL_STATE.ON) ? true : false)
             {
-                Thread.Sleep(1);
+                await Task.Delay(1);
                 _HandshakeStatusText = handshakeText + $"-{stopwatch.Elapsed}";
                 if (cancellation != null && cancellation.IsCancellationRequested)
                 {

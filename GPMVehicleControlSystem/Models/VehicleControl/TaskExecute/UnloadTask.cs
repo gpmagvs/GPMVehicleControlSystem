@@ -65,11 +65,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            _ = Task.Factory.StartNew(() =>
+            Task.Run(async () =>
             {
                 while (!_wait_fork_reach_position_cst.IsCancellationRequested)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     Agv.HandshakeStatusText = $"AGV牙叉上升至取貨高度...({ForkLifter.CurrentHeightPosition} cm)";
                 }
             });

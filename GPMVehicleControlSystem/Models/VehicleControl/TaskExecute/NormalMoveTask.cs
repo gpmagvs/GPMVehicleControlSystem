@@ -130,11 +130,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal void StartTrackingSecondaryPointReach()
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 while (Agv.GetSub_Status() == SUB_STATUS.RUN)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
                     var _currentTag = Agv.BarcodeReader.CurrentTag;
                     if (_currentTag == null)
                         continue;

@@ -78,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LOG.WARN($"Handshake Signal excahge via ModbusTcp Process START");
                 while (true)
                 {
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
                     if (HandshakingModbusTcpProcessCancel.IsCancellationRequested)
                     {
                         if (Connected)
@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                     if (!Connected)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000);
                         Connected = Connect();
                         continue;
                     }
