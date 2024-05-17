@@ -62,8 +62,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             cst_reader_confirm_ack = null;
             var cst_reader_command = "read_try";
             int retry_cnt = 0;
-            if (cst_type == CST_TYPE.None)
+            if (cst_type == CST_TYPE.None || (int)cst_type == -1)
             {
+                LOG.ERROR($"從派車接收到的 CST TYPE={cst_type}({(int)cst_type})=> 沒有定義");
                 if (OnCstTriggerButTypeUnknown == null)
                     AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
                 else
@@ -72,6 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
             }
             cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
+            LOG.WARN($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
             while (cst_reader_confirm_ack == null)
             {
                 await Task.Delay(1);
