@@ -547,7 +547,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// </summary>
         protected virtual bool StartFrontendObstcleDetection(ALARM_LEVEL alarmLevel)
         {
-            var IsObstacleDetected = Agv.WagoDI.GetState(Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? DI_ITEM.FrontProtection_Obstacle_Sensor : DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+            IO_CONTACT_POINT _PointType = Agv.Parameters.LOAD_OBS_DETECTION.ContactPointType;
+            DI_ITEM _inputDI = Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD ? DI_ITEM.FrontProtection_Obstacle_Sensor : DI_ITEM.Fork_Frontend_Abstacle_Sensor;
+            var IsObstacleDetected = Agv.WagoDI.GetState(_inputDI);
+            IsObstacleDetected = _PointType == IO_CONTACT_POINT.A ? IsObstacleDetected : !IsObstacleDetected;
             var options = Agv.Parameters.LOAD_OBS_DETECTION;
             bool Enable = action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad;
             if (!Enable)
@@ -568,22 +571,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Stopwatch stopwatch = Stopwatch.StartNew();
             bool detected = false;
 
-            void FrontendObsSensorDetectAction(object sender, EventArgs e)
+            void _HandleInputStateChange(object? sender, bool boolState)
             {
-                detected = true;
-                if (!cancelDetectCTS.IsCancellationRequested)
+                if (_IsDetected(boolState))
                 {
-                    cancelDetectCTS.Cancel();
-                    stopwatch.Stop();
-                    LOG.Critical($"前方障礙物預檢知觸發[等級={alarmLevel}](在第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
-                    if (alarmLevel == ALARM_LEVEL.ALARM)
-                        EMO_STOP_AGV();
-                    else
-                        AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+                    detected = true;
+                    if (!cancelDetectCTS.IsCancellationRequested)
+                    {
+                        cancelDetectCTS.Cancel();
+                        stopwatch.Stop();
+                        LOG.Critical($"前方障礙物預檢知觸發[等級={alarmLevel}](在第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
+                        if (alarmLevel == ALARM_LEVEL.ALARM)
+                            EMO_STOP_AGV();
+                        else
+                            AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+                    }
+                }
+                bool _IsDetected(bool inputState)
+                {
+                    return _PointType == IO_CONTACT_POINT.A ? inputState : !inputState;
                 }
             }
-            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
-
+            Agv.WagoDI.SubsSignalStateChange(_inputDI, _HandleInputStateChange);
             Task.Run(() =>
             {
                 while (!cancelDetectCTS.IsCancellationRequested)
@@ -594,7 +603,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     LOG.INFO($"前方障礙物預檢知Sensor Pass , No Obstacle", color: ConsoleColor.Green);
                 }
-                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
+                Agv.WagoDI.UnRegistSignalStateChange(_inputDI, _HandleInputStateChange);
             });
             void EMO_STOP_AGV()
             {
@@ -612,6 +621,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return true;
         }
+
 
         protected virtual void Dispose(bool disposing)
         {

@@ -14,6 +14,11 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
+    public enum IO_CONTACT_POINT
+    {
+        A,
+        B
+    }
     public partial class clsDIModule : Connection
     {
         TcpClient client;
@@ -310,7 +315,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             ConnectionWatchDog();
             int error_cnt = 0;
             await Task.Delay(100);
-            _=Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 while (true)
                 {

@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Alarm;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
@@ -20,5 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public ALARM_LEVEL AlarmLevelWhenTrigger { get; set; } = ALARM_LEVEL.WARNING;
         public FRONTEND_OBS_DETECTION_METHOD Detection_Method { get; set; } = FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION;
+
+        public IO_CONTACT_POINT ContactPointType { get; set; } = IO_CONTACT_POINT.B;
     }
 }
