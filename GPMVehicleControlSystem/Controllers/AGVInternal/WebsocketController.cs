@@ -13,7 +13,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("/ws")]
         public async Task Get(string user_id)
         {
-            await WebsocketAgent.Middleware.HandleWebsocketClientConnectIn(HttpContext, user_id);
+            await WebsocketServerHelper.Middleware.HandleWebsocketClientConnectIn(HttpContext, user_id);
+            Console.WriteLine($"{user_id} _ ws closed");
+            GC.Collect();
         }
     }
 }

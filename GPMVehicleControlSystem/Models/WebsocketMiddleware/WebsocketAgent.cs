@@ -18,14 +18,16 @@ namespace GPMVehicleControlSystem.Models.WebsocketMiddleware
 {
     public class WebsocketAgent : AGVSystemCommonNet6.HttpTools.WebsocketServerMiddleware
     {
-        public static WebsocketAgent Middleware = new WebsocketAgent();
+        public WebsocketAgent(int duration) : base(duration)
+        {
+        }
         public override List<string> channelMaps { get; set; } = new List<string>()
         {
             "/ws"
         };
         public override void Initialize()
         {
-            ClientsOfAllChannel = channelMaps.ToDictionary(str => str, str => new List<clsWebsocktClientHandler>());
+            ClientsOfAllChannel = channelMaps.ToDictionary(str => str, str => new ConcurrentDictionary<string, clsWebsocktClientHandler>());
             CurrentViewModelDataOfAllChannel = channelMaps.ToDictionary(str => str, str => new object());
             CurrentViewModelDataOfAllChannel[channelMaps[0]] = new Dictionary<string, object>()
             {

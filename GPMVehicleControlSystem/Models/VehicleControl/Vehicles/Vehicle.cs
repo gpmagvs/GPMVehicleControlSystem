@@ -455,7 +455,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                 LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
 
-                WebsocketAgent.Middleware.Initialize();
+                WebsocketServerHelper.Middleware.Initialize();
                 IsSystemInitialized = true;
             }
             catch (Exception ex)

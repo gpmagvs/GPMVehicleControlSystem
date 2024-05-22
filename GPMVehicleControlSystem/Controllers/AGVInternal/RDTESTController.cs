@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("/ws/RDTestData")]
         public async Task ConnectionStateEcho()
         {
-            await WebsocketAgent.Middleware.HandleWebsocketClientConnectIn(HttpContext);
+            await WebsocketServerHelper.Middleware.HandleWebsocketClientConnectIn(HttpContext);
         }
     }
 }

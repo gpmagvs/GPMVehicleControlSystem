@@ -33,17 +33,18 @@ namespace GPMVehicleControlSystem.Tools
             File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "VCS_PID"), pid.ToString());
         }
 
-        public static async void SysLoadingLogProcess()
+        public static async Task SysLoadingLogProcess()
         {
-            await Task.Run(async () =>
+            while (true)
             {
-                while (true)
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                Memory = GetMemUsedMB();
+                LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: true);
+                if (Memory > 500)
                 {
-                    Memory = GetMemUsedMB();
-                    LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: false);
-                    await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                    GC.Collect();
                 }
-            });
+            }
         }
 
         public static double GetMemUsedMB()
