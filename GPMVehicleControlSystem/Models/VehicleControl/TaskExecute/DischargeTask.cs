@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
@@ -66,8 +67,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, ForkGoHomeResultAlarmCode);
                 }
             }
+            Agv.SetIsCharging(false);
             Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);
+        }
+        protected override async Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                Agv.SetIsCharging(false);
+            });
+            return await base.TransferTaskToAGVC();
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
