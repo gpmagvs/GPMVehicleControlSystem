@@ -236,6 +236,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void DetermineHandShakeSetting()
         {
+            if (Agv.Parameters.AgvType == AGV_TYPE.FORK && this.height > 0)
+            {
+                IsNeedHandshake = false;
+                eqHandshakeMode = WORKSTATION_HS_METHOD.NO_HS;
+                LOG.INFO($"[{action}] Tag_{destineTag} is WIP and NOT FIRST Layer (Height={height}): Handshake Mode:{eqHandshakeMode}");
+                return;
+            }
             if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
             {
                 WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
