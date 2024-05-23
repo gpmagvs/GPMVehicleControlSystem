@@ -31,7 +31,7 @@ namespace GPMVehicleControlSystem.Service
         private async Task MonitorBatteryOverVoltage()
         {
             double threshold = Vehicle.Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval;//mV
-            List<ushort> currentVoltages = Vehicle.Batteries.Select(bat => bat.Value.Data.Voltage).ToList();
+            List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.Voltage).ToList();
 
             bool isOverVotage = currentVoltages.Any(voltag => voltag >= threshold);
 
@@ -39,7 +39,8 @@ namespace GPMVehicleControlSystem.Service
             {
                 if (Vehicle.IsChargeCircuitOpened)
                 {
-                    LOG.ERROR($"Battery over-voltage when charging. Cut-off charge circuit!");
+                    string voltagesStr = string.Join(" mV,", currentVoltages);
+                    LOG.ERROR($"Battery over-voltage when charging. Cut-off charge circuit!({voltagesStr})");
                     await Vehicle.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
                     Vehicle.SetIsCharging(false);
                     AlarmManager.AddAlarm(AlarmCodes.Battery_Over_Voltage_When_Charging, true);
