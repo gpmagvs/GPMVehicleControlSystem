@@ -149,6 +149,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
+                if (this.height > 0 && Agv.Parameters.AgvType == AGV_TYPE.FORK)
+                    return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
+
                 if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
                 {
                     return data.CargoTransferMode;
