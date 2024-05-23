@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models.WebsocketMiddleware;
+﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Service;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -10,12 +11,32 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     [ApiController]
     public class WebsocketController : ControllerBase
     {
+        private WebsocketMiddlewareService _WebsocketMiddlewareService;
+        public WebsocketController(WebsocketMiddlewareService websocketBackground)
+        {
+            _WebsocketMiddlewareService = websocketBackground;
+        }
+
         [HttpGet("/ws")]
         public async Task Get(string user_id)
         {
-            await WebsocketServerHelper.Middleware.HandleWebsocketClientConnectIn(HttpContext, user_id);
-            Console.WriteLine($"{user_id} _ ws closed");
-            GC.Collect();
+            if (HttpContext.WebSockets.IsWebSocketRequest)
+            {
+                try
+                {
+                    string RemoteIpAddress = HttpContext.Request.HttpContext.Connection.RemoteIpAddress.ToString();
+                    Console.WriteLine($"{RemoteIpAddress}-broswering website.");
+                    await _WebsocketMiddlewareService.ClientConnect(user_id, await HttpContext.WebSockets.AcceptWebSocketAsync());
+                }
+                catch (TaskCanceledException ex)
+                {
+                    LOG.TRACE($"Website client-{user_id} connection closed");
+                }
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = 500;
+            }
         }
     }
 }

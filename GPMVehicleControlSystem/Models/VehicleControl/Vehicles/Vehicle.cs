@@ -14,7 +14,6 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
-using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
@@ -455,7 +454,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                 LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
 
-                WebsocketServerHelper.Middleware.Initialize();
                 IsSystemInitialized = true;
             }
             catch (Exception ex)

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 using System.Runtime.InteropServices;
+using GPMVehicleControlSystem.Service;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -95,6 +96,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 builder.Services.AddDirectoryBrowser();
+builder.Services.AddSingleton<WebsocketMiddlewareService>();
+builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = null;

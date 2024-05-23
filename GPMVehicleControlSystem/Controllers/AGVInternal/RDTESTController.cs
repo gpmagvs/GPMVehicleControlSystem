@@ -2,7 +2,6 @@
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.RDTEST;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.ViewModels.RDTEST;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -34,11 +33,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             StaRDTestManager.StopMoveTest();
             return Ok();
-        }
-        [HttpGet("/ws/RDTestData")]
-        public async Task ConnectionStateEcho()
-        {
-            await WebsocketServerHelper.Middleware.HandleWebsocketClientConnectIn(HttpContext);
         }
     }
 }
