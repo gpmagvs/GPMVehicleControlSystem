@@ -15,6 +15,7 @@ using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Service;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -88,7 +89,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     HandShakeTimers = AGV.EQHSTimers,
                     SysLoading = new AGVCStatusVM.clsSysLoading
                     {
-                        Memory = LinuxTools.Memory
+                        Memory = SystemLoadingMonitorBackgroundServeice.CurrentRAM,
+                        CPU = SystemLoadingMonitorBackgroundServeice.CurrentCPU
                     },
                     HandshakeStatus = new AGVCStatusVM.clsEQHandshake
                     {

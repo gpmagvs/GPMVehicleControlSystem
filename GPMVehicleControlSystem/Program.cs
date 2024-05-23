@@ -69,7 +69,7 @@ void VehicheAndWagoIOConfiguraltion()
                 StaStored.CurrentVechicle = new DemoMiniAGV();
         }
         LOG.INFO($"AGV-{StaStored.CurrentVechicle.Parameters.AgvType} Created¡I¡I");
-        LinuxTools.SysLoadingLogProcess();
+        //LinuxTools.SysLoadingLogProcess();
     }
     catch (Exception ex)
     {
@@ -98,6 +98,7 @@ builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializ
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddSingleton<WebsocketMiddlewareService>();
 builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
+builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = null;
