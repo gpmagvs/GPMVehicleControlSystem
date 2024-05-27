@@ -180,7 +180,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
-                if (IsJustAGVPickAndPlaceAtWIPPort)
+                if (IsJustAGVPickAndPlaceAtWIPPort || action == ACTION_TYPE.Park)
                     return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
 
                 if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
@@ -349,7 +349,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         LOG.WARN($"一般走行任務-牙叉回HOME-牙叉已位於安全位置({ForkLifter.CurrentHeightPosition} cm)");
                 }));
             }
-            else if (action == ACTION_TYPE.Charge || action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.LoadAndPark)
+            else if (action == ACTION_TYPE.Charge || action == ACTION_TYPE.Park || action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.LoadAndPark)
             {
                 tasks.Add(Task.Run(async () =>
                 {
@@ -357,6 +357,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度");
 
                     var _position = CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_;
+
                     var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
                     if (!forkGoTeachPositionResult.success)
                         alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
