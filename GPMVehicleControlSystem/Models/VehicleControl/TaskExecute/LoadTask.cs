@@ -56,9 +56,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal clsCST CstInformation = new clsCST() { CST_Type = CST_TYPE.None };
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
+            height = taskDownloadData.Height;
             DetermineHandShakeSetting();
             HandleCSTType();
-            height = taskDownloadData.Height;
         }
 
         private void HandleCSTType()
@@ -236,7 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void DetermineHandShakeSetting()
         {
-            if (Agv.Parameters.AgvType == AGV_TYPE.FORK && this.height > 0)
+            if (IsJustAGVPickAndPlaceAtWIPPort)
             {
                 IsNeedHandshake = false;
                 eqHandshakeMode = WORKSTATION_HS_METHOD.NO_HS;

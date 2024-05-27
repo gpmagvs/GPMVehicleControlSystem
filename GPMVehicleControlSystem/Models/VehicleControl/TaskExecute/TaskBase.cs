@@ -23,6 +23,8 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using AGVSystemCommonNet6;
 using Newtonsoft.Json.Linq;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using static AGVSystemCommonNet6.MAP.MapPoint;
+using WebSocketSharp;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -38,6 +40,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private bool disposedValue;
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         protected double ExpectedForkPostionWhenEntryWorkStation = 0;
+
+        public MapPoint DestineMapPoint
+        {
+            get
+            {
+                return Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == destineTag);
+            }
+        }
+
+        public STATION_TYPE DestineStationType => DestineMapPoint == null ? STATION_TYPE.Unknown : DestineMapPoint.StationType;
+
+        public bool IsJustAGVPickAndPlaceAtWIPPort
+        {
+            get
+            {
+                if (Agv.Parameters.AgvType != AGV_TYPE.FORK)
+                    return false;
+
+                if (DestineStationType == STATION_TYPE.Unknown)
+                    return false;
+
+                if (DestineStationType != STATION_TYPE.Buffer_EQ &&
+                    DestineStationType != STATION_TYPE.Buffer &&
+                    DestineStationType != STATION_TYPE.Charge_Buffer)
+                    return false;
+
+                return DestineStationType == STATION_TYPE.Buffer || (DestineStationType != STATION_TYPE.Buffer && height > 0);
+            }
+        }
         public Action<ActionStatus> AGVCActionStatusChaged
         {
             get => Agv.AGVC.OnAGVCActionChanged;
@@ -149,7 +180,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
-                if (this.height > 0 && Agv.Parameters.AgvType == AGV_TYPE.FORK)
+                if (IsJustAGVPickAndPlaceAtWIPPort)
                     return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
 
                 if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
