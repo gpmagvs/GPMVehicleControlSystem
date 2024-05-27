@@ -801,11 +801,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal virtual async void ResetHandshakeSignals()
         {
+            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
-            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);

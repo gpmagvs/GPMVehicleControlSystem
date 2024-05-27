@@ -105,9 +105,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
-
-
-
             RecordLDULDStateToDB();
 
             if (IsNeedHandshake)

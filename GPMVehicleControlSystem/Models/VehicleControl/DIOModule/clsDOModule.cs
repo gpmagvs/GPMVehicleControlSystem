@@ -200,7 +200,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                 }
             }
-           
+
         }
 
         public async Task<bool> SetState(string address, bool state)
@@ -220,9 +220,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            await semaphore.WaitAsync();
             try
             {
+                await semaphore.WaitAsync();
                 if (Current_Alarm_Code != AlarmCodes.None)
                     return false;
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == start_signal.ToString());
