@@ -577,79 +577,109 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
         private CancellationTokenSource LaserObsMonitorCancel = new CancellationTokenSource();
+        private SemaphoreSlim _StartLaserMonitorSemaphore = new SemaphoreSlim(1, 1);
         public bool IsLaserMonitoring => !LaserObsMonitorCancel.IsCancellationRequested;
         public void EndLaserObstacleMonitor()
         {
             LaserObsMonitorCancel.Cancel();
         }
-        public void StartLaserObstacleMonitor()
+        public async void StartLaserObstacleMonitor()
         {
-            if (IsLaserMonitoring)
-                return;
-
-            ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
-            AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
-            LaserObsMonitorCancel = new CancellationTokenSource();
-            Task.Run(async () =>
+            try
             {
-                async Task DecreaseSpeedAndRecovery()
+                await _StartLaserMonitorSemaphore.WaitAsync();
+
+                if (IsLaserMonitoring)
+                    return;
+
+                ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
+                AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
+                LaserObsMonitorCancel = new CancellationTokenSource();
+                SemaphoreSlim _SpeedRecoveryHandleSemaphoreSlim = new SemaphoreSlim(1, 1);
+                await Task.Run(async () =>
                 {
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                    Stopwatch timer = Stopwatch.StartNew();
-                    while (timer.Elapsed.Seconds < 1)
+                    while (true)
                     {
-                        await Task.Delay(1);
-                        if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                        if (LaserObsMonitorCancel.IsCancellationRequested)
                             return;
-                    }
 
-                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
-                }
-                while (true)
-                {
-                    if (LaserObsMonitorCancel.IsCancellationRequested)
-                        return;
-
-                    var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
-                    if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
-                    {
-                        if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
+                        var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+                        if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                         {
-                            SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
-                            if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
-                            else if (ExecutingTaskEntity.action == ACTION_TYPE.Charge)
-                                BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                            if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
+                            {
+                                SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
+                                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                                    BuzzerPlayer.Move();
+                                else if (ExecutingTaskEntity.action == ACTION_TYPE.Charge)
+                                    BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                                else
+                                    BuzzerPlayer.Action();
+                            }
                             else
-                                BuzzerPlayer.Action();
-                        }
-                        else
-                        {
-                            SetSub_Status(SUB_STATUS.ALARM);
-                            BuzzerPlayer.Alarm();
-                        }
+                            {
+                                SetSub_Status(SUB_STATUS.ALARM);
+                                BuzzerPlayer.Alarm();
+                            }
 
-                        //已無異常清空所有雷射異常
-                        if (!alarmCodeCollection.Any())
-                            AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
-                        else
-                        {
-                            HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
-                        }
-                        if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                        {
-                            DecreaseSpeedAndRecovery();
-                        }
-                        else
-                            await AGVC.CarSpeedControl(cmdGet);
+                            //已無異常清空所有雷射異常
+                            if (!alarmCodeCollection.Any())
+                                AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
+                            else
+                            {
+                                HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
+                            }
+                            if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                            {
+                                DecreaseSpeedAndRecovery();
+                            }
+                            else
+                                await AGVC.CarSpeedControl(cmdGet);
 
 
-                        _CurrentRobotControlCmd = cmdGet;
-                        _CurrentAlarmCodeCollection = alarmCodeCollection;
+                            _CurrentRobotControlCmd = cmdGet;
+                            _CurrentAlarmCodeCollection = alarmCodeCollection;
+                        }
+                        await Task.Delay(10);
+
+                        async Task DecreaseSpeedAndRecovery()
+                        {
+                            try
+                            {
+                                await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
+                                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                                Stopwatch timer = Stopwatch.StartNew();
+                                while (timer.Elapsed.Seconds < 1)
+                                {
+                                    await Task.Delay(1);
+                                    if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                        return;
+                                }
+
+                                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                            }
+                            catch (Exception ex)
+                            {
+                                LOG.ERROR(ex);
+                            }
+                            finally
+                            {
+                                _SpeedRecoveryHandleSemaphoreSlim.Release();
+                            }
+
+                        }
                     }
-                    await Task.Delay(10);
-                }
-            });
+                });
+
+            }
+            catch (Exception ex)
+            {
+                LOG.ERROR(ex);
+            }
+            finally
+            {
+                _StartLaserMonitorSemaphore.Release();
+            }
         }
 
         private static void HandleLaserAlarmCodes(AlarmCodes[] _CurrentAlarmCodeCollection, AlarmCodes[] alarmCodeCollection)
