@@ -639,7 +639,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool frontBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Front_LsrBypass);
             bool backBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Back_LsrBypass);
             bool rightSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
-            bool leftSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
+            bool leftSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Left_LsrBypass);
 
             bool rightSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
             bool leftSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);

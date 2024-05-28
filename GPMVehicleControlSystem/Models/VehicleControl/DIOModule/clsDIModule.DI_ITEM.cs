@@ -101,6 +101,8 @@
             EQ_Check_Ready,
             Cst_Sensor_1,
             Cst_Sensor_2,
+            Cst_Sensor_3,
+            Cst_Sensor_4,
             FrontProtection_Obstacle_Sensor,
             FrontProtection_Area_Sensor_1,
             FrontProtection_Area_Sensor_2,

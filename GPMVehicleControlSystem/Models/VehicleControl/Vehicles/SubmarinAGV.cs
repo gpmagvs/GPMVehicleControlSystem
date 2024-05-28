@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public override (bool report_allow, clsRunningStatus running_status) HandleWebAPIProtocolGetRunningStatus()
         {
-            var feedbackDto =  base.HandleWebAPIProtocolGetRunningStatus();
+            var feedbackDto = base.HandleWebAPIProtocolGetRunningStatus();
             feedbackDto.running_status.CSTID = new string[] { CSTReader.ValidCSTID };
             return feedbackDto;
         }
@@ -118,25 +118,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
             LOG.TRACE($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
 
-        }
-        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
-        protected virtual CARGO_STATUS GetCargoStatus()
-        {
-            if (Parameters.LDULD_Task_No_Entry)
-            {
-                return simulation_cargo_status;
-            }
-
-            bool cst_exist_check_Sensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
-            bool cst_exist_check_Sensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
-
-            if (cst_exist_check_Sensor_1 && cst_exist_check_Sensor_2)
-                return CARGO_STATUS.HAS_CARGO_NORMAL;
-            if (!cst_exist_check_Sensor_1 && !cst_exist_check_Sensor_2)
-                return CARGO_STATUS.NO_CARGO;
-            if ((!cst_exist_check_Sensor_1 && cst_exist_check_Sensor_2) || (cst_exist_check_Sensor_1 && !cst_exist_check_Sensor_2))
-                return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-            return CARGO_STATUS.NO_CARGO;
         }
     }
 }

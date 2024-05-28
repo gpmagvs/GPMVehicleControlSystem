@@ -174,11 +174,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(string address, bool state)
         {
-            await _writeStateSemaphoreSlim.WaitAsync();
-            if (Current_Alarm_Code != AlarmCodes.None)
-                return false;
             try
             {
+                await _writeStateSemaphoreSlim.WaitAsync();
+                if (Current_Alarm_Code != AlarmCodes.None)
+                    return false;
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
                 if (DO != null)
                 {
@@ -218,11 +218,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         public async Task<bool> SetState(DO_ITEM signal, bool state)
         {
-            await _writeStateSemaphoreSlim.WaitAsync();
-            if (Current_Alarm_Code != AlarmCodes.None)
-                return false;
             try
             {
+                await _writeStateSemaphoreSlim.WaitAsync();
+                if (Current_Alarm_Code != AlarmCodes.None)
+                    return false;
                 clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == signal + "");
                 if (DO != null)
                 {
@@ -270,11 +270,11 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         private ConcurrentQueue<clsWriteRequest> OutputWriteRequestQueue = new ConcurrentQueue<clsWriteRequest>();
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
-            await _writeStateSemaphoreSlim.WaitAsync();
-            if (Current_Alarm_Code != AlarmCodes.None)
-                return false;
             try
             {
+                await _writeStateSemaphoreSlim.WaitAsync();
+                if (Current_Alarm_Code != AlarmCodes.None)
+                    return false;
                 clsIOSignal? DO_Start = VCSOutputs.FirstOrDefault(k => k.Name == start_signal + "");
                 if (DO_Start == null)
                 {

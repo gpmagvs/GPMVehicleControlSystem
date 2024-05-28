@@ -229,9 +229,12 @@ namespace GPMVehicleControlSystem.ViewModels
 
         internal static ConnectionStateVM GetConnectionStatesVM()
         {
+            if (AGV == null)
+                return new ConnectionStateVM();
+
             ConnectionStateVM data_view_model = new ConnectionStateVM()
             {
-                RosbridgeServer = AGV.AGVC==null? ConnectionStateVM.CONNECTION.DISCONNECT: AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                RosbridgeServer = AGV.AGVC == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 VMS = AGV.AGVS == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 WAGO = AGV.WagoDI == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
             };

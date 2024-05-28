@@ -419,7 +419,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Spin_Laser_Mode = Parameters.Spin_Laser_Mode
                 };
 
-                WebsocketAgent.Middleware.Initialize();
                 List<Task> tasks = new List<Task>();
                 Task RosConnTask = new Task(async () =>
                 {
@@ -460,7 +459,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await DownloadMapFromServer();
                 });
 
-                Task.WhenAll(tasks).ContinueWith(t =>
+                Task.WhenAll(tasks).ContinueWith(async t =>
                 {
 
                     if (CSTReader != null)
@@ -479,7 +478,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.INFO($"等待車控數據接收...");
                     while (!ModuleInformationUpdatedInitState)
                     {
-                        Thread.Sleep(1);
+                        await Task.Delay(10);
                     }
                     LOG.INFO($"車控數據已接收..!.");
                     Thread.Sleep(1000);
@@ -489,6 +488,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.Active = true;
                     AlarmManager.AddAlarm(AlarmCodes.None);
                     IsSystemInitialized = true;
+                    WebsocketAgent.Middleware.Initialize();
                 });
             }
             catch (Exception ex)
@@ -775,11 +775,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal virtual async void ResetHandshakeSignals()
         {
 
+            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
-            await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
 
             if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
             {
@@ -1170,14 +1170,42 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                return !WagoDI.GetState(DI_ITEM.Cst_Sensor_1) || !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+                var cargoStatus = GetCargoStatus();
+                return cargoStatus != CARGO_STATUS.NO_CARGO;
             }
             catch (Exception)
             {
                 return false;
             }
         }
+        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
 
+        protected virtual CARGO_STATUS GetCargoStatus()
+        {
+            if (Parameters.LDULD_Task_No_Entry)
+            {
+                return simulation_cargo_status;
+            }
+
+            bool cst_exist_check_Sensor_1 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_1);
+            bool cst_exist_check_Sensor_2 = !WagoDI.GetState(DI_ITEM.Cst_Sensor_2);
+
+            bool exist3Mounted = WagoDI.VCSInputs.FirstOrDefault(k => k.Name == DI_ITEM.Cst_Sensor_3 + "") != null;
+            bool exist4Mounted = WagoDI.VCSInputs.FirstOrDefault(k => k.Name == DI_ITEM.Cst_Sensor_4 + "") != null;
+
+            bool cst_exist_check_Sensor_3 = exist3Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_3) : cst_exist_check_Sensor_1;
+            bool cst_exist_check_Sensor_4 = exist3Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_4) : cst_exist_check_Sensor_2;
+
+            bool[] existStates = new bool[4] { cst_exist_check_Sensor_1, cst_exist_check_Sensor_2, cst_exist_check_Sensor_3, cst_exist_check_Sensor_4 };
+
+            if (existStates.All(state => state))
+                return CARGO_STATUS.HAS_CARGO_NORMAL;
+            if (existStates.All(state => !state))
+                return CARGO_STATUS.NO_CARGO;
+            if (existStates.Any(state => state))
+                return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+            return CARGO_STATUS.NO_CARGO;
+        }
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
         {
             LOG.INFO($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");
