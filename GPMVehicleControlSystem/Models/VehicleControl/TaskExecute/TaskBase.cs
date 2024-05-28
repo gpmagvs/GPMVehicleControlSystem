@@ -258,6 +258,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         _agv.CSTReader.ValidCSTID = _cst_id;
                     }
                     await Task.Delay(2000);
+                    Agv.SetSub_Status(SUB_STATUS.IDLE);
                     LOG.TRACE($"AGV完成任務[空取空放]---[{action}=>{task_abort_alarmcode}.]");
                     return new List<AlarmCodes>();
 
