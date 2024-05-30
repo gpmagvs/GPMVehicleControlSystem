@@ -969,7 +969,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
 
-        protected virtual CARGO_STATUS GetCargoStatus()
+        public virtual CARGO_STATUS GetCargoStatus()
         {
             return GetCargoStatus(out _);
         }

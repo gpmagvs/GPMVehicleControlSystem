@@ -78,6 +78,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.HasAnyCargoOnAGV(),
                     CargoExist = AGV.HasAnyCargoOnAGV(),
+                    IsCargoBias = AGV.GetCargoStatus() == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS,
                     HandShakeSignals = new
                     {
                         EQ = AGV.EQHsSignalStates,

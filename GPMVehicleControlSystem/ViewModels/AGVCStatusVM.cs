@@ -96,6 +96,10 @@ namespace GPMVehicleControlSystem.ViewModels
         public bool IsLDULD_No_Entry { get; set; } = false;
         public bool ForkHasLoading { get; set; }
         public bool CargoExist { get; set; }
+        /// <summary>
+        /// 貨物是否傾斜(在席Sensor部分OFF 部分ON)
+        /// </summary>
+        public bool IsCargoBias { get; set; } = false;
         public object HandShakeSignals { get; set; } = new object();
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();
