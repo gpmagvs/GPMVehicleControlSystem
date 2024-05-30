@@ -138,7 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 if (_ActionStatus != value)
                 {
-                    LOG.TRACE($"Action Status Changed To : {value}", color: ConsoleColor.Green);
+                    LOG.TRACE($"Action Status Changed To : {value} (Previous = {_ActionStatus})", color: ConsoleColor.Green);
 
                     _ActionStatus = value;
                 }
@@ -503,6 +503,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             CycleStopActionExecuting = false;
             LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: false, color: ConsoleColor.Green);
             OnAGVCActionChanged = null;
+            ActionStatus = ActionStatus.NO_GOAL;//先設成NO_GOAL
             await Task.Delay(isEmptyPathPlan ? 1 : 200);
             actionClient.goal = rosGoal;
             actionClient.SendGoal();
