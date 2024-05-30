@@ -1194,7 +1194,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool exist4Mounted = WagoDI.VCSInputs.FirstOrDefault(k => k.Name == DI_ITEM.Cst_Sensor_4 + "") != null;
 
             bool cst_exist_check_Sensor_3 = exist3Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_3) : cst_exist_check_Sensor_1;
-            bool cst_exist_check_Sensor_4 = exist3Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_4) : cst_exist_check_Sensor_2;
+            bool cst_exist_check_Sensor_4 = exist4Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_4) : cst_exist_check_Sensor_2;
 
             bool[] existStates = new bool[4] { cst_exist_check_Sensor_1, cst_exist_check_Sensor_2, cst_exist_check_Sensor_3, cst_exist_check_Sensor_4 };
 
