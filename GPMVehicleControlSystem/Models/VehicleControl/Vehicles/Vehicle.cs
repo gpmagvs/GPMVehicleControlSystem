@@ -971,6 +971,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual CARGO_STATUS GetCargoStatus()
         {
+            return GetCargoStatus(out _);
+        }
+        protected virtual CARGO_STATUS GetCargoStatus(out List<DI_ITEM> abnormalSignals)
+        {
+            abnormalSignals = new List<DI_ITEM>();
             if (Parameters.LDULD_Task_No_Entry)
             {
                 return simulation_cargo_status;
@@ -985,14 +990,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool cst_exist_check_Sensor_3 = exist3Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_3) : cst_exist_check_Sensor_1;
             bool cst_exist_check_Sensor_4 = exist4Mounted ? !WagoDI.GetState(DI_ITEM.Cst_Sensor_4) : cst_exist_check_Sensor_2;
 
-            bool[] existStates = new bool[4] { cst_exist_check_Sensor_1, cst_exist_check_Sensor_2, cst_exist_check_Sensor_3, cst_exist_check_Sensor_4 };
+            Dictionary<DI_ITEM, bool> existStatesMap = new Dictionary<DI_ITEM, bool>()
+            {
+                { DI_ITEM.Cst_Sensor_1 ,cst_exist_check_Sensor_1},
+                { DI_ITEM.Cst_Sensor_2 ,cst_exist_check_Sensor_2},
+                { DI_ITEM.Cst_Sensor_3 ,cst_exist_check_Sensor_3},
+                { DI_ITEM.Cst_Sensor_4 ,cst_exist_check_Sensor_4},
+            };
+            bool[] existStates = existStatesMap.Values.ToArray();
 
             if (existStates.All(state => state))
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
             if (existStates.All(state => !state))
                 return CARGO_STATUS.NO_CARGO;
             if (existStates.Any(state => state))
+            {
+                abnormalSignals = existStatesMap.Where(state => state.Value)
+                                                .Select(state => state.Key)
+                                                .ToList();
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+            }
             return CARGO_STATUS.NO_CARGO;
         }
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)

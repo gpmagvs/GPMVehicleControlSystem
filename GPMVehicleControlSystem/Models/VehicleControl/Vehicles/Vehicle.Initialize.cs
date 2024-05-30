@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using Microsoft.OpenApi.Extensions;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -33,6 +34,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if ((Parameters.AgvType == AGV_TYPE.FORK || Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD))
             {
+                if (GetCargoStatus(out List<DI_ITEM> abnormalSignals) == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                {
+                    List<string> abnSensorDesLs = WagoDI.VCSInputs.Where(i => abnormalSignals.Contains(i.Input))
+                                    .Select(i => i.Address + $"({i.Name})")
+                                    .ToList();
+                    return (false, $"貨物傾斜異常！請立即檢查並重新擺放貨物，以確保安全。\n ({string.Join("、", abnSensorDesLs)})未檢出");
+                }
+
                 if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "")
                 {
                     CSTReader.ValidCSTID = "";
