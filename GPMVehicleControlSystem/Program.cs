@@ -11,6 +11,8 @@ using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 using System.Runtime.InteropServices;
 using GPMVehicleControlSystem.Service;
+using Microsoft.Net.Http.Headers;
+using Microsoft.AspNetCore.ResponseCompression;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -107,6 +109,16 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.PropertyNameCaseInsensitive = false;
     options.SerializerOptions.WriteIndented = true;
 });
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+ {
+     options.Level = System.IO.Compression.CompressionLevel.Optimal;
+ });
+
 AlarmManager.AddAlarm(AlarmCodes.None, true);
 
 _ = Task.Run(async () =>
@@ -133,7 +145,15 @@ app.UseSwaggerUI();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(1) });
 app.UseCors(c => c.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        const int duractionInSeconds = 24 * 60 * 60 * 120;
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] =
+               "public,max-age=" + duractionInSeconds;
+    }
+});
 
 var imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
 Directory.CreateDirectory(imageFolder);

@@ -22,11 +22,11 @@ namespace GPMVehicleControlSystem.Service
                 double ram = LinuxTools.GetMemUsedMB();
                 LOG.TRACE($"CPU:{cpu} % / RAM:{ram} MB");
 
-                if (ram > 500)
-                {
-                    GC.Collect();
-                    LOG.WARN($"RAM:{ram} MB > 500MB , Run GC.Collect()");
-                }
+                //if (ram > 500)
+                //{
+                //    GC.Collect();
+                //    LOG.WARN($"RAM:{ram} MB > 500MB , Run GC.Collect()");
+                //}
                 CurrentCPU = Math.Round(cpu, 1);
                 CurrentRAM = ram;
             }

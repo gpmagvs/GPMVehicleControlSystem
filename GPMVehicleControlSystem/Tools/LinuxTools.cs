@@ -40,10 +40,10 @@ namespace GPMVehicleControlSystem.Tools
                 await Task.Delay(TimeSpan.FromSeconds(5));
                 Memory = GetMemUsedMB();
                 LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: true);
-                if (Memory > 500)
-                {
-                    GC.Collect();
-                }
+                //if (Memory > 500)
+                //{
+                //    GC.Collect();
+                //}
             }
         }
 
