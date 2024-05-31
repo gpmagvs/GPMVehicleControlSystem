@@ -1003,9 +1003,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
             if (existStates.All(state => !state))
                 return CARGO_STATUS.NO_CARGO;
-            if (existStates.Any(state => state))
+            if (existStates.Any(state => !state))
             {
-                abnormalSignals = existStatesMap.Where(state => state.Value)
+                abnormalSignals = existStatesMap.Where(state => !state.Value)
                                                 .Select(state => state.Key)
                                                 .ToList();
                 return CARGO_STATUS.HAS_CARGO_BUT_BIAS;

@@ -162,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             return WagoDI.GetState(DI_ITEM.EMO_Button);
         }
-        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
+        protected override async Task<(bool confirm, string message, string message_eng)> InitializeActions(CancellationTokenSource cancellation)
         {
             //初始化儀器
             //(bool confirm, string message) measurementInitResult = await InspectorAGVC?.MeasurementInit();
@@ -186,10 +186,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AlarmManager.AddWarning(AlarmCodes.Battery2_Not_Lock);
                     }
                     err_msg += " 尚未Lock";
-                    return (false, $"[{AlarmCodes.Battery_Not_Lock}] {err_msg}");
+                    return (false, $"[{AlarmCodes.Battery_Not_Lock}] {err_msg}", "Battery Not Lock");
                 }
             }
-            return (true, "");
+            return (true, "", "");
         }
 
         internal override async void ResetHandshakeSignals()

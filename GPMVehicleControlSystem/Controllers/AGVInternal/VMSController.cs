@@ -19,6 +19,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using static AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -163,7 +164,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> Initialize()
         {
             var result = await agv.Initialize();
-            return Ok(new { confirm = result.confirm, message = result.message });
+            IEnumerable<AlarmCodes> currentWarnings = AlarmManager.CurrentAlarms.Where(al => al.Value.ELevel == LEVEL.Warning)
+                                                             .Select(al => al.Value.EAlarmCode);
+            bool _HasCargoButNoData = currentWarnings.Any(code => code == AlarmCodes.Has_Cargo_But_No_Data);
+            return Ok(new
+            {
+                confirm = result.confirm,
+                message = result.message,
+                message_eng = result.message_eng,
+                has_cargo_but_no_data = _HasCargoButNoData
+            });
         }
 
 
@@ -209,7 +219,17 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
-
+        [HttpGet("TriggerCSTReaderWithCargoType")]
+        public async Task<IActionResult> TriggerCSTReaderWithCargoType(CST_TYPE cargo_type)
+        {
+            (bool request_success, bool action_done) ret = await agv.AGVC.TriggerCSTReader();
+            string barcode = "ERROR";
+            if (ret.action_done)
+            {
+                barcode = agv.CSTReader.Data.data;
+            }
+            return Ok(new { barcode });
+        }
 
         [HttpGet("TriggerCSTReader")]
         public async Task<IActionResult> TriggerCSTReader()
@@ -223,6 +243,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(new { barcode });
         }
 
+        [HttpPost("BuildCargoID")]
+        public async Task<object> BuildCargoID(string id)
+        {
+            try
+            {
+                agv.CSTReader.ValidCSTID = id;
+                return new { confirm = true, message = "" };
+            }
+            catch (Exception ex)
+            {
+                return new { confirm = true, message = ex.Message };
+            }
+        }
 
         [HttpGet("StopCSTReader")]
         public async Task<IActionResult> StopCSTReader()

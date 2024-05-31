@@ -37,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return GetCargoStatus();
             }
         }
-        protected override CARGO_STATUS GetCargoStatus()
+        public override CARGO_STATUS GetCargoStatus()
         {
             bool existSensor_1 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
             bool existSensor_2 = !WagoDI.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor);
@@ -108,14 +108,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             };
         }
-        protected override async Task<(bool, string)> PreActionBeforeInitialize()
+        protected override async Task<(bool, string, string)> PreActionBeforeInitialize()
         {
-            (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
+            (bool, string, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
             if (!Parameters.CheckObstacleWhenForkInit)
-                return (true, "");
+                return (true, "", "");
 
             await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
@@ -124,23 +124,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
             if (RightLaserAbnormal)
-                return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
+                return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)", "Initialization cannot be performed with an obstacle intrusion detected (obstacle detected on the right side)");
             bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
             if (LeftLaserAbnormal)
-                return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
+                return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)", "Initialization cannot be performed with an obstacle intrusion detected (obstacle detected on the left side)");
             //bool forkFrontendSensorAbnormal = !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
             //if (forkFrontendSensorAbnormal)
             //    return (false, "無法在障礙物入侵的狀態下進行初始化(Fork 前端障礙物檢出)");
             else
             {
-                return (true, "");
+                return (true, "", "");
             }
 
         }
-        protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
+        protected override async Task<(bool confirm, string message, string message_eng)> InitializeActions(CancellationTokenSource cancellation)
         {
 
-            (bool confirm, string message) baseInitize = await base.InitializeActions(cancellation);
+            (bool confirm, string message, string message_eng) baseInitize = await base.InitializeActions(cancellation);
             if (!baseInitize.confirm)
                 return baseInitize;
             if (ForkLifter.Enable)
@@ -168,19 +168,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
                     if (!home_action_response.confirm)
                     {
-                        return (false, home_action_response.alarm_code.ToString());
+                        return (false, home_action_response.alarm_code.ToString(), home_action_response.alarm_code.ToString());
                     }
                 }
 
                 if (!Parameters.SensorBypass.BeltSensorBypass)
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
                 AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
-                return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
+                return (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString(), forkInitizeResult.alarm_code.ToString());
             }
             else
             {
                 AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
-                return (true, "Forklift disabled");
+                return (true, "Forklift disabled", "Forklift disabled");
             }
         }
 
@@ -272,13 +272,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return dat;
         }
 
-        public override (bool confirm, string message) CheckHardwareStatus()
+        public override (bool confirm, string message, string message_eng) CheckHardwareStatus()
         {
             if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Switch))
             {
                 AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error_Vertical, false);
                 BuzzerPlayer.Alarm();
-                return (false, "Z軸解煞車旋鈕尚未復歸");
+                return (false, "Z軸解煞車旋鈕尚未復歸", "The Z-axis brake release knob has not been reset");
             }
             return base.CheckHardwareStatus();
         }

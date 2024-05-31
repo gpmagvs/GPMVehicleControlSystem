@@ -71,7 +71,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
 
 
-            (bool confirm, string message) hardware_status_check;
+            (bool confirm, string message, string message_eng) hardware_status_check;
             if (!(hardware_status_check = agv.CheckHardwareStatus()).confirm)
             {
                 return Ok(new

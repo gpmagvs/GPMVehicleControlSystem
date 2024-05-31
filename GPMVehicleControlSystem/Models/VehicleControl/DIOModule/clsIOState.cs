@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             get
             {
-                return Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().First(di => di.ToString() == Name);
+                return Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>().FirstOrDefault(di => di.ToString() == Name);
             }
         }
 
