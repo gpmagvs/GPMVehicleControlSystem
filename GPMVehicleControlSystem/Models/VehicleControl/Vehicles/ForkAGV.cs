@@ -430,14 +430,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return base.CheckHardwareStatus();
         }
 
-        protected override int GetCargoType()
-        {
-            var rack_sensor1 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
-            var rack_sensor2 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
-            if (rack_sensor2 || rack_sensor1)
-                return 1;
-            else return 0;
-        }
         protected override async Task DOSettingWhenEmoTrigger()
         {
             await base.DOSettingWhenEmoTrigger();

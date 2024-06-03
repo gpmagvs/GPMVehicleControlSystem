@@ -128,7 +128,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                 StartLaserObstacleMonitor();
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-                EndLaserObstacleMonitor();
+
                 LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
 
                 if (alarmCodes.Any(al => al == AlarmCodes.Replan))
@@ -172,6 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     AlarmManager.ClearAlarm();
                 AGVC.OnAGVCActionChanged = null;
+                EndLaserObstacleMonitor();
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
             });
         }

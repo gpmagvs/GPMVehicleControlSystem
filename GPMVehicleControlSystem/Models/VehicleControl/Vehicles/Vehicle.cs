@@ -131,7 +131,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                return CARGO_STATUS.NO_CARGO_CARRARYING_CAPABILITY;
+                return GetCargoStatus();
             }
         }
         protected virtual List<CarComponent> CarComponents
@@ -1192,7 +1192,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         protected virtual int GetCargoType()
         {
-            return 0;
+            GetCargoStatus(out CST_TYPE cargoType);
+            return (int)cargoType;
         }
 
         /// <summary>
@@ -1218,19 +1219,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
         protected virtual CARGO_STATUS GetCargoStatus()
         {
+            return GetCargoStatus(out _);
+        }
+
+        protected virtual CARGO_STATUS GetCargoStatus(out CST_TYPE cargoType)
+        {
+            cargoType = CST_TYPE.None;
             if (Parameters.LDULD_Task_No_Entry)
             {
                 return simulation_cargo_status;
             }
 
-            CARGO_STATUS _tray_cargo_status = CARGO_STATUS.NO_CARGO;
-            CARGO_STATUS _rack_cargo_status = CARGO_STATUS.NO_CARGO;
             bool isRackSensorMounted = Parameters.CargoExistSensorParams.RackSensorMounted;
-            IO_CONEECTION_POINT_TYPE sensorPointType = Parameters.CargoExistSensorParams.SensorPointType;
+            bool tray3SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_3 + "") != null;
+            bool tray4SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_4 + "") != null;
+
             bool _tray1Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1);
             bool _tray2Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-            bool _tray3Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_3);
-            bool _tray4Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_4);
+            bool _tray3Input = tray3SensorMounted ? WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_3) : _tray1Input;
+            bool _tray4Input = tray4SensorMounted ? WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_4) : _tray2Input;
 
             bool _rack1Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) : _tray1Input;
             bool _rack2Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) : _tray2Input;
@@ -1247,27 +1254,58 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 { DI_ITEM.RACK_Exist_Sensor_1, _rack1Input},
                 { DI_ITEM.RACK_Exist_Sensor_2, _rack2Input},
             };
+
+            IO_CONEECTION_POINT_TYPE sensorPointType = Parameters.CargoExistSensorParams.SensorPointType;
             switch (sensorPointType)
             {
                 case IO_CONEECTION_POINT_TYPE.A:
-                    if (trayExistInputStates.Values.All(state => state) || rackExistInputStates.Values.All(state => state))
+                    bool _isTraySensorAllOn = trayExistInputStates.Values.All(state => state);
+                    bool _isRackSensorAllOn = rackExistInputStates.Values.All(state => state);
+                    bool _isTraySensorAnyOn = trayExistInputStates.Values.Any(state => state);
+                    bool _isRackSensorAnyOn = rackExistInputStates.Values.Any(state => state);
+
+                    if (_isTraySensorAllOn || _isRackSensorAllOn)
+                    {
+                        cargoType = _isTraySensorAllOn ? CST_TYPE.Tray : CST_TYPE.Rack;
                         return CARGO_STATUS.HAS_CARGO_NORMAL;
-                    else if (trayExistInputStates.Values.All(state => !state) || rackExistInputStates.Values.All(state => !state))
-                        return CARGO_STATUS.NO_CARGO;
-                    else
+                    }
+                    else if (_isTraySensorAnyOn || _isRackSensorAnyOn)
+                    {
+                        cargoType = _isTraySensorAnyOn ? CST_TYPE.Tray : CST_TYPE.Rack;
                         return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                    }
+                    else
+                    {
+                        cargoType = CST_TYPE.None;
+                        return CARGO_STATUS.NO_CARGO;
+                    }
                 case IO_CONEECTION_POINT_TYPE.B:
-                    if (trayExistInputStates.Values.All(state => !state) || rackExistInputStates.Values.All(state => !state))
+                    bool _isTraySensorAllOff = trayExistInputStates.Values.All(state => !state);
+                    bool _isRackSensorAllOff = rackExistInputStates.Values.All(state => !state);
+                    bool _isTraySensorAnyOff = trayExistInputStates.Values.Any(state => !state);
+                    bool _isRackSensorAnyOff = rackExistInputStates.Values.Any(state => !state);
+
+                    if (_isTraySensorAllOff || _isRackSensorAllOff)
+                    {
+                        cargoType = _isTraySensorAllOff ? CST_TYPE.Tray : CST_TYPE.Rack;
                         return CARGO_STATUS.HAS_CARGO_NORMAL;
-                    else if (trayExistInputStates.Values.All(state => state) || rackExistInputStates.Values.All(state => state))
-                        return CARGO_STATUS.NO_CARGO;
-                    else
+                    }
+                    else if (_isTraySensorAnyOff || _isRackSensorAnyOff)
+                    {
+                        cargoType = _isTraySensorAnyOff ? CST_TYPE.Tray : CST_TYPE.Rack;
                         return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                    }
+                    else
+                    {
+                        cargoType = CST_TYPE.None;
+                        return CARGO_STATUS.NO_CARGO;
+                    }
                 default:
                     return CARGO_STATUS.HAS_CARGO_NORMAL;
             }
 
         }
+
 
         internal virtual bool HasAnyCargoOnAGV()
         {
