@@ -32,13 +32,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return baseCompos;
             }
         }
-        public override CARGO_STATUS CargoStatus
-        {
-            get
-            {
-                return GetCargoStatus();
-            }
-        }
         protected override int GetCargoType()
         {
             return HasAnyCargoOnAGV() ? 200 : 0;
@@ -113,53 +106,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
             LOG.TRACE($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
 
-        }
-        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
-        protected virtual CARGO_STATUS GetCargoStatus()
-        {
-            if (Parameters.LDULD_Task_No_Entry)
-            {
-                return simulation_cargo_status;
-            }
-
-            CARGO_STATUS _tray_cargo_status = CARGO_STATUS.NO_CARGO;
-            CARGO_STATUS _rack_cargo_status = CARGO_STATUS.NO_CARGO;
-
-            CARGO_STATUS _GetCargoStatus(DI_ITEM sensor1, DI_ITEM sensor2, IO_CONEECTION_POINT_TYPE sensor1_connect_type, IO_CONEECTION_POINT_TYPE sensor2_connect_type)
-            {
-                bool existSensor_1 = sensor1_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor1) : !WagoDI.GetState(sensor1);
-                bool existSensor_2 = sensor2_connect_type == IO_CONEECTION_POINT_TYPE.A ? WagoDI.GetState(sensor2) : !WagoDI.GetState(sensor2);
-                if (existSensor_1 && existSensor_2)
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-                if (!existSensor_1 && !existSensor_2)
-                    return CARGO_STATUS.NO_CARGO;
-                if ((!existSensor_1 && existSensor_2) || (existSensor_1 && !existSensor_2))
-                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                else
-                    return CARGO_STATUS.NO_CARGO;
-            }
-
-            if (Parameters.CargoExistSensorParams.TraySensorMounted)
-            {
-                var _connect_io_AB_type = Parameters.CargoExistSensorParams.TraySensorPointType;
-                _tray_cargo_status = _GetCargoStatus(DI_ITEM.TRAY_Exist_Sensor_1, DI_ITEM.TRAY_Exist_Sensor_2, _connect_io_AB_type, _connect_io_AB_type);
-            }
-            if (Parameters.CargoExistSensorParams.RackSensorMounted)
-            {
-                var _connect_io_AB_type = Parameters.CargoExistSensorParams.RackSensorPointType;
-                _rack_cargo_status = _GetCargoStatus(DI_ITEM.RACK_Exist_Sensor_2, DI_ITEM.RACK_Exist_Sensor_1, _connect_io_AB_type, _connect_io_AB_type);
-            }
-            CARGO_STATUS[] status_collection = new CARGO_STATUS[] { _tray_cargo_status, _rack_cargo_status };
-
-            if (status_collection.All(status => status == CARGO_STATUS.NO_CARGO))
-                return CARGO_STATUS.NO_CARGO;
-            else
-            {
-                if (status_collection.Any(status => status == CARGO_STATUS.HAS_CARGO_BUT_BIAS))
-                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                else
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-            }
         }
     }
 }

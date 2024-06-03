@@ -58,14 +58,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 PinHardware.rosSocket = AGVC.rosSocket;
         }
 
-        public override CARGO_STATUS CargoStatus
-        {
-            get
-            {
-                return GetCargoStatus();
-            }
-        }
-        
         public async Task<bool> ResetVerticalDriver()
         {
             try
@@ -437,7 +429,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return base.CheckHardwareStatus();
         }
-      
+
         protected override int GetCargoType()
         {
             var rack_sensor1 = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);

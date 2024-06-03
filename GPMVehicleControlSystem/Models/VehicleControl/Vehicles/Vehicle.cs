@@ -1215,31 +1215,64 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return true;
         }
+        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
+        protected virtual CARGO_STATUS GetCargoStatus()
+        {
+            if (Parameters.LDULD_Task_No_Entry)
+            {
+                return simulation_cargo_status;
+            }
+
+            CARGO_STATUS _tray_cargo_status = CARGO_STATUS.NO_CARGO;
+            CARGO_STATUS _rack_cargo_status = CARGO_STATUS.NO_CARGO;
+            bool isRackSensorMounted = Parameters.CargoExistSensorParams.RackSensorMounted;
+            IO_CONEECTION_POINT_TYPE sensorPointType = Parameters.CargoExistSensorParams.SensorPointType;
+            bool _tray1Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1);
+            bool _tray2Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
+            bool _tray3Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_3);
+            bool _tray4Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_4);
+
+            bool _rack1Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) : _tray1Input;
+            bool _rack2Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) : _tray2Input;
+
+            Dictionary<DI_ITEM, bool> trayExistInputStates = new Dictionary<DI_ITEM, bool>()
+            {
+                { DI_ITEM.TRAY_Exist_Sensor_1, _tray1Input},
+                { DI_ITEM.TRAY_Exist_Sensor_2, _tray2Input},
+                { DI_ITEM.TRAY_Exist_Sensor_3, _tray3Input},
+                { DI_ITEM.TRAY_Exist_Sensor_4, _tray4Input},
+            };
+            Dictionary<DI_ITEM, bool> rackExistInputStates = new Dictionary<DI_ITEM, bool>()
+            {
+                { DI_ITEM.RACK_Exist_Sensor_1, _rack1Input},
+                { DI_ITEM.RACK_Exist_Sensor_2, _rack2Input},
+            };
+            switch (sensorPointType)
+            {
+                case IO_CONEECTION_POINT_TYPE.A:
+                    if (trayExistInputStates.Values.All(state => state) || rackExistInputStates.Values.All(state => state))
+                        return CARGO_STATUS.HAS_CARGO_NORMAL;
+                    else if (trayExistInputStates.Values.All(state => !state) || rackExistInputStates.Values.All(state => !state))
+                        return CARGO_STATUS.NO_CARGO;
+                    else
+                        return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                case IO_CONEECTION_POINT_TYPE.B:
+                    if (trayExistInputStates.Values.All(state => !state) || rackExistInputStates.Values.All(state => !state))
+                        return CARGO_STATUS.HAS_CARGO_NORMAL;
+                    else if (trayExistInputStates.Values.All(state => state) || rackExistInputStates.Values.All(state => state))
+                        return CARGO_STATUS.NO_CARGO;
+                    else
+                        return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+                default:
+                    return CARGO_STATUS.HAS_CARGO_NORMAL;
+            }
+
+        }
 
         internal virtual bool HasAnyCargoOnAGV()
         {
-            bool _hasRack = false;
-            bool _hasTray = false;
-
-            if (Parameters.CargoExistSensorParams.RackSensorMounted)
-            {
-                if (Parameters.CargoExistSensorParams.RackSensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                {
-                    _hasRack = WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
-                }
-                else
-                {
-                    _hasRack = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
-                }
-            }
-            if (Parameters.CargoExistSensorParams.TraySensorMounted)
-            {
-                if (Parameters.CargoExistSensorParams.TraySensorPointType == IO_CONEECTION_POINT_TYPE.A)
-                    _hasTray = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-                else
-                    _hasTray = !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1) || !WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-            }
-            return _hasRack || _hasTray;
+            var currentCargoStatus = GetCargoStatus();
+            return currentCargoStatus != CARGO_STATUS.NO_CARGO;
         }
 
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
