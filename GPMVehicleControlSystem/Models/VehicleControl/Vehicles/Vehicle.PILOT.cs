@@ -609,9 +609,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
                             {
                                 SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
-                                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
                                     BuzzerPlayer.Move();
-                                else if (ExecutingTaskEntity.action == ACTION_TYPE.Charge)
+                                else if (_RunTaskData.Action_Type == ACTION_TYPE.Charge)
                                     BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
                                 else
                                     BuzzerPlayer.Action();
