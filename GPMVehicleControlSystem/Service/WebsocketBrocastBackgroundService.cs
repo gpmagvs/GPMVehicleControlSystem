@@ -29,15 +29,15 @@ namespace GPMVehicleControlSystem.Service
         {
             Console.WriteLine($"線上人數 = {clients.Count()}");
         }
-        private async Task<List<byte[]>> CreateChunkData(byte[] datPublishOut)
+        private List<byte[]> CreateChunkData(byte[] datPublishOut)
         {
             int offset = 0;
             int chunkSize = 16384;
             List<byte[]> chunks = new List<byte[]>();
             var dataLen = datPublishOut.Length;
+
             while (offset < datPublishOut.Length)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(0.1));
                 try
                 {
                     byte[] data = new byte[chunkSize];
@@ -70,13 +70,13 @@ namespace GPMVehicleControlSystem.Service
                     _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
                     var dataBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_ws_data_store));
                     ArraySegment<byte> buffer = new ArraySegment<byte>(dataBytes);
-                    List<byte[]> chunks = await CreateChunkData(dataBytes);
-                    var tasks = new List<Task>();
+                    List<byte[]> chunks = CreateChunkData(dataBytes);
+                    List<Task> tasks = new List<Task>();
                     foreach (var _client in clients)
                     {
                         if (_client.Value.State == WebSocketState.Open)
                         {
-                            tasks.Add(SendDataWithSemaphore(_client.Value, chunks));
+                            SendDataWithSemaphore(_client.Value, chunks);
                         }
                         else
                         {
@@ -84,7 +84,7 @@ namespace GPMVehicleControlSystem.Service
                         }
                     }
 
-                    await Task.WhenAll(tasks);
+                    //await Task.WhenAll(tasks);
                 }
                 catch (Exception ex)
                 {
@@ -95,14 +95,14 @@ namespace GPMVehicleControlSystem.Service
 
         private async Task SendDataWithSemaphore(WebSocket client, List<byte[]> chunks)
         {
-            await _semaphore.WaitAsync();
+            //await _semaphore.WaitAsync();
             try
             {
                 await SendData(client, chunks);
             }
             finally
             {
-                _semaphore.Release();
+                // _semaphore.Release();
             }
         }
         async Task SendData(WebSocket ws, List<byte[]> _chunks)
