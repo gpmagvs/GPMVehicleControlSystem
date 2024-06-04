@@ -135,6 +135,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
         public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
         private Action<ActionStatus> _OnAGVCActionChanged;
+        public event EventHandler OnAGVCActionActive;
+        public event EventHandler OnAGVCActionSuccess;
         public Action<ActionStatus> OnAGVCActionChanged
         {
             get => _OnAGVCActionChanged;
@@ -156,6 +158,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 if (_ActionStatus != value)
                 {
                     _ActionStatus = value;
+                    if (value == ActionStatus.SUCCEEDED)
+                    {
+                        OnAGVCActionSuccess?.Invoke(this, EventArgs.Empty);
+                    }
                 }
             }
         }
@@ -507,6 +513,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
             }
             LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
         }
 

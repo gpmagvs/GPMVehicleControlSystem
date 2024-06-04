@@ -27,7 +27,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.ONLINE();
                 }
                 else
+                {
                     StatusLighter.OFFLINE();
+                    AGVC.EmergencyStop(true);
+                }
             }
         }
 

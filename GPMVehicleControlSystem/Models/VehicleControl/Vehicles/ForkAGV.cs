@@ -435,5 +435,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await base.DOSettingWhenEmoTrigger();
             await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
         }
+
+        protected override async Task TryResetMotors()
+        {
+            if (IsAnyMotorAlarm())
+            {
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true);
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
+
+                while (IsAnyMotorAlarm())
+                {
+                    await Task.Delay(1);
+                }
+                await Task.Delay(50);
+            }
+        }
+        protected override bool IsAnyMotorAlarm()
+        {
+            bool horizonMotorAlarm = base.IsAnyMotorAlarm();
+
+            bool verticalMotorAlarm = !WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy);
+
+            return horizonMotorAlarm || verticalMotorAlarm;
+        }
     }
 }

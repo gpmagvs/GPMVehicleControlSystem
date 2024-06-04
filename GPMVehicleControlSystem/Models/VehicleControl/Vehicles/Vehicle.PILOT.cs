@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Security.Claims;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -126,7 +127,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _RunTaskData.IsEQHandshake = _isNeedHandshaking;
 
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
-                StartLaserObstacleMonitor();
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
 
                 LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
@@ -172,9 +172,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     AlarmManager.ClearAlarm();
                 AGVC.OnAGVCActionChanged = null;
-                EndLaserObstacleMonitor();
+                EndLaserObsMonitorAsync();
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
             });
+        }
+        private async Task EndLaserObsMonitorAsync()
+        {
+            Laser.ModeSwitch(LASER_MODE.Bypass, true);
+            await Task.Delay(100);
+            EndLaserObstacleMonitor();
+            var currentStatus = GetSub_Status();
+            if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
+                BuzzerPlayer.Stop();
         }
 
         private TaskBase CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
@@ -579,11 +588,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private CancellationTokenSource LaserObsMonitorCancel = new CancellationTokenSource();
         private SemaphoreSlim _StartLaserMonitorSemaphore = new SemaphoreSlim(1, 1);
-        public bool IsLaserMonitoring => !LaserObsMonitorCancel.IsCancellationRequested;
+        public bool IsLaserMonitoring { get; private set; } = false;
+
+        /// <summary>
+        /// 結束雷射障礙物監控
+        /// </summary>
         public void EndLaserObstacleMonitor()
         {
+            IsLaserMonitoring = false;
             LaserObsMonitorCancel.Cancel();
         }
+        /// <summary>
+        /// 雷射障礙物監控
+        /// </summary>
         public async void StartLaserObstacleMonitor()
         {
             try
@@ -599,10 +616,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SemaphoreSlim _SpeedRecoveryHandleSemaphoreSlim = new SemaphoreSlim(1, 1);
                 await Task.Run(async () =>
                 {
-                    while (true)
+                    IsLaserMonitoring = true;
+                    while (IsLaserMonitoring)
                     {
                         if (LaserObsMonitorCancel.IsCancellationRequested)
+                        {
+                            IsLaserMonitoring = false;
                             return;
+                        }
 
                         var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
                         if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
@@ -643,6 +664,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         await Task.Delay(10);
 
+                        //減速後恢復
                         async Task DecreaseSpeedAndRecovery()
                         {
                             try

@@ -87,7 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             base.Navigation_OnDirectionChanged(sender, direction);
 
         }
-        
+
         internal override void CreateLaserInstance()
         {
             Laser = new clsAMCLaser(WagoDO, WagoDI)
@@ -525,6 +525,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async void HandshakeIOOff()
         {
             //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
+        }
+
+        protected override bool IsAnyMotorAlarm()
+        {
+            return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) ||
+               !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
         }
         #region Private Methods
         private void HandleAGVCInstrumentMeasureDone(clsMeasureDone result)

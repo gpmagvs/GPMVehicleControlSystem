@@ -100,6 +100,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddSingleton<WebsocketMiddlewareService>();
+builder.Services.AddSingleton<SystemUpdateService>();
 builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
 builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
 builder.Services.AddHostedService<BatteryStateMonitorBackgroundService>();

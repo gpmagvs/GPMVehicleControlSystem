@@ -58,6 +58,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSpeedRecoveryRequesting += HandleSpeedReconveryRequesetRaised;
             AGVC.OnCstTriggerButTypeUnknown += HandleCstTriggerButTrayKnownEvent;
             AGVC.OnActionSendToAGVCRaising += HandleSendActionGoalToAGVCRaised;
+            AGVC.OnAGVCActionActive += HandleAGVCActionActive;
+            AGVC.OnAGVCActionSuccess += HandleAGVCActionSuccess;
             ChargeTask.OnChargeCircuitOpening += HandleChargeTaskTryOpenChargeCircuit;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
@@ -107,6 +109,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
                 clsBattery.OnBatteryUnderVoltage += HandleBatteryUnderVoltage;
 
+        }
+
+        private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
+        {
+            EndLaserObsMonitorAsync();
+        }
+
+        private async void HandleAGVCActionActive(object? sender, EventArgs e)
+        {
+            StartLaserObstacleMonitor();
         }
 
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
@@ -190,7 +202,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnReConnected += WagoDI_OnReConnected;
             WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
-            WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
+            WagoDI.OnResetButtonPressed += HandleResetButtonPush;
+            //WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
 
             Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
             {
@@ -211,6 +224,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
             }
 
+        }
+
+        private async void HandleResetButtonPush(object? sender, EventArgs e)
+        {
+            await TryResetMotors();
+            AlarmManager.ClearAlarm();
+            BuzzerPlayer.Stop();
+        }
+
+        protected virtual async Task TryResetMotors()
+        {
+            if (IsAnyMotorAlarm())
+            {
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
+                await Task.Delay(100);
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+
+                while (IsAnyMotorAlarm())
+                {
+                    await Task.Delay(1);
+                }
+                await Task.Delay(50);
+            }
+        }
+
+        protected virtual bool IsAnyMotorAlarm()
+        {
+            return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2);
         }
 
         private void HandleLimitSwitchSensorSignalChange(object? sender, bool input_status)
@@ -820,7 +861,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task DOSettingWhenEmoTrigger()
         {
-            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+            //await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
         }
 
         protected virtual void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)
