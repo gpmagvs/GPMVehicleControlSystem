@@ -312,12 +312,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             DO_ITEM BES = batNo == BATTERY_LOCATION.RIGHT ? DO_ITEM.AGV_CS_1 : DO_ITEM.AGV_CS_0;
             DO_ITEM LDUDLREQ = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? DO_ITEM.AGV_L_REQ : DO_ITEM.AGV_U_REQ;
 
+            //check progress
+            await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, true);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Result, true, 3, token);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Ready, true, 3, token);
+            await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, false);
+
+            //start handshake
             await WaitEQSignal(DI_ITEM.EQ_VALID, true, 3, token);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, true);
-
-
             WatchEQVALID(cancellationTokenSource);
-
 
             await TsmcMiniAGV.WagoDO.SetState(BES, true);
             await TsmcMiniAGV.WagoDO.SetState(LDUDLREQ, true);
