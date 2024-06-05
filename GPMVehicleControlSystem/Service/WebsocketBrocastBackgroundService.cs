@@ -1,5 +1,6 @@
 ﻿
 using GPMVehicleControlSystem.ViewModels;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
@@ -10,25 +11,13 @@ namespace GPMVehicleControlSystem.Service
 {
     public class WebsocketBrocastBackgroundService : BackgroundService
     {
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(5); // 设置并发限制
-
-        private static ConcurrentDictionary<string, WebSocket> clients = new ConcurrentDictionary<string, WebSocket>();
-        public static void ConnectIn(string user_id, WebSocket clientWs)
+        //use hub to broadcast
+        private readonly IHubContext<FrontendHub> _hubContext;
+        public WebsocketBrocastBackgroundService(IHubContext<FrontendHub> hubContext)
         {
-            clients.TryAdd(user_id, clientWs);
-            PrintOnlineClientNum();
+            _hubContext = hubContext;
         }
 
-        internal static void HandleClientDisconnect(string user_id)
-        {
-            clients.TryRemove(user_id, out WebSocket clientWs);
-            clientWs?.Dispose();
-            PrintOnlineClientNum();
-        }
-        private static void PrintOnlineClientNum()
-        {
-            Console.WriteLine($"線上人數 = {clients.Count()}");
-        }
         private List<byte[]> CreateChunkData(byte[] datPublishOut)
         {
             int offset = 0;
@@ -60,7 +49,7 @@ namespace GPMVehicleControlSystem.Service
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(180);
+                await Task.Delay(180, stoppingToken);
                 try
                 {
                     var _ws_data_store = new Dictionary<string, object>();
@@ -68,23 +57,7 @@ namespace GPMVehicleControlSystem.Service
                     _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
                     _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
                     _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
-                    var dataBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_ws_data_store));
-                    ArraySegment<byte> buffer = new ArraySegment<byte>(dataBytes);
-                    List<byte[]> chunks = CreateChunkData(dataBytes);
-                    List<Task> tasks = new List<Task>();
-                    foreach (var _client in clients)
-                    {
-                        if (_client.Value.State == WebSocketState.Open)
-                        {
-                            SendDataWithSemaphore(_client.Value, chunks);
-                        }
-                        else
-                        {
-                            _client.Value.Dispose();
-                        }
-                    }
-
-                    //await Task.WhenAll(tasks);
+                    await _hubContext.Clients.All.SendAsync("ReceiveData", "VMS", _ws_data_store);
                 }
                 catch (Exception ex)
                 {
@@ -93,32 +66,5 @@ namespace GPMVehicleControlSystem.Service
             }
         }
 
-        private async Task SendDataWithSemaphore(WebSocket client, List<byte[]> chunks)
-        {
-            //await _semaphore.WaitAsync();
-            try
-            {
-                await SendData(client, chunks);
-            }
-            finally
-            {
-                // _semaphore.Release();
-            }
-        }
-        async Task SendData(WebSocket ws, List<byte[]> _chunks)
-        {
-            try
-            {
-                for (int i = 0; i < _chunks.Count; i++)
-                {
-                    var chunk = _chunks[i];
-                    await ws.SendAsync(new ArraySegment<byte>(chunk), WebSocketMessageType.Text, i == _chunks.Count - 1, CancellationToken.None);
-                }
-            }
-            catch (Exception)
-            {
-                ws.Dispose();
-            }
-        }
     }
 }

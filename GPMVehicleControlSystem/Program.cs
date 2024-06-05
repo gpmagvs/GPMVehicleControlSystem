@@ -1,4 +1,4 @@
-using AGVSystemCommonNet6.Log;
+锘縰sing AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
@@ -17,7 +17,7 @@ System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Inst
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 OTAHelper.TryStartOTAServiceAPP();
-Console.Title = $"ó更╰参-V{StaStored.APPVersion}";
+Console.Title = $"杌婅級绯荤当-V{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 {
@@ -71,7 +71,7 @@ void VehicheAndWagoIOConfiguraltion()
                 StaStored.CurrentVechicle = new DemoMiniAGV();
         }
 
-        LOG.INFO($"AGV-{StaStored.CurrentVechicle?.Parameters.AgvType} Created");
+        LOG.INFO($"AGV-{StaStored.CurrentVechicle?.Parameters.AgvType} Created锛侊紒");
         //LinuxTools.SysLoadingLogProcess();
     }
     catch (Exception ex)
@@ -99,7 +99,6 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 builder.Services.AddDirectoryBrowser();
-builder.Services.AddSingleton<WebsocketMiddlewareService>();
 builder.Services.AddSingleton<SystemUpdateService>();
 builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
 builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
@@ -119,6 +118,8 @@ builder.Services.Configure<GzipCompressionProviderOptions>(options =>
  {
      options.Level = System.IO.Compression.CompressionLevel.Optimal;
  });
+builder.Services.AddSignalR().AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNamingPolicy = null; });
+builder.Services.AddSignalR();
 
 AlarmManager.AddAlarm(AlarmCodes.None, true);
 
@@ -133,7 +134,7 @@ _ = Task.Run(async () =>
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"GPM AGV ó更╰参-v.{StaStored.APPVersion}");
+            Console.WriteLine($"GPM AGV 杌婅級绯荤当-v.{StaStored.APPVersion}");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }
@@ -144,7 +145,11 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(1) });
-app.UseCors(c => c.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+app.UseCors(c => c.AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true)
+                .AllowCredentials()
+           );
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -177,6 +182,6 @@ app.UseRouting();
 app.UseVueRouterHistory();
 app.UseAuthorization();
 app.MapControllers();
-
+app.MapHub<FrontendHub>("/FrontendHub");
 app.Run();
 
