@@ -267,7 +267,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (Version == 2)
                 {
                     VCSInputs[Indexs[DI_ITEM.EMO_Button_2]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
-                    VCSInputs[Indexs[DI_ITEM.Safty_PLC_Output]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
+                    //VCSInputs[Indexs[DI_ITEM.Safty_PLC_Output]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
                 }
                 else
                 {

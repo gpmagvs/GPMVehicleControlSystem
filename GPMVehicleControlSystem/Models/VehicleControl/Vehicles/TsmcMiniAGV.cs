@@ -104,20 +104,50 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_2, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_3, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Error_4, HandleDriversStatusErrorAsync);
-            WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
-            WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
-            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
-            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
 
-            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_1, HandleSideLaserArea1SinalChange);
-            //WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
-            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_1, HandleSideLaserArea1SinalChange);
-            //WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_2, HandleLaserArea2SinalChange);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Safty_PLC_Output, HandleSaftyPLCOutputStatusChanged);
+
+            //WagoDI.SubsSignalStateChange(DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            //WagoDI.SubsSignalStateChange(DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            //WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            //WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandleLaserTriggerSaftyRelay);
+            //WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_1, HandleSideLaserArea1SinalChange);
+            //WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_1, HandleSideLaserArea1SinalChange);
 
             WagoDI.SubsSignalStateChange(DI_ITEM.Front_Right_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
             WagoDI.SubsSignalStateChange(DI_ITEM.Back_Left_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
 
             WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
+        }
+
+        private async void HandleSaftyPLCOutputStatusChanged(object? sender, bool io_state)
+        {
+            //B接點 > OFF表示異常
+            bool _SaftyPLCOuputError = !io_state;
+
+            if (!_SaftyPLCOuputError)
+                return;
+            if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING)
+                return;
+            LOG.TRACE($"Safty PLC Ouput Error [HandleSaftyPLCOutputStatusChanged]");
+            while (!_SaftyRelayResetAllow())
+            {
+                await Task.Delay(100);
+            }
+            await WagoDO.ResetSaftyRelay();
+
+            if (!WagoDI.GetState(DI_ITEM.Safty_PLC_Output))
+            {
+                LOG.WARN($"Reset Safty Relay Done But Safty_PLC_Output still OFF. Recall HandleSaftyPLCOutputStatusChanged");
+                HandleSaftyPLCOutputStatusChanged(sender, false);
+                return;
+            }
+            LOG.TRACE($"No Obstacle. Reset Safty Relay.  [HandleSaftyPLCOutputStatusChanged]");
+
+            bool _SaftyRelayResetAllow()
+            {
+                return AGVC.CurrentSpeedControlCmd != ROBOT_CONTROL_CMD.STOP;
+            }
         }
 
         private async void HandleUltrasoundSensorTrigger(object? sender, bool state)
@@ -264,7 +294,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected internal async override void SoftwareEMO(AlarmCodes alarmCode)
         {
-            Task.Factory.StartNew(() => BuzzerPlayer.Alarm());
+            BuzzerPlayer.Alarm();
             if (Laser3rdTriggerHandlerFlag)
             {
                 LOG.WARN($"EMS Trigger by Laser 3rd and Reset process is running, No Abort Task and AGV is not Down Status");
@@ -526,11 +556,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
         }
-
+        protected override async Task TryResetMotors()
+        {
+            await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, true);
+            await Task.Delay(100);
+            await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
+        }
         protected override bool IsAnyMotorAlarm()
         {
-            return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2) ||
-               !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_3) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_4);
+            return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
+               WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
         }
         #region Private Methods
         private void HandleAGVCInstrumentMeasureDone(clsMeasureDone result)

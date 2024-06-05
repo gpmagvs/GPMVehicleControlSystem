@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -28,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public BATTERY_LOCATION Inspefic_Bat_loc = BATTERY_LOCATION.NAN;
         public EXCHANGE_BAT_ACTION Inspefic_Action = EXCHANGE_BAT_ACTION.BOTH;
         public bool Debugging = false;
-
+        //
         public clsBatExchangeTimeout timouts => TsmcMiniAGV.Parameters.InspectionAGV.BatExchangeTimeout;
 
         public enum EXCHANGE_BAT_ACTION
@@ -44,8 +45,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public ExchangeBatteryTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             TsmcMiniAGV = Agv as TsmcMiniAGV;
+            if (this.RunningTaskData.Homing_Trajectory.Length == 1)
+            {
+                //expand 
+                //TsmcMiniAGV.lastVisitedMapPoint
+                var _current_theta = TsmcMiniAGV.lastVisitedMapPoint.Direction;
+                var _current_tag = TsmcMiniAGV.lastVisitedMapPoint.TagNumber;
+                var _current_x = TsmcMiniAGV.lastVisitedMapPoint.X;
+                var _current_y = TsmcMiniAGV.lastVisitedMapPoint.Y;
+                List<clsMapPoint> _newHomeTrajList = RunningTaskData.Homing_Trajectory.ToList();
+                _newHomeTrajList.Insert(0, new clsMapPoint
+                {
+                    Theta = _current_theta,
+                    Point_ID = _current_tag,
+                    X = _current_x,
+                    Y = _current_y,
+                    index = 0,
+                });
+                _newHomeTrajList.Last().index = 1;
+                RunningTaskData.Homing_Trajectory = _newHomeTrajList.ToArray();
+            }
         }
 
+        protected override Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
+        {
+            return base.TransferTaskToAGVC();
+        }
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.ExchangeBattery;
 
         public override void DirectionLighterSwitchBeforeTaskExecute()

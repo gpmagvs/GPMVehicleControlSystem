@@ -440,6 +440,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
 
         public static ROBOT_CONTROL_CMD AGVS_SPEED_CONTROL_REQUEST = ROBOT_CONTROL_CMD.NONE;
+
+        public ROBOT_CONTROL_CMD CurrentSpeedControlCmd { get; set; } = ROBOT_CONTROL_CMD.SPEED_Reconvery;
         public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
         {
             if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery & OnSpeedRecoveryRequesting != null)
@@ -468,6 +470,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);
             }
+            CurrentSpeedControlCmd = cmd;
             return res.confirm;
         }
 
