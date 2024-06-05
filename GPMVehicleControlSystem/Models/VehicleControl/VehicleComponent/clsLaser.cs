@@ -17,6 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public enum LASER_MODE
         {
+            Unknow = 444,
             Bypass = 0,
             Normal = 1,
             Secondary = 2,
@@ -34,7 +35,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             Unknow_14 = 14,
             Unknow_15 = 15,
             Bypass16 = 16,
-            Unknow = 444
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().First(mo => (int)mo == CurrentLaserModeOfSick);
+                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().FirstOrDefault(mo => (int)mo == CurrentLaserModeOfSick);
                 }
                 catch (Exception)
                 {
@@ -293,6 +293,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-       
+
     }
 }

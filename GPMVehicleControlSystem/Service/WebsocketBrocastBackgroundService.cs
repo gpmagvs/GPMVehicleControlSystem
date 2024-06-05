@@ -52,12 +52,24 @@ namespace GPMVehicleControlSystem.Service
                 await Task.Delay(180, stoppingToken);
                 try
                 {
-                    var _ws_data_store = new Dictionary<string, object>();
-                    _ws_data_store["ConnectionStatesVM"] = ViewModelFactory.GetConnectionStatesVM();
-                    _ws_data_store["VMSStatesVM"] = ViewModelFactory.GetVMSStatesVM();
-                    _ws_data_store["DIOTableVM"] = ViewModelFactory.GetDIOTableVM();
-                    _ws_data_store["RDTestData"] = ViewModelFactory.GetRDTestData();
+                    Dictionary<string, object> _ws_data_store = new Dictionary<string, object>();
+                    ConnectionStateVM conn_data = ViewModelFactory.GetConnectionStatesVM();
+                    AGVCStatusVM state_data = ViewModelFactory.GetVMSStatesVM();
+                    DIOTableVM dio_data = ViewModelFactory.GetDIOTableVM();
+                    object rd_data = ViewModelFactory.GetRDTestData();
+                    _ws_data_store["ConnectionStatesVM"] = conn_data;
+                    _ws_data_store["VMSStatesVM"] = state_data;
+                    _ws_data_store["DIOTableVM"] = dio_data;
+                    _ws_data_store["RDTestData"] = rd_data;
                     await _hubContext.Clients.All.SendAsync("ReceiveData", "VMS", _ws_data_store);
+
+                    state_data.Dispose();
+                    dio_data.Dispose();
+                    conn_data = null;
+                    state_data = null;
+                    dio_data = null;
+                    rd_data = null;
+
                 }
                 catch (Exception ex)
                 {

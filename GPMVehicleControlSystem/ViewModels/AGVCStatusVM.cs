@@ -11,8 +11,10 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
-    public class AGVCStatusVM
+    public class AGVCStatusVM : IDisposable
     {
+        private bool disposedValue;
+
         public string APPVersion { get; set; } = "1.0.0";
         public AGV_TYPE Agv_Type { get; set; }
         public string MainState { get; set; } = "";
@@ -133,6 +135,53 @@ namespace GPMVehicleControlSystem.ViewModels
 
             public string HandshakingInfoText { get; set; } = "Non-Handshake";
 
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: 處置受控狀態 (受控物件)
+                }
+                // TODO: 釋出非受控資源 (非受控物件) 並覆寫完成項
+                //TODO: 將大型欄位設為 Null 
+                BatteryStatus = null;
+                Last_Visit_MapPoint = null;
+                Pose = null;
+                BCR_State_MoveBase = null;
+                ZAxisDriverState = null;
+                DriversStates = null;
+                UltrSensorState = null;
+                NavInfo = null;
+                LightsStates = null;
+                HandShakeSignals = null;
+                HandShakeTimers = null;
+                SysLoading = null;
+                HandshakeStatus = null;
+                OrderInfo = null;
+                AMCAGVSensorState = null;
+                IMUMaxMinValRecord = null;
+                AlarmCodes = null;
+
+                disposedValue = true;
+
+            }
+        }
+
+        // // TODO: 僅有當 'Dispose(bool disposing)' 具有會釋出非受控資源的程式碼時，才覆寫完成項
+        // ~AGVCStatusVM()
+        // {
+        //     // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -10,7 +10,6 @@ using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
-
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -279,36 +278,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// AGV是否有搭載極限Sensor
         /// </summary>
-        public bool IsLimitSwitchSensorMounted
-        {
-            get
-            {
-                try
-                {
-                    var inputs_mounted = WagoDI.VCSInputs.Select(i => i.Input).ToList();
-                    return inputs_mounted.Any(input => input is DI_ITEM.Limit_Switch_Sensor);
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-
-            }
-        }
-        public bool IsForkExtenable
-        {
-            get
-            {
-                try
-                {
-                    return WagoDO.VCSOutputs.Any(item => item.Output is DO_ITEM.Fork_Extend);
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-        }
+        public bool IsLimitSwitchSensorMounted { get; private set; } = false;
+        public bool IsForkExtenable { get; private set; } = false;
         public Vehicle()
         {
             try
@@ -346,9 +317,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 CreateLaserInstance();
 
 
-                List<Task> WagoAndRosInitTasks = new List<Task>();
-                WagoAndRosInitTasks.Add(WagoDIInit());
-                WagoAndRosInitTasks.Add(RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag));
+                List<Task> WagoAndRosInitTasks = new List<Task>
+                {
+                    WagoDIInit(),
+                    RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag)
+                };
 
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
@@ -451,10 +424,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     CSTReader.ReadCSTIDFromLocalStorage();
                 }
+                IsForkExtenable = _IsForkExtenable();
+                IsLimitSwitchSensorMounted = _IsLimitSwitchSensorMounted();
+
                 LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                 LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
 
                 IsSystemInitialized = true;
+
+                bool _IsLimitSwitchSensorMounted()
+                {
+                    try
+                    {
+                        var inputs_mounted = WagoDI.VCSInputs.Select(i => i.Input).ToList();
+                        return inputs_mounted.Any(input => input is DI_ITEM.Limit_Switch_Sensor);
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }
+
+                bool _IsForkExtenable()
+                {
+                    try
+                    {
+                        return WagoDO.VCSOutputs.Any(item => item.Output is DO_ITEM.Fork_Extend);
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }
             }
             catch (Exception ex)
             {

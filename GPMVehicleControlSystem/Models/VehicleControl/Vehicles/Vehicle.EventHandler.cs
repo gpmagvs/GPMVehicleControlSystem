@@ -926,6 +926,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 LOG.Critical(ex);
             }
+            finally
+            {
+                _ModuleInformation = null;
+            }
+
         }
 
 

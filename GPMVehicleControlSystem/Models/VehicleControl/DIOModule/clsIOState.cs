@@ -35,7 +35,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             get
             {
-                return Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().First(di => di.ToString() == Name);
+                return Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().FirstOrDefault(di => di.ToString() == Name);
             }
         }
 

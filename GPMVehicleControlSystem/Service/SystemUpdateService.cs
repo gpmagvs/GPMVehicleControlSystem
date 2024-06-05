@@ -29,9 +29,20 @@ namespace GPMVehicleControlSystem.Service
                     //2 unzip to current folder
                     ZipFile.ExtractToDirectory(filePath, zipFileTempFolder, true);
                     File.Delete(filePath);
-                    File.WriteAllText(Path.Combine(currentDirectory, "update.sh"), $"sleep 3 && killall -9 GPM_VCS&&cp -r {zipFileTempFolder}/* {currentDirectory}/");
-                    //File.WriteAllText(Path.Combine(_currentFolderPath, "copy.sh"), $"cp -r {_currentFolderPath}/* /usr/local/bin");
-                    Process.Start("chmod", "+x update.sh");
+                    File.WriteAllText(Path.Combine(currentDirectory, "update.sh"), $"sleep 3 && killall -9 GPM_VCS&&cp -r {zipFileTempFolder}/* {currentDirectory}/" +
+                        $"&& cd {currentDirectory};./GPM_VCS;exec bash");
+
+                    ProcessStartInfo startInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = "-c \"./update.sh\"",
+                        WorkingDirectory = currentDirectory,
+                        UseShellExecute = false,
+                        CreateNoWindow = false
+                    };
+                    // Start the process
+                    Process process = Process.Start(startInfo);
+
                     return (true, "");
                 }
                 catch (Exception ex)
