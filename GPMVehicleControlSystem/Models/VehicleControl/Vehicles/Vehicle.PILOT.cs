@@ -619,77 +619,86 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     IsLaserMonitoring = true;
                     while (IsLaserMonitoring)
                     {
-                        if (LaserObsMonitorCancel.IsCancellationRequested)
+                        try
                         {
-                            IsLaserMonitoring = false;
-                            return;
-                        }
+                            if (LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring)
+                                return;
 
-                        var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
-                        if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
-                        {
-                            if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
+                            var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+                            if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                             {
-                                SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
-                                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                                    BuzzerPlayer.Move();
-                                else if (_RunTaskData.Action_Type == ACTION_TYPE.Charge)
-                                    BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
-                                else
-                                    BuzzerPlayer.Action();
-                            }
-                            else
-                            {
-                                SetSub_Status(SUB_STATUS.ALARM);
-                                BuzzerPlayer.Alarm();
-                            }
-
-                            //已無異常清空所有雷射異常
-                            if (!alarmCodeCollection.Any())
-                                AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
-                            else
-                            {
-                                HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
-                            }
-                            if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                            {
-                                DecreaseSpeedAndRecovery();
-                            }
-                            else
-                                await AGVC.CarSpeedControl(cmdGet);
-
-
-                            _CurrentRobotControlCmd = cmdGet;
-                            _CurrentAlarmCodeCollection = alarmCodeCollection;
-                        }
-                        await Task.Delay(10);
-
-                        //減速後恢復
-                        async Task DecreaseSpeedAndRecovery()
-                        {
-                            try
-                            {
-                                await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
-                                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                                Stopwatch timer = Stopwatch.StartNew();
-                                while (timer.Elapsed.Seconds < 1)
+                                if (LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring)
+                                    return;
+                                await Task.Delay(10, LaserObsMonitorCancel.Token);
+                                if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
                                 {
-                                    await Task.Delay(1);
-                                    if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                                        return;
+                                    SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
+                                    if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                        BuzzerPlayer.Move();
+                                    else if (_RunTaskData.Action_Type == ACTION_TYPE.Charge)
+                                        BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                                    else
+                                        BuzzerPlayer.Action();
+                                }
+                                else
+                                {
+                                    SetSub_Status(SUB_STATUS.ALARM);
+                                    BuzzerPlayer.Alarm();
                                 }
 
-                                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                                //已無異常清空所有雷射異常
+                                if (!alarmCodeCollection.Any())
+                                    AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
+                                else
+                                {
+                                    HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
+                                }
+                                if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                {
+                                    DecreaseSpeedAndRecovery();
+                                }
+                                else
+                                    await AGVC.CarSpeedControl(cmdGet);
+
+
+                                _CurrentRobotControlCmd = cmdGet;
+                                _CurrentAlarmCodeCollection = alarmCodeCollection;
                             }
-                            catch (Exception ex)
+                            await Task.Delay(10, LaserObsMonitorCancel.Token);
+
+                            //減速後恢復
+                            async Task DecreaseSpeedAndRecovery()
                             {
-                                LOG.ERROR(ex);
-                            }
-                            finally
-                            {
-                                _SpeedRecoveryHandleSemaphoreSlim.Release();
+                                try
+                                {
+                                    await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
+                                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                                    Stopwatch timer = Stopwatch.StartNew();
+                                    while (timer.Elapsed.Seconds < 1)
+                                    {
+                                        await Task.Delay(1);
+                                        if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                            return;
+                                    }
+
+                                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LOG.ERROR(ex);
+                                }
+                                finally
+                                {
+                                    _SpeedRecoveryHandleSemaphoreSlim.Release();
+                                }
+
                             }
 
+                        }
+                        catch (TaskCanceledException ex)
+                        {
+                            LOG.INFO("雷射偵測流程已取消");
+                            return;
                         }
                     }
                 });
