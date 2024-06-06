@@ -324,7 +324,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             IOListsTopicID = rosSocket.Advertise<IOlistsMsg>("IOlists");
         }
 
-        internal void IOListMsgPublisher(IOlistsMsg payload)
+        public virtual void IOListMsgPublisher(IOlistsMsg payload)
         {
             rosSocket.Publish(IOListsTopicID, payload);
         }

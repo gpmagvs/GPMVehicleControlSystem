@@ -54,15 +54,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override void AdertiseROSServices()
         {
-            base.AdertiseROSServices();
-
+            IOListsTopicID = rosSocket.Advertise<IOlistsMsg_KGS>("IOlists");
             string _service_name = rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", InstrumentMeasureDone);
             LOG.TRACE($"Service Advertised: {_service_name}");
             _service_name = rosSocket?.AdvertiseService<Fire_Action_Request, Fire_Action_Response>("/fire_action", FireActionDoneCallback);
             LOG.TRACE($"Service Advertised: {_service_name}");
         }
 
-
+        public void IOListMsgPublisher(IOlistsMsg_KGS payload)
+        {
+            rosSocket.Publish(IOListsTopicID, payload);
+        }
         /// <summary>
         /// 確認儀器狀態
         /// </summary>

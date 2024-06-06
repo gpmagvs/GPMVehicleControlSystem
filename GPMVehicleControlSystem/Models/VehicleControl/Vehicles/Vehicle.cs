@@ -342,7 +342,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-        public async void StartPublishIOListsMsg()
+        public virtual async void StartPublishIOListsMsg()
         {
             await Task.Delay(10);
             _ = Task.Run(async () =>

@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.Buzzer;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -279,6 +280,60 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 exist2_back = WagoDI.GetState(DI_ITEM.Battery_2_Exist_2);
                 exist3_docked = WagoDI.GetState(DI_ITEM.Battery_2_Exist_3);
             }
+        }
+
+        public override async void StartPublishIOListsMsg()
+        {
+            await Task.Delay(10);
+            _ = Task.Run(async () =>
+            {
+                LOG.TRACE($"Start publish IOLists! [Use {IOlistsMsg_KGS.RosMessageName}]");
+
+                IOlistsMsg_KGS payload = new IOlistsMsg_KGS();
+
+                IOlistMsg_KGSBase[] lastInputsIOTable = GetCurrentInputIOTable();
+                IOlistMsg_KGSBase[] lastOutputsIOTable = GetCurrentInputIOTable();
+
+                PublishIOListsMsg(lastInputsIOTable);
+                PublishIOListsMsg(lastOutputsIOTable);
+
+                while (true)
+                {
+                    await Task.Delay(1);
+
+                    IOlistMsg_KGSBase[] _currentInputsIOTable = GetCurrentInputIOTable();
+                    IOlistMsg_KGSBase[] _currentOutputsIOTable = GetCurrentOutputIOTable();
+
+                    bool _isInputsChanged = IsIOChanged(_currentInputsIOTable, lastInputsIOTable);
+                    bool _isOutputsChanged = IsIOChanged(_currentOutputsIOTable, lastOutputsIOTable);
+
+                    if (_isInputsChanged)
+                        PublishIOListsMsg(_currentInputsIOTable);
+                    if (_isOutputsChanged)
+                        PublishIOListsMsg(_currentOutputsIOTable);
+
+                    lastInputsIOTable = _currentInputsIOTable;
+                    lastOutputsIOTable = _currentOutputsIOTable;
+
+                }
+                IOlistMsg_KGSBase[] GetCurrentInputIOTable()
+                {
+                    return WagoDI.VCSInputs.Select(signal => new IOlistMsg_KGSBase("X", signal.State ? 1 : 0, WagoDI.VCSInputs.IndexOf(signal))).ToArray();
+                }
+                IOlistMsg_KGSBase[] GetCurrentOutputIOTable()
+                {
+                    return WagoDO.VCSOutputs.Select(signal => new IOlistMsg_KGSBase("Y", signal.State ? 1 : 0, WagoDO.VCSOutputs.IndexOf(signal))).ToArray();
+                }
+                void PublishIOListsMsg(IOlistMsg_KGSBase[] IOTable)
+                {
+                    payload.IOtable = IOTable;
+                    AGVC?.IOListMsgPublisher(payload);
+                }
+                bool IsIOChanged(IOlistMsg_KGSBase[] table1, IOlistMsg[] table2)
+                {
+                    return !table1.Select(io => io.Coil).SequenceEqual(table2.Select(io => io.Coil));
+                }
+            });
         }
     }
 }
