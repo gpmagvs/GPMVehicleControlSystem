@@ -200,7 +200,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 task_abort_alarmcode = AlarmCodes.None;
                 await Task.Delay(10);
-                BuzzerPlayMusic(action);
+                if (this.action != ACTION_TYPE.None)
+                {
+                    Agv.SetSub_Status(SUB_STATUS.RUN);
+                    BuzzerPlayMusic(action);
+                }
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 if (!await LaserSettingBeforeTaskExecute())
@@ -385,7 +389,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             return (alarmCodes.Count == 0, alarmCodes);
         }
-
         protected virtual void BuzzerPlayMusic(ACTION_TYPE action)
         {
             if (action == ACTION_TYPE.None)
@@ -526,6 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+            await Task.Delay(200);
             Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);
         }

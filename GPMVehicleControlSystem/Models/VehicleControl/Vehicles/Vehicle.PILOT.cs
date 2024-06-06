@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using MathNet.Numerics;
+using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Claims;
@@ -105,7 +106,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.ClearAlarm();
             LOG.TRACE("Set Sub_Status RUN When Execute AGVS Task");
             await Task.Delay(10);
-            SetSub_Status(SUB_STATUS.RUN);
+            if (AGV_Reset_Flag)
+                return;
             await Laser.AllLaserActive();
             ACTION_TYPE action = taskDownloadData.Action_Type;
             IsWaitForkNextSegmentTask = false;
@@ -121,16 +123,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             TaskDispatchFlowControlSemaphoreSlim.Release();
             await Task.Run(async () =>
             {
+                if (AGV_Reset_Flag)
+                    return;
                 //LDULDRecord
                 IsLaserRecoveryHandled = false;
                 bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
                 _RunTaskData.IsEQHandshake = _isNeedHandshaking;
-
+                AGV_Reset_Flag = AGVSResetCmdFlag = false;
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-
                 LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
-
                 if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                 {
                     LOG.WARN("Replan.");
@@ -347,6 +349,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void TryControlAutoDoor(int newVisitedNodeTag)
         {
+            if (ExecutingTaskEntity == null)
+                return;
+
             clsMapPoint[] trajectory = ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory;
             LOG.INFO($"Try Control Auto Door in Tag {newVisitedNodeTag}(Full Traj: {string.Join(",", trajectory.Select(pt => pt.Point_ID))})");
             //剩餘路徑包含自動門 則將 IO ON著 反之 OFF
@@ -617,18 +622,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Run(async () =>
                 {
                     IsLaserMonitoring = true;
-                    while (IsLaserMonitoring)
+                    while (!CheckMonitorCancel() && !CheckAGVCActionDone())
                     {
                         try
                         {
-                            if (LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring)
+                            if (CheckMonitorCancel() || CheckAGVCActionDone())
                                 return;
 
                             var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
                             if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                             {
-                                if (LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring)
+                                if (CheckMonitorCancel() || CheckAGVCActionDone())
                                     return;
+
                                 await Task.Delay(10, LaserObsMonitorCancel.Token);
                                 if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
                                 {
@@ -700,6 +706,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             LOG.INFO("雷射偵測流程已取消");
                             return;
                         }
+                    }
+
+                    bool CheckMonitorCancel()
+                    {
+                        return LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring;
+                    }
+
+                    bool CheckAGVCActionDone()
+                    {
+                        return AGVC.ActionStatus == ActionStatus.SUCCEEDED;
                     }
                 });
 

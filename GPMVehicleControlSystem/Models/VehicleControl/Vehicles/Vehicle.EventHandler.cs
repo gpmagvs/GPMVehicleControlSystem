@@ -118,7 +118,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleAGVCActionActive(object? sender, EventArgs e)
         {
-            StartLaserObstacleMonitor();
+            _ = Task.Run(async () =>
+            {
+                SetSub_Status(SUB_STATUS.RUN);
+                StartLaserObstacleMonitor();
+                await Task.Delay(300);
+                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                    BuzzerPlayer.Move();
+            });
         }
 
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)

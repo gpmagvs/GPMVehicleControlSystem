@@ -41,7 +41,6 @@ namespace GPMVehicleControlSystem.Controllers
             LogAsync("Execute", data, method: "POST");
 
             TASK_DOWNLOAD_RETURN_CODES return_code = Agv.AGVSTaskDownloadConfirm(data);
-
             task_download_feedback.ReturnCode = return_code;
             if (return_code == TASK_DOWNLOAD_RETURN_CODES.OK)
             {

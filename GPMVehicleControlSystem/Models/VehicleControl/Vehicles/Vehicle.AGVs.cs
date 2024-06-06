@@ -105,38 +105,50 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
-            await Task.Delay(1);
+            await Task.Delay(100);
             _ = Task.Run(async () =>
             {
-                LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
-                LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
-                AGV_Reset_Flag = AGVSResetCmdFlag = false;
-
-                await CheckActionFinishFeedbackFinish();
-                clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-                _TryClearExecutingTask();
-                WriteTaskNameToFile(taskDownloadData.Task_Name);
                 try
                 {
-                    await Task.Delay(200);
-                    ExecuteAGVSTask(taskDownloadData);
-                }
-                catch (NullReferenceException ex)
-                {
-                    LOG.Critical(ex.Message, ex);
-                }
 
-                void _TryClearExecutingTask()
-                {
-                    AGVC.OnAGVCActionChanged = null;
+                    if (AGV_Reset_Flag)
+                        return;
+                    LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+                    LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
 
-                    if (ExecutingTaskEntity != null)
+                    await CheckActionFinishFeedbackFinish();
+                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                    _TryClearExecutingTask();
+                    WriteTaskNameToFile(taskDownloadData.Task_Name);
+                    try
                     {
-                        ExecutingTaskEntity.TaskCancelByReplan.Cancel();
-                        ExecutingTaskEntity.Dispose();
+                        await Task.Delay(20);
+                        ExecuteAGVSTask(taskDownloadData);
                     }
-                }
+                    catch (NullReferenceException ex)
+                    {
+                        LOG.Critical(ex.Message, ex);
+                    }
 
+                    void _TryClearExecutingTask()
+                    {
+                        AGVC.OnAGVCActionChanged = null;
+
+                        if (ExecutingTaskEntity != null)
+                        {
+                            ExecutingTaskEntity.TaskCancelByReplan.Cancel();
+                            ExecutingTaskEntity.Dispose();
+                        }
+                    }
+
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    AGV_Reset_Flag = false;
+                }
             });
 
         }
