@@ -2,6 +2,7 @@
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     [ApiController]
     public class SystemController : ControllerBase
     {
+        private SystemUpdateService _sysUpdateService;
+
+        public SystemController(SystemUpdateService sysUpdateService)
+        {
+            _sysUpdateService = sysUpdateService;
+        }
+
         [HttpGet("Settings")]
         public async Task<IActionResult> GetParameters()
         {
@@ -72,6 +80,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok($"PC Will Shutdown after {PCShutDownHelper.ShutdownDelayTimeSec} sec...");
         }
 
-
+        [HttpPost("BackupSystem")]
+        public async Task<IActionResult> BackupSystem()
+        {
+            bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg);
+            if (backupSuccess)
+                return Ok(new { confirm = true, message = "" });
+            else
+                return Ok(new { confirm = false, message = errMsg });
+        }
     }
 }
