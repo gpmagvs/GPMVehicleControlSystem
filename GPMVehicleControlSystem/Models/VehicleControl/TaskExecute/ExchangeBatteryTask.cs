@@ -296,9 +296,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (tp3Cts.IsCancellationRequested && !_IsBatteryInstall_Remove_Flag)
                 {
-                    throw new HSTimeoutException(AlarmCodes.Handshake_Fail_BAT_Remove_Timeout);
-
+                    AlarmCodes alarmCode = action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? AlarmCodes.Handshake_Fail_BAT_Remove_Timeout : AlarmCodes.Handshake_Fail_BAT_Install_Timeout;
+                    throw new HSTimeoutException(alarmCode);
                 }
+
                 if (!_IsBatteryInstall_Remove_Flag && _IsBatteryExistStateChanged())
                 {
                     _IsBatteryInstall_Remove_Flag = true;
