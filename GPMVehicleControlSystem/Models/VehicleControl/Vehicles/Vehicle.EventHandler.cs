@@ -871,7 +871,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task DOSettingWhenEmoTrigger()
         {
-            //await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, true);
         }
 
         protected virtual void WagoDI_OnBumpSensorPressed(object? sender, EventArgs e)

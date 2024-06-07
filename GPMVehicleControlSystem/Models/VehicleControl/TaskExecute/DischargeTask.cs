@@ -68,7 +68,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             Agv.SetIsCharging(false);
-            Agv.SetSub_Status(SUB_STATUS.IDLE);
             return (true, AlarmCodes.None);
         }
         protected override async Task<CarController.SendActionCheckResult> TransferTaskToAGVC()

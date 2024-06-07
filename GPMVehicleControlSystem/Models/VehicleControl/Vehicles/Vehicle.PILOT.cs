@@ -94,33 +94,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
-            TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
-            await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
-            LOG.TRACE($"Start Execute Task-{taskDownloadData.Task_Simplex}", color: ConsoleColor.Green);
-            //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
-            _RunTaskData = taskDownloadData.Clone();
-            _RunTaskData.IsEQHandshake = false;
-            _RunTaskData.IsActionFinishReported = false;
-            _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
-
-            AlarmManager.ClearAlarm();
-            LOG.TRACE("Set Sub_Status RUN When Execute AGVS Task");
-            await Task.Delay(10);
-            if (AGV_Reset_Flag)
-                return;
-            await Laser.AllLaserActive();
             ACTION_TYPE action = taskDownloadData.Action_Type;
-            IsWaitForkNextSegmentTask = false;
-            ExecutingTaskEntity = CreateTaskBasedOnDownloadedData(taskDownloadData);
-            if (ExecutingTaskEntity == null)
+            try
             {
-                throw new NullReferenceException("ExecutingTaskEntity is null(CreateTaskBasedOnDownloadedData return.)");
-            }
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
+                await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
+                LOG.TRACE($"Start Execute Task-{taskDownloadData.Task_Simplex}", color: ConsoleColor.Green);
+                //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
+                _RunTaskData = taskDownloadData.Clone();
+                _RunTaskData.IsEQHandshake = false;
+                _RunTaskData.IsActionFinishReported = false;
+                _RunTaskData.VibrationRecords = new List<clsVibrationRecord>();
 
-            ExecutingTaskEntity.ForkLifter = ForkLifter;
-            orderInfoViewModel = taskDownloadData.OrderInfo;
-            Console.WriteLine(orderInfoViewModel.ToJson());
-            TaskDispatchFlowControlSemaphoreSlim.Release();
+                AlarmManager.ClearAlarm();
+                await Task.Delay(10);
+                if (AGV_Reset_Flag)
+                    return;
+                await Laser.AllLaserActive();
+                IsWaitForkNextSegmentTask = false;
+                ExecutingTaskEntity = CreateTaskBasedOnDownloadedData(taskDownloadData);
+                if (ExecutingTaskEntity == null)
+                {
+                    throw new NullReferenceException("ExecutingTaskEntity is null(CreateTaskBasedOnDownloadedData return.)");
+                }
+                ExecutingTaskEntity.ForkLifter = ForkLifter;
+                orderInfoViewModel = taskDownloadData.OrderInfo;
+                Console.WriteLine(orderInfoViewModel.ToJson());
+            }
+            catch (Exception ex)
+            {
+                LOG.Critical(ex);
+                SoftwareEMO(AlarmCodes.Code_Error_In_System);
+                return;
+            }
+            finally
+            {
+                TaskDispatchFlowControlSemaphoreSlim.Release();
+            }
             await Task.Run(async () =>
             {
                 if (AGV_Reset_Flag)
@@ -172,11 +182,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                 }
                 else
+                {
                     AlarmManager.ClearAlarm();
+                    SetSub_Status(SUB_STATUS.IDLE);
+                }
                 AGVC.OnAGVCActionChanged = null;
-                EndLaserObsMonitorAsync();
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
             });
+
+
         }
         private async Task EndLaserObsMonitorAsync()
         {

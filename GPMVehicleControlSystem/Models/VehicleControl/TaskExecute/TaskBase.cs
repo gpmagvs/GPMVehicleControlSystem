@@ -529,8 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal virtual async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            await Task.Delay(200);
-            Agv.SetSub_Status(SUB_STATUS.IDLE);
+            await Task.Delay(10);
             return (true, AlarmCodes.None);
         }
 

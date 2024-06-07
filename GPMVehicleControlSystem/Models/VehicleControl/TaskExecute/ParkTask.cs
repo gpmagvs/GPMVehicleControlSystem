@@ -32,8 +32,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            await Task.Delay(200);
-            Agv.SetSub_Status(SUB_STATUS.IDLE);
             BuzzerPlayer.Stop();
             return (true, AlarmCodes.None);
         }

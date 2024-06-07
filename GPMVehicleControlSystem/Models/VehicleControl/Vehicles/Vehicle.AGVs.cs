@@ -382,6 +382,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Alarm_Code = alarm_codes,
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = GetIsCharging(),
+                    AppVersion = StaStored.APPVersion,
                 };
                 return status;
             }
