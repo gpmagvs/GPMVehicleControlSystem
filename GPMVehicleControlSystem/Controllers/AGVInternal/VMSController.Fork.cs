@@ -3,8 +3,11 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Microsoft.AspNetCore.Mvc;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -134,6 +137,25 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
             if (_isMoveToPoseOperation)
                 speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
+
+            bool _isVerticalMotorStopped = forkAgv.WagoDO.GetState(DO_ITEM.Vertical_Motor_Stop);
+
+            bool _isForkUnderPressSensorBypassed = forkAgv.WagoDO.GetState(DO_ITEM.Fork_Under_Pressing_SensorBypass);
+            bool _isVerticalPreessSensorTrigered = !forkAgv.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
+
+            if (_isVerticalMotorStopped)
+                return Ok(new { confirm = false, message = "垂直馬達 [STOP] 訊號ON，Z軸無法動作。" });
+
+            if (_isVerticalPreessSensorTrigered && _isForkUnderPressSensorBypassed)
+            {
+                clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
+                return Ok(new
+                {
+                    confirm = false,
+                    message = $"牙叉防壓Sensor觸發中，Z軸無法動作。" +
+                              $"(須將 [{underPressedSensorBypassSignal.Address}] {underPressedSensorBypassSignal.Name} 開啟)"
+                });
+            }
 
             if (!forkAgv.IsForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
