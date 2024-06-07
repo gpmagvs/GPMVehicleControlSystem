@@ -31,8 +31,8 @@ namespace GPMVehicleControlSystem.Service
                     ZipFile.ExtractToDirectory(filePath, zipFileTempFolder, true);
                     File.Delete(filePath);
 
-                    // backup 
-                    BackupCurrentProgram(out string errMsg);
+                    //// backup 
+                    //BackupCurrentProgram(out string errMsg);
 
                     string scriptFile = Path.Combine(currentDirectory, "update.sh");
                     File.WriteAllText(scriptFile, $"sleep 1 && killall -9 GPM_VCS 2>/dev/null || true && cp -r {zipFileTempFolder}/* {currentDirectory}/" +

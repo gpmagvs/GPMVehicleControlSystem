@@ -137,12 +137,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
 
                 //check progress
-                await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, true);
-                await WaitEQSignal(DI_ITEM.EQ_Check_Result, true, 3, CancellationToken.None);
-                await WaitEQSignal(DI_ITEM.EQ_Check_Ready, true, 3, CancellationToken.None);
-                await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, false);
-                await WaitEQSignal(DI_ITEM.EQ_Check_Result, false, 3, CancellationToken.None);
-                await WaitEQSignal(DI_ITEM.EQ_Check_Ready, false, 3, CancellationToken.None);
+                //await PreCheckStatus();
 
 
                 //
@@ -198,6 +193,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換完成，退至定位點..";
             //退至二次定位點
             return await BackwardToEntryPoint();
+        }
+
+        private async Task PreCheckStatus()
+        {
+            await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, true);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Result, true, 3, CancellationToken.None);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Ready, true, 3, CancellationToken.None);
+            await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, false);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Result, false, 3, CancellationToken.None);
+            await WaitEQSignal(DI_ITEM.EQ_Check_Ready, false, 3, CancellationToken.None);
         }
 
         private async Task<(bool success, AlarmCodes alarmCode)> BackwardToEntryPoint()
@@ -280,12 +285,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             TimeSpan tp4TimeSpan = TimeSpan.FromSeconds(timouts.TP4);
             TimeSpan tp34TimeSpan = TimeSpan.FromSeconds(timouts.TP3 + timouts.TP4);
             tp3Cts.CancelAfter(tp3TimeSpan); //TP3
-            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo} Removed By Exchanger ...";
+            TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo}  [{action}]  By Exchanger ...";
             Stopwatch _stopwatch = Stopwatch.StartNew();
             bool _IsBatteryInstall_Remove_Flag = false;
             while (TsmcMiniAGV.WagoDI.GetState(DI_ITEM.EQ_BUSY))
             {
-                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo} Removed By Exchanger ...{_stopwatch.Elapsed}/{tp34TimeSpan}";
+                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Start Wait Battery-{batNo} [{action}] By Exchanger ...{_stopwatch.Elapsed}/{tp34TimeSpan}";
                 await Task.Delay(10);
                 if (tp4Cts.IsCancellationRequested)
                 {
@@ -315,13 +320,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                     if (batNo == BATTERY_LOCATION.RIGHT)
                     {
-                        bat_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_1);
-                        bat_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_2);
+                        bat_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_2);
+                        bat_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_1_Exist_3);
                     }
                     else
                     {
-                        bat_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_1);
-                        bat_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_2);
+                        bat_exist1 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_2);
+                        bat_exist2 = TsmcMiniAGV.WagoDI.GetState(DI_ITEM.Battery_2_Exist_3);
                     }
                     return action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY ? !bat_exist1 && !bat_exist2 : bat_exist1 && bat_exist2;
                 }
@@ -404,7 +409,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 await Task.Delay(10);
 
-                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Wait Exchanger-{input}-{(expect_state ? "ON" : "OFF")}...{_sw.Elapsed}";
+                TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Wait Exchanger-{input}-{(expect_state ? "ON" : "OFF")}...{_sw.Elapsed}/{TimeSpan.FromSeconds(timeout_sec)}";
                 if (token.IsCancellationRequested)
                 {
                     throw new HandshakeException(AlarmCodes.Handshake_Fail_BAT_EXG_EQ_VALID_OFF_WHEN_HANDSHAKING);
