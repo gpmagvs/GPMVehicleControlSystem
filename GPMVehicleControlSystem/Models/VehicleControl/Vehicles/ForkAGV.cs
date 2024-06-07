@@ -438,6 +438,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override async Task TryResetMotors()
         {
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
+
             if (IsAnyMotorAlarm())
             {
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
@@ -452,6 +456,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     await Task.Delay(1);
                 }
+
                 await Task.Delay(50);
             }
         }

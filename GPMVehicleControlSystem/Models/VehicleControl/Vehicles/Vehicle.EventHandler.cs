@@ -242,6 +242,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task TryResetMotors()
         {
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+            await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+
             if (IsAnyMotorAlarm())
             {
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
