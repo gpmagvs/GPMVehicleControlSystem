@@ -171,8 +171,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
                     }
-
-                    SetSub_Status(SUB_STATUS.DOWN);
+                    try
+                    {
+                        await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                    }
+                    catch (TaskCanceledException ex)
+                    {
+                        LOG.TRACE($"Laser OBS Monitor Process end. |{ex.Message}");
+                    }
+                    finally
+                    {
+                        SetSub_Status(SUB_STATUS.DOWN);
+                    }
                     alarmCodes.ForEach(alarm =>
                     {
                         AlarmManager.AddAlarm(alarm, false);
@@ -184,7 +194,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                 {
                     AlarmManager.ClearAlarm();
-                    SetSub_Status(SUB_STATUS.IDLE);
+                    try
+                    {
+                        await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                    }
+                    catch (TaskCanceledException ex)
+                    {
+                        LOG.TRACE($"Laser OBS Monitor Process end. |{ex.Message}");
+                    }
+                    finally
+                    {
+                        SetSub_Status(SUB_STATUS.IDLE);
+                    }
                 }
                 AGVC.OnAGVCActionChanged = null;
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
@@ -615,7 +636,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public void EndLaserObstacleMonitor()
         {
             IsLaserMonitoring = false;
-            LaserObsMonitorCancel.Cancel();
         }
         /// <summary>
         /// 雷射障礙物監控
@@ -741,6 +761,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             finally
             {
                 _StartLaserMonitorSemaphore.Release();
+                LaserObsMonitorCancel.Cancel();
             }
         }
 
