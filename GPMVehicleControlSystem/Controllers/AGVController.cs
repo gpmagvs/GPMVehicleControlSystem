@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
@@ -15,23 +16,24 @@ namespace GPMVehicleControlSystem.Controllers
     {
 
         private Vehicle agv;
+        private ILogger<clsAGVSConnection> logger;
         public AGVController()
         {
-
             this.agv = StaStored.CurrentVechicle;
+            logger = agv.AGVS.logger;
         }
         private async void LogAsync(string api_name, string method = "GET")
         {
             await Task.Factory.StartNew(() =>
             {
-                agv.AGVS.LogMsgFromAGVS($"({method}) api route= /api/AGV/{api_name}");
+                logger.LogTrace($"({method}) api route= /api/AGV/{api_name}");
             });
         }
         private async void LogResponseAsync(string api_name, string method = "GET", object response = null)
         {
             await Task.Factory.StartNew(() =>
             {
-                agv.AGVS.LogMsgToAGVS($"({method}) api route= /api/AGV/{api_name} {(response == null ? "" : $"Response={response.ToJson(Newtonsoft.Json.Formatting.None)}")} ");
+                logger.LogTrace($"({method}) api route= /api/AGV/{api_name} {(response == null ? "" : $"Response={response.ToJson(Newtonsoft.Json.Formatting.None)}")} ");
             });
         }
         [HttpGet("RunningState")]
@@ -97,7 +99,7 @@ namespace GPMVehicleControlSystem.Controllers
         public async Task<IActionResult> Localization([FromBody] clsLocalizationVM localization)
         {
             LogAsync("Localization");
-            var result = await  agv.Localization((ushort)localization.currentID, localization.x, localization.y);
+            var result = await agv.Localization((ushort)localization.currentID, localization.x, localization.y);
             var response = new { Success = result.confirm, Message = result.message };
             LogResponseAsync("agv_offline", response: response);
             return Ok(response);

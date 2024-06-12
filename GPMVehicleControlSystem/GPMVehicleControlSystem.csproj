@@ -37,8 +37,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.1.163.2</AssemblyVersion>
-		<FileVersion>3.1.163.2</FileVersion>
+		<AssemblyVersion>3.1.164.2</AssemblyVersion>
+		<FileVersion>3.1.164.2</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
@@ -55,6 +55,8 @@
 		<PackageReference Include="ini-parser" Version="2.5.2" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="NLog" Version="5.3.2" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.11" />
 		<PackageReference Include="NModbus4.Core" Version="1.0.2" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />

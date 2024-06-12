@@ -27,7 +27,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     [ApiController]
     public partial class VMSController : ControllerBase
     {
-
+        ILogger<VMSController> logger;
+        public VMSController(ILogger<VMSController> _logger)
+        {
+            // help me 
+            logger = _logger;
+        }
         private Vehicle agv => StaStored.CurrentVechicle;
 
         [HttpGet("Where_r_u")]
@@ -86,6 +91,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
+                logger.LogTrace($"車載用戶請求AGV {mode}");
                 LOG.WARN($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 string _message = "";
@@ -115,6 +121,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "OnlineModeSwitch Exception");
                 return Ok(new
                 {
                     Success = false,
@@ -170,7 +177,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("Initialize")]
         public async Task<IActionResult> Initialize()
         {
+            logger.LogTrace($"User raise Initialize request.");
             var result = await agv.Initialize();
+            logger.LogTrace($"User raise Initialize request. Result:{result}");
             return Ok(new { confirm = result.confirm, message = result.message });
         }
 

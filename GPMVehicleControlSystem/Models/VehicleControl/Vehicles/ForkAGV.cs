@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6.AGVDispatch;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Log;
@@ -38,7 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
-        public ForkAGV() : base()
+        public ForkAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
         {
             ForkLifter = new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;

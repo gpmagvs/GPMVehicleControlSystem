@@ -9,6 +9,13 @@ namespace GPMVehicleControlSystem.Service
 {
     public class SystemLoadingMonitorBackgroundServeice : BackgroundService
     {
+        ILogger<SystemLoadingMonitorBackgroundServeice> logger;
+        public SystemLoadingMonitorBackgroundServeice(ILogger<SystemLoadingMonitorBackgroundServeice> logger)
+        {
+
+            this.logger = logger;
+        }
+
         public static double CurrentCPU = 0;
         public static double CurrentRAM = 0;
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -20,7 +27,7 @@ namespace GPMVehicleControlSystem.Service
                 await Task.Delay(5000);
                 double cpu = await cpuUsage.GetCPU();
                 double ram = LinuxTools.GetMemUsedMB();
-                LOG.TRACE($"CPU:{cpu} % / RAM:{ram} MB");
+                logger.LogInformation($"CPU:{cpu} % / RAM:{ram} MB");
 
                 //if (ram > 500)
                 //{

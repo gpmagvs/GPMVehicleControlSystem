@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6.AGVDispatch;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Log;
@@ -19,8 +20,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class SubmarinAGV : Vehicle
     {
 
-        public SubmarinAGV() : base()
+        public SubmarinAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
         {
+
         }
 
         protected override List<CarComponent> CarComponents
@@ -36,6 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsCSTReader CSTReader { get; set; } = new clsCSTReader();
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
+        public ILogger Logger { get; }
 
         protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
         {

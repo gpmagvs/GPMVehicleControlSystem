@@ -3,7 +3,6 @@ using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
@@ -173,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (_AGVSResetCmdFlag != value)
                 {
                     _AGVSResetCmdFlag = value;
-                    LOG.WARN($"AGVSResetCmdFlag changed to :{value}");
+                    logger.LogWarning($"AGVSResetCmdFlag changed to :{value}");
                 }
             }
         }
@@ -265,13 +264,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     return;
                 }
-                LOG.TRACE($"Try Write AGV Status to Database \n{status_data.ToJson()}", false);
+                logger.LogTrace($"Try Write AGV Status to Database \n{status_data.ToJson()}", false);
                 status_data_store = status_data;
                 DBhelper.AddAgvStatusData(status_data);
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex, false);
+                logger.LogError(ex, ex.Message);
             }
         }
 
@@ -280,16 +279,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public bool IsLimitSwitchSensorMounted { get; private set; } = false;
         public bool IsForkExtenable { get; private set; } = false;
-        public Vehicle()
+        internal ILogger<Vehicle> logger;
+        internal ILogger<clsAGVSConnection> agvsLogger;
+        public Vehicle(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger)
         {
             try
             {
+                this.logger = logger;
+                this.agvsLogger = agvsLogger;
                 Parameters = LoadParameters(watch_file_change: true);
                 Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
                 IMU.Options = Parameters.ImpactDetection;
                 CIMConnectionInitialize();
                 LoadWorkStationConfigs();
-                LOG.INFO($"{GetType().Name} Start create instance...");
+                logger.LogTrace($"{GetType().Name} Start create instance...");
                 ReadTaskNameFromFile();
                 IsSystemInitialized = false;
                 Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
@@ -347,7 +350,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(10);
             _ = Task.Run(async () =>
             {
-                LOG.TRACE($"Start publish IOLists!");
+                logger.LogTrace($"Start publish IOLists!");
 
                 IOlistsMsg payload = new IOlistsMsg();
 
@@ -427,8 +430,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsForkExtenable = _IsForkExtenable();
                 IsLimitSwitchSensorMounted = _IsLimitSwitchSensorMounted();
 
-                LOG.INFO($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
-                LOG.INFO($"AGV 牙叉可伸縮?{IsForkExtenable}");
+                logger.LogTrace($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
+                logger.LogTrace($"AGV 牙叉可伸縮?{IsForkExtenable}");
 
                 IsSystemInitialized = true;
 
@@ -459,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex.Message, ex);
+                logger.LogError(ex.Message, ex);
             }
         }
 
@@ -519,7 +522,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
                 if (json == null)
                 {
-                    LOG.ERROR("Load Fork Teach Data Fail...Read Json Null");
+                    logger.LogError("Load Fork Teach Data Fail...Read Json Null");
                     return;
                 }
                 WorkStations = DeserializeWorkStationJson(json);
@@ -528,7 +531,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"Load Fork Teach Data Fail...{ex.Message}");
+                logger.LogError($"Load Fork Teach Data Fail...{ex.Message}");
             }
             finally
             {
@@ -545,7 +548,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 string json = JsonConvert.SerializeObject(WorkStations, Formatting.Indented);
                 File.WriteAllText(WorkStationSettingsJsonFilePath, json);
-                LOG.INFO($"WorkStation Settings Save done");
+                logger.LogInformation($"WorkStation Settings Save done");
                 return true;
             }
             catch (Exception ex)
@@ -564,7 +567,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                LOG.INFO($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
+                logger.LogInformation($"DIO Module Connecting...{WagoDI.IP}:{WagoDI.VMSPort}");
                 while (!await WagoDI.Connect())
                 {
                     await Task.Delay(1000);
@@ -578,11 +581,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (SocketException ex)
             {
-                LOG.Critical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
+                logger.LogCritical($"初始化Wago 連線的過程中發生Socket 例外 , {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                LOG.Critical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
+                logger.LogCritical($"初始化Wago 連線的過程中發生例外 , {ex.Message}", ex);
             }
         }
 
@@ -605,7 +608,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var RightArea = RLsrBypassState ? true : WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
             var LeftArea = LLsrBypassState ? true : WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
 
-            LOG.INFO($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
+            logger.LogInformation($"雷射狀態檢查(IsAllLaserNoTrigger)\r\n" +
                         $"Front_Area 1->3 ={FrontArea1.ToSymbol("O", "X")}|{FrontArea2.ToSymbol("O", "X")}|{FrontArea3.ToSymbol("O", "X")}\r\n" +
                         $"Back_Area  1->3 ={BackArea1.ToSymbol("O", "X")}|{BackArea2.ToSymbol("O", "X")}|{BackArea3.ToSymbol("O", "X")}\r\n" +
                         $"Right_Area      ={RightArea.ToSymbol("O", "X")}\r\n" +
@@ -719,7 +722,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     CarController.AGVS_SPEED_CONTROL_REQUEST = CarController.ROBOT_CONTROL_CMD.NONE;
                     IsInitialized = true;
-                    LOG.INFO("Init done, and Laser mode chaged to Bypass");
+                    logger.LogInformation("Init done, and Laser mode chaged to Bypass");
                     clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
                     return (true, "");
                 }
@@ -728,7 +731,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     StatusLighter.AbortFlash();
                     _Sub_Status = SUB_STATUS.DOWN;
                     IsInitialized = false;
-                    LOG.Critical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
+                    logger.LogCritical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
                     return (false, $"AGV Initizlize Task Canceled! : \r\n{ex.Message}");
                 }
                 catch (Exception ex)
@@ -875,14 +878,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
             {
                 CSTReader.ValidCSTID = "";
-                LOG.WARN($"偵測到AGV有帳無料，已完成自動清帳");
+                logger.LogWarning($"偵測到AGV有帳無料，已完成自動清帳");
             }
             else if (Parameters.Auto_Read_CST_ID_When_No_Data_But_Has_Cargo && IsCargoExistButNoID)
             {
                 InitializingStatusText = "自動建帳中...";
                 (bool request_success, bool action_done) result = await AGVC.TriggerCSTReader();
                 if (result.request_success)
-                    LOG.WARN($"偵測到AGV有料無帳，已完成自動建帳");
+                    logger.LogWarning($"偵測到AGV有料無帳，已完成自動建帳");
             }
         }
 
@@ -933,7 +936,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected internal virtual async void SoftwareEMOFromUI()
         {
-            LOG.Critical($"Software EMO By User!!!");
+            logger.LogCritical($"Software EMO By User!!!");
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
 
@@ -948,7 +951,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await _softwareEmoSemaphoreSlim.WaitAsync();
             try
             {
-                LOG.Critical($"EMO-{alarmCode}");
+                logger.LogCritical($"EMO-{alarmCode}");
                 _Sub_Status = SUB_STATUS.DOWN;
 
                 if (ExecutingTaskEntity != null)
@@ -980,7 +983,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     _ = Task.Run(async () =>
                     {
-                        LOG.INFO($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                        logger.LogInformation($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
                         await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
                     });
                 }
@@ -988,7 +991,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogCritical(ex, ex.Message);
             }
             finally
             {
@@ -1007,7 +1010,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.Message, ex);
+                    logger.LogError(ex.Message, ex);
                 }
             });
         }
@@ -1030,7 +1033,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.LogError(ex, ex.Message);
             }
         }
 
@@ -1073,7 +1076,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             bool isHSAlarmCode = alarcode_str.Substring(0, 2) == "32";
             if (isHSAlarmCode)
-                LOG.WARN($"HS Alarm-{alarmCode} happend!");
+                logger.LogWarning($"HS Alarm-{alarmCode} happend!");
 
             return isHSAlarmCode;
         }
@@ -1126,7 +1129,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogCritical(ex, ex.Message);
             }
             finally
             {
@@ -1148,7 +1151,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 var caller_class_name = new StackTrace().GetFrame(1).GetMethod().DeclaringType.Name;
                 if (IsMotorReseting)
                 {
-                    LOG.WARN($"Reset Motor Action is excuting by other process");
+                    logger.LogWarning($"Reset Motor Action is excuting by other process");
                     return false;
                 }
                 IsMotorReseting = true;
@@ -1159,14 +1162,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (bypass_when_motor_busy_on & WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
                     return true;
 
-                LOG.TRACE($"Reset Motor Process Start (caller:{caller_class_name})");
+                logger.LogTrace($"Reset Motor Process Start (caller:{caller_class_name})");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
                 //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, true, 100)) throw new Exception($"Horizon_Motor_Free set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, false, 100)) throw new Exception($"Horizon_Motor_Reset set false fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
                 //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
-                LOG.TRACE("Reset Motor Process End");
+                logger.LogTrace("Reset Motor Process End");
 
                 IsMotorReseting = false;
                 return true;
@@ -1174,13 +1177,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (SocketException ex)
             {
                 IsMotorReseting = false;
-                LOG.ERROR(ex);
+                logger.LogError(ex, ex.Message);
                 return false;
             }
             catch (Exception ex)
             {
                 IsMotorReseting = false;
-                LOG.ERROR(ex);
+                logger.LogError(ex, ex.Message);
                 return false;
             }
 
@@ -1205,7 +1208,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<bool> Auto_Mode_Siwtch(OPERATOR_MODE mode)
         {
             Operation_Mode = mode;
-            LOG.TRACE($"手/自動模式已切換為:{mode}");
+            logger.LogTrace($"手/自動模式已切換為:{mode}");
             if (mode == OPERATOR_MODE.AUTO)
             {
                 await Laser.FrontBackLasersEnable(true, true);
@@ -1316,17 +1319,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
         {
-            LOG.INFO($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");
+            logger.LogInformation($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");
             (bool result, string virtual_id, string message) results = await AGVS.TryGetVirtualID(QueryType, CstType);
             if (results.result)
             {
                 CSTReader.ValidCSTID = results.virtual_id;
-                LOG.INFO($"Query Virtual ID From AGVS Success, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Virtual ID={CSTReader.ValidCSTID}");
+                logger.LogInformation($"Query Virtual ID From AGVS Success, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Virtual ID={CSTReader.ValidCSTID}");
 
             }
             else
             {
-                LOG.WARN($"Query Virtual ID From AGVS Fail, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Message={results.message}");
+                logger.LogWarning($"Query Virtual ID From AGVS Fail, QueryType={QueryType.ToString()},CstType={CstType.ToString()},Message={results.message}");
                 AlarmManager.AddAlarm(AlarmCodes.GetVirtualIDFail, true);
             }
         }
@@ -1356,7 +1359,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double distance_to_tag_center = Math.Sqrt(Math.Pow(BarcodeReader.CurrentX, 2) + Math.Pow(BarcodeReader.CurrentY, 2));
                 var rotationAngle = currentAngle + Math.Cosh(BarcodeReader.CurrentX / distance_to_tag_center) * 180.0 / Math.PI;
 
-                LOG.INFO($"[Find Tag] Rotation Angle : {rotationAngle}");
+                logger.LogInformation($"[Find Tag] Rotation Angle : {rotationAngle}");
 
                 var rotationAngleAim = currentAngle - rotationAngle;
 

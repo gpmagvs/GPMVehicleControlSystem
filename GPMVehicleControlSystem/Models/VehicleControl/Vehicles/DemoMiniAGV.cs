@@ -7,6 +7,7 @@ using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.Buzzer;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.AGVDispatch;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -35,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public DemoMiniAGV() : base()
+        public DemoMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
         {
             LOG.INFO("Demo Mini AGV Created.");
         }
