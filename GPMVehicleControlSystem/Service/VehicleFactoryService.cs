@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Tools;
 using AGVSystemCommonNet6.AGVDispatch;
+using NLog;
 
 namespace GPMVehicleControlSystem.Service
 {
@@ -35,6 +36,8 @@ namespace GPMVehicleControlSystem.Service
                 DBhelper.Initialize();
 
                 logger.LogTrace("Database Initialize done");
+
+
                 var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
                 if (!File.Exists(iniFilePath))
                 {

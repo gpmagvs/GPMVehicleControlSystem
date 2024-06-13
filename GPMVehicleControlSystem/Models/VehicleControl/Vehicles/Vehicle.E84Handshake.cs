@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
+using NLog;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -19,6 +20,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+
+        Logger HandShakeLogger;
+
         public enum HANDSHAKE_AGV_TIMEOUT
         {
             Normal,
@@ -78,9 +82,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public class clsHandshakeSignalState
         {
             public static int FlickDelayTime => StaStored.CurrentVechicle.Parameters.HandshakeIOFlickDelayTime;
+            private Logger logger;
             public clsHandshakeSignalState(EQ_HSSIGNAL signal_name)
             {
                 this.signal_name = signal_name;
+                logger = LogManager.GetLogger("HandshakeLog");
             }
             public bool _state = false;
             public bool lastNewInput = false;
@@ -113,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 _state = lastNewInput;
                                 if (is_changed)
                                 {
-                                    LOG.TRACE($"[EQ交握訊號監視] {signal_name} Change to {(_state ? 1 : 0)}");
+                                    logger.Info($"[EQ交握訊號監視] {signal_name} Change to {(_state ? 1 : 0)}");
                                     if (!_state)
                                         OnSignalOFF?.Invoke(this, EventArgs.Empty);
                                     else
@@ -121,10 +127,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 }
                                 _change_wait_task = null;
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
-                                LOG.WARN($"{signal_name}-Signal Flick! (Change to {(lastNewInput ? 1 : 0)} in short time(300ms))");
-
+                                logger.Warn($"{signal_name} flicking!");
                             }
                         });
 
@@ -313,6 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 item.ClearEventRegist();
             }
+            HandshakeLog($"Handshake Timers/Events Reset done.");
         }
         internal async Task<(bool done, AlarmCodes alarmCode)> Handshake_AGV_BUSY_ON(bool isBackToHome)
         {
@@ -478,7 +484,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await SetAGV_COMPT(false);
                 await SetAGV_TR_REQ(false);
                 await SetAGVVALID(false);
-                LOG.INFO("[EQ Handshake] EQ READY OFF=>Handshake Done");
+                HandshakeLog("EQ READY OFF=>Handshake Done");
                 _ = Task.Run(async () =>
                 {
                     HandshakeStatusText = "Finish!";
@@ -488,7 +494,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                HandshakeLog(ex, "WaitEQReadyOFF Exception");
                 return (false, AlarmCodes.Handshake_Fail);
             }
             return (true, AlarmCodes.None);
@@ -567,12 +573,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task<(bool success, AlarmCodes alarm_code)> HandshakeWith(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, HANDSHAKE_EQ_TIMEOUT Timer, AlarmCodes alarm_code_timeout)
         {
             int timeout = Parameters.EQHSTimeouts[Timer];
-            LOG.TRACE($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
+            HandshakeLog($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
             if (Signal.GetType().Name == "EQ_HSSIGNAL")
                 HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
             StartTimer(Timer);
             bool changed_done = await WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts, HandshakeStatusText);
-            LOG.WARN($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
+            HandshakeLog($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
             AlarmCodes _alarmcode = AlarmCodes.None;
             if (!changed_done || GetSub_Status() == SUB_STATUS.DOWN)
@@ -671,6 +677,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     return false;
             }
+        }
+
+        internal void HandshakeLog(string message)
+        {
+            LogEventInfo logEvent = new LogEventInfo(NLog.LogLevel.Trace, "HandshakeLog", message);
+            logEvent.Properties["EventID"] = "test";
+            HandShakeLogger.Log(logEvent);
+        }
+        internal void HandshakeLog(Exception ex, string message)
+        {
+            LogEventInfo logEvent = new LogEventInfo(NLog.LogLevel.Error, "HandshakeLog", message + $"{ex.Message} \n {ex.StackTrace}");
+            logEvent.Properties["EventID"] = "test";
+            HandShakeLogger.Log(logEvent);
         }
     }
 }

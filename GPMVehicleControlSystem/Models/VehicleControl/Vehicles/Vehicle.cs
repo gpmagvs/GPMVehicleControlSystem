@@ -15,6 +15,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using NLog;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
@@ -287,6 +288,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 this.logger = logger;
                 this.agvsLogger = agvsLogger;
+                HandShakeLogger = LogManager.GetCurrentClassLogger();
                 Parameters = LoadParameters(watch_file_change: true);
                 Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
                 IMU.Options = Parameters.ImpactDetection;
@@ -334,6 +336,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(1000);
                     }
                     await Startup();
+
+                    HandshakeLog("Hello!World!");
 
                 });
             }
@@ -817,6 +821,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
             }
+            HandshakeLog($"Handshake IO Reset done.");
         }
 
         public virtual (bool confirm, string message) CheckHardwareStatus()

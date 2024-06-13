@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Log;
 using Microsoft.Data.SqlClient;
+using NLog;
 using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -12,11 +13,55 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             this.Name = Name;
             this.Address = Address;
+            logger = LogManager.GetCurrentClassLogger();
         }
+
+
+
+        private Logger logger;
+
         public event EventHandler OnSignalON;
         public event EventHandler OnSignalOFF;
         public event EventHandler<bool> OnStateChanged;
 
+        static List<DI_ITEM> handshake_inputs = new List<DI_ITEM>()
+        {
+             DI_ITEM.EMO,
+             DI_ITEM.Panel_Reset_PB,
+             DI_ITEM.Horizon_Motor_Switch,
+             DI_ITEM.EQ_GO,
+             DI_ITEM.EQ_BUSY,
+             DI_ITEM.EQ_VALID,
+             DI_ITEM.EQ_READY,
+             DI_ITEM.EQ_Check_Ready,
+             DI_ITEM.EQ_Check_Result,
+             DI_ITEM.EQ_U_REQ,
+             DI_ITEM.EQ_L_REQ,
+             DI_ITEM.EQ_COMPT,
+             DI_ITEM.EQ_TR_REQ,
+             DI_ITEM.EQ_UP_READY,
+             DI_ITEM.EQ_U_REQ,
+             DI_ITEM.EQ_VALID,
+             DI_ITEM.TRAY_Exist_Sensor_1,
+             DI_ITEM.TRAY_Exist_Sensor_2,
+             DI_ITEM.TRAY_Exist_Sensor_3,
+             DI_ITEM.TRAY_Exist_Sensor_4,
+             DI_ITEM.RACK_Exist_Sensor_1,
+             DI_ITEM.RACK_Exist_Sensor_2
+        };
+        public static List<DO_ITEM> handshake_outputs = new List<DO_ITEM>()
+        {
+            DO_ITEM.AGV_TR_REQ,
+            DO_ITEM.AGV_BUSY,
+            DO_ITEM.AGV_VALID,
+            DO_ITEM.AGV_READY,
+            DO_ITEM.AGV_Check_REQ,
+            DO_ITEM.AGV_COMPT,
+            DO_ITEM.AGV_CS_0,
+            DO_ITEM.AGV_CS_1,
+            DO_ITEM.AGV_L_REQ,
+            DO_ITEM.AGV_U_REQ,
+        };
         /// <summary>
         /// Input定義
         /// </summary>
@@ -49,7 +94,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 if (_State != value)
                 {
                     _State = value;
-                    LOG.INFO($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}", color: ConsoleColor.Magenta);
+                    logger.Info($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}");
+
+                    if (handshake_outputs.Any(i => i.ToString() == Name) || handshake_inputs.Any(i => i.ToString() == Name))
+                    {
+                        Logger hslogger = LogManager.GetLogger("HandshakeLog");
+                        hslogger.Info($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}");
+                    }
+
                     OnStateChanged?.Invoke(this, value);
                     if (_State)
                         OnSignalON?.Invoke(this, EventArgs.Empty);
