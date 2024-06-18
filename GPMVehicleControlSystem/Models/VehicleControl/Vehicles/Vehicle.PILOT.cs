@@ -666,14 +666,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
                             if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                             {
-
-                                if (alarmCodeCollection.Contains(AlarmCodes.RightProtection_Area3) || alarmCodeCollection.Contains(AlarmCodes.LeftProtection_Area3)
-                                   && Parameters.SensorBypass.SideLaserBypass && (!WagoDO.GetState(DO_ITEM.Right_LsrBypass) || !WagoDO.GetState(DO_ITEM.Left_LsrBypass)))
-                                {
-                                    await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
-                                    await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
-                                }
-
                                 if (CheckMonitorCancel() || CheckAGVCActionDone())
                                     return;
 

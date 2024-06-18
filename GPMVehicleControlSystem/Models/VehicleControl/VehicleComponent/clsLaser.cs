@@ -64,7 +64,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private int _AgvsLsrSetting = 1;
         public delegate void LsrModeSwitchDelegate(int mode);
         public LsrModeSwitchDelegate OnLsrModeSwitchRequest;
-        public delegate bool SideLaserBypassSettingDelagete(bool active);
+        public delegate (bool leftBypass, bool rightBypass) SideLaserBypassSettingDelagete();
         /// <summary>
         /// 回傳值為true時,強制設定左右雷射Bypass
         /// </summary>
@@ -162,20 +162,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, !active);
         }
         /// <summary>
-        /// 前後雷射Bypass關閉
+        /// 側邊雷射Bypass設定
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         internal async Task SideLasersEnable(bool active)
         {
-            bool _active = active;
-            if (OnSideLaserBypassSetting != null)
+            bool _leftactive = active;
+            bool _rightactive = active;
+            if (active && OnSideLaserBypassSetting != null)
             {
-                bool forcingBypass = OnSideLaserBypassSetting.Invoke(active);
-                _active = forcingBypass ? false : active;
+                (bool leftforcingBypass, bool rightforcingBypass) = OnSideLaserBypassSetting.Invoke();
+                _leftactive = leftforcingBypass ? false : active;
+                _rightactive = rightforcingBypass ? false : active;
             }
 
-            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !_active);
-            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !_active);
+            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !_rightactive);
+            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !_leftactive);
         }
         /// <summary>
         /// 前後左右雷射Bypass全部關閉
@@ -185,20 +187,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, false);
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, false);
-
-            if (OnSideLaserBypassSetting != null)
-            {
-                bool sideLsrBypassForcing = OnSideLaserBypassSetting.Invoke(true);
-                if (sideLsrBypassForcing)
-                {
-                    await DOModule.SetState(DO_ITEM.Right_LsrBypass, true);
-                    await DOModule.SetState(DO_ITEM.Left_LsrBypass, true);
-                    return;
-                }
-            }
-
-            await DOModule.SetState(DO_ITEM.Right_LsrBypass, false);
-            await DOModule.SetState(DO_ITEM.Left_LsrBypass, false);
+            await SideLasersEnable(true);
         }
 
 
