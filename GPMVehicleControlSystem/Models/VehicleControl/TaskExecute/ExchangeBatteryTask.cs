@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
@@ -231,7 +230,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
 
                 _waitReachHomeDone.WaitOne();
-                LOG.INFO($"退出至定位點,電池交換完成");
+                logger.Info($"退出至定位點,電池交換完成");
                 Agv.SetSub_Status(SUB_STATUS.IDLE);
                 return (result.Accept, result.Accept ? AlarmCodes.None : AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
             }
@@ -240,7 +239,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal async Task WatchEQVALID(CancellationTokenSource cancellationTokenSource)
         {
             bool _eq_valid_off = false;
-            LOG.TRACE($"[BAT EXG] EQ VALID 訊號監視中...");
+            logger.Trace($"[BAT EXG] EQ VALID 訊號監視中...");
             while (TsmcMiniAGV.WagoDO.GetState(DO_ITEM.AGV_VALID))
             {
                 await Task.Delay(1);
@@ -251,7 +250,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     break;
                 }
             }
-            LOG.TRACE($"[BAT EXG] EQ VALID 訊號監視結束.{(_eq_valid_off ? "EQ 異常" : "")}");
+            logger.Trace($"[BAT EXG] EQ VALID 訊號監視結束.{(_eq_valid_off ? "EQ 異常" : "")}");
         }
 
         internal async Task<bool> HandshakeWithExchanger(clsBatInfo bat, EXCHANGE_BAT_ACTION action)

@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -30,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return false;
             }
         }
@@ -72,11 +71,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             int _time_count_down = _delayTime;
             Timer timer = new Timer(new TimerCallback((s) =>
             {
-                LOG.INFO($"AGV Sub Status Will Changed by charge state after {_time_count_down} second ");
+                logger.Info($"AGV Sub Status Will Changed by charge state after {_time_count_down} second ");
                 _time_count_down--;
             }), null, 0, 1000);
             await Task.Delay(TimeSpan.FromSeconds(_delayTime));
-            LOG.INFO($"Agv.WaitingForChargeStatusChangeFlag = false");
+            logger.Info($"Agv.WaitingForChargeStatusChangeFlag = false");
             timer.Dispose();
             Agv.WaitingForChargeStatusChangeFlag = false;
         }

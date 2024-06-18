@@ -1,7 +1,6 @@
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
@@ -11,7 +10,6 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -87,7 +85,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return false;
             }
         }
@@ -166,18 +164,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 if (Agv.Parameters.LDULDParams.LsrObsDetectedAlarmLevel == ALARM_LEVEL.ALARM)
                 {
-                    LOG.ERROR($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
+                    logger.Error($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],Alarm等級=>不允許AGV侵入!");
                     return (false, AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
                 }
                 else
                 {
-                    LOG.WARN($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
+                    logger.Warn($"EQ (TAG-{destineTag}) [偵測到設備Port內有障礙物],警示等級=>允許侵入");
                     AlarmManager.AddWarning(AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR);
                 }
             }
             else
             {
-                LOG.TRACE($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
+                logger.Trace($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
             }
             return await base.BeforeTaskExecuteActions();
         }
@@ -188,7 +186,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 Agv.IsHandshaking = true;
                 Agv.HandshakeStatusText = "設備內障礙物檢查..";
-                LOG.TRACE($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
+                logger.Trace($"EQ (TAG-{destineTag}) [Port雷射偵測障礙物]啟動");
                 bool _HasObstacle = await CheckPortObstacleViaLaser();
 
                 return (!_HasObstacle, _HasObstacle ? AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR : AlarmCodes.None);
@@ -237,7 +235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 IsNeedHandshake = false;
                 eqHandshakeMode = WORKSTATION_HS_METHOD.NO_HS;
-                LOG.INFO($"[{action}] Tag_{destineTag} is WIP and NOT FIRST Layer (Height={height}): Handshake Mode:{eqHandshakeMode}");
+                logger.Info($"[{action}] Tag_{destineTag} is WIP and NOT FIRST Layer (Height={height}): Handshake Mode:{eqHandshakeMode}");
                 return;
             }
             if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
@@ -245,11 +243,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
                 eqHandshakeMode = mode;
                 IsNeedHandshake = mode == WORKSTATION_HS_METHOD.HS;
-                LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
+                logger.Warn($"[{action}] Tag_{destineTag} Handshake Mode:{mode}({(int)mode})");
             }
             else
             {
-                LOG.WARN($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
+                logger.Warn($"[{action}] Tag_{destineTag} Handshake Mode Not Defined! Forcing Handsake to Safty Protection. ");
                 eqHandshakeMode = WORKSTATION_HS_METHOD.HS;
                 IsNeedHandshake = true;
             }
@@ -258,20 +256,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (Agv.EQDIOStates == null)
             {
-                LOG.WARN($"無法取得EQ DIO狀態!");
+                logger.Warn($"無法取得EQ DIO狀態!");
                 return;
             }
             if (Agv.EQDIOStates.TryGetValue(RunningTaskData.Destination, out var dio_status))
             {
                 if (!dio_status.EQ_Status_Run)
                 {
-                    LOG.WARN($"EQ DO : EQ_STATUS_RUN Not ON");
+                    logger.Warn($"EQ DO : EQ_STATUS_RUN Not ON");
                     return;
                 }
 
                 if (dio_status.Up_Pose == false && dio_status.Down_Pose == false)
                 {
-                    LOG.WARN($"EQ DO : EQ LD IN UNKNOWN POSITION.");
+                    logger.Warn($"EQ DO : EQ LD IN UNKNOWN POSITION.");
                     return;
                 }
 
@@ -279,34 +277,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     if (dio_status.PortExist)
                     {
-                        LOG.WARN($"EQ DO : EQ PORT HAS CARGO!");
+                        logger.Warn($"EQ DO : EQ PORT HAS CARGO!");
                         return;
                     }
                     if (dio_status.Up_Pose == true && dio_status.Down_Pose == false)
                     {
-                        LOG.WARN($"EQ DO : EQ LD NOT DOWN_POSE");
+                        logger.Warn($"EQ DO : EQ LD NOT DOWN_POSE");
                         return;
                     }
-                    LOG.INFO($"EQ DO Status Check [Load] => OK", color: ConsoleColor.Green);
+                    logger.Info($"EQ DO Status Check [Load] => OK");
                 }
                 else if ((action == ACTION_TYPE.Unload))
                 {
                     if (!dio_status.PortExist)
                     {
-                        LOG.WARN($"EQ DO : EQ PORT NO CARGO!!");
+                        logger.Warn($"EQ DO : EQ PORT NO CARGO!!");
                         return;
                     }
                     if (dio_status.Up_Pose == false && dio_status.Down_Pose == true)
                     {
-                        LOG.WARN($"EQ DO : EQ LD NOT  UP_POSE");
+                        logger.Warn($"EQ DO : EQ LD NOT  UP_POSE");
                         return;
                     }
-                    LOG.INFO($"EQ DO Status Check [Unload] => OK", color: ConsoleColor.Green);
+                    logger.Info($"EQ DO Status Check [Unload] => OK");
                 }
 
             }
             else
-                LOG.WARN($"無法取得站點 Tag {RunningTaskData.Destination} 的DIO狀態.(Key Not Found..)");
+                logger.Warn($"無法取得站點 Tag {RunningTaskData.Destination} 的DIO狀態.(Key Not Found..)");
         }
 
         internal override void Abort(AlarmCodes alarm_code = AlarmCodes.None)
@@ -325,23 +323,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
             _eqHandshakeMode = eqHandshakeMode;
             IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
-            LOG.TRACE($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}|_eqHandshakeMode:{_eqHandshakeMode}|isNeedArmExtend:{isNeedArmExtend}");
+            logger.Trace($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}|_eqHandshakeMode:{_eqHandshakeMode}|isNeedArmExtend:{isNeedArmExtend}");
             if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
                 {
-                    LOG.TRACE($"Cargo Transfer - ForkExtendOutAsync");
+                    logger.Trace($"Cargo Transfer - ForkExtendOutAsync");
                     var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                 }
 
-                LOG.TRACE($"Cargo Transfer TryCheckAGVStatus");
+                logger.Trace($"Cargo Transfer TryCheckAGVStatus");
                 var checkStatusResult = await TryCheckAGVStatus();
                 if (!checkStatusResult.success)
                     return (false, checkStatusResult.alarmCode);
 
                 if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
                 {
-                    LOG.TRACE($"Cargo Transfer WaitEQBusyOnAndOFF");
+                    logger.Trace($"Cargo Transfer WaitEQBusyOnAndOFF");
                     HSResult = await Agv.WaitEQBusyOnAndOFF(action);
                     if (HSResult.hs_success)
                     {
@@ -352,13 +350,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     else
                     {
 
-                        LOG.ERROR($"Wait EQ Busy On/Off result Fail({HSResult.alarmCode})");
+                        logger.Error($"Wait EQ Busy On/Off result Fail({HSResult.alarmCode})");
                         return (false, HSResult.alarmCode);
                     }
                 }
                 else
                 {
-                    LOG.TRACE($"AGV Pick and Place not need Wait EQ Busy ON/OFF.");
+                    logger.Trace($"AGV Pick and Place not need Wait EQ Busy ON/OFF.");
                 }
                 //放貨完成->清除CST帳籍
                 if (action == ACTION_TYPE.Load)
@@ -439,7 +437,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 SendActionCheckResult send_task_result = await TransferTaskToAGVC();
                 if (!send_task_result.Accept)
                 {
-                    LOG.ERROR($"{send_task_result.ToJson()}");
+                    logger.Error($"{send_task_result.ToJson()}");
                     Agv.SetSub_Status(SUB_STATUS.DOWN);
                     return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
                 }
@@ -463,7 +461,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
-                        LOG.TRACE("等待二次定位回HOME位置任務完成...", color: ConsoleColor.Magenta);
+                        logger.Trace("等待二次定位回HOME位置任務完成...");
                         _WaitBackToHomeDonePause.WaitOne();
                         AGVCActionStatusChaged -= BackToHomeActionDoneCallback;
                         if (task_abort_alarmcode != AlarmCodes.None)
@@ -471,7 +469,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
-                        LOG.TRACE("車控回HOME位置任務完成", color: ConsoleColor.Magenta);
+                        logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
                     }
@@ -521,7 +519,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private void BackToHomeActionDoneCallback(ActionStatus status)
         {
             _BackHomeActionDoneStatus = status;
-            LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
+            logger.Warn($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}-Back To Secondary Point of WorkStation] AGVC Action Status Changed: {status}.");
             _WaitBackToHomeDonePause.Set();
             _BackHomeActionDoneStatus = status;
         }
@@ -529,7 +527,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
-                LOG.WARN($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.GetSub_Status()})");
+                logger.Warn($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.GetSub_Status()})");
                 var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
                 return IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
             }
@@ -553,9 +551,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (IsNeedWaitForkHome)
                 {
-                    LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                    logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
                     Task.WaitAll(new Task[] { forkGoHomeTask });
-                    LOG.TRACE($"[Async Action] Fork is at safe height Now");
+                    logger.Trace($"[Async Action] Fork is at safe height Now");
                 }
 
                 var HSResult = await AGVCOMPTHandshake();
@@ -579,14 +577,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     switch (query_cause)
                     {
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL:
-                            LOG.TRACE($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
+                            logger.Trace($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
                             await Agv.QueryVirtualID(query_cause, cst_type);
                             break;
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH:
 
                             if (IsNeedQueryVirutalStation)
                             {
-                                LOG.TRACE($"Station {destineTag} is need to query virtual id from AGVS when ID Not Match");
+                                logger.Trace($"Station {destineTag} is need to query virtual id from AGVS when ID Not Match");
                                 await Agv.QueryVirtualID(query_cause, cst_type);
                             }
                             break;
@@ -655,19 +653,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (isNeedArmExtend)
             {
                 Agv.HandshakeStatusText = "AGV牙叉伸出中";
-                LOG.TRACE($"FORK ARM Extend Out");
+                logger.Trace($"FORK ARM Extend Out");
                 var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
                 arm_move_Done = _arm_move_result.confirm;
                 if (!arm_move_Done)
                 {
-                    LOG.TRACE($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
+                    logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
                     return (false, _arm_move_result.Item2);
                 }
                 else if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
                 {
                     return (false, AlarmCodes.Fork_Arm_Pose_Error);
                 }
-                LOG.INFO($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
+                logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
                 await Task.Delay(1000);
                 //check arm position 
             }
@@ -723,7 +721,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)
         {
-            LOG.INFO($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
+            logger.Info($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
 
             //檢查在席
             if (check_cargo_exist_state)
@@ -748,7 +746,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 alarm_code = AlarmCodes.None;
 
             if (alarm_code != AlarmCodes.None)
-                LOG.WARN($"車載狀態錯誤({alarm_code}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+                logger.Warn($"車載狀態錯誤({alarm_code}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
 
             return alarm_code;
         }
@@ -768,7 +766,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         private async Task WaitCSTIDReported()
         {
-            LOG.TRACE($"Start Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS");
+            logger.Trace($"Start Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS");
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             if (Agv.AGVS.UseWebAPI)
                 while (Agv.AGVS.previousRunningStatusReport_via_WEBAPI.CSTID.First() != Agv.CSTReader.ValidCSTID)
@@ -776,7 +774,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(1);
                     if (cts.IsCancellationRequested)
                     {
-                        LOG.Critical($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
+                        logger.Error($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
                         return;
                     }
                 }
@@ -787,12 +785,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(1);
                     if (cts.IsCancellationRequested)
                     {
-                        LOG.Critical($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
+                        logger.Error($"Wait CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS Timeout!");
                         return;
                     }
                 }
             }
-            LOG.TRACE($"CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS SUCCESS");
+            logger.Trace($"CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS SUCCESS");
         }
 
         protected async virtual Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
@@ -858,19 +856,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (Agv.Parameters.CSTIDReadNotMatchSimulation)
             {
-                LOG.ERROR($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
+                logger.Error($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
 
 
             if (reader_valid_id == "ERROR" || reader_actual_read_id == "ERROR" || reader_actual_read_id == "ERROR")
             {
-                LOG.ERROR($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
+                logger.Error($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
             if (reader_valid_id != cst_id_expect)
             {
-                LOG.ERROR($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
+                logger.Error($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
                 return (false, AlarmCodes.Cst_ID_Not_Match);
             }
             Agv.CSTReader.ValidCSTID = reader_valid_id;

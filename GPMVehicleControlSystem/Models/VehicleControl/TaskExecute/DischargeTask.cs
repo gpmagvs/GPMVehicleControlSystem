@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
@@ -30,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return false;
             }
         }
@@ -57,11 +56,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 };
                 if (IsNeedWaitForkHome)
                 {
-                    LOG.TRACE($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
+                    logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
                     Task.WaitAll(new Task[] { forkGoHomeTask });
-                    LOG.TRACE($"[Async Action] Fork is Home Now");
+                    logger.Trace($"[Async Action] Fork is Home Now");
                 }
-                LOG.WARN($"Fork Go Home When AGVC Action Finish , {ForkGoHomeResultAlarmCode}");
+                logger.Warn($"Fork Go Home When AGVC Action Finish , {ForkGoHomeResultAlarmCode}");
                 if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
                 {
                     return (false, ForkGoHomeResultAlarmCode);

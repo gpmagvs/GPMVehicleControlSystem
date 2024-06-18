@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -30,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             isSegmentTask = destine != end_of_traj;
             if (isSegmentTask)
             {
-                LOG.TRACE($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
+                logger.Trace($"分段任務接收:軌跡終點:{end_of_traj},目的地:{destine}");
             }
 
         }
@@ -39,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
-                LOG.INFO($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
+                logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
                 if (ForkActionStartWhenReachSecondartPTFlag)
                 {
                     StartTrackingSecondaryPointReach();
@@ -49,7 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         protected override async Task WaitTaskDoneAsync()
         {
-            LOG.TRACE($"等待 AGV完成 [移動] 任務", color: ConsoleColor.Green);
+            logger.Trace($"等待 AGV完成 [移動] 任務");
             await Task.Delay(10);
             try
             {
@@ -61,20 +60,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         throw new TaskCanceledException();
                     }
                 }
-                LOG.TRACE($"AGV完成 [移動] 任務, Alarm Code: {task_abort_alarmcode}.]", color: ConsoleColor.Green);
+                logger.Trace($"AGV完成 [移動] 任務, Alarm Code: {task_abort_alarmcode}.]");
 
             }
             catch (TaskCanceledException ex)
             {
                 task_abort_alarmcode = AlarmCodes.Replan;
                 _wait_agvc_action_done_pause.Set();
-                LOG.TRACE($"[移動]任務-Replan.{ex.Message}, Alarm Code:{task_abort_alarmcode}.]", color: ConsoleColor.Green);
+                logger.Trace($"[移動]任務-Replan.{ex.Message}, Alarm Code:{task_abort_alarmcode}.]");
             }
             catch (Exception ex)
             {
                 task_abort_alarmcode = AlarmCodes.Replan;
                 _wait_agvc_action_done_pause.Set();
-                LOG.TRACE($"[移動]任務-Replan.{ex.Message}=>{task_abort_alarmcode}.]", color: ConsoleColor.Green);
+                logger.Trace($"[移動]任務-Replan.{ex.Message}=>{task_abort_alarmcode}.]");
             }
         }
         private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
@@ -90,19 +89,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (!Agv.NavingMap.GetStationTags().Contains(workstation_tag))
                 {
-                    LOG.WARN($"圖資中不存在 Tag {workstation_tag}");
+                    logger.Warn($"圖資中不存在 Tag {workstation_tag}");
                     return false;
                 }
 
                 var workstation_point = Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == workstation_tag);
                 if (workstation_point == null)
                 {
-                    LOG.WARN($"圖資中不存在站點 {workstation_tag}");
+                    logger.Warn($"圖資中不存在站點 {workstation_tag}");
                     return false;
                 }
                 if (workstation_point.StationType == STATION_TYPE.Normal)
                 {
-                    LOG.WARN($"工作站點的類型錯誤 {workstation_point.StationType}");
+                    logger.Warn($"工作站點的類型錯誤 {workstation_point.StationType}");
                     return false;
                 }
 
@@ -115,14 +114,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    LOG.WARN($"找不到工作點位的二次定位點 TAG ({_next_action})");
+                    logger.Warn($"找不到工作點位的二次定位點 TAG ({_next_action})");
                     return false;
                 }
 
             }
             else
             {
-                LOG.WARN($"訂單任務下一個動作不需要升降牙叉({_next_action})");
+                logger.Warn($"訂單任務下一個動作不需要升降牙叉({_next_action})");
 
                 return false;
             }
@@ -147,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         var isunLoad = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
                         var ischarge = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
 
-                        LOG.WARN($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
+                        logger.Warn($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
                         try
                         {
                             double _position_aim = 0;
@@ -173,7 +172,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                                 {
                                     _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
                                     var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
-                                    LOG.WARN($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
+                                    logger.Warn($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
 
                                     Task.Run(async () =>
                                     {
@@ -203,14 +202,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                         catch (Exception ex)
                         {
-                            LOG.Critical(ex.Message, ex);
+                            logger.Error(ex, ex.Message);
                             Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
                             break;
                         }
                     }
 
                 }
-                LOG.TRACE($"牙叉提前上升至安全位置程序結束..", color: ConsoleColor.Green);
+                logger.Trace($"牙叉提前上升至安全位置程序結束..");
             });
         }
 
@@ -228,7 +227,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
-                    LOG.WARN($"貨物傾倒偵測已在執行中!!");
+                    logger.Warn($"貨物傾倒偵測已在執行中!!");
                 }
             }
             //Task.Run(() => WatchVirtualPtAndStopWorker());
@@ -255,7 +254,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return;
                 }
 
-                LOG.INFO($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
+                logger.Info($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
                 CancellationTokenSource cts = new CancellationTokenSource();
                 cts.CancelAfter(10000);
                 while (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
@@ -264,11 +263,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (cts.IsCancellationRequested)
                     {
                         Agv.IsCargoBiasDetecting = false;
-                        LOG.ERROR($"Wait AGV Move(Active) Timeout, cargo Bias Detection not start.");
+                        logger.Error($"Wait AGV Move(Active) Timeout, cargo Bias Detection not start.");
                         return;
                     }
                 }
-                LOG.INFO($"Start Cargo Bias Detection.");
+                logger.Info($"Start Cargo Bias Detection.");
                 while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
@@ -278,11 +277,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS || Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
                     {
-                        LOG.WARN($"貨物傾倒偵測觸發-Check1");
+                        logger.Warn($"貨物傾倒偵測觸發-Check1");
                         await Task.Delay(500); //避免訊號瞬閃導致誤偵測
                         if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
                         {
-                            LOG.ERROR($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
+                            logger.Error($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             Agv.IsCargoBiasTrigger = true;
                             Agv.AGVC.ResetTask(RESET_MODE.CYCLE_STOP);
                             break;

@@ -1,6 +1,5 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
@@ -25,6 +24,7 @@ using Newtonsoft.Json.Linq;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using WebSocketSharp;
+using NLog;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -40,7 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private bool disposedValue;
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         protected double ExpectedForkPostionWhenEntryWorkStation = 0;
-
+        protected NLog.Logger logger;
         public MapPoint DestineMapPoint
         {
             get
@@ -84,7 +84,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.Message, ex);
+                    logger.Error(ex, ex.Message);
                     return false;
                 }
             }
@@ -109,7 +109,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex);
+                    logger.Error(ex, ex.Message);
                 }
                 _RunningTaskData = value;
             }
@@ -153,7 +153,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             this.Agv = Agv;
             RunningTaskData = taskDownloadData;
-            LOG.INFO($"New Task : " +
+            logger = LogManager.GetLogger("TaskLog");
+            logger.Info($"New Task : " +
                 $"\r\nTask Name:{taskDownloadData.Task_Name}" +
                 $"\r\nTask_Simplex:{taskDownloadData.Task_Simplex}" +
                 $"\r\nTask_Sequence:{taskDownloadData.Task_Sequence}" +
@@ -218,7 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return new List<AlarmCodes> { checkResult.alarm_code };
                 }
                 await Task.Delay(10);
-                LOG.WARN($"Do Order_ {RunningTaskData.Task_Name}:" +
+                logger.Trace($"Do Order_ {RunningTaskData.Task_Name}:" +
                     $"\r\nAction:{action}" +
                     $"\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}" +
                     $"\r\nHeight:{RunningTaskData.Height}", false);
@@ -233,13 +234,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (AGVCActionStatusChaged != null)
                 {
-                    LOG.WARN($"車控 AGVCActionStatusChaged event 註冊狀態未清空=>自動清空");
+                    logger.Warn($"車控 AGVCActionStatusChaged event 註冊狀態未清空=>自動清空");
                     AGVCActionStatusChaged = null;
                 }
 
                 if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 {
-                    LOG.WARN($"車載狀態錯誤:{Agv.GetSub_Status()}");
+                    logger.Error($"車載狀態錯誤:{Agv.GetSub_Status()}");
                     var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
 
                     return new List<AlarmCodes> { IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode };
@@ -249,21 +250,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
                 if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
                 {
-                    LOG.WARN("空取空放!");
+                    logger.Trace("空取空放!");
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
                     if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD || Agv.Parameters.AgvType == AGV_TYPE.FORK)
                     {
                         SubmarinAGV? _agv = (Agv as SubmarinAGV);
                         CARGO_STATUS _cargo_status_simulation = action == ACTION_TYPE.Load ? CARGO_STATUS.NO_CARGO : CARGO_STATUS.HAS_CARGO_NORMAL;
                         string _cst_id = action == ACTION_TYPE.Load ? "" : RunningTaskData.CST.FirstOrDefault() == null ? "" : RunningTaskData.CST.First().CST_ID;//取貨[Unload]需模擬拍照=>從派車任務中拿CSTID
-                        LOG.WARN($"空取空放-貨物在席狀態模擬-{_cargo_status_simulation},CST ID= {_cst_id}");
+                        logger.Trace($"空取空放-貨物在席狀態模擬-{_cargo_status_simulation},CST ID= {_cst_id}");
 
                         _agv.simulation_cargo_status = _cargo_status_simulation;
                         _agv.CSTReader.ValidCSTID = _cst_id;
                     }
                     await Task.Delay(2000);
                     Agv.SetSub_Status(SUB_STATUS.IDLE);
-                    LOG.TRACE($"AGV完成任務[空取空放]---[{action}=>{task_abort_alarmcode}.]");
+                    logger.Info($"AGV完成任務[空取空放]---[{action}=>{task_abort_alarmcode}.]");
                     return new List<AlarmCodes>();
 
                 }
@@ -315,7 +316,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
+                logger.Error(ex.Message, ex);
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
@@ -323,9 +324,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task WaitTaskDoneAsync()
         {
-            LOG.TRACE($"等待AGV完成 [{action}] 任務", color: ConsoleColor.Green);
+            logger.Trace($"等待AGV完成 [{action}] 任務");
             _wait_agvc_action_done_pause.WaitOne();
-            LOG.TRACE($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]", color: ConsoleColor.Green);
+            logger.Trace($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
         }
 
         private async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action)
@@ -346,12 +347,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    LOG.WARN($"一般走行任務-牙叉回HOME");
+                    logger.Warn($"一般走行任務-牙叉回HOME");
                     (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = await ForkLifter.ForkGoHome();
                     if (!forkGoHomeResult.confirm)
                         alarmCodes.Add(forkGoHomeResult.alarm_code);
                     else
-                        LOG.WARN($"一般走行任務-牙叉回HOME-牙叉已位於安全位置({ForkLifter.CurrentHeightPosition} cm)");
+                        logger.Warn($"一般走行任務-牙叉回HOME-牙叉已位於安全位置({ForkLifter.CurrentHeightPosition} cm)");
                 }));
             }
             else if (action == ACTION_TYPE.Charge || action == ACTION_TYPE.Park || action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.LoadAndPark)
@@ -359,7 +360,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 tasks.Add(Task.Run(async () =>
                 {
                     Agv.HandshakeStatusText = "AGV牙叉動作中";
-                    LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度");
+                    logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度");
 
                     var _position = CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_;
 
@@ -369,7 +370,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     else
                     {
                         ExpectedForkPostionWhenEntryWorkStation = forkGoTeachPositionResult.position;
-                        LOG.WARN($"取貨、放貨、充電任務-牙叉升至設定高度({ExpectedForkPostionWhenEntryWorkStation})-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
+                        logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度({ExpectedForkPostionWhenEntryWorkStation})-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
                     }
                 }));
 
@@ -383,9 +384,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
 
-            LOG.INFO($"等待牙叉動作(動作數:{tasks.Count})...", color: ConsoleColor.Green);
+            logger.Info($"等待牙叉動作(動作數:{tasks.Count})...");
             Task.WaitAll(tasks.ToArray());
-            LOG.INFO($"牙叉動作完成(動作數:{tasks.Count}),異常:{alarmCodes.Count}", color: ConsoleColor.Green);
+            logger.Info($"牙叉動作完成(動作數:{tasks.Count}),異常:{alarmCodes.Count}");
 
             return (alarmCodes.Count == 0, alarmCodes);
         }
@@ -418,19 +419,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private async Task ForkPositionSaftyMonitor()
         {
             await Task.Delay(1);
-            LOG.WARN($"Start Monitor Fork Position before AGV Reach in WorkStation(Fork Position should be : {ExpectedForkPostionWhenEntryWorkStation})");
+            logger.Warn($"Start Monitor Fork Position before AGV Reach in WorkStation(Fork Position should be : {ExpectedForkPostionWhenEntryWorkStation})");
             while (Agv.BarcodeReader.CurrentTag != this.RunningTaskData.Homing_Trajectory.Last().Point_ID)
             {
                 await Task.Delay(1);
+                if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                    return;
+
                 double _error = 0;
                 if ((_error = _ForkHeightErrorWithExpected()) > 0.5)
                 {
                     AlarmManager.AddAlarm(AlarmCodes.Fork_Height_Setting_Error, false);
-                    LOG.Critical($"Fork Position Incorrect. Error={_error}cm ({Agv.ForkLifter.CurrentHeightPosition}/{ExpectedForkPostionWhenEntryWorkStation})");
+                    logger.Error($"Fork Position Incorrect. Error={_error}cm ({Agv.ForkLifter.CurrentHeightPosition}/{ExpectedForkPostionWhenEntryWorkStation})");
                     return;
                 }
             }
-            LOG.INFO($"Fork Position Monitor done=>Safe");
+            logger.Info($"Fork Position Monitor done=>Safe");
 
             double _ForkHeightErrorWithExpected()
             {
@@ -448,7 +452,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                LOG.WARN($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
+                logger.Warn($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
                 if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 {
                     if (Agv.AGVSResetCmdFlag)
@@ -463,7 +467,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (Agv.IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     AGVCActionStatusChaged = null;
-                    LOG.ERROR($"存在貨物傾倒異常");
+                    logger.Warn($"存在貨物傾倒異常");
                     Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
                     Agv.SetSub_Status(SUB_STATUS.DOWN);
                     task_abort_alarmcode = AlarmCodes.Cst_Slope_Error;
@@ -492,12 +496,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         _wait_agvc_action_done_pause.Set();
                         return;
                     }
-                    //LOG.INFO($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
+                    //logger.Info($"[{_RunningTaskData.Action_Type}] Tag-[{Agv.BarcodeReader.CurrentTag}] AGVC Action Status is success, {(_RunningTaskData.Action_Type != ACTION_TYPE.None ? $"Do Action in/out of Station defined!" : "Park done")}");
                     Agv.DirectionLighter.CloseAll();
                     Agv.lastParkingAccuracy = StoreParkingAccuracy();
                     (bool success, AlarmCodes alarmCode) result = await HandleAGVCActionSucceess();
                     task_abort_alarmcode = result.success ? AlarmCodes.None : result.alarmCode;
-                    LOG.TRACE($"HandleAGVCActionSucceess result => {task_abort_alarmcode}");
+                    logger.Trace($"HandleAGVCActionSucceess result => {task_abort_alarmcode}");
 
                     _wait_agvc_action_done_pause.Set();
                 }
@@ -577,7 +581,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (need_reach_secondary)
                 {
-                    LOG.TRACE($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.");
+                    logger.Trace($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.");
 
                     while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
                     {
@@ -589,7 +593,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         }
                     }
                 }
-                LOG.TRACE($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
+                logger.Trace($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
                 (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (Agv.ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME, AlarmCodes.None);
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
@@ -605,9 +609,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             return;
                         }
                         ForkGoHomeActionResult = await ForkLifter.ForkGoHome();
-                        LOG.TRACE($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
+                        logger.Trace($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
                     }
-                    LOG.TRACE($"[Fork Home Process At Secondary] Fork position now is Under safty height({_safty_height}cm)");
+                    logger.Trace($"[Fork Home Process At Secondary] Fork position now is Under safty height({_safty_height}cm)");
 
                 }
                 else
@@ -621,10 +625,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             return;
                         }
                         var go = await ForkLifter.ForkPose(0, 1);
-                        LOG.TRACE($"[Fork Pose to zero Process At Secondary] ForkPose Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
+                        logger.Trace($"[Fork Pose to zero Process At Secondary] ForkPose Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
                     }
                     await Task.Delay(200);
-                    LOG.TRACE($"[Fork Home Process At Secondary] Fork position now is almost at home({Agv.ForkLifter.CurrentHeightPosition}cm)");
+                    logger.Trace($"[Fork Home Process At Secondary] Fork position now is almost at home({Agv.ForkLifter.CurrentHeightPosition}cm)");
 
                 }
                 ForkGoHomeActionResult.confirm = true;
@@ -653,7 +657,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             });
 
-            LOG.WARN($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
+            logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
             (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1).Result;
             _wait_fork_reach_position_cst.Cancel();
             return result;
@@ -670,16 +674,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return true;
             if (Agv.IsFrontendSideHasObstacle)
             {
-                LOG.Critical($"前方障礙物預檢知觸發[等級={alarmLevel}]");
+                logger.Error($"前方障礙物預檢知觸發[等級={alarmLevel}]");
                 return false;
             }
             if (options.Detection_Method == FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION)
             {
-                LOG.INFO($"前方障礙物預檢知Sensor Pass , No Obstacle", color: ConsoleColor.Green);
+                logger.Info($"前方障礙物預檢知Sensor Pass , No Obstacle");
                 return true;
             }
             int DetectionTime = options.Duration;
-            LOG.WARN($"前方障礙物預檢知偵側開始[{options.Detection_Method}]==> 偵測持續時間={DetectionTime} 秒)");
+            logger.Warn($"前方障礙物預檢知偵側開始[{options.Detection_Method}]==> 偵測持續時間={DetectionTime} 秒)");
             CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
             Stopwatch stopwatch = Stopwatch.StartNew();
             bool detected = false;
@@ -691,7 +695,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     cancelDetectCTS.Cancel();
                     stopwatch.Stop();
-                    LOG.Critical($"前方障礙物預檢知觸發[等級={alarmLevel}](在第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
+                    logger.Error($"前方障礙物預檢知觸發[等級={alarmLevel}](在第 {stopwatch.ElapsedMilliseconds / 1000.0} 秒)");
                     if (alarmLevel == ALARM_LEVEL.ALARM)
                         EMO_STOP_AGV();
                     else
@@ -708,7 +712,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 if (!detected)
                 {
-                    LOG.INFO($"前方障礙物預檢知Sensor Pass , No Obstacle", color: ConsoleColor.Green);
+                    logger.Info($"前方障礙物預檢知Sensor Pass , No Obstacle");
                 }
                 Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
             });
