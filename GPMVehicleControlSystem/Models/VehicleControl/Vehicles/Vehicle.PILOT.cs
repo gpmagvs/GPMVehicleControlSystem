@@ -39,9 +39,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     _IsCargoBiasDetecting = value;
                     if (!_IsCargoBiasDetecting)
-                        LOG.WARN($"貨物傾倒偵測結束-AGV Move Finish");
+                        logger.LogWarning($"貨物傾倒偵測結束-AGV Move Finish");
                     else
-                        LOG.WARN($"貨物傾倒偵測開始");
+                        logger.LogWarning($"貨物傾倒偵測開始");
                 }
             }
         }
@@ -99,8 +99,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
-                LOG.TRACE($"Start Execute Task-{taskDownloadData.Task_Simplex}", color: ConsoleColor.Green);
-                //LOG.WARN($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
+                logger.LogTrace($"Start Execute Task-{taskDownloadData.Task_Simplex}");
+                // logger.LogWarning($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
                 _RunTaskData = taskDownloadData.Clone();
                 _RunTaskData.IsEQHandshake = false;
                 _RunTaskData.IsActionFinishReported = false;
@@ -123,7 +123,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogError(ex, ex.Message);
                 SoftwareEMO(AlarmCodes.Code_Error_In_System);
                 return;
             }
@@ -142,15 +142,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGV_Reset_Flag = AGVSResetCmdFlag = false;
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                 List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-                LOG.TRACE($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}", color: ConsoleColor.Green);
+                logger.LogTrace($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}");
                 if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                 {
-                    LOG.WARN("Replan.");
+                    logger.LogWarning("Replan.");
                     return;
                 }
                 if (alarmCodes.Any(al => al == AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised))
                 {
-                    LOG.WARN("AGVS Cancel Request Raised and AGV is executing cycle stop action");
+                    logger.LogWarning("AGVS Cancel Request Raised and AGV is executing cycle stop action");
                     return;
                 }
 
@@ -177,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (TaskCanceledException ex)
                     {
-                        LOG.TRACE($"Laser OBS Monitor Process end. |{ex.Message}");
+                        logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
                     }
                     finally
                     {
@@ -188,7 +188,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         AlarmManager.AddAlarm(alarm, false);
                     });
                     _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
-                    LOG.Critical($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+                    logger.LogError($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+
                     TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                 }
                 else
@@ -200,7 +201,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (TaskCanceledException ex)
                     {
-                        LOG.TRACE($"Laser OBS Monitor Process end. |{ex.Message}");
+                        logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
                     }
                     finally
                     {
@@ -292,7 +293,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(1000);
                         if (cancTs.IsCancellationRequested)
                         {
-                            LOG.ERROR($"Cannot Download Transfer Infomation From CIM");
+                            logger.LogWarning($"Cannot Download Transfer Infomation From CIM");
                             return;
                         }
                         transferData = await QueryTaskInfoFromCIM(task_Name);
@@ -316,13 +317,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         orderInfoViewModel.SourceName = SourceEQName;
                         orderInfoViewModel.DestineName = DestinEQName;
-                        LOG.INFO($"Download TransferTask= {orderInfoViewModel.ToJson()}", color: ConsoleColor.Green);
+                        logger.LogInformation($"Download TransferTask= {orderInfoViewModel.ToJson()}");
 
                     }
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex);
+                    logger.LogError(ex, ex.Message);
                 }
             });
         }
@@ -333,11 +334,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 File.WriteAllText("task_name.txt", task_Name);
-                LOG.TRACE($"任務ID站存寫入檔案成功({task_Name})", false);
+                logger.LogTrace($"任務ID站存寫入檔案成功({task_Name})");
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"任務ID站存寫入檔案失敗.", ex);
+                logger.LogError(ex, $"任務ID站存寫入檔案失敗.");
                 Task.Run(() => WriteTaskNameToFile(task_Name));
             }
         }
@@ -388,7 +389,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             clsMapPoint[] trajectory = ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory;
-            LOG.INFO($"Try Control Auto Door in Tag {newVisitedNodeTag}(Full Traj: {string.Join(",", trajectory.Select(pt => pt.Point_ID))})");
+            logger.LogInformation($"Try Control Auto Door in Tag {newVisitedNodeTag}(Full Traj: {string.Join(",", trajectory.Select(pt => pt.Point_ID))})");
             //剩餘路徑包含自動門 則將 IO ON著 反之 OFF
             clsMapPoint? currentPt = trajectory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
             if (currentPt == null)
@@ -407,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             IEnumerable<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt));
             IEnumerable<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID);
-            LOG.TRACE($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
+            logger.LogTrace($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
             bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2;
             if (_isAutoDoorInRemainTraj)
             {
@@ -435,7 +436,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task OpenAutoDoor()
         {
-            LOG.INFO($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
+            logger.LogInformation($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
             bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, true);
             if (!success)
             {
@@ -444,7 +445,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected virtual async Task CloseAutoDoor()
         {
-            LOG.INFO($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
+            logger.LogInformation($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
             bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
             //if (!success)
             //    AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
@@ -467,7 +468,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex.Message, ex);
+                logger.LogError(ex, ex.Message);
                 AlarmManager.AddWarning(AlarmCodes.Measure_Result_Data_Report_Fail);
             }
         }
@@ -493,12 +494,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (_RunTaskData.IsLocalTask)
             {
                 _RunTaskData.IsActionFinishReported = status == TASK_RUN_STATUS.ACTION_FINISH;
-                LOG.WARN($"{_RunTaskData.Task_Name}-本地任務不需要向派車系統回報任務狀態!({status})");
+                logger.LogWarning($"{_RunTaskData.Task_Name}-本地任務不需要向派車系統回報任務狀態!({status})");
                 return;
             }
 
 
-            LOG.WARN($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
+            logger.LogWarning($"嘗試向派車系統上報任務狀態(狀態=>{status},是否因為派車系統取消任務回報=>{IsTaskCancel},異常碼追蹤=>{(alarms_tracking == null ? "" : string.Join(",", alarms_tracking))})");
             var _task_namae = _RunTaskData.Task_Name;
             var _task_simplex = _RunTaskData.Task_Simplex;
             var _task_sequence = _RunTaskData.Task_Sequence;
@@ -522,7 +523,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     catch (Exception ex)
                     {
                         IsWaitForkNextSegmentTask = false;
-                        LOG.WARN($"[FeedbackTaskStatus] Exception Occur when determine 'IsWaitForkNextSegmentTask' value. Forcing set as FALSE{ex.Message}");
+                        logger.LogWarning($"[FeedbackTaskStatus] Exception Occur when determine 'IsWaitForkNextSegmentTask' value. Forcing set as FALSE{ex.Message}");
                     }
 
                     if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
@@ -559,7 +560,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             await Task.Delay(1000);
                             while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
-                            LOG.WARN($"[{GetSub_Status()}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
+                            logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
                             bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
 
@@ -571,7 +572,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogError(ex, ex.Message);
             }
             IsActionFinishTaskFeedbackExecuting = false;
         }
@@ -579,7 +580,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task WaitAlarmCodeReported(List<AlarmCodes> alarms_tracking)
         {
             string _alarm_codes_str = string.Join(",", alarms_tracking);
-            LOG.WARN($"Before TaskFeedback, AlarmCodes({_alarm_codes_str}) reported tracking ");
+            logger.LogWarning($"Before TaskFeedback, AlarmCodes({_alarm_codes_str}) reported tracking ");
             bool alarm_reported()
             {
                 List<int> alarm_codes_reported = new List<int>();
@@ -596,11 +597,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(1);
                 if (cancel_wait.IsCancellationRequested)
                 {
-                    LOG.TRACE($"AlarmCodes({alarms_tracking}) not_reported ,, timeout(10 sec) ");
+                    logger.LogTrace($"AlarmCodes({alarms_tracking}) not_reported ,, timeout(10 sec) ");
                     return;
                 }
             }
-            LOG.WARN($"All AlarmCodes ({_alarm_codes_str}) are reported to AGVS ! ");
+            logger.LogWarning($"All AlarmCodes ({_alarm_codes_str}) are reported to AGVS ! ");
 
         }
 
@@ -611,7 +612,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 clsMapPoint? currentPt = _RunTaskData.ExecutingTrajecory.FirstOrDefault(pt => pt.Point_ID == Navigation.LastVisitedTag);
                 if (currentPt == null)
                 {
-                    LOG.ERROR("計算目前點位在移動路徑中的INDEX過程發生錯誤 !");
+                    logger.LogError("計算目前點位在移動路徑中的INDEX過程發生錯誤 !");
                     return -1;
                 }
                 else
@@ -621,7 +622,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR("GetCurrentTagIndexOfTrajectory exception occur !", ex);
+                logger.LogError(ex, "GetCurrentTagIndexOfTrajectory exception occur !");
                 throw new NullReferenceException();
             }
 
@@ -725,7 +726,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 }
                                 catch (Exception ex)
                                 {
-                                    LOG.ERROR(ex);
+                                    logger.LogError(ex, ex.Message);
                                 }
                                 finally
                                 {
@@ -737,7 +738,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         catch (TaskCanceledException ex)
                         {
-                            LOG.INFO("雷射偵測流程已取消");
+                            logger.LogInformation("雷射偵測流程已取消");
                             return;
                         }
                     }
@@ -756,7 +757,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.LogError(ex, ex.Message);
             }
             finally
             {

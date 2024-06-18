@@ -433,6 +433,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
+
+                await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
                 await Agv.Laser.FrontBackLasersEnable(false, true);
                 SendActionCheckResult send_task_result = await TransferTaskToAGVC();
                 if (!send_task_result.Accept)

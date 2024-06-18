@@ -6,6 +6,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using NLog;
 using RosSharp.RosBridgeClient;
 using System.Reflection;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -57,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
-                    LOG.INFO($"Laser Mode Chaged To : {value}({Mode})", true);
+                    logger.Info($"Laser Mode Chaged To : {value}({Mode})", true);
                 }
             }
         }
@@ -73,6 +74,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
+
+        protected Logger logger;
         public int AgvsLsrSetting
         {
             get => _AgvsLsrSetting;
@@ -87,6 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public clsLaser(clsDOModule DOModule, clsDIModule DIModule)
         {
+            logger = LogManager.GetCurrentClassLogger();
             this.DOModule = DOModule;
             this.DIModule = DIModule;
         }
@@ -123,11 +127,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.Message, ex);
+                    logger.Error(ex, ex.Message);
                 }
                 _rosSocket = value;
                 _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
-                LOG.TRACE($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
+
+                logger.Trace($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
             }
         }
 
@@ -137,7 +142,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             get
             {
                 double period = (DateTime.Now - lastSickOutputPathDataUpdateTime).TotalSeconds;
-                LOG.TRACE($"{period},lastSickOutputPathDataUpdateTime:{lastSickOutputPathDataUpdateTime.ToString("yyyy-MM-dd HH:mm:ss.ffff")}");
+                logger.Trace($"{period},lastSickOutputPathDataUpdateTime:{lastSickOutputPathDataUpdateTime.ToString("yyyy-MM-dd HH:mm:ss.ffff")}");
                 return period > 1;
             }
         }
@@ -205,7 +210,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal async void ApplyAGVSLaserSetting()
         {
-            LOG.INFO($"雷射組數切換為AGVS Setting={AgvsLsrSetting}", false);
+            logger.Info($"雷射組數切換為AGVS Setting={AgvsLsrSetting}");
+
             await ModeSwitch(AgvsLsrSetting);
         }
 
@@ -214,7 +220,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
-                LOG.INFO($"雷射設定組 =Bypass , AGVC Direction 11", true);
+                logger.Info($"雷射設定組 =Bypass , AGVC Direction 11", true);
                 //await FrontBackLasersEnable(false);
                 await ModeSwitch(LASER_MODE.Bypass);
 
@@ -224,14 +230,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await FrontBackLasersEnable(true);
                 await ModeSwitch(AgvsLsrSetting);
-                LOG.INFO($"雷射設定組 = {AgvsLsrSetting}", true);
-                LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
+                logger.Info($"雷射設定組 = {AgvsLsrSetting}", true);
+                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
+
             }
             else // 左.右轉
             {
                 await FrontBackLasersEnable(true);
                 await ModeSwitch(Spin_Laser_Mode);
-                LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
+                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
         }
         public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
@@ -246,7 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 bool isModeAllowSetting = mode_int == (int)LASER_MODE.Turning || mode_int == (int)LASER_MODE.Bypass;
                 if ((agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT) && !isModeAllowSetting)
                 {
-                    LOG.Critical($"AGV旋轉中,雷射切換為 =>{mode_int} 請求已被Bypass");
+                    logger.Warn($"AGV旋轉中,雷射切換為 =>{mode_int} 請求已被Bypass");
                     return true;
                 }
                 if (isSettingByAGVS)
@@ -262,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         break;
                     }
-                    LOG.WARN($"Try Laser Output Setting  as {mode_int} --({try_count})");
+                    logger.Warn($"Try Laser Output Setting  as {mode_int} --({try_count})");
                     if (try_count > retry_times_limit)
                         return false;
                     bool writeSuccess = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
@@ -277,13 +284,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 if (isSickOutputPathDataNotUpdate)
                     AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_But_SICK_OUPUT_NOT_UPDATE);
-                LOG.INFO($"Laser Output Setting as {mode_int} Success({try_count})");
+                logger.Info($"Laser Output Setting as {mode_int} Success({try_count})");
 
                 return true;
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.Error(ex);
                 return false;
             }
             finally
