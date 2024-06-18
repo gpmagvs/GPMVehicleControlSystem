@@ -218,12 +218,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!Parameters.CheckObstacleWhenForkInit)
                 return (true, "");
 
-            bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
-            if (RightLaserAbnormal)
-                return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
-            bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-            if (LeftLaserAbnormal)
-                return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
+
+            if (!Parameters.SensorBypass.SideLaserBypass)
+            {
+                bool RightLaserAbnormal = !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
+                if (RightLaserAbnormal)
+                    return (false, "無法在障礙物入侵的狀態下進行初始化(右方障礙物檢出)");
+                bool LeftLaserAbnormal = !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                if (LeftLaserAbnormal)
+                    return (false, "無法在障礙物入侵的狀態下進行初始化(左方障礙物檢出)");
+            }
 
             await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
             await WagoDO.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);

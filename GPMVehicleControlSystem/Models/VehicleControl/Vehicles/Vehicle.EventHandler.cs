@@ -67,6 +67,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             IMU.OnImuStatesError += HandleIMUStatesError;
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
+            Laser.OnSideLaserBypassSetting += (active) =>
+            {
+                if (Parameters.SensorBypass.SideLaserBypass)
+                {
+                    logger.LogWarning($"側邊雷射強制Bypass已啟用");
+                    return true;
+                }
+                return active;
+            };
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
             OnParamEdited += (param) => { this.Parameters = param; };
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>

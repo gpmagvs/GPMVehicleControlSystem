@@ -64,6 +64,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private int _AgvsLsrSetting = 1;
         public delegate void LsrModeSwitchDelegate(int mode);
         public LsrModeSwitchDelegate OnLsrModeSwitchRequest;
+        public delegate bool SideLaserBypassSettingDelagete(bool active);
+        /// <summary>
+        /// 回傳值為true時,強制設定左右雷射Bypass
+        /// </summary>
+        public SideLaserBypassSettingDelagete OnSideLaserBypassSetting;
+
+
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
         public int AgvsLsrSetting
@@ -160,8 +167,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task SideLasersEnable(bool active)
         {
-            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !active);
-            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !active);
+            bool _active = active;
+            if (OnSideLaserBypassSetting != null)
+            {
+                bool forcingBypass = OnSideLaserBypassSetting.Invoke(active);
+                _active = forcingBypass ? false : active;
+            }
+
+            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !_active);
+            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !_active);
         }
         /// <summary>
         /// 前後左右雷射Bypass全部關閉
@@ -171,6 +185,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             await DOModule.SetState(DO_ITEM.Front_LsrBypass, false);
             await DOModule.SetState(DO_ITEM.Back_LsrBypass, false);
+
+            if (OnSideLaserBypassSetting != null)
+            {
+                bool sideLsrBypassForcing = OnSideLaserBypassSetting.Invoke(true);
+                if (sideLsrBypassForcing)
+                {
+                    await DOModule.SetState(DO_ITEM.Right_LsrBypass, true);
+                    await DOModule.SetState(DO_ITEM.Left_LsrBypass, true);
+                    return;
+                }
+            }
+
             await DOModule.SetState(DO_ITEM.Right_LsrBypass, false);
             await DOModule.SetState(DO_ITEM.Left_LsrBypass, false);
         }

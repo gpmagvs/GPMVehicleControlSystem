@@ -3,5 +3,6 @@
     public class clsSensorBypass
     {
         public bool BeltSensorBypass { get; set; } = true;
+        public bool SideLaserBypass { get; set; } = false;
     }
 }
