@@ -166,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(1000);
                         if (PCShutDownHelper.CancelPCShutdownFlag)
                         {
-                            LOG.INFO($"User cancel PC Shutdwon when wait status change to shutdownable.");
+                            logger.LogInformation($"User cancel PC Shutdwon when wait status change to shutdownable.");
                             return;
                         }
                     }
@@ -175,14 +175,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (shutdownReady)
                     {
                         await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
-                        LOG.Critical($"Low battery level PC whill shutdown ");
+                        logger.LogWarning($"Low battery level PC whill shutdown ");
                         AlarmManager.AddAlarm(AlarmCodes.Battery_Low_Level_Auto_PC_Shutdown, false);
                     }
 
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.Message);
+                    logger.LogError(ex, ex.Message);
                 }
                 finally
                 {
@@ -216,6 +216,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.OnEMO += EMOTriggerHandler;
             WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
             WagoDI.OnResetButtonPressed += HandleResetButtonPush;
+            WagoDI.SubsSignalStateChange(DI_ITEM.Panel_Reset_PB, Panel_Reset_Button_Input_State_Handler);
             //WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
 
             Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
@@ -237,6 +238,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
             }
 
+        }
+
+        private CancellationTokenSource _ResetButtonOnPressingCts = new CancellationTokenSource();
+
+        private async void Panel_Reset_Button_Input_State_Handler(object? sender, bool pushed)
+        {
+            if (pushed)
+            {
+                _ResetButtonOnPressingCts = new CancellationTokenSource();
+                _ButtonOnReleaseAsync();
+            }
+            else
+            {
+                this._ResetButtonOnPressingCts.Cancel();
+            }
+
+            async Task _ButtonOnReleaseAsync()
+            {
+                try
+                {
+                    await Task.Delay(2000, _ResetButtonOnPressingCts.Token);
+                    await Laser.ModeSwitch(LASER_MODE.Bypass16, isSettingByResetButtonLongPressed: true);
+                    logger.LogTrace("Panel Reset Button Pressed 2s,Laser set Bypass. ^_^ ");
+
+                }
+                catch (Exception ex)
+                {
+                    //button released
+                }
+            }
         }
 
         private async void HandleResetButtonPush(object? sender, EventArgs e)
@@ -279,7 +310,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!isTriggered || !isLDULDActionRunning)
                 return;
-            LOG.TRACE($"AGV進站過程中限動開關-{sensorName} 觸發!");
+            logger.LogTrace($"AGV進站過程中限動開關-{sensorName} 觸發!");
             AlarmManager.AddAlarm(AlarmCodes.Limit_Switch_Sensor, false);
         }
 
@@ -290,7 +321,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var threshold = Parameters.BatteryModule.ChargeLevelThreshold;
             bool anyBatteryLevelLowerThreshold = Batteries.Any(bat => bat.Value.Data.batteryLevel < threshold);
             var batlevels = string.Join(",", Batteries.Values.Select(bat => bat.Data.batteryLevel));
-            LOG.INFO($"[Charge Circuit Only Open when level lower than threshold({threshold} %)] Charge Circuit Open Check : {(anyBatteryLevelLowerThreshold ? "Allowed" : "Forbid")}|Battery Levels ={batlevels}");
+            logger.LogInformation($"[Charge Circuit Only Open when level lower than threshold({threshold} %)] Charge Circuit Open Check : {(anyBatteryLevelLowerThreshold ? "Allowed" : "Forbid")}|Battery Levels ={batlevels}");
             return anyBatteryLevelLowerThreshold;
         }
 
@@ -310,7 +341,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
                 AlarmManager.AddWarning(imu_event_data.Imu_AlarmCode);
-            LOG.WARN($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nState={imu_event_data.ToJson()}");
+            logger.LogWarning($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nState={imu_event_data.ToJson()}");
         }
 
         private bool HandleSpeedReconveryRequesetRaised()
@@ -329,7 +360,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED);
             }
-            LOG.TRACE($"Before Action Goal Send to AGVC Check Result = {_confirmResult.ToJson()}");
+            logger.LogTrace($"Before Action Goal Send to AGVC Check Result = {_confirmResult.ToJson()}");
             return _confirmResult;
         }
 
@@ -345,11 +376,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Stopwatch stopwatch = Stopwatch.StartNew();
                     File.Copy(database_file_name, fileName, true);
                     stopwatch.Stop();
-                    LOG.TRACE($"DB File Copy spend:{stopwatch.ElapsedMilliseconds} ms", Debugger.IsAttached);
+                    logger.LogTrace($"DB File Copy spend:{stopwatch.ElapsedMilliseconds} ms", Debugger.IsAttached);
                 }
                 catch (Exception ex)
                 {
-                    LOG.Critical(ex);
+                    logger.LogError(ex, ex.Message);
                 }
             });
 
@@ -394,7 +425,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
             {
-                LOG.WARN($"AGV位於充電站且偵測到AGV有帳無料=>自動清帳");
+                logger.LogWarning($"AGV位於充電站且偵測到AGV有帳無料=>自動清帳");
                 CSTReader.ValidCSTID = "";
             }
             if (!IsChargeCircuitOpened)
@@ -411,7 +442,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (IsNoObstacleAroundAGV)
             {
-                LOG.WARN("AGV Executing Task and Wago Module Reconnected,and No Obstacle,Send Complex Control Speed Reconvery");
+                logger.LogWarning("AGV Executing Task and Wago Module Reconnected,and No Obstacle,Send Complex Control Speed Reconvery");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_RECOVERY);
             }
         }
@@ -420,7 +451,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (AGVC?.ActionStatus != ActionStatus.ACTIVE)
                 return;
-            LOG.WARN("AGV Executing Task but Wago Module Disconnect,Send Complex Control STOP => AGV STOP");
+            logger.LogWarning("AGV Executing Task but Wago Module Disconnect,Send Complex Control STOP => AGV STOP");
             AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_DISCONNECTED);
         }
 
@@ -453,7 +484,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     var x = Navigation.Data.robotPose.pose.position.x;
                     var y = Navigation.Data.robotPose.pose.position.y;
                     var theta = Navigation.Angle;
-                    LOG.ERROR($"{(IsRightLaser ? "Right" : "Left")} Side Laser Flick! ({x},{y},{theta})");
+                    logger.LogWarning($"{(IsRightLaser ? "Right" : "Left")} Side Laser Flick! ({x},{y},{theta})");
                     if (IsNoObstacleAroundAGV)
                         await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                     return;
@@ -473,7 +504,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
-                    LOG.INFO($"[{alarm_code}] 側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
+                    logger.LogInformation($"[{alarm_code}] 側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                 }
             }
@@ -498,7 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var alarm_code = isFrontLaser ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2;
             if (!diState.State)
             {
-                LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
+                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddWarning(alarm_code);
                 AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_TRIGGER);
@@ -507,7 +538,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (IsLaserRecoveryHandled)
                     return;
-                LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
+                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                 _ = Task.Run(async () =>
                 {
                     IsLaserRecoveryHandled = false;
@@ -536,7 +567,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var alarm_code = isRightLaser ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2;
             if (!diState.State)
             {
-                LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
+                logger.LogInformation($"{(isRightLaser ? "右方" : "左方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.AddWarning(alarm_code);
                 AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
@@ -552,7 +583,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         await Task.Delay(1000);
                     }
-                    LOG.INFO($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
+                    logger.LogInformation($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
                 });
             }
@@ -580,7 +611,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!diState.State)
             {
-                LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
+                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.RecordAlarm(alarm_code);
@@ -593,7 +624,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
-                    LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
+                    logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_RECOVERY);
                 }
             }
@@ -619,7 +650,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmCodes alarm_code = isFrontLaser ? AlarmCodes.FrontProtection_Area3 : AlarmCodes.BackProtection_Area3;
             if (!di_state)
             {
-                LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
+                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
                 AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_TRIGGER);
                 LogStatausWhenLaserTrigger(alarm_code);
                 AlarmManager.RecordAlarm(alarm_code);
@@ -632,7 +663,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm(alarm_code);
                 if (IsNoObstacleAroundAGV)
                 {
-                    LOG.INFO($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
+                    logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
                     AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
                 }
             }
@@ -651,7 +682,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LsrInputState += $"\r\nBack_3={WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3)}";
             LsrInputState += $"\r\nBack_4={WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_4)}";
 
-            LOG.TRACE($"{alarm_code} 雷射觸發_當前雷射組數={Laser.Mode}," +
+            logger.LogTrace($"{alarm_code} 雷射觸發_當前雷射組數={Laser.Mode}," +
                 $"當前位置={lastVisitedMapPoint.Name}," +
                 $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})" +
                 $"當前角度={Navigation.Angle}" +
@@ -688,13 +719,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         catch (Exception ex)
                         {
-                            LOG.ERROR(ex);
+                            logger.LogError(ex, ex.Message);
                         }
 
                     }
                     if (speed_control == ROBOT_CONTROL_CMD.SPEED_Reconvery)
                     {
-                        LOG.TRACE($"速度恢復-減速後加速");
+                        logger.LogTrace($"速度恢復-減速後加速");
 
                         AGVC.OnSTOPCmdRequesting += HandleSTOPCmdRequesting;
                         await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, sPEED_CONTROL_REQ_MOMENT);
@@ -705,7 +736,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (waitNoObstacleCTS.IsCancellationRequested)
                             {
                                 AGVC.OnSTOPCmdRequesting -= HandleSTOPCmdRequesting;
-                                LOG.TRACE($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
+                                logger.LogTrace($"取消等待:無障礙物後速度恢復，因STOP命令已下達");
                                 return;
                             }
                         }
@@ -723,7 +754,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.StackTrace);
+                    logger.LogError(ex, ex.Message);
                 }
                 finally
                 {
@@ -767,7 +798,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             #region 嘗試Reset馬達
             _ = Task.Factory.StartNew(async () =>
             {
-                LOG.WARN($"Horizon Motor IO Alarm, Try auto reset process start");
+                logger.LogWarning($"Horizon Motor IO Alarm, Try auto reset process start");
                 await Task.Delay(500);
                 while (signal.State) //異常持續存在
                 {
@@ -793,7 +824,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (cancellation.IsCancellationRequested)
                 {
-                    LOG.WARN($"Reset Motor Fail:Waiting other motor reset process end TIMEOUT");
+                    logger.LogWarning($"Reset Motor Fail:Waiting other motor reset process end TIMEOUT");
                     return false;
                 }
 
@@ -801,7 +832,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!signal.State)
             {
                 AlarmManager.ClearAlarm(alarmCode);
-                LOG.INFO($"{signal.Name} state {signal.State}, Alarm is reset");
+                logger.LogInformation($"{signal.Name} state {signal.State}, Alarm is reset");
                 return true;
             }
 
@@ -835,13 +866,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //    }
                     //    if (Navigation.Direction == AGV_DIRECTION.LEFT || Navigation.Direction == AGV_DIRECTION.RIGHT)
                     //    {
-                    //        LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
+                    //        logger.LogWarning($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
                     //        await Laser.ModeSwitch(LASER_MODE.Turning);
                     //    }
                     //    else
                     //    {
                     //        await Laser.ModeSwitch(Laser.AgvsLsrSetting);
-                    //        LOG.WARN($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
+                    //        logger.LogWarning($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
                     //    }
                     //}
                 }
@@ -863,7 +894,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 bool _isLaserSettingError = Laser.AgvsLsrSetting != _oriLaser;
                 if (_isLaserSettingError)
                 {
-                    LOG.WARN($"偵測到AGV向前但雷射組數為{Laser.AgvsLsrSetting}(應為{_oriLaser})");
+                    logger.LogWarning($"偵測到AGV向前但雷射組數為{Laser.AgvsLsrSetting}(應為{_oriLaser})");
                     await Laser.ModeSwitch(_oriLaser, true);
                 }
             });
@@ -940,7 +971,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogError(ex, ex.Message);
             }
             finally
             {

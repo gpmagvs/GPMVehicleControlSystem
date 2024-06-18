@@ -241,17 +241,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
         }
-        public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false)
+        public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false, bool isSettingByResetButtonLongPressed = false)
         {
-            return await ModeSwitch((int)mode, isSettingByAGVS);
+            return await ModeSwitch((int)mode, isSettingByAGVS, isSettingByResetButtonLongPressed);
         }
-        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false)
+        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false, bool isSettingByResetButtonLongPressed = false)
         {
             try
             {
                 await modeSwitchSemaphoresSlim.WaitAsync();
                 bool isModeAllowSetting = mode_int == (int)LASER_MODE.Turning || mode_int == (int)LASER_MODE.Bypass;
-                if ((agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT) && !isModeAllowSetting)
+                if (!isSettingByResetButtonLongPressed && (agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT) && !isModeAllowSetting)
                 {
                     logger.Warn($"AGV旋轉中,雷射切換為 =>{mode_int} 請求已被Bypass");
                     return true;
