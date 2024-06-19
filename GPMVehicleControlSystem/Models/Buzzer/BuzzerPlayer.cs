@@ -4,16 +4,21 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Media;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Protocols;
 using AGVSystemCommonNet6;
+using NLog;
 
 namespace GPMVehicleControlSystem.Models.Buzzer
 {
     public class BuzzerPlayer
     {
+        public BuzzerPlayer()
+        {
+            logger = LogManager.GetCurrentClassLogger();
+        }
+        static Logger logger;
         public static RosSocket rossocket;
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
@@ -78,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         public static async Task<bool> UpdateMusicService(SOUNDS sound)
         {
             var request = new UpdateMusicRequest(sound.ToString().ToLower());
-            LOG.INFO($"Call /update_music :{request.ToJson()}");
+            logger.Info($"Call /update_music :{request.ToJson()}");
             UpdateMusicResponse response = await rossocket.CallServiceAndWait<UpdateMusicRequest, UpdateMusicResponse>("/update_music", request);
             return response != null ? response.success : false;
         }
@@ -102,7 +107,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     IsHandshakingPlaying = sound == SOUNDS.Handshaking;
                 }
 
-                LOG.WARN($"Playing Sound : {sound}");
+                logger.Info($"Playing Sound : {sound}");
                 Thread playsound_thred = new Thread(() =>
                 {
                     try
@@ -122,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     }
                     catch (Exception ex)
                     {
-                        LOG.ERROR(ex);
+                        logger.Error(ex);
                     }
                 });
                 playsound_thred.IsBackground = false;

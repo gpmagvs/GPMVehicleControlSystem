@@ -80,11 +80,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool CIMConn { get; set; } = false;
 
         /// <summary>
-        /// 等待交握訊號時撥放交握音效
-        /// </summary>
-        public bool PlayHandshakingMusic { get; set; } = true;
-
-        /// <summary>
         /// 量測儀器服務模擬器
         /// </summary>
         public bool MeasureServiceSimulator { get; set; } = false;

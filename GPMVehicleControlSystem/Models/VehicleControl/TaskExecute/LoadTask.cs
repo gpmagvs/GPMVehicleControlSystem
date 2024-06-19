@@ -132,9 +132,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);
                 }
 
-                if (Agv.Parameters.PlayHandshakingMusic)
-                    BuzzerPlayer.Handshaking();
-
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
                 await Task.Delay(1000);
                 if (!HSResult.eqready)
