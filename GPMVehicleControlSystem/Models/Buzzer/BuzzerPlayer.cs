@@ -14,11 +14,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 {
     public class BuzzerPlayer
     {
-        public BuzzerPlayer()
-        {
-            logger = LogManager.GetCurrentClassLogger();
-        }
-        static Logger logger;
+        static Logger logger => LogManager.GetCurrentClassLogger();
         public static RosSocket rossocket;
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
@@ -54,13 +50,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             if (_sound == SOUNDS.GoToChargeStation && IsGotoChargeStationPlaying) return;
 
             Play(_sound);
-        }
-
-        public static void Handshaking()
-        {
-            if (IsHandshakingPlaying)
-                return;
-            Play(SOUNDS.Handshaking);
         }
 
         internal static void Measure()
