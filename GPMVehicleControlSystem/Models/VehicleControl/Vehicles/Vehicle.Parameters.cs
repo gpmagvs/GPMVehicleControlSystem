@@ -1,7 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using Newtonsoft.Json;
+using NLog;
 using System.Text;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -17,7 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _Parameters = value;
                 TryChangeAGVSOptions(value);
                 ModifyAGVSMessageEncoder(value.AGVsMessageEncoding);
-                LOG.INFO($"Parameters updated");
+                logger.LogInformation($"Parameters updated");
             }
         }
 
@@ -33,19 +33,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private static void ModifyAGVSMessageEncoder(string encoding)
         {
+            Logger logger = LogManager.GetLogger(typeof(Vehicle).Name);
             try
             {
                 var newEncoder = Encoding.GetEncoding(encoding);
                 if (AGVSMessageFactory.Encoder != newEncoder)
                 {
                     AGVSMessageFactory.Encoder = newEncoder;
-                    LOG.INFO($"AGVS Message Encoder Changed to {AGVSMessageFactory.Encoder.EncodingName}");
+                    logger.Info($"AGVS Message Encoder Changed to {AGVSMessageFactory.Encoder.EncodingName}");
 
                 }
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"Modify AGVS Message Encoder Fail..({ex.Message})");
+                logger.Error($"Modify AGVS Message Encoder Fail..({ex.Message})");
             }
         }
 
@@ -62,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public static Action<clsVehicelParam> OnParamEdited;
         public static clsVehicelParam LoadParameters(string filepath = null, bool watch_file_change = false)
         {
+            Logger logger = LogManager.GetLogger(typeof(Vehicle).Name);
             try
             {
                 clsVehicelParam? Parameters = new clsVehicelParam();
@@ -76,11 +78,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     InitWatchConfigFileChange(param_file);
                 }
+                logger.Trace("Parameters Load done");
                 return Parameters;
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return null;
             }
         }

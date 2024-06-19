@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch;
-using AGVSystemCommonNet6.Log;
 using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using Newtonsoft.Json;
@@ -65,14 +64,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async void AGVSPingSuccessHandler()
         {
             await Task.Delay(1).ConfigureAwait(false);
-            LOG.TRACE($"AGVS Network restored. ");
+            logger.LogTrace($"AGVS Network restored. ");
             AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
         }
 
         private async void AGVSPingFailHandler()
         {
             await Task.Delay(1).ConfigureAwait(false);
-            LOG.TRACE($"AGVS Network Ping Fail.... ");
+            logger.LogTrace($"AGVS Network Ping Fail.... ");
             AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
         }
 
@@ -98,7 +97,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV && isMoveOrderButDestineIsWorkStation)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_GO_TO_WORKSTATION_WITH_NORMAL_MOVE_ACTION;
 
-            LOG.INFO($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
+            //於非主幹道站點收到走行任務
+            if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal && action_type == ACTION_TYPE.None)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_NORMAL_MOVE_ACTION_IN_NON_NORMAL_POINT;
+
+            if (Main_Status == MAIN_STATUS.RUN && _ExecutingTask.action != ACTION_TYPE.None)
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_TASK_WHEN_WORKING_AT_WORKSTATION;
+
+            logger.LogInformation($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
+
+            if (returnCode != TASK_DOWNLOAD_RETURN_CODES.OK)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Reject_AGVS_Task);
+            }
+
             return returnCode;
         }
 
@@ -112,8 +124,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (AGV_Reset_Flag)
                         return;
-                    LOG.INFO($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
-                    LOG.WARN($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+                    logger.LogInformation($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+                    logger.LogWarning($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
 
                     await CheckActionFinishFeedbackFinish();
                     clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
@@ -126,7 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (NullReferenceException ex)
                     {
-                        LOG.Critical(ex.Message, ex);
+                        logger.LogError(ex.Message, ex);
                     }
 
                     void _TryClearExecutingTask()
@@ -175,18 +187,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 while ((distance = _calculateDistance(Navigation.Data.robotPose.pose.position.x, Navigation.Data.robotPose.pose.position.y, goal_x, goal_y)) > 3.0)
                 {
                     await Task.Delay(1000);
-                    LOG.TRACE($"[TryTemporaryStopWhenReachTag] Wait AGV Reach in to Decrease Speed Region..{distance} m");
+                    logger.LogTrace($"[TryTemporaryStopWhenReachTag] Wait AGV Reach in to Decrease Speed Region..{distance} m");
                 }
-                LOG.TRACE($"[TryTemporaryStopWhenReachTag] AGV Reach in to Decrease Speed Region, Send DECELERATE request to AGVC.");
+                logger.LogTrace($"[TryTemporaryStopWhenReachTag] AGV Reach in to Decrease Speed Region, Send DECELERATE request to AGVC.");
                 await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.DECELERATE, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
 
-                LOG.TRACE($"[TryTemporaryStopWhenReachTag] Wait AGV Reach Tag {stopPoint.Point_ID}");
+                logger.LogTrace($"[TryTemporaryStopWhenReachTag] Wait AGV Reach Tag {stopPoint.Point_ID}");
                 while (Navigation.Data.lastVisitedNode.data != stopPoint.Point_ID)
                 {
                     await Task.Delay(100);
                 }
 
-                LOG.TRACE($"[TryTemporaryStopWhenReachTag] AGV Reach Stop Tag {stopTag}, Send STOP request to AGVC.");
+                logger.LogTrace($"[TryTemporaryStopWhenReachTag] AGV Reach Stop Tag {stopTag}, Send STOP request to AGVC.");
                 await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.STOP, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
 
                 double _calculateDistance(double x1, double y1, double x2, double y2)
@@ -201,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsActionFinishTaskFeedbackExecuting)
                 return;
-            LOG.WARN($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
+            logger.LogWarning($"Recieve AGVs Task But [ACTION_FINISH] Feedback TaskStatus Process is Running...");
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (IsActionFinishTaskFeedbackExecuting)
             {
@@ -226,10 +238,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Handle_AGVS_TaskFeedBackT1Timeout(object? sender, FeedbackData feedbackData)
         {
-            LOG.WARN($"Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})=> Canceled because T1 Timeout");
+            logger.LogWarning($"Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})=> Canceled because T1 Timeout");
             if (feedbackData.TaskStatus == TASK_RUN_STATUS.ACTION_FINISH)
             {
-                LOG.WARN($"Retry Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})");
+                logger.LogWarning($"Retry Task Feedback to AGVS(TaskName={feedbackData.TaskName},state={feedbackData.TaskStatus})");
                 Task.Factory.StartNew(async () =>
                 {
                     taskfeedbackCanceTokenSoruce = new CancellationTokenSource();
@@ -251,16 +263,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (File.Exists(Parameters.MapParam.LocalMapFileFullName))
             {
-                LOG.WARN($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
+                logger.LogWarning($"Try load map from local : {Parameters.MapParam.LocalMapFileFullName}");
                 NavingMap = MapStore.GetMapFromFile(Parameters.MapParam.LocalMapFileFullName);
                 if (NavingMap.Note != "empty")
                 {
-                    LOG.WARN($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
+                    logger.LogWarning($"Local Map data load success: {NavingMap.Name}({NavingMap.Note})");
                 }
             }
             else
             {
-                LOG.ERROR($"Local map file dosen't exist({Parameters.MapParam.LocalMapFileFullName})");
+                logger.LogError($"Local map file dosen't exist({Parameters.MapParam.LocalMapFileFullName})");
             }
         }
         internal async Task<(bool confirm, Map map)> DownloadMapFromServer()
@@ -276,20 +288,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _NavingMap.Segments = MapManager.CreateSegments(_NavingMap);
                         MapStore.SaveCurrentMap(_NavingMap, out string map_file_saved_path);
                         NavingMap = _NavingMap;
-                        LOG.INFO($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
+                        logger.LogInformation($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
                         return (true, NavingMap);
 
                     }
                     else
                     {
-                        LOG.ERROR($"Cannot download map from server.({MapStore.GetMapUrl})");
+                        logger.LogError($"Cannot download map from server.({MapStore.GetMapUrl})");
                         return (false, null);
                     }
                 }
                 catch (Exception ex)
                 {
 
-                    LOG.Critical($"Map Download Fail....{ex.Message}", ex);
+                    logger.LogError($"Map Download Fail....{ex.Message}", ex);
                     return (false, null);
                 }
             });
@@ -301,12 +313,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(eqTags.ToArray());
-                LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
+                logger.LogInformation($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
                 return eqOptions;
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
+                logger.LogError($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
                 return null;
             }
         }
@@ -316,12 +328,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(WorkStations.Stations.Keys.ToArray());
-                LOG.INFO($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
+                logger.LogInformation($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
                 return eqOptions;
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
+                logger.LogError($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
                 return null;
             }
         }
@@ -387,7 +399,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                //LOG.ERROR("GenRunningStateReportData ", ex);
+                //logger.LogError("GenRunningStateReportData ", ex);
                 return new clsRunningStatus();
             }
         }
@@ -438,7 +450,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                //LOG.ERROR("GenRunningStateReportData ", ex);
+                //logger.LogError("GenRunningStateReportData ", ex);
                 return new RunningStatus();
             }
         }
@@ -452,11 +464,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
 
-            LOG.INFO($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Red);
+            logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
 
             if (AGVSResetCmdFlag)
             {
-                LOG.INFO($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}", color: ConsoleColor.Yellow);
+                logger.LogInformation($"[任務取消] AGVSResetCmdFlag 'ON'. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
                 return true;
             }
 
@@ -475,7 +487,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     AGVC.OnAGVCActionChanged = null;
                     AGV_Reset_Flag = false;
-                    LOG.WARN($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
+                    logger.LogWarning($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
@@ -501,7 +513,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogError(ex, ex.Message);
                 if (mode == RESET_MODE.CYCLE_STOP)
                     AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
                 else

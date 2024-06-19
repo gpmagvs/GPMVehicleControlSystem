@@ -309,8 +309,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         internal override void Abort(AlarmCodes alarm_code = AlarmCodes.None)
         {
+            task_abort_alarmcode = alarm_code;
+            Agv.AGVC.EmergencyStop(true);
             base.Abort(alarm_code);
             _WaitBackToHomeDonePause.Set();
+            logger.Warn($"[Abort Task] {action} Task Abort, Alarm Code = {alarm_code}");
         }
         /// <summary>
         /// AGV停車停好在設備後的動作

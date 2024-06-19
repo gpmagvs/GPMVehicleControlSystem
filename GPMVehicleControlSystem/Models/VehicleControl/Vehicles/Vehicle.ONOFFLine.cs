@@ -1,6 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
@@ -48,14 +47,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return false;
                 RemoteModeRequestingflag = true;
                 string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
-                LOG.WARN($"{request_user_name} 請求變更Online模式為:{mode}");
+                logger.LogWarning($"{request_user_name} 請求變更Online模式為:{mode}");
 
                 (bool success, RETURN_CODE return_code) result = Online_Mode_Switch(mode).Result;
                 RemoteModeRequestingflag = false;
                 if (result.success)
                 {
                     RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
-                    LOG.WARN($"{request_user_name} 請求變更Online模式為 {mode}---成功");
+                    logger.LogWarning($"{request_user_name} 請求變更Online模式為 {mode}---成功");
                     if (IsAGVSRequest && mode == REMOTE_MODE.OFFLINE && !IsActionFinishTaskFeedbackExecuting && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE)
                     {
                         Task.Factory.StartNew(async () =>
@@ -63,14 +62,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             await Task.Delay(1000);
                             while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
-                            LOG.WARN($"[{GetSub_Status()}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
+                            logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
                             bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
                         });
                     }
                 }
                 else
-                    LOG.ERROR($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
+                    logger.LogError($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
                 return result.success;
             }
             else
@@ -82,7 +81,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool success, RETURN_CODE return_code)> Online_Mode_Switch(REMOTE_MODE mode, bool bypassStatusCheck = false)
         {
             int currentTag = BarcodeReader.CurrentTag;
-            LOG.TRACE($"Online_Mode_Switch, current tag = {currentTag}");
+            logger.LogTrace($"Online_Mode_Switch, current tag = {currentTag}");
             if (mode == REMOTE_MODE.ONLINE && Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
             {
                 if (!IsInitialized)
@@ -127,7 +126,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                 {
                     Remote_Mode = _oriMode;
-                    LOG.ERROR($"車輛{mode}失敗 : Return Code : {result.return_code}");
+                    logger.LogError($"車輛{mode}失敗 : Return Code : {result.return_code}");
                 }
             }
             else
