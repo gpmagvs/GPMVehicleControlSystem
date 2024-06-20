@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using NLog;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -10,6 +10,9 @@ namespace GPMVehicleControlSystem.Tools
         internal static bool CancelPCShutdownFlag { get; set; } = false;
 
         internal static int ShutdownDelayTimeSec = 5;
+
+        static NLog.Logger logger => LogManager.GetCurrentClassLogger();
+
         public static async Task<bool> ShutdownAsync()
         {
             IsInPCShutdownProcess = true;
@@ -26,13 +29,13 @@ namespace GPMVehicleControlSystem.Tools
                 Process proc = new Process();
                 proc.StartInfo = procStartInfo;
 
-                LOG.WARN($"PC Will Shutdown after {ShutdownDelayTimeSec} sec...");
+                logger.Warn($"PC Will Shutdown after {ShutdownDelayTimeSec} sec...");
                 Stopwatch sw = Stopwatch.StartNew();
                 while (sw.Elapsed.Seconds < ShutdownDelayTimeSec)
                 {
                     if (CancelPCShutdownFlag)
                     {
-                        LOG.INFO($"User cancel PC Shutdwon when shutdown countdown...");
+                        logger.Trace($"User cancel PC Shutdwon when shutdown countdown...");
                         return false;
                     }
                     await Task.Delay(1000);
