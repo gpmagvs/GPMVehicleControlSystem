@@ -1,9 +1,7 @@
 ﻿
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -12,6 +10,12 @@ namespace GPMVehicleControlSystem.Service
 {
     public class BatteryStateMonitorBackgroundService : BackgroundService
     {
+        private readonly ILogger<BatteryStateMonitorBackgroundService> logger;
+
+        public BatteryStateMonitorBackgroundService(ILogger<BatteryStateMonitorBackgroundService> logger)
+        {
+            this.logger = logger;
+        }
         private Vehicle Vehicle => StaStored.CurrentVechicle;
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -40,7 +44,7 @@ namespace GPMVehicleControlSystem.Service
                 if (Vehicle.IsChargeCircuitOpened)
                 {
                     string voltagesStr = string.Join(" mV,", currentVoltages);
-                    LOG.ERROR($"Battery over-voltage when charging. Cut-off charge circuit!({voltagesStr})");
+                    logger.LogWarning($"Battery over-voltage when charging. Cut-off charge circuit!({voltagesStr})");
                     await Vehicle.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
                     Vehicle.SetIsCharging(false);
                     AlarmManager.AddAlarm(AlarmCodes.Battery_Over_Voltage_When_Charging, true);

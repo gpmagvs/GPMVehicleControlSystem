@@ -1,8 +1,5 @@
-﻿
-using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Tools;
+﻿using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.CPUUsage;
-using System;
 using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Service

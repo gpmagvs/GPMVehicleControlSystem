@@ -1,12 +1,10 @@
 ﻿
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using GPMVehicleControlSystem.Models;
-using static AGVSystemCommonNet6.clsEnums;
+using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
-using GPMVehicleControlSystem.Tools;
-using AGVSystemCommonNet6.AGVDispatch;
-using NLog;
+using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Service
 {

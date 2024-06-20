@@ -1,5 +1,4 @@
 ﻿
-using AGVSystemCommonNet6.Log;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;

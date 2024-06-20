@@ -1,11 +1,7 @@
 ﻿
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.SignalR;
-using Newtonsoft.Json;
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
 
 namespace GPMVehicleControlSystem.Service
 {
