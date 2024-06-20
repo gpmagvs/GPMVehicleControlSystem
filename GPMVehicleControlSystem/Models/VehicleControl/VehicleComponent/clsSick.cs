@@ -1,7 +1,5 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using Newtonsoft.Json;
 
@@ -70,7 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 LocalizationStatus = Data.loc_status;
                 if (LocalizationStatus != 10)
                 {
-                    LOG.WARN($"Map Compare Rate Too Low [From Sick Data]");
+                    logger.Warn($"Map Compare Rate Too Low [From Sick Data]");
                 }
             }
             return true;
@@ -91,7 +89,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
+                logger.Error($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
             }
         }
 

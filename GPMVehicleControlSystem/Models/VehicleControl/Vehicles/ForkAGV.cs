@@ -393,16 +393,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
                 AlarmManager.AddWarning(AlarmCodes.Vertical_Motor_IO_Error);
-                #region 嘗試Reset馬達
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    while (signal.State)
-                    {
-                        await Task.Delay(1000);
-                        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, AlarmCodes.Vertical_Motor_IO_Error);
-                    }
-                });
-                #endregion
+                //#region 嘗試Reset馬達
+                //_ = Task.Factory.StartNew(async () =>
+                //{
+                //    while (signal.State)
+                //    {
+                //        await Task.Delay(1000);
+                //        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, AlarmCodes.Vertical_Motor_IO_Error);
+                //    }
+                //});
+                //#endregion
             }
         }
         protected override void DIOStatusChangedEventRegist()

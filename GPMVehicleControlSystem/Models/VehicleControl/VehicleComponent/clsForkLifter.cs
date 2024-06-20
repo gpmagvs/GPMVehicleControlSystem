@@ -1,19 +1,11 @@
-﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
-using System.Diagnostics;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using System.Security.AccessControl;
-using AGVSystemCommonNet6.Log;
-using Newtonsoft.Json;
-
-using GPMVehicleControlSystem.Models.WorkStation;
-using System.ComponentModel;
-using RosSharp.RosBridgeClient.MessageTypes.Geometry;
-using AGVSystemCommonNet6.Vehicle_Control;
-using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -171,7 +163,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR($"{OnForkLifterSensorsStateChange} code error", ex);
+                    logger.Error($"{OnForkLifterSensorsStateChange} code error", ex);
                 }
             });
         }
@@ -199,7 +191,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 fork_ros_controller.BeforeForkStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
                 fork_ros_controller.wait_action_down_cts.Cancel();
-                LOG.TRACE("Call fork_ros_controller.wait_action_down_cts.Cancel()");
+                logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
             return await fork_ros_controller.ZAxisStop();
         }
@@ -273,7 +265,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 DO_ITEM _DO_USE_TO_EXTEND_FORK = DO_ITEM.Fork_Shortend;
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await DOModule.SetState(_DO_USE_TO_EXTEND_FORK, true);
-                LOG.WARN($"Wait Fork Extent DO ON..({_DO_USE_TO_EXTEND_FORK})");
+                logger.Warn($"Wait Fork Extent DO ON..({_DO_USE_TO_EXTEND_FORK})");
                 while (!DOModule.GetState(_DO_USE_TO_EXTEND_FORK))
                 {
                     await Task.Delay(1);
@@ -281,7 +273,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return (false, AlarmCodes.Fork_Arm_Action_Timeout);
                 }
 
-                LOG.WARN($"Fork Extent DO ON..!!({_DO_USE_TO_EXTEND_FORK})");
+                logger.Warn($"Fork Extent DO ON..!!({_DO_USE_TO_EXTEND_FORK})");
                 if (wait_reach_end)
                 {
                     cts.TryReset();
@@ -375,7 +367,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
         {
-            LOG.INFO($"Fork 初始化動作開始，速度={InitForkSpeed}");
+            logger.Info($"Fork 初始化動作開始，速度={InitForkSpeed}");
             IsInitialing = true;
             bool _isInitializeDone = false;
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
@@ -407,7 +399,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                     if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
                     {
-                        LOG.Critical($"Status Down Fork initialize action interupted.!");
+                        logger.Fatal($"Status Down Fork initialize action interupted.!");
                         break;
                     }
                     _isInitializeDone = CurrentForkLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentHeightPosition - 0) < 0.01;
@@ -420,12 +412,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             catch (Exception ex)
             {
                 IsInitialing = IsInitialized = false;
-                LOG.Critical($"[ForkInitialize] FAIL. {ex.Message}");
+                logger.Fatal($"[ForkInitialize] FAIL. {ex.Message}");
                 return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
             }
             IsInitialing = false;
             IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
-            LOG.INFO($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
+            logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
             return (true, AlarmCodes.None);
 
             async Task ShortMoveToFindHome()
@@ -579,7 +571,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //        Thread.Sleep(300);
             //        while (CurrentForkLocation == FORK_LOCATIONS.HOME)
             //        {
-            //            LOG.WARN($"Not leave home, up 0.5 continue...");
+            //            logger.Warn($"Not leave home, up 0.5 continue...");
             //            Thread.Sleep(300);
             //            await GoUpToAboveHome(CurrentHeightPosition + 0.5, false);
             //        }
@@ -593,13 +585,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //                if (initPose)
             //                {
             //                    response = await ForkPositionInit();
-            //                    LOG.INFO($" Fork init and Go To {pose} ForkPositionInit {response.confirm},{response.message}");
+            //                    logger.Info($" Fork init and Go To {pose} ForkPositionInit {response.confirm},{response.message}");
             //                    if (!response.confirm)
             //                        continue;
             //                }
             //                Thread.Sleep(1000);
             //                response = await ForkPose(pose, 1);
-            //                LOG.INFO($" Fork init and Go To {pose} ForkPose {response.confirm},{response.message}");
+            //                logger.Info($" Fork init and Go To {pose} ForkPose {response.confirm},{response.message}");
             //                if (!response.confirm)
             //                    continue;
             //            }
@@ -620,9 +612,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //            return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
             //        }
             //        var pose = Driver.CurrentPosition - 0.05;
-            //        LOG.INFO($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
+            //        logger.Info($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
             //        var response = await ForkPose(pose, 0.1);
-            //        LOG.INFO($"{response.confirm},{response.message}");
+            //        logger.Info($"{response.confirm},{response.message}");
             //    }
 
             //    if (IsHomeSensorOn())
@@ -641,18 +633,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //            if (cancellation.IsCancellationRequested)
             //                return (false, AlarmCodes.Action_Timeout);
             //            fork_init_response = await ForkPositionInit();
-            //            LOG.INFO($"Fork cmd : init response: {fork_init_response.confirm}<{fork_init_response.message}>");
+            //            logger.Info($"Fork cmd : init response: {fork_init_response.confirm}<{fork_init_response.message}>");
             //        }
             //        var home_position_error_ = Math.Abs(Driver.CurrentPosition - 0);
             //        IsInitialized = IsHomeSensorOn() && home_position_error_ < 0.01;
 
             //        if (!IsInitialized)
             //        {
-            //            LOG.Critical(!IsHomeSensorOn() ? $"Fork Initialize Done but Home DI Not ON" : $"Fork Initialize Done But Driver Position Error to much ({home_position_error_} cm)");
+            //            logger.Fatal(!IsHomeSensorOn() ? $"Fork Initialize Done but Home DI Not ON" : $"Fork Initialize Done But Driver Position Error to much ({home_position_error_} cm)");
             //            return (false, !IsHomeSensorOn() ? AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON : AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
             //        }
             //        IsInitialing = false;
-            //        LOG.INFO($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
+            //        logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
             //        return (true, AlarmCodes.None);
             //    }
             //    else
@@ -710,7 +702,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 await ForkStopAsync();
                 await Task.Delay(200);
 
-                LOG.WARN($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
+                logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
 
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
 
@@ -725,16 +717,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                     if (AGVStatusError())
                     {
-                        LOG.ERROR($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
+                        logger.Error($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
                         return (target, false, AlarmCodes.None);
                     }
                     tryCnt++;
                     if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
                         return (target, false, AlarmCodes.Fork_Action_Aborted);
 
-                    LOG.WARN($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
+                    logger.Warn($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
                     forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
-                    LOG.WARN($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
+                    logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
                     if (!forkMoveResult.confirm)
                     {
                         AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
@@ -742,7 +734,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     }
                 }
 
-                LOG.TRACE($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
+                logger.Trace($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
                 //Final Check
                 if (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
                     return (target, false, AlarmCodes.Fork_Height_Setting_Error);
@@ -768,17 +760,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (TaskCanceledException ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return (target, false, AlarmCodes.Fork_Action_Aborted);
             }
             catch (OperationCanceledException ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return (target, false, AlarmCodes.Fork_Action_Aborted);
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.Fatal(ex);
                 return (target, false, AlarmCodes.Code_Error_In_System);
             }
 

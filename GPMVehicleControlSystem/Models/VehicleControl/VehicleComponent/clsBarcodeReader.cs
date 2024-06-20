@@ -1,6 +1,4 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -46,12 +44,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (currentTag == 0)
                 {
-                    LOG.INFO($"Leave Tag {PreviousTag}", true);
+                    logger.Info($"Leave Tag {PreviousTag}", true);
                     OnAGVLeavingTag?.Invoke(this, PreviousTag);
                 }
                 else
                 {
-                    LOG.INFO($"Reach Tag {currentTag}", true);
+                    logger.Info($"Reach Tag {currentTag}", true);
                     OnAGVReachingTag?.Invoke(this, EventArgs.Empty);
                 }
 

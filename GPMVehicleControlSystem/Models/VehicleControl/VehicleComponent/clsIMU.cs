@@ -1,9 +1,6 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.MAP;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using MathNet.Numerics.LinearAlgebra;
@@ -11,9 +8,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
-using SQLitePCL;
-using System.Text.Json.Serialization;
-using WebSocketSharp;
 using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -114,9 +108,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public Imu IMUData { get; private set; } = new Imu();
 
-        public override bool  CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
-            if (! base.CheckStateDataContent())
+            if (!base.CheckStateDataContent())
                 return false;
 
             GpmImuMsg _imu_state = null;
@@ -126,7 +120,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
+                logger.Fatal(ex.Message, ex);
                 _AccData = new Vector3(0, 0, 0);
                 return false;
             }
@@ -145,7 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
+                logger.Fatal(ex.Message, ex);
             }
             return true;
         }
@@ -153,7 +147,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             MaxMinGValRecord.Reset(new Vector3(AccData.x / 9.8, AccData.y / 9.8, AccData.z / 9.8));
             SaveRecordValue(MaxMinGValRecord);
-            LOG.TRACE($"IMU最大最小值紀錄已重置...{MaxMinGValRecord.ToJson()}");
+            logger.Trace($"IMU最大最小值紀錄已重置...{MaxMinGValRecord.ToJson()}");
         }
         private void MaxAndMiniGValueUpdate(Vector3 accData)
         {
@@ -206,7 +200,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (File.Exists(MinMaxRecordFilePath))
             {
                 MaxMinGValRecord = JsonConvert.DeserializeObject<clsMaxMinGvalDataSaveModel>(File.ReadAllText(MinMaxRecordFilePath));
-                LOG.TRACE($"IMU Max/Min GVal Record Loaded.{MaxMinGValRecord.ToJson()}");
+                logger.Trace($"IMU Max/Min GVal Record Loaded.{MaxMinGValRecord.ToJson()}");
             }
         }
 
@@ -215,12 +209,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 var json = Newtonsoft.Json.JsonConvert.SerializeObject(record, Formatting.Indented);
-                LOG.TRACE($"Save IMU Max/Min Record:{json} to : {MinMaxRecordFilePath} ");
+                logger.Trace($"Save IMU Max/Min Record:{json} to : {MinMaxRecordFilePath} ");
                 File.WriteAllText(MinMaxRecordFilePath, json);
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"Exception happen when save IMU Max/Min Records({ex.Message})", ex);
+                logger.Error($"Exception happen when save IMU Max/Min Records({ex.Message})", ex);
             }
         }
 

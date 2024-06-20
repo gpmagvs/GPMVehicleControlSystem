@@ -801,20 +801,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             AlarmManager.AddWarning(alarmCode);
-            #region 嘗試Reset馬達
-            _ = Task.Factory.StartNew(async () =>
-            {
-                logger.LogWarning($"Horizon Motor IO Alarm, Try auto reset process start");
-                await Task.Delay(500);
-                while (signal.State) //異常持續存在
-                {
-                    await Task.Delay(1000);
-                    IsMotorReseting = false;
-                    await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
-                }
-            });
+            //#region 嘗試Reset馬達
+            //_ = Task.Factory.StartNew(async () =>
+            //{
+            //    logger.LogWarning($"Horizon Motor IO Alarm, Try auto reset process start");
+            //    await Task.Delay(500);
+            //    while (signal.State) //異常持續存在
+            //    {
+            //        await Task.Delay(1000);
+            //        IsMotorReseting = false;
+            //        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
+            //    }
+            //});
 
-            #endregion
+            //#endregion
         }
         protected private async Task<bool> ResetMotorWithWait(TimeSpan timeout, clsIOSignal? signal, AlarmCodes alarmCode)
         {

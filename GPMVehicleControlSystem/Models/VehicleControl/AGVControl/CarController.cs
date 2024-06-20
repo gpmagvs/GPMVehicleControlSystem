@@ -519,7 +519,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                 }
             }
-            logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}(Destine={rosGoal.finalGoalID})");
             OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
         }

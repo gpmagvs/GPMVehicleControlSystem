@@ -1,9 +1,6 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 using RosSharp.RosBridgeClient;
-using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -29,7 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 _rosSocket = value;
                 _rosSocket?.AdvertiseService<PinCommandRequest, PinCommandResponse>(PinActionDonwServiceName, PinDoneActionCallback);
-                LOG.TRACE($"[Pin] {PinActionDonwServiceName} Service advertised (Action request service name={PinActionServiceName})");
+                logger.Trace($"[Pin] {PinActionDonwServiceName} Service advertised (Action request service name={PinActionServiceName})");
             }
         }
 
@@ -93,17 +90,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(1);
                     if (_wait.IsCancellationRequested)
                     {
-                        LOG.ERROR($"Pin-{request.command} request timeout");
+                        logger.Error($"Pin-{request.command} request timeout");
                         Current_Alarm_Code = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.AlarmCodes.Pin_Action_Error;
                         throw new TimeoutException();
                     }
                 }
-                LOG.INFO($"Pin-{request.command} action finish done.");
+                logger.Info($"Pin-{request.command} action finish done.");
                 return true;
             }
             else
             {
-                LOG.ERROR($"Pin-{request.command} request is rejected.");
+                logger.Error($"Pin-{request.command} request is rejected.");
                 return false;
             }
         }
@@ -115,11 +112,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 confirm = true
             };
-            LOG.TRACE($"/pin_done_action , agvc response={tin.ToJson()}");
+            logger.Trace($"/pin_done_action , agvc response={tin.ToJson()}");
             bool command_reply_done = tin.command == "done";
             if (!command_reply_done)
             {
-                LOG.INFO($"Pin command action not done.. AGVC Reply command =  {tin.command}");
+                logger.Info($"Pin command action not done.. AGVC Reply command =  {tin.command}");
             }
             return true;
         }

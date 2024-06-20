@@ -1,21 +1,8 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.RunMode;
-using AGVSystemCommonNet6.Log;
+﻿using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using GPMVehicleControlSystem.Tools;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Modbus.Device;
-using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
-using System.Threading;
-using System.Xml.Linq;
-using static AGVSystemCommonNet6.Vehicle_Control.CarComponent;
-using static GPMVehicleControlSystem.ViewModels.ForkTestVM.clsForkTestState;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {

@@ -1,12 +1,8 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -103,7 +99,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_previousDirection != value)
                 {
-                    LOG.TRACE($"AGVC Direction changed to : {value}");
+                    logger.Info($"AGVC Direction changed to : {value}");
                     OnDirectionChanged?.Invoke(this, value);
                     _previousDirection = value;
                 }
@@ -139,10 +135,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public override bool  CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
 
-            if (! base.CheckStateDataContent())
+            if (!base.CheckStateDataContent())
                 return false;
 
             LastVisitedTag = Data.lastVisitedNode.data;

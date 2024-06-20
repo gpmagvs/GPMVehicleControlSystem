@@ -1,6 +1,4 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -17,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_State != value)
                 {
-                    LOG.TRACE($"CST Reader State Change to {value}()");
+                    logger.Info($"CST Reader State Change to {value}()");
                     _State = value;
                 }
             }
@@ -33,10 +31,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     if (value.ToLower().Trim() == "error")
                     {
-                        LOG.WARN($"CST ID is {value}_Valid ID Not Updated");
+                        logger.Warn($"CST ID is {value}_Valid ID Not Updated");
                         return;
                     }
-                    LOG.TRACE($"CST ID CHANGED TO {value} (Old= {_ValidCSTID})");
+                    logger.Info($"CST ID CHANGED TO {value} (Old= {_ValidCSTID})");
                     SaveCSTIDToLocalStorage(value);
                     _ValidCSTID = value;
                 }
@@ -45,10 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
-        public override  bool CheckStateDataContent()
+        public override bool CheckStateDataContent()
         {
 
-            if (! base.CheckStateDataContent())
+            if (!base.CheckStateDataContent())
                 return false;
             State = Data.state;
             return true;
@@ -67,7 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
             }
         }
         internal void ReadCSTIDFromLocalStorage()
@@ -80,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
             }
 
         }
