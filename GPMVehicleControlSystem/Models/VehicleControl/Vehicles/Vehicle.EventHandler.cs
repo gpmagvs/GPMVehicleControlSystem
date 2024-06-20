@@ -310,8 +310,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!isTriggered || !isLDULDActionRunning)
                 return;
-            logger.LogTrace($"AGV進站過程中限動開關-{sensorName} 觸發!");
-            AlarmManager.AddAlarm(AlarmCodes.Limit_Switch_Sensor, false);
+
+            logger.LogWarning($"AGV進站過程中限動開關-{sensorName} 觸發!");
+
+            bool isRecoverable = Parameters.SensorBypass.AGVBodyLimitSensorBypass;
+            if (isRecoverable)
+                AlarmManager.AddWarning(AlarmCodes.Limit_Switch_Sensor);
+            else
+                AlarmManager.AddAlarm(AlarmCodes.Limit_Switch_Sensor, false);
         }
 
         private bool HandleChargeTaskTryOpenChargeCircuit()
