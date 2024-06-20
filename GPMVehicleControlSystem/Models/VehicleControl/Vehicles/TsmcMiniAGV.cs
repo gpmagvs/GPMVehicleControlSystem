@@ -1,20 +1,12 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch;
-using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using RosSharp.RosBridgeClient.Actionlib;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Sockets;
-using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.InspectorAGVCarController;
@@ -130,7 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING)
                 return;
-            LOG.TRACE($"Safty PLC Ouput Error [HandleSaftyPLCOutputStatusChanged]");
+            logger.LogTrace($"Safty PLC Ouput Error [HandleSaftyPLCOutputStatusChanged]");
             while (!_SaftyRelayResetAllow())
             {
                 await Task.Delay(100);
@@ -139,11 +131,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (!WagoDI.GetState(DI_ITEM.Safty_PLC_Output))
             {
-                LOG.WARN($"Reset Safty Relay Done But Safty_PLC_Output still OFF. Recall HandleSaftyPLCOutputStatusChanged");
+                logger.LogWarning($"Reset Safty Relay Done But Safty_PLC_Output still OFF. Recall HandleSaftyPLCOutputStatusChanged");
                 HandleSaftyPLCOutputStatusChanged(sender, false);
                 return;
             }
-            LOG.TRACE($"No Obstacle. Reset Safty Relay.  [HandleSaftyPLCOutputStatusChanged]");
+            logger.LogTrace($"No Obstacle. Reset Safty Relay.  [HandleSaftyPLCOutputStatusChanged]");
 
             bool _SaftyRelayResetAllow()
             {
@@ -159,12 +151,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var input = signal.Input;
             if (state)
             {
-                LOG.TRACE($"{input} Trigger! AGV STOP");
+                logger.LogTrace($"{input} Trigger! AGV STOP");
                 await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor, false);
             }
             else
             {
-                LOG.TRACE($"{input} Recovery! AGV Speed Recovery");
+                logger.LogTrace($"{input} Recovery! AGV Speed Recovery");
                 await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery, true);
 
             }
@@ -208,7 +200,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Laser3rdTriggerHandlerFlag = true;
                     while (!IsAllLaserNoTrigger())
                     {
-                        LOG.TRACE($"等待障礙物移除");
+                        logger.LogTrace($"等待障礙物移除");
 
                         if (GetSub_Status() == SUB_STATUS.DOWN)
                             return;
@@ -226,11 +218,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
                     if (safty_relay_reset_result)
                     {
-                        LOG.WARN($"[TSMC Inspection AGV] Safty relay reset done.");
+                        logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset done.");
                         safty_relay_reset_result = await ResetMotor(false);
                         if (safty_relay_reset_result)
                         {
-                            LOG.WARN($"[TSMC Inspection AGV] 馬達已Reset");
+                            logger.LogWarning($"[TSMC Inspection AGV] 馬達已Reset");
                             AlarmManager.ClearAlarm();
                             //BuzzerPlayer.Stop();
                             //await Task.Delay(100);
@@ -249,18 +241,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         else
                         {
-                            LOG.WARN($"[TSMC Inspection AGV] 馬達Reset失敗");
+                            logger.LogWarning($"[TSMC Inspection AGV] 馬達Reset失敗");
                         }
                     }
                     else
-                        LOG.WARN($"[TSMC Inspection AGV] Safty relay reset 失敗");
+                        logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset 失敗");
                     Laser3rdTriggerHandlerFlag = false;
 
                 }
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.LogError(ex, ex.Message);
             }
             finally
             {
@@ -298,7 +290,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.Alarm();
             if (Laser3rdTriggerHandlerFlag)
             {
-                LOG.WARN($"EMS Trigger by Laser 3rd and Reset process is running, No Abort Task and AGV is not Down Status");
+                logger.LogWarning($"EMS Trigger by Laser 3rd and Reset process is running, No Abort Task and AGV is not Down Status");
                 return;
             }
             base.SoftwareEMO(alarmCode);
@@ -409,7 +401,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return val;
             else
             {
-                LOG.WARN($"int convert fail. convert ${valStr} to int fail");
+                logger.LogWarning($"int convert fail. convert ${valStr} to int fail");
                 return -1;
             }
         }
@@ -420,7 +412,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery1Lock()
         {
-            LOG.TRACE("Mini AGV- Try Lock Battery No.1");
+            logger.LogTrace("Mini AGV- Try Lock Battery No.1");
             return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.LOCK);
         }
 
@@ -430,7 +422,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual async Task<bool> Battery2Lock()
         {
-            LOG.TRACE("Mini AGV- Try Lock Battery No.2");
+            logger.LogTrace("Mini AGV- Try Lock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.LOCK);
         }
 
@@ -444,7 +436,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return false;
             }
-            LOG.TRACE("Mini AGV- Try Unlock Battery No.1");
+            logger.LogTrace("Mini AGV- Try Unlock Battery No.1");
             return await ChangeBatteryLockState(1, BAT_LOCK_ACTION.UNLOCK);
         }
         /// <summary>
@@ -457,7 +449,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return false;
             }
-            LOG.TRACE("Mini AGV- Try Unlock Battery No.2");
+            logger.LogTrace("Mini AGV- Try Unlock Battery No.2");
             return await ChangeBatteryLockState(2, BAT_LOCK_ACTION.UNLOCK);
         }
         protected virtual bool IsUnlockActionAllow(int toLockBatNumber, out string rejectReason)
@@ -482,13 +474,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (battery_no == 1 ? IsBattery1Locked : IsBattery2Locked);
             }
-            LOG.TRACE($"Start wait battery-{battery_no} Locked done...");
+            logger.LogTrace($"Start wait battery-{battery_no} Locked done...");
             while (!IsBatLocked(battery_no))
             {
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
-                    LOG.WARN($"Battery-{battery_no} [Lock] LOCK Sensor 檢知 Timeout");
+                    logger.LogWarning($"Battery-{battery_no} [Lock] LOCK Sensor 檢知 Timeout");
                     break;
                 }
             }
@@ -506,13 +498,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return (battery_no == 1 ? IsBattery1UnLocked : IsBattery2UnLocked);
             }
-            LOG.TRACE($"Start wait battery-{battery_no} Unlocked done...");
+            logger.LogTrace($"Start wait battery-{battery_no} Unlocked done...");
             while (!IsBatUnLocked(battery_no))
             {
                 Thread.Sleep(1);
                 if (cst.IsCancellationRequested)
                 {
-                    LOG.WARN($"Battery-{battery_no} [Unlock] UNLOCK Sensor 檢知  Timeout");
+                    logger.LogWarning($"Battery-{battery_no} [Unlock] UNLOCK Sensor 檢知  Timeout");
                     break;
                 }
             }
@@ -528,7 +520,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<(bool confirm, string message)> MeasurementInit()
         {
             (bool confirm, string message) init_result = await MiniAgvAGVC.MeasurementInit();
-            LOG.INFO($"儀器初始化 {init_result.confirm},{init_result.message}");
+            logger.LogInformation($"儀器初始化 {init_result.confirm},{init_result.message}");
             return init_result;
         }
 
@@ -604,7 +596,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 PID = ToIntVal(command_splited[16]),
 
             };
-            LOG.INFO($"解析儀器量測數值完成:{mesResult.ToJson()}");
+            logger.LogInformation($"解析儀器量測數值完成:{mesResult.ToJson()}");
             return mesResult;
         }
 

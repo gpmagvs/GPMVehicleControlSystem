@@ -1,19 +1,13 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
-using System.Diagnostics;
-using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -48,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.ForkAGV.IsPinMounted)
                 PinHardware = new clsPin();
 
-            LOG.INFO($"FORK AGV 搭載Pin模組?{PinHardware != null}");
+            logger.LogInformation($"FORK AGV 搭載Pin模組?{PinHardware != null}");
             ForkMovingProtectedProcess();
         }
 
@@ -72,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.LogError(ex, ex.Message);
                 IsMotorReseting = false;
                 return false;
             }
@@ -89,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
+                logger.LogError(ex, ex.Message);
                 return false;
             }
         }
@@ -126,7 +120,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
         {
             //throw new NotImplementedException();
-            LOG.TRACE("Fork Stop");
+            logger.LogTrace("Fork Stop");
             _ForkSaftyProtectFlag = false;
             if (GetSub_Status() == SUB_STATUS.IDLE)
                 BuzzerPlayer.Stop();
@@ -135,7 +129,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
         {
             //throw new NotImplementedException();
-            LOG.TRACE($"Fork Star Run (Started by:{request.command})");
+            logger.LogTrace($"Fork Star Run (Started by:{request.command})");
             bool isGoUpAction = request.command == "pose" && request.target > ForkLifter.CurrentHeightPosition;
             bool isGoUpByLdUldAction = (isGoUpAction && _isLoadUnloadTaskRunning);
             _ForkSaftyProtectFlag = !isGoUpByLdUldAction;
@@ -157,7 +151,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         if (_isLaserTriggerAndForkIsMoving)
                         {
-                            LOG.WARN("Side Laser Trigger, Stop Fork");
+                            logger.LogWarning("Side Laser Trigger, Stop Fork");
                             ForkLifter.ForkStopAsync();
                             _isStopped = true;
                             BuzzerPlayer.Alarm();
@@ -167,7 +161,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     if (_isLaserSafeAndForkIsStopping)
                     {
-                        LOG.INFO("Side Laser Reconvery, Resume Fork Action");
+                        logger.LogInformation("Side Laser Reconvery, Resume Fork Action");
                         ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning();
                         ForkLifter.ForkResumeAction();
                         _isStopped = false;
@@ -176,7 +170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             });
             _thread.Start();
-            LOG.TRACE("Start Fork Safty Protect Process Thread");
+            logger.LogTrace("Start Fork Safty Protect Process Thread");
         }
         private bool _isLoadUnloadTaskRunning => _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
         private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
@@ -344,14 +338,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AGVC = new ForkAGVController(RosBridge_IP, RosBridge_Port);
             (AGVC as ForkAGVController).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
-            LOG.TRACE($"(AGVC as ForkAGVController).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
+            logger.LogTrace($"(AGVC as ForkAGVController).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
         }
 
         protected internal override void SoftwareEMO(AlarmCodes alarmCode)
         {
             Task.Run(async () =>
             {
-                LOG.Critical($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
+                logger.LogWarning($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
                 ForkLifter.ForkStopAsync(true);

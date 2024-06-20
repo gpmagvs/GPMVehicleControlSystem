@@ -155,9 +155,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
                 IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
-                bool _agv_alarm = alarmCodes.Count != 0;
-                alarmCodes = alarmCodes;
-                if (_agv_alarm)
+                bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
+                bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
+                if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)
                 {
                     AGVC.EmergencyStop();
                     _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
@@ -209,7 +209,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 }
                 AGVC.OnAGVCActionChanged = null;
-                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: _agv_alarm ? _current_alarm_codes?.ToList() : null);
+                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
             });
 
 

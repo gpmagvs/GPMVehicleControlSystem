@@ -1,13 +1,12 @@
 ﻿
+using AGVSystemCommonNet6.AGVDispatch;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using System.Net.Sockets;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using System.Net.Sockets;
-using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
-using GPMVehicleControlSystem.Models.Buzzer;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.AGVDispatch;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -38,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public DemoMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
         {
-            LOG.INFO("Demo Mini AGV Created.");
+            logger.LogInformation("Demo Mini AGV Created.");
         }
         protected override async Task DOSignalDefaultSetting()
         {
@@ -144,10 +143,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsLockActionAllow(1, out string rejectReason))
             {
-                LOG.Critical(rejectReason);
+                logger.LogError(rejectReason);
                 return false;
             }
-            LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.1 [call service]");
+            logger.LogTrace("Demo Room Mini AGV- Try Lock Battery No.1 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.LOCK);
             return WaitBatteryLocked(1);
         }
@@ -155,10 +154,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsLockActionAllow(2, out string rejectReason))
             {
-                LOG.Critical(rejectReason);
+                logger.LogError(rejectReason);
                 return false;
             }
-            LOG.TRACE("Demo Room Mini AGV- Try Lock Battery No.2 [call service]");
+            logger.LogTrace("Demo Room Mini AGV- Try Lock Battery No.2 [call service]");
             DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.LOCK);
             return WaitBatteryLocked(2);
         }
@@ -167,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsUnlockActionAllow(2, out string rejectReason))
             {
-                LOG.Critical(rejectReason);
+                logger.LogError(rejectReason);
                 return false;
             }
 
@@ -176,7 +175,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
 
-                LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
+                logger.LogTrace("Demo Room Mini AGV- Try Unlock Battery No.1 [call service]");
                 DemoMiniAGVControl.BatteryLockControlService(1, BAT_LOCK_ACTION.UNLOCK);
                 return WaitBatteryUnLocked(1);
             }
@@ -193,13 +192,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsUnlockActionAllow(2, out string rejectReason))
             {
-                LOG.Critical(rejectReason);
+                logger.LogError(rejectReason);
                 return false;
             }
             await BatteryUnLockSemaphoreSlim.WaitAsync();
             try
             {
-                LOG.TRACE("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
+                logger.LogTrace("Demo Room Mini AGV- Try Unlock Battery No.2 [call service]");
                 DemoMiniAGVControl.BatteryLockControlService(2, BAT_LOCK_ACTION.UNLOCK);
                 return WaitBatteryUnLocked(2);
             }
@@ -288,7 +287,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(10);
             _ = Task.Run(async () =>
             {
-                LOG.TRACE($"Start publish IOLists! [Use {IOlistsMsg_KGS.RosMessageName}]");
+                logger.LogTrace($"Start publish IOLists! [Use {IOlistsMsg_KGS.RosMessageName}]");
 
                 IOlistsMsg_KGS payload = new IOlistsMsg_KGS();
 

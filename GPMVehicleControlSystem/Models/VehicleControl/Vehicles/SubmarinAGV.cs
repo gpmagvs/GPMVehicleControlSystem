@@ -2,13 +2,8 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
-using GPMVehicleControlSystem.Models.WorkStation;
-using Newtonsoft.Json;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -68,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task<RETURN_CODE> RemoveCstData()
         {
             //向AGVS請求移除卡匣
-            LOG.TRACE($"使用者進行'移除卡匣'操作");
+            logger.LogTrace($"使用者進行'移除卡匣'操作");
             CSTReader.ValidCSTID = "";
             simulation_cargo_status = CARGO_STATUS.NO_CARGO;
             return RETURN_CODE.OK;
@@ -82,8 +77,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = state; });
             WagoDI.SubsSignalStateChange(DI_ITEM.EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State = state; });
+
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, HandleDriversStatusErrorAsync);
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, HandleDriversStatusErrorAsync);
+
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_1, AutoResetHorizonMotor);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Alarm_2, AutoResetHorizonMotor);
+
 
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, (sender, state) => { IsHandshaking = state; AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_TR_REQ] = state; });
@@ -97,14 +97,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = state; });
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State = state; });
-                LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
+                logger.LogInformation($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
             }
         }
+
+        private void AutoResetHorizonMotor(object? sender, bool alarm)
+        {
+            if (!alarm)
+                return;
+
+
+        }
+
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);
             (AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;
-            LOG.TRACE($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
+            logger.LogTrace($"(AGVC as SubmarinAGVControl).OnCSTReaderActionDone += CSTReader.UpdateCSTIDDataHandler;");
 
         }
     }
