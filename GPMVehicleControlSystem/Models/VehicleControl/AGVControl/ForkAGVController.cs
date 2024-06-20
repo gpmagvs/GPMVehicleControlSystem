@@ -1,7 +1,6 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
-using AGVSystemCommonNet6.Log;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
@@ -61,7 +60,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
         {
-            LOG.INFO($"{CurrentForkActionRequesting.command} command action ack. AGVC Reply command =  {tin.command}");
+            logger.Info($"{CurrentForkActionRequesting.command} command action ack. AGVC Reply command =  {tin.command}");
             IsZAxisActionDone = true;
             response = new VerticalCommandResponse()
             {
@@ -70,7 +69,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool command_reply_done = tin.command == "done";
             if (!command_reply_done)
             {
-                LOG.INFO($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
+                logger.Info($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
             }
             CurrentForkActionRequesting = new VerticalCommandRequest();
             return IsZAxisActionDone;
@@ -134,7 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         sw.Stop();
                         string reason = sw.ElapsedMilliseconds >= timeout * 1000 ? "Timeout" : "Abort By Cancel Process";
                         string log_ = $"Fork Lifter Wait Action Done Fail- {reason}";
-                        LOG.Critical(log_);
+                        logger.Error(log_);
                         return (false, log_);
                     }
                     if (CurrentForkActionRequesting.command == "orig" && CurrentPosition < HSafeSetting)
@@ -204,7 +203,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             WaitActionDoneFlag = wait_done;
             HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
-            LOG.INFO($"Fork ready Go Home Position,HSafe={HSafeSetting}");
+            logger.Info($"Fork ready Go Home Position,HSafe={HSafeSetting}");
             VerticalCommandRequest request = new VerticalCommandRequest
             {
                 model = "FORK",
@@ -251,7 +250,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             if (BeforeForkStopActionRequesting.command == "")
                 return (true, "No Request excuting before fork stopped");
             VerticalCommandRequest request = BeforeForkStopActionRequesting.Clone();
-            LOG.WARN($"Fork {request.command} resume to action");
+            logger.Warn($"Fork {request.command} resume to action");
             return await CallVerticalCommandService(request);
         }
         internal async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request)
@@ -259,7 +258,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             try
             {
 
-                LOG.INFO($"Try rosservice call /command_action : {request.ToJson()}");
+                logger.Info($"Try rosservice call /command_action : {request.ToJson()}");
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>("/command_action", request, 1000);
                 if (response == null)
                     throw new TimeoutException();

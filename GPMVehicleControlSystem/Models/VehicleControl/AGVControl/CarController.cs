@@ -6,12 +6,12 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using NLog;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
@@ -137,13 +137,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private Action<ActionStatus> _OnAGVCActionChanged;
         public event EventHandler OnAGVCActionActive;
         public event EventHandler OnAGVCActionSuccess;
+
+        protected Logger logger;
+
         public Action<ActionStatus> OnAGVCActionChanged
         {
             get => _OnAGVCActionChanged;
             set
             {
                 _OnAGVCActionChanged = value;
-                LOG.TRACE($"{(value == null ? "取消註冊" : "新增註冊")} Action Server Status 變化監視");
+                logger.Info($"{(value == null ? "取消註冊" : "新增註冊")} Action Server Status 變化監視");
             }
         }
         internal bool CycleStopActionExecuting = false;
@@ -232,6 +235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public CarController(string IP, int Port) : base(IP, Port)
         {
+            logger = LogManager.GetLogger("CarControl");
         }
         private bool _Connected = true;
         public bool Connected
@@ -265,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     rosSocket.Close();
                     rosSocket.protocol.Close();
                 }
-                LOG.WARN($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
+                logger.Warn($"Connect to ROSBridge Server (ws://{IP}:{VMSPort}) Processing...");
                 try
                 {
                     rosSocket = new RosSocket(new RosSharp.RosBridgeClient.Protocols.WebSocketSharpProtocol($"ws://{IP}:{VMSPort}"));
@@ -285,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             Connected = true;
             rosSocket.protocol.OnClosed += Protocol_OnClosed;
-            LOG.INFO($"ROS Connected ! ws://{IP}:{VMSPort}");
+            logger.Info($"ROS Connected ! ws://{IP}:{VMSPort}");
             SubscribeROSTopics();
             AdertiseROSServices();
             InitTaskCommandActionClient();
@@ -332,7 +336,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             OnRosSocketDisconnected?.Invoke(this, e);
             rosSocket.protocol.OnClosed -= Protocol_OnClosed;
-            LOG.WARN("Rosbridger Server On Closed...Retry connecting...");
+            logger.Warn("Rosbridger Server On Closed...Retry connecting...");
             TryConnecting = true;
             Connect();
         }
@@ -360,14 +364,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex.Message, ex);
+                    logger.Error(ex.Message, ex);
                 }
                 actionClient.Dispose();
             }
             actionClient = new TaskCommandActionClient("/barcodemovebase", rosSocket);
             actionClient.OnActionStatusChanged += (sender, status) =>
             {
-                LOG.TRACE($"車控-ActionServer: Action Status Changed To : {status}");
+                logger.Info($"車控-ActionServer: Action Status Changed To : {status}");
                 if (OnAGVCActionChanged != null)
                     OnAGVCActionChanged(status);
                 ActionStatus = status;
@@ -388,7 +392,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             if (ActionStatus == ActionStatus.ACTIVE && actionClient.goal.mobilityModes != 0)
             {
-                LOG.WARN($"AGV Is Navigating at working station, Cycle Stop is not nessary.");
+                logger.Warn($"AGV Is Navigating at working station, Cycle Stop is not nessary.");
                 return true;
             }
             bool cycleStopAccept = CycleStopActionExecuting = await CarSpeedControl(ROBOT_CONTROL_CMD.STOP_WHEN_REACH_GOAL, actionClient.goal.taskID, SPEED_CONTROL_REQ_MOMENT.CYCLE_STOP);
@@ -419,7 +423,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
                 catch (Exception ex)
                 {
-                    LOG.WARN("DisposeTaskCommandActionClient Exception Occur :　" + ex.Message);
+                    logger.Warn("DisposeTaskCommandActionClient Exception Occur :　" + ex.Message);
                 }
             }
         }
@@ -450,7 +454,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 var speed_recoverable = OnSpeedRecoveryRequesting();
                 if (!speed_recoverable && CheckLaserStatus)
                 {
-                    LOG.INFO($"[ROBOT_CONTROL_CMD] 要求車控速度恢復但尚有雷射觸發中");
+                    logger.Info($"[ROBOT_CONTROL_CMD] 要求車控速度恢復但尚有雷射觸發中");
                     return false;
                 }
             }
@@ -465,7 +469,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return false;
             }
-            LOG.INFO($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})", false);
+            logger.Info($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})", false);
             if (cmd == ROBOT_CONTROL_CMD.STOP)
             {
                 OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);
@@ -489,12 +493,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
             if (isEmptyPathPlan)
-                LOG.WARN("Empty Action Goal To AGVC To Emergency Stop AGV", show_console: true, color: ConsoleColor.Red);
+                logger.Warn("Empty Action Goal To AGVC To Emergency Stop AGV");
             else
                 _IsEmergencyStopFlag = false;
 
             CycleStopActionExecuting = false;
-            LOG.TRACE("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(), show_console: true, color: ConsoleColor.Green);
+            logger.Info("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson());
             actionClient.goal = rosGoal;
             actionClient?.SendGoal();
             if (isEmptyPathPlan)
@@ -505,17 +509,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             await Task.Delay(500);
             while (!IsRunning && ActionStatus != ActionStatus.SUCCEEDED)
             {
-                LOG.TRACE($"[SendGoal] Action Status Monitor .Status = {ActionStatus}", false);
+                logger.Info($"[SendGoal] Action Status Monitor .Status = {ActionStatus}", false);
                 await Task.Delay(1);
                 if (wait_agvc_execute_action_cts.IsCancellationRequested)
                 {
                     string error_msg = $"發送任務請求給車控但車控並未接收成功-AGVC Status={ActionStatus}";
-                    LOG.Critical(error_msg);
+                    logger.Error(error_msg);
                     AbortTask();
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                 }
             }
-            LOG.INFO($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
+            logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}", true);
             OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
         }
@@ -529,7 +533,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             if (!bypass_stopped_check && _IsEmergencyStopFlag)
                 return;
 
-            LOG.Critical("發送空任務請求車控緊急停止");
+            logger.Error("發送空任務請求車控緊急停止");
             OnAGVCActionChanged = null;
             OnAGVCActionChanged += (status) =>
             {

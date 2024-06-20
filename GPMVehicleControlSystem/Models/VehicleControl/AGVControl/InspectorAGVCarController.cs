@@ -3,12 +3,8 @@ using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using Microsoft.AspNetCore.Components;
 using Newtonsoft.Json;
-using RosSharp.RosBridgeClient;
-using System.Diagnostics.Metrics;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.EquipmentStateRequest;
 using static AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest;
 
@@ -56,9 +52,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             IOListsTopicID = rosSocket.Advertise<IOlistsMsg_KGS>("IOlists");
             string _service_name = rosSocket?.AdvertiseService<VerticalCommandRequest, VerticalCommandResponse>("/done_action", InstrumentMeasureDone);
-            LOG.TRACE($"Service Advertised: {_service_name}");
+            logger.Trace($"Service Advertised: {_service_name}");
             _service_name = rosSocket?.AdvertiseService<Fire_Action_Request, Fire_Action_Response>("/fire_action", FireActionDoneCallback);
-            LOG.TRACE($"Service Advertised: {_service_name}");
+            logger.Trace($"Service Advertised: {_service_name}");
         }
 
         public void IOListMsgPublisher(IOlistsMsg_KGS payload)
@@ -165,13 +161,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             };
             if (model == "batterylock")
             {
-                LOG.INFO($"電池{battery_lock_action_command} 動作完成, request.command= {request.command}");
+                logger.Info($"電池{battery_lock_action_command} 動作完成, request.command= {request.command}");
                 batteryLockManualResetEvent.Set();
             }
             else
             {
 
-                LOG.INFO($"儀器量測結束, request.command= {request.command}");
+                logger.Info($"儀器量測結束, request.command= {request.command}");
                 if (action_command == COMMANDS.pose && OnInstrumentMeasureDone != null)
                     OnInstrumentMeasureDone(new clsMeasureDone()
                     {
@@ -183,7 +179,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         private bool FireActionDoneCallback(Fire_Action_Request request, out Fire_Action_Response response)
         {
-            LOG.INFO($"車控端已完成避災動作!", color: ConsoleColor.Red);
+            logger.Info($"車控端已完成避災動作!");
             response = new Fire_Action_Response(true);
             return true;
         }
@@ -245,9 +241,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return confirm;
 #else
             var request = new EquipmentStateRequest(equipment, state);
-            LOG.TRACE($"call service : /equipment_state , request={request.ToJson()}");
+            logger.Trace($"call service : /equipment_state , request={request.ToJson()}");
             var response = await rosSocket.CallServiceAndWait<EquipmentStateRequest, EquipmentStateResponse>("/equipment_state", request);
-            LOG.TRACE($"/equipment_state , response={response.ToJson()}");
+            logger.Trace($"/equipment_state , response={response.ToJson()}");
             bool confirm = response == null ? false : response.confirm;
             EquipmentAvtiveState[equipment] = confirm ? state : EquipmentAvtiveState[equipment];
             return confirm;
@@ -257,9 +253,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         internal async Task<bool> SensorStateControl(SensorStateStateRequest.SENSORS sensor, bool state)
         {
             var request = new SensorStateStateRequest(sensor, state);
-            LOG.TRACE($"call service : /sensor_state, request={request.ToJson()}");
+            logger.Trace($"call service : /sensor_state, request={request.ToJson()}");
             var response = await rosSocket.CallServiceAndWait<SensorStateStateRequest, SensorStateStateResponse>("/sensor_state", request);
-            LOG.TRACE($"/sensor_state, response={response.ToJson()}");
+            logger.Trace($"/sensor_state, response={response.ToJson()}");
             bool confirm = response == null ? false : response.confirm;
             SensorAvtiveState[sensor] = confirm ? state : SensorAvtiveState[sensor];
             return confirm;
