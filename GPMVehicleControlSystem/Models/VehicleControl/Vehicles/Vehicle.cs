@@ -1418,5 +1418,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return result;
         }
+
+        protected bool IsMotorAutoRecoverable()
+        {
+            return BarcodeReader.Data.tagID != 0 && lastVisitedMapPoint.IsCharge;
+        }
     }
 }

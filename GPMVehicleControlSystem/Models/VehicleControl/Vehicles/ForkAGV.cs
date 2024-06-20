@@ -445,7 +445,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
             await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
 
-            if (IsAnyMotorAlarm())
+            if (IsAnyHorizonMotorAlarm())
             {
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
                 await Task.Delay(100);
@@ -455,7 +455,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
 
-                while (IsAnyMotorAlarm())
+                while (IsAnyHorizonMotorAlarm())
                 {
                     await Task.Delay(1);
                 }
@@ -463,9 +463,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Task.Delay(50);
             }
         }
-        protected override bool IsAnyMotorAlarm()
+
+        protected override void AutoResetHorizonMotor(object? sender, bool alarm)
         {
-            bool horizonMotorAlarm = base.IsAnyMotorAlarm();
+            //DO Nothing
+        }
+        protected override bool IsAnyHorizonMotorAlarm()
+        {
+            bool horizonMotorAlarm = base.IsAnyHorizonMotorAlarm();
 
             bool verticalMotorAlarm = !WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy);
 

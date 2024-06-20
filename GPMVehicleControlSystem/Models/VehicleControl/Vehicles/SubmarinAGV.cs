@@ -2,8 +2,10 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -34,6 +36,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
         public ILogger Logger { get; }
+
+        private SemaphoreSlim _AutoResetHorizonMotorSemaphosre = new SemaphoreSlim(1, 1);
 
         protected override RunningStatus HandleTcpIPProtocolGetRunningStatus()
         {
@@ -100,12 +104,42 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 logger.LogInformation($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
             }
         }
-
-        private void AutoResetHorizonMotor(object? sender, bool alarm)
+        protected virtual async void AutoResetHorizonMotor(object? sender, bool alarm)
         {
-            if (!alarm)
+            bool isEMO = !WagoDI.GetState(DI_ITEM.EMO);
+            if (!alarm || isEMO || !IsMotorAutoRecoverable())
                 return;
+            clsIOSignal input = sender as clsIOSignal;
+            AutoReset();
+            async Task AutoReset()
+            {
+                try
+                {
+                    await _AutoResetHorizonMotorSemaphosre.WaitAsync();
+                    if (!IsAnyHorizonMotorAlarm())
+                    {
+                        logger.LogInformation($"因馬達異常已清除,{input?.Name}異常自動復位取消");
+                        return;
+                    }
+                    logger.LogWarning($"於{lastVisitedMapPoint.Graph.Display}中發生走行馬達異常({input?.Name})，進行自動復位");
+                    AlarmManager.AddWarning(input.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? AlarmCodes.Wheel_Motor_IO_Error_Right : AlarmCodes.Wheel_Motor_IO_Error_Left);
+                    await Task.Delay(1000);
+                    await Initialize();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    _AutoResetHorizonMotorSemaphosre.Release();
+                }
+            }
 
+            bool _IsMotorNoAlarm()
+            {
+                return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+            }
 
         }
 

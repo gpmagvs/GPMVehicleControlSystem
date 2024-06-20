@@ -282,13 +282,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
 
-            if (IsAnyMotorAlarm())
+            if (IsAnyHorizonMotorAlarm())
             {
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true);
                 await Task.Delay(100);
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
 
-                while (IsAnyMotorAlarm())
+                while (IsAnyHorizonMotorAlarm())
                 {
                     await Task.Delay(1);
                 }
@@ -296,9 +296,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        protected virtual bool IsAnyMotorAlarm()
+        protected virtual bool IsAnyHorizonMotorAlarm()
         {
-            return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) || !WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2);
+            return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
         }
 
         private void HandleLimitSwitchSensorSignalChange(object? sender, bool input_status)
@@ -776,11 +776,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
         }
-
+        public REMOTE_MODE RemoteModeWhenHorizonMotorAlarm { get; protected set; } = REMOTE_MODE.OFFLINE;
         protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
+
+
             if (!status)
                 return;
+            if (IsMotorAutoRecoverable())
+            {
+                RemoteModeWhenHorizonMotorAlarm = Remote_Mode.Clone();
+                return;
+            }
 
             await Task.Delay(1000);
             if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)

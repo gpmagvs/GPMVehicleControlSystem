@@ -555,7 +555,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(100);
             await WagoDO.SetState(DO_ITEM.Safety_Relays_Reset, false);
         }
-        protected override bool IsAnyMotorAlarm()
+        protected override bool IsAnyHorizonMotorAlarm()
         {
             return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
