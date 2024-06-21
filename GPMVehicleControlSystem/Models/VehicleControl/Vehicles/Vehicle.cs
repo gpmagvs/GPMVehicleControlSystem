@@ -914,6 +914,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
             Laser.rosSocket = AGVC.rosSocket;
+            Navigation.OnAlarmHappened += AGVC.HandleAlarm;
             StartPublishIOListsMsg();
 
         }

@@ -140,7 +140,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             if (!base.CheckStateDataContent())
                 return false;
-
             LastVisitedTag = Data.lastVisitedNode.data;
             LinearSpeed = CalculateLinearSpeed(Data.robotPose.pose.position);
             AngularSpeed = CalculateAngularSpeed(Angle);
@@ -154,6 +153,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Current_Warning_Code = _Alarm_Code;
                 else
                     Current_Alarm_Code = _Alarm_Code;
+
             }
             else
                 Current_Alarm_Code = AlarmCodes.None;

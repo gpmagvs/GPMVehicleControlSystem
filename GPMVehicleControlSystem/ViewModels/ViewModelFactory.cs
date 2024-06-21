@@ -62,15 +62,12 @@ namespace GPMVehicleControlSystem.ViewModels
                     MapComparsionRate = AGV.SickData.MapSocre,
                     LocStatus = AGV.SickData.Data.loc_status,
                     AGV_Direct = AGV.Navigation.Direction.ToString().ToUpper(),
-                    LinearSpeed = AGV.Navigation.LinearSpeed,
-                    AngularSpeed = AGV.Navigation.AngularSpeed,
                     DriversStates = driverStates.ToArray(),
                     Laser_Mode = (int)AGV.Laser.Mode,
                     NavInfo = new NavStateVM
                     {
                         Destination = AGV.ExecutingTaskEntity == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
                         DestinationMapPoint = AGV.GetSub_Status() != clsEnums.SUB_STATUS.RUN && !AGV.IsWaitForkNextSegmentTask ? new MapPoint { Name = "", Graph = new Graph { Display = "" } } : AGV.DestinationMapPoint,
-                        Speed_max_limit = AGV.AGVC.CurrentSpeedLimit,
                         PathPlan = AGV.GetSub_Status() != clsEnums.SUB_STATUS.RUN ? new int[0] : AGV.ExecutingTaskEntity == null ? new int[0] : AGV.ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory.GetRemainPath(AGV.Navigation.LastVisitedTag),
                         IsSegmentTaskExecuting = AGV.IsWaitForkNextSegmentTask
 

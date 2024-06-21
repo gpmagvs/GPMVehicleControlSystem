@@ -570,5 +570,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             return (response == null ? false : response.confirm, response == null ? "Call Service Error" : "");
         }
+
+        internal async Task<bool> HandleAlarm(AlarmCodes alarm)
+        {
+            logger.Error($"");
+            return true;
+        }
     }
 }

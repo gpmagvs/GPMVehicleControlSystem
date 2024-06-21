@@ -6,7 +6,6 @@ namespace GPMVehicleControlSystem.ViewModels
     {
         public string Destination { get; set; } = "";
         public MapPoint DestinationMapPoint { get; set; } = new MapPoint() { Name = "Unknown" };
-        public double Speed_max_limit { get; set; } = -1;
 
         public int[] PathPlan { get; set; } = new int[0];
         public bool IsSegmentTaskExecuting { get; set; } = false;

@@ -1,13 +1,11 @@
-﻿using RosSharp.RosBridgeClient.MessageTypes.Geometry;
-using RosSharp.RosBridgeClient.MessageTypes.Std;
-using AGV_VMS.ViewModels;
-using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using static AGVSystemCommonNet6.clsEnums;
 using AGVSystemCommonNet6.MAP;
-using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
+using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -34,13 +32,10 @@ namespace GPMVehicleControlSystem.ViewModels
         public BatteryStateVM[] BatteryStatus { get; set; } = new BatteryStateVM[0]; //TODO Multi battery data should define
         public double Mileage { get; set; }
         public Pose Pose { get; set; } = new Pose();
-        public double LinearSpeed { get; set; } = 0;
-        public double AngularSpeed { get; set; } = 0;
         public double Angle { get; set; } = -1;
         public string AGV_Direct { get; set; }
         public BarcodeReaderState BCR_State_MoveBase { get; set; } = new BarcodeReaderState();
         public DriverState ZAxisDriverState { get; set; } = new DriverState();
-        public string ZAxisActionName { get; set; } = "";
         /// <summary>
         /// 地圖比對率
         /// </summary>
@@ -49,8 +44,6 @@ namespace GPMVehicleControlSystem.ViewModels
         /// SICK 定位狀態
         /// </summary>
         public int LocStatus { get; set; }
-        public bool ForkCSTExist { get; set; }
-        public bool ForkFrontEndSensorTrigger { get; set; }
         public clsAlarmCode[] AlarmCodes { get; set; } = new clsAlarmCode[0];
         public object AlarmsGroup
         {
@@ -90,11 +83,8 @@ namespace GPMVehicleControlSystem.ViewModels
         }
         public DriverState[] DriversStates { get; set; } = new DriverState[0];
         public int Laser_Mode { get; set; } = 0;
-        public UltrasonicSensorState UltrSensorState { get; set; } = new UltrasonicSensorState();
-        public bool IsAGVPoseError { get; set; } = false;
         public NavStateVM NavInfo { get; set; } = new NavStateVM();
         public string Current_LASER_MODE { get; set; } = "";
-        public LightsStatesVM LightsStates { get; set; } = new LightsStatesVM();
         public bool IsLaserModeSettingError { get; set; } = false;
         public bool IsLDULD_No_Entry { get; set; } = false;
         public bool IsForkExtenable { get; set; } = false;
@@ -153,9 +143,7 @@ namespace GPMVehicleControlSystem.ViewModels
                 BCR_State_MoveBase = null;
                 ZAxisDriverState = null;
                 DriversStates = null;
-                UltrSensorState = null;
                 NavInfo = null;
-                LightsStates = null;
                 HandShakeSignals = null;
                 HandShakeTimers = null;
                 SysLoading = null;
@@ -164,7 +152,6 @@ namespace GPMVehicleControlSystem.ViewModels
                 AMCAGVSensorState = null;
                 IMUMaxMinValRecord = null;
                 AlarmCodes = null;
-
                 disposedValue = true;
 
             }
