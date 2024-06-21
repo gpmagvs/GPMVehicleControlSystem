@@ -484,9 +484,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task FeedbackTaskStatus(TASK_RUN_STATUS status, List<AlarmCodes> alarms_tracking = null, bool IsTaskCancel = false)
         {
-
-            if (_RunTaskData.IsActionFinishReported)
-                return;
+            logger.LogWarning($"{_RunTaskData.Task_Name}-開始向派車上報任務狀態 ({status})");
 
             if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
