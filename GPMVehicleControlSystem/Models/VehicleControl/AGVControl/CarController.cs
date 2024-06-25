@@ -490,6 +490,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
+
+            (bool checkTaskConfirmed, TaskCommandGoal goalModified) = await CheckTaskCommandGoal(rosGoal);
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
             if (isEmptyPathPlan)
@@ -499,15 +501,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             CycleStopActionExecuting = false;
             logger.Info("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson());
-            actionClient.goal = rosGoal;
+
+            if (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
+            {
+                logger.Warn($"[SendGoal] Action Status is not PENDING or ACTIVE. Current Status = {_ActionStatus}");
+                _ActionStatus = ActionStatus.NO_GOAL;
+            }
+
+            actionClient.goal = goalModified;
             actionClient?.SendGoal();
             if (isEmptyPathPlan)
             {
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
             }
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-            await Task.Delay(500);
-            while (!IsRunning && ActionStatus != ActionStatus.SUCCEEDED)
+            while (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
             {
                 logger.Info($"[SendGoal] Action Status Monitor .Status = {ActionStatus}", false);
                 await Task.Delay(1);
@@ -521,7 +529,74 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}(Destine={rosGoal.finalGoalID})");
             OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
+
+            if (!checkTaskConfirmed)
+            {
+                logger.Trace($"Wait AGVC ActionStatus Success");
+                while (_ActionStatus != ActionStatus.SUCCEEDED)
+                {
+                    await Task.Delay(1);
+                }
+                logger.Trace($"Wait AGVC ActionStatus now is Success,Resend Task");
+
+                int indexOfCurrentTag = rosGoal.pathInfo.Select(p => p.tagid).ToList().FindIndex(p => p == this.lastVisitedNode); // 0 , 1 
+                rosGoal.pathInfo = rosGoal.pathInfo.Skip(indexOfCurrentTag).ToArray();
+                rosGoal.planPath.poses = rosGoal.planPath.poses.Skip(indexOfCurrentTag).ToArray();
+                return await SendGoal(rosGoal, timeout);
+            }
+
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+        }
+
+        private async Task<(bool confirmed, TaskCommandGoal goalModified)> CheckTaskCommandGoal(TaskCommandGoal newGoal)
+        {
+            try
+            {
+                if (newGoal.planPath.poses.Length == 0)
+                {
+                    logger.Trace($"[CheckTaskCommandGoal] path of goal is empty. Return.");
+                    return (true, newGoal);
+                }
+
+                TaskCommandGoal _previousGoal = actionClient.goal;
+
+                bool _IsPathOfGoalSegment(TaskCommandGoal _taskCmdGoal)
+                {
+                    if (_taskCmdGoal.pathInfo?.Length == 0)
+                        return false;
+
+                    return _taskCmdGoal.pathInfo?.Last().tagid != _taskCmdGoal.finalGoalID;
+                }
+
+                if (_IsPathOfGoalSegment(_previousGoal))
+                {
+                    //如果上一個任務的最後一個點不是目標點，則新的任務的第一個點必須與上一個任務的PathInfo的第一點相同
+                    bool IsPathStartPtNotMatched = _previousGoal.pathInfo[0].tagid != newGoal.pathInfo[0].tagid;
+                    bool IsFinalGoalNotMatched = _previousGoal.finalGoalID != newGoal.finalGoalID;
+
+                    if (IsPathStartPtNotMatched || IsFinalGoalNotMatched)
+                    {
+                        logger.Warn($"[CheckTaskCommandGoal] The first point of the new goal is not the same as the last point of the previous goal.");
+                        logger.Warn($"[CheckTaskCommandGoal] Cycle Stop Action is not executing, start cycle stop action first.");
+
+                        return (false, new TaskCommandGoal());
+                    }
+                    else
+                    {
+                        return (true, newGoal);
+                    }
+                }
+                else
+                {
+                    return (true, newGoal);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+                throw ex;
+            }
+
         }
 
         public abstract Task<(bool request_success, bool action_done)> TriggerCSTReader();

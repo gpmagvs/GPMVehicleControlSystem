@@ -97,8 +97,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ACTION_TYPE action = taskDownloadData.Action_Type;
             try
             {
-                TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 logger.LogTrace($"Start Execute Task-{taskDownloadData.Task_Simplex}");
                 // logger.LogWarning($"Recieve AGVs Task and Prepare to Excute!- NO [ACTION_FINISH] Feedback TaskStatus Process is Running!");
                 _RunTaskData = taskDownloadData.Clone();
@@ -524,11 +524,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         logger.LogWarning($"[FeedbackTaskStatus] Exception Occur when determine 'IsWaitForkNextSegmentTask' value. Forcing set as FALSE{ex.Message}");
                     }
 
-                    if (_RunTaskData.IsActionFinishReported && !AGVSResetCmdFlag)
-                    {
-                        IsActionFinishTaskFeedbackExecuting = false;
-                        return;
-                    }
                 }
                 taskfeedbackCanceTokenSoruce?.Cancel(); //Raise取消請求,若前一次回報請求還沒完成則會取消回報
                 taskfeedbackCanceTokenSoruce = new CancellationTokenSource();

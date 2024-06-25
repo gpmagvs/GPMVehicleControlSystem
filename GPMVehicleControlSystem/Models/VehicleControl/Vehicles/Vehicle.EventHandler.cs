@@ -119,7 +119,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
         {
-            EndLaserObsMonitorAsync();
+            _ = Task.Run(async () =>
+            {
+                await EndLaserObsMonitorAsync();
+            });
         }
 
         private async void HandleAGVCActionActive(object? sender, EventArgs e)

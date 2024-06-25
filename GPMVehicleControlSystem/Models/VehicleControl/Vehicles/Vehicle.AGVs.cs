@@ -101,7 +101,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal && action_type == ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_NORMAL_MOVE_ACTION_IN_NON_NORMAL_POINT;
 
-            if (Main_Status == MAIN_STATUS.RUN && _ExecutingTask?.action != ACTION_TYPE.None)
+            if (Main_Status == MAIN_STATUS.RUN && _RunTaskData?.Action_Type != ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_TASK_WHEN_WORKING_AT_WORKSTATION;
 
             logger.LogInformation($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
@@ -491,15 +491,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
 
-                if (!AGVC.IsRunning && mode == RESET_MODE.CYCLE_STOP)
+                if (Main_Status != MAIN_STATUS.RUN && mode == RESET_MODE.CYCLE_STOP)
                 {
-                    AGVC.OnAGVCActionChanged = null;
                     AGV_Reset_Flag = false;
                     logger.LogWarning($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                     await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                     AGVC._ActionStatus = ActionStatus.NO_GOAL;
                     AGV_Reset_Flag = true;
+                    AGVC.OnAGVCActionChanged = null;
                     return true;
                 }
                 else
