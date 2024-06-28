@@ -103,11 +103,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (Main_Status == MAIN_STATUS.RUN && _RunTaskData?.Action_Type != ACTION_TYPE.None)
                 returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_TASK_WHEN_WORKING_AT_WORKSTATION;
+            //收到Discharge任務，但Homing_Trajectory 最後一點不是一般點位
+            if (action_type == ACTION_TYPE.Discharge)
+            {
+                var homing_traj = taskDownloadData.Homing_Trajectory;
+                if (!homing_traj.Any() || homing_traj.Length == 1)
+                    returnCode = TASK_DOWNLOAD_RETURN_CODES.Homing_Trajectory_Error;
+                MapPoint? destineStationOfHoming = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == homing_traj.Last().Point_ID);
+                if (destineStationOfHoming?.StationType != STATION_TYPE.Normal)
+                    returnCode = TASK_DOWNLOAD_RETURN_CODES.Homing_Trajectory_Error;
+            }
 
             logger.LogInformation($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
-
             if (returnCode != TASK_DOWNLOAD_RETURN_CODES.OK)
             {
+                logger.LogWarning($"Reject AGVS Task : {returnCode}({(int)returnCode})");
                 AlarmManager.AddWarning(AlarmCodes.Reject_AGVS_Task);
             }
 
