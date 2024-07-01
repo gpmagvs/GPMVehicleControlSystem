@@ -8,7 +8,9 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -475,6 +477,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool verticalMotorAlarm = !WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy);
 
             return horizonMotorAlarm || verticalMotorAlarm;
+        }
+
+        public virtual bool ZAxisGoHomingCheck()
+        {
+            if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
+            {
+                logger.LogCritical($"Fork want to Home in non-normal point!!!!!!");
+                return false;
+            }
+
+            bool IsAGVEnteringWorkStationNow()
+            {
+                var currentAction = _RunTaskData.Action_Type;
+                var agvcActionStatus = AGVC.ActionStatus;
+
+                if (currentAction == ACTION_TYPE.None)
+                    return false;
+                return agvcActionStatus != ActionStatus.SUCCEEDED && lastVisitedMapPoint.StationType == STATION_TYPE.Normal;
+            }
+            return true;
         }
     }
 }

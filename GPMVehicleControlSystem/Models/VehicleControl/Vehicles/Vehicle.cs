@@ -1424,5 +1424,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             return BarcodeReader.Data.tagID != 0 && lastVisitedMapPoint.IsCharge;
         }
+
+        /// <summary>
+        /// 確認當下是否可以進行Z軸回HOME動作
+        /// </summary>
+        /// <returns>true:可回HOME; false:禁止回HOME</returns>
+
     }
 }

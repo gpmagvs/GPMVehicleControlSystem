@@ -572,6 +572,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 IsNeedWaitForkHome = false;
                 return;
             }
+            //check StationType of AGV.lastVisitedMapPoint should be Normal
+
             IsNeedWaitForkHome = action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload;
             forkGoHomeTask = await Task.Factory.StartNew(async () =>
             {

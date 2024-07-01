@@ -213,8 +213,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
         {
-            (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
+            if (!forkAGV.ZAxisGoHomingCheck())
+            {
+                return (false, AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point);
+                AlarmManager.AddAlarm(AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point, false);
+            }
 
+            (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
             if (!response.confirm)
                 return (false, AlarmCodes.Action_Timeout);
             return (true, AlarmCodes.None);
