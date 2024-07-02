@@ -424,6 +424,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
                     if (!accept)
                     {
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                            return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+
                         Agv.SetSub_Status(SUB_STATUS.DOWN);
                         return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
                     }
@@ -499,6 +502,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     await Task.Delay(1000);
                     if (cancelCts.IsCancellationRequested)
                         break;
+                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                        return false;
                     accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
                     Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
                 }
