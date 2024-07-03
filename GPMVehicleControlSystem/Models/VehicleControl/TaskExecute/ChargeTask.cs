@@ -54,13 +54,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             DelayChargeStatusJudgeWork();
-            await Task.Delay(1000);
             Agv._IsCharging = true;
-            Agv.SetSub_Status(SUB_STATUS.Charging);
             BuzzerPlayer.Stop();
-            //將狀態設為充電中後 ,開始等待電池真正開始充電
-
-
             return (true, AlarmCodes.None);
         }
 

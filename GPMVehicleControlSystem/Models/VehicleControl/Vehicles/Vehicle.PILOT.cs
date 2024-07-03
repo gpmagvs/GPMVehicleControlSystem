@@ -205,7 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     finally
                     {
-                        SetSub_Status(SUB_STATUS.IDLE);
+                        SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
                     }
                 }
                 AGVC.OnAGVCActionChanged = null;
