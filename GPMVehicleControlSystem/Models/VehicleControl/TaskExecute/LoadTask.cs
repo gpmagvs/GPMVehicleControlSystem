@@ -318,6 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
+            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
             Agv.DirectionLighter.CloseAll();
             RecordParkLoction();
             (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
