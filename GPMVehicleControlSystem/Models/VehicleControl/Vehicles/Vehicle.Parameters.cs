@@ -97,21 +97,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private static async void ConfigFileChangedWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            configFileChangedWatcher.EnableRaisingEvents = false;
-            await Task.Delay(1000);
-            //copy 
-            var file_copy = Path.Combine(Path.GetTempPath(), $"parameters_temp_{DateTime.Now.Ticks}.json");
-            File.Copy(ParametersFilePath, file_copy, true);
-            var updated_param = LoadParameters(file_copy, false);
-            if (updated_param != null & OnParamEdited != null)
+            try
             {
-                OnParamEdited(updated_param);
-            }
-            else
-            {
+                configFileChangedWatcher.EnableRaisingEvents = false;
+                await Task.Delay(1000);
+                //copy 
+                var file_copy = Path.Combine(Path.GetTempPath(), $"parameters_temp_{DateTime.Now.Ticks}.json");
+                File.Copy(ParametersFilePath, file_copy, true);
+                var updated_param = LoadParameters(file_copy, false);
+                if (updated_param != null & OnParamEdited != null)
+                {
+                    OnParamEdited(updated_param);
+                }
+                else
+                {
 
+                }
             }
-            configFileChangedWatcher.EnableRaisingEvents = true;
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                configFileChangedWatcher.EnableRaisingEvents = true;
+            }
+
         }
 
         public static void SaveParameters(clsVehicelParam Parameters)

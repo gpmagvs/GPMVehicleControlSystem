@@ -389,6 +389,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
 
             clsMapPoint[] trajectory = ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory;
+
+            List<int> autoDoorStationTags = NavingMap.Points.Values.Where(pt => pt.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Auto_Door)
+                                                            .Select(pt => pt.TagNumber)
+                                                            .ToList();
+
             logger.LogInformation($"Try Control Auto Door in Tag {newVisitedNodeTag}(Full Traj: {string.Join(",", trajectory.Select(pt => pt.Point_ID))})");
             //剩餘路徑包含自動門 則將 IO ON著 反之 OFF
             clsMapPoint? currentPt = trajectory.FirstOrDefault(pt => pt.Point_ID == newVisitedNodeTag);
@@ -409,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IEnumerable<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt));
             IEnumerable<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID);
             logger.LogTrace($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
-            bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2;
+            bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2 && autoDoorPoints.Any(pt => autoDoorStationTags.Contains(pt.Point_ID));
             if (_isAutoDoorInRemainTraj)
             {
                 int index_of_first_auto_door_pt = trajectory.ToList().FindIndex(pt => pt.Point_ID == autoDoorPoints.First().Point_ID);

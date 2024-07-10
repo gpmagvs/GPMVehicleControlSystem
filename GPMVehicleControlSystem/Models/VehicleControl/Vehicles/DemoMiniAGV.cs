@@ -164,7 +164,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override async Task<bool> Battery1UnLock()
         {
-            if (!IsUnlockActionAllow(2, out string rejectReason))
+            if (!IsUnlockActionAllow(1, out string rejectReason))
             {
                 logger.LogError(rejectReason);
                 return false;
@@ -224,13 +224,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         protected override bool IsUnlockActionAllow(int toUnlockBatNumber, out string rejectReason)
         {
+
+
             //不可解鎖的情況: 1.僅有一顆電池正在服役中
             rejectReason = "";
             //GetExistSensorState(toUnlockBatNumber, out bool exist1_front, out bool exist2_back, out bool exist3_docked);
             GetExistSensorState(1, out bool bat1_exist1_front, out bool bat1_exist2_back, out bool bat1_exist3_docked);
             GetExistSensorState(2, out bool bat2_exist1_front, out bool bat2_exist2_back, out bool bat2_exist3_docked);
 
+
             bool _isToUnlockBatIsNotExist = toUnlockBatNumber == 1 ? !bat1_exist3_docked : !bat2_exist3_docked;
+
+            if (_isToUnlockBatIsNotExist)
+                return true;//請求解鎖的那一顆電池目前不存在
 
             bool _isOnlyOneBatteryDocked = (bat1_exist3_docked && !bat2_exist3_docked) || !bat1_exist3_docked && bat2_exist3_docked;
 

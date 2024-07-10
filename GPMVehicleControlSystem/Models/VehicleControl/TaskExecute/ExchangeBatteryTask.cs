@@ -169,12 +169,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 BuzzerPlayer.Alarm();
                 TsmcMiniAGV.IsHandshaking = false;
+
                 if (Debugging)
                 {
                     StaStored.CurrentVechicle.SetSub_Status(SUB_STATUS.DOWN);
                     AlarmManager.AddAlarm(ex.alarm_code, false);
                 }
-
+                ResetPIOSignals();
                 return (false, ex.alarm_code);
             }
             catch (HSTimeoutException ex)
@@ -185,6 +186,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     AlarmManager.AddAlarm(ex.alarm_code, false);
                 }
                 TsmcMiniAGV.IsHandshaking = false;
+                ResetPIOSignals();
                 return (false, ex.alarm_code);
             }
             #endregion
@@ -193,7 +195,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //退至二次定位點
             return await BackwardToEntryPoint();
         }
-
+        private async Task ResetPIOSignals()
+        {
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, false);
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_CS_0, false);
+            TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_CS_1, false);
+        }
         private async Task PreCheckStatus()
         {
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_Check_REQ, true);
@@ -409,6 +419,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Task.Delay(10);
 
                 TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Wait Exchanger-{input}-{(expect_state ? "ON" : "OFF")}...{_sw.Elapsed}/{TimeSpan.FromSeconds(timeout_sec)}";
+
+                if (TsmcMiniAGV.GetSub_Status() == SUB_STATUS.DOWN)
+                {
+                    throw new HandshakeException(AlarmCodes.Handshake_Fail_AGV_DOWN);
+                }
+
                 if (token.IsCancellationRequested)
                 {
                     throw new HandshakeException(AlarmCodes.Handshake_Fail_BAT_EXG_EQ_VALID_OFF_WHEN_HANDSHAKING);
