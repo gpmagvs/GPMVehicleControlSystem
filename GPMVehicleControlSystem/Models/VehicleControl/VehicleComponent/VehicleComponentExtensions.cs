@@ -168,7 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Battery_Warning_Code = AlarmCodes.Under_Temperature;
                 else if (error_code == 32)
                     Battery_Warning_Code = AlarmCodes.Over_Voltage;
-                else if (error_code == 128)
+                else if (error_code == 64)
                     Battery_Warning_Code = AlarmCodes.Over_Temperature;
             }
             else
