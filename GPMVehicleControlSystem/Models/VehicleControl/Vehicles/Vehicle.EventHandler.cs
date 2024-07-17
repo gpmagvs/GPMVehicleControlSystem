@@ -113,9 +113,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             if (Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
+            {
                 clsBattery.OnBatteryUnderVoltage += HandleBatteryUnderVoltage;
+                //clsBattery.OnBatteryOverTemperature += HandleBatteryOverTemperature;
+            }
 
         }
+
+
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
         {
@@ -136,7 +141,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     BuzzerPlayer.Move();
             });
         }
-
+        private void HandleBatteryOverTemperature(object? sender, clsBattery e)
+        {
+            AlarmManager.AddAlarm(AlarmCodes.Over_Temperature, false);
+        }
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
         {
             bool _isCharging = Batteries.Any(bat => bat.Value.Data.chargeCurrent > 0);

@@ -6,6 +6,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public class clsBattery : CarComponent
     {
         public static event EventHandler<clsBattery> OnBatteryUnderVoltage;
+        public static event EventHandler<clsBattery> OnBatteryOverTemperature;
         /// <summary>
         /// 電池位置(面向電池Port左/右)
         /// </summary>

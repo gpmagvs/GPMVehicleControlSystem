@@ -81,7 +81,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public clsGuideSensor GuideSensor = new clsGuideSensor();
         public clsBarcodeReader BarcodeReader = new clsBarcodeReader();
         public abstract clsCSTReader CSTReader { get; set; }
-
+        public clsBatteryRunStatus BatteryStatusOverview { get; set; } = new clsBatteryRunStatus();
         public clsDriver VerticalDriverState = new clsDriver()
         {
             location = clsDriver.DRIVER_LOCATION.FORK
@@ -439,6 +439,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 IsSystemInitialized = true;
 
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    if (BatteryStatusOverview.StatusDown)
+                    {
+                        foreach (var alCode in BatteryStatusOverview.downReasons.Values)
+                        {
+                            AlarmManager.AddAlarm(alCode, false);
+                        }
+                    }
+                });
+
                 bool _IsLimitSwitchSensorMounted()
                 {
                     try
@@ -641,6 +653,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!ModuleInformationUpdatedInitState)
             {
                 return (false, $"與車控系統通訊異常，不可進行初始化");
+            }
+
+            if (BatteryStatusOverview.StatusDown)
+            {
+                return (false, $"電池狀態異常!禁止初始化!({BatteryStatusOverview.DownStatusDescription})");
             }
 
             if (GetSub_Status() == SUB_STATUS.RUN)
