@@ -597,7 +597,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
                 else
                     _alarmcode = alarm_code_timeout;
-                ExecutingTaskEntity.Abort(_alarmcode);
+
+                if (alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ &&
+                    alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ &&
+                    alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF)
+                    ExecutingTaskEntity.Abort(_alarmcode);
             }
             return (_alarmcode == AlarmCodes.None, _alarmcode);
         }

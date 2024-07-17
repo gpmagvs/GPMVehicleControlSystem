@@ -562,12 +562,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     logger.Trace($"[Async Action] Fork is at safe height Now");
                 }
 
-                var HSResult = await AGVCOMPTHandshake();
+                var HSResult = await AGVCOMPTHandshake(statusDownWhenErr: false);
                 //RestoreEQHandshakeConnectionMode();
                 if (!HSResult.confirm)
                 {
-                    //await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: HSResult.alarmCode);
-                    return HSResult.alarmCode;
+                    logger.Warn($"設備外交握失敗(Alarm Code={HSResult.alarmCode})，新增異常但流程可繼續");
+                    AlarmManager.AddAlarm(HSResult.alarmCode, true);
+                    Agv.ResetHandshakeSignals();
                 }
 
                 (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
@@ -757,14 +758,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return alarm_code;
         }
 
-        private async Task<(bool confirm, AlarmCodes alarmCode)> AGVCOMPTHandshake()
+        private async Task<(bool confirm, AlarmCodes alarmCode)> AGVCOMPTHandshake(bool statusDownWhenErr)
         {
             if (_eqHandshakeMode != WORKSTATION_HS_METHOD.HS)
                 return (true, AlarmCodes.None);
             (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyOFF(action);
             if (!HSResult.eqready)
             {
-                Agv.SetSub_Status(SUB_STATUS.DOWN);
+                if (statusDownWhenErr)
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
                 return (false, HSResult.alarmCode);
             }
             else
