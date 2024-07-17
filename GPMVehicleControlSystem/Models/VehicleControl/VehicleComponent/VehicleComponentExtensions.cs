@@ -151,13 +151,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             return DriverAlarmCode;
         }
 
+        /// <summary>
+        ///Bit0：ERROR =1
+        ///Bit1：OC_C(充電過流)  = 2
+        ///Bit2：OC_D(放電過流)  = 4
+        ///Bit3：UV(欠壓)       = 8
+        ///Bit4：UT(低溫)       = 16
+        ///Bit5：OV(過壓)       = 32
+        ///Bit6：SC(短路)       = 64
+        ///Bit7：OT(過溫)       = 128
+        /// </summary>
+        /// <param name="error_code"></param>
+        /// <returns></returns>
         public static AlarmCodes ToBatteryAlarmCode(this byte error_code)
         {
             var Battery_Warning_Code = AlarmCodes.None;
             if (error_code != 0)
             {
                 if (error_code == 1)
-                    Battery_Warning_Code = AlarmCodes.Over_Voltage;
+                    Battery_Warning_Code = AlarmCodes.Battery_Exist_Error_;
                 else if (error_code == 2)
                     Battery_Warning_Code = AlarmCodes.Over_Current_Charge;
                 else if (error_code == 4)
@@ -169,6 +181,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else if (error_code == 32)
                     Battery_Warning_Code = AlarmCodes.Over_Voltage;
                 else if (error_code == 64)
+                    Battery_Warning_Code = AlarmCodes.Battery_Short_Circuit;
+                else if (error_code == 128)
                     Battery_Warning_Code = AlarmCodes.Over_Temperature;
             }
             else
