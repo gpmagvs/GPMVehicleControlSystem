@@ -105,10 +105,16 @@
             RightProtection_Area_Sensor_3,
             Battery_2_Exist_1,
             Battery_2_Exist_2,
+            /// <summary>
+            /// 電池2已插入接頭的檢知
+            /// </summary>
             Battery_2_Exist_3,
             Battery_2_Exist_4,
             Battery_1_Exist_1,
             Battery_1_Exist_2,
+            /// <summary>
+            /// 電池1已插入接頭的檢知
+            /// </summary>
             Battery_1_Exist_3,
             Battery_1_Exist_4,
             Battery_1_Lock_Sensor,

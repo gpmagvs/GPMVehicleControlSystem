@@ -285,6 +285,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!unlockSuccess)
                 throw new HandshakeException(unlockAlarmCode);
 
+            //斷開電池電源(OFF =>短路,電源開啟/ ON=> 導通,電源關閉)
+            await CutOffBatteryOutput(BES);
+
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, true);
             await WaitEQSignal(DI_ITEM.EQ_BUSY, true, timouts.TP2, token);
 
@@ -344,6 +347,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await WaitEQSignal(DI_ITEM.EQ_COMPT, true, Debugging ? 30 : 8, token);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await TsmcMiniAGV.WagoDO.SetState(BES, false);
+            await OpenBatteryOutput(BES);
             await WaitEQSignal(DI_ITEM.EQ_COMPT, false, timouts.TP5, token);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Battery-{batNo} {action} By Exchanger Success!";
@@ -403,6 +407,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             #endregion
 
         }
+        /// <summary>
+        /// 切斷電池輸出
+        /// </summary>
+        /// <param name="bES"></param>
+        /// <returns></returns>
+        private async Task CutOffBatteryOutput(DO_ITEM bES)
+        {
+            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_1_Electricity_Interrupt : DO_ITEM.Battery_2_Electricity_Interrupt;
+            await TsmcMiniAGV.WagoDO.SetState(cutOffBatOutput, true);
+        }
+        /// <summary>
+        /// 開啟電池輸出
+        /// </summary>
+        /// <param name="bES"></param>
+        /// <returns></returns>
+        private async Task OpenBatteryOutput(DO_ITEM bES)
+        {
+            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_1_Electricity_Interrupt : DO_ITEM.Battery_2_Electricity_Interrupt;
+            await TsmcMiniAGV.WagoDO.SetState(cutOffBatOutput, false);
+        }
+
         private async Task<bool> WaitEQSignal(DI_ITEM input, bool expect_state, int timeout_sec, CancellationToken token)
         {
             CancellationTokenSource cts = new CancellationTokenSource();
@@ -437,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (input == DI_ITEM.EQ_TR_REQ)
                         alarm_code = expect_state ? AlarmCodes.Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON : AlarmCodes.Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF;
                     if (input == DI_ITEM.EQ_BUSY)
-                        alarm_code = expect_state ? AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_ON : AlarmCodes.Handshake_Fail_EQ_BUSY_NOT_OFF;
+                        alarm_code = expect_state ? AlarmCodes.Handshake_Fail_BAT_EXG_EQ_BUSY_NOT_ON : AlarmCodes.Handshake_Fail_BAT_EXG_EQ_BUSY_NOT_OFF;
                     if (input == DI_ITEM.EQ_COMPT)
                         alarm_code = expect_state ? AlarmCodes.Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON : AlarmCodes.Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF;
                     if (input == DI_ITEM.EQ_Check_Result)

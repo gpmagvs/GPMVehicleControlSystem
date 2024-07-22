@@ -362,12 +362,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StartWatchAGVStatusAsync();
             try
             {
-                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ);
+                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On : AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On);
                 if (!_result.success)
                     return _result;
                 await SetAGV_TR_REQ(true);
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF += HandleEQ_LUREQ_OFF;
-                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON, AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF -= HandleEQ_LUREQ_OFF;
                 if (!_result.success)
                     return _result;
@@ -414,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LOG.WARN($"EQ READY OFF When Handshaking running");
                 IsEQAbnormal_when_handshaking = true;
                 hs_abnormal_happen_cts.Cancel();
-                ExecutingTaskEntity.Abort(AlarmCodes.Handshake_Fail_EQ_READY_OFF);
+                ExecutingTaskEntity.Abort(AlarmCodes.Handshake_Fail_EQ_READY);
             }
         }
 
@@ -440,11 +440,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON, AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
+                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON, AlarmCodes.Handshake_Timeout_TA3_EQ_BUSY_Not_ON);
                 if (!_result.success)
                     return _result;
 
-                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF, AlarmCodes.Handshake_Fail_TA4_EQ_BUSY_OFF);
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_BUSY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA4_Wait_EQ_BUSY_OFF, AlarmCodes.Handshake_Timeout_TA4_EQ_BUSY_Not_OFF);
                 if (!_result.success)
                     return _result;
 
@@ -466,7 +466,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
             EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
-            AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ : AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ;
+            AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Timeout_TA5_EQ_L_REQ_Not_OFF : AlarmCodes.Handshake_Timeout_TA5_EQ_U_REQ_Not_OFF;
             await SetAGVBUSY(false, false);
             await Task.Delay(200);
             await SetAGV_COMPT(true);
@@ -477,7 +477,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!_result.success)
                     return _result;
 
-                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF);
+                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF);
                 if (!_result.success)
                     return _result;
 
@@ -592,15 +592,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else if (IsEQBusy_when_AGV_Busy)
                     _alarmcode = AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY;
                 else if (IsEQAbnormal_when_handshaking)
-                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY;
                 else if (IsEQ_READYOFF_when_handshaking)
-                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+                    _alarmcode = AlarmCodes.Handshake_Fail_EQ_READY;
                 else
                     _alarmcode = alarm_code_timeout;
 
-                if (alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ &&
-                    alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ &&
-                    alarm_code_timeout != AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF)
+                if (alarm_code_timeout != AlarmCodes.Handshake_Timeout_TA5_EQ_U_REQ_Not_OFF &&
+                    alarm_code_timeout != AlarmCodes.Handshake_Timeout_TA5_EQ_L_REQ_Not_OFF &&
+                    alarm_code_timeout != AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF)
                     ExecutingTaskEntity.Abort(_alarmcode);
             }
             return (_alarmcode == AlarmCodes.None, _alarmcode);
