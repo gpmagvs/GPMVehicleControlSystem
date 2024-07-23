@@ -24,6 +24,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!CSTTrigger)
             {
                 var cst_id_expect = RunningTaskData.CST.First().CST_ID;
+                if (cst_id_expect == null || cst_id_expect == "")
+                    return (true, AlarmCodes.None);
                 Agv.CSTReader.ValidCSTID = cst_id_expect;
                 return (true, AlarmCodes.None);
             }
