@@ -1,5 +1,7 @@
 ﻿using AGVSystemCommonNet6.Log;
+using GPMVehicleControlSystem.Tools.CPUUsage;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Tools
 {
@@ -37,15 +39,24 @@ namespace GPMVehicleControlSystem.Tools
         {
             Task.Factory.StartNew(async () =>
             {
+                CPUUaageBase cpuUsage = _GetCPUUsageInstance();
+
                 while (true)
                 {
+                    double cpu = await cpuUsage.GetCPU();
                     Memory = GetMemUsedMB();
-                    LOG.TRACE($"[Sys-Loading] CPU:-1, Memory:{Memory}Mb", show_console: false);
+                    LOG.TRACE($"[Sys-Loading] CPU:{cpu}, Memory:{Memory}Mb", show_console: false);
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
             });
         }
-
+        private static CPUUaageBase _GetCPUUsageInstance()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return new LinuxCPUUsage();
+            else
+                return new CPUUaageBase();
+        }
         public static double GetMemUsedMB()
         {
             var currentProcess = Process.GetCurrentProcess();
