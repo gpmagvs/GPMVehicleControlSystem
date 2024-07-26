@@ -414,7 +414,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         private async Task CutOffBatteryOutput(DO_ITEM bES)
         {
-            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_1_Electricity_Interrupt : DO_ITEM.Battery_2_Electricity_Interrupt;
+            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_2_Electricity_Interrupt : DO_ITEM.Battery_1_Electricity_Interrupt;
             await TsmcMiniAGV.WagoDO.SetState(cutOffBatOutput, true);
         }
         /// <summary>
@@ -424,7 +424,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         private async Task OpenBatteryOutput(DO_ITEM bES)
         {
-            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_1_Electricity_Interrupt : DO_ITEM.Battery_2_Electricity_Interrupt;
+            DO_ITEM cutOffBatOutput = bES == DO_ITEM.AGV_CS_0 ? DO_ITEM.Battery_2_Electricity_Interrupt : DO_ITEM.Battery_1_Electricity_Interrupt;
             await TsmcMiniAGV.WagoDO.SetState(cutOffBatOutput, false);
         }
 
