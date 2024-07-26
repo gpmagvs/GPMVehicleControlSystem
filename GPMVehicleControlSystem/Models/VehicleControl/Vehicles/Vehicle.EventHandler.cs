@@ -529,40 +529,74 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private Task<bool> AutoResetMotorTaskExecution;
         protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
+
             if (!status)
                 return;
-            await Task.Delay(200);
+            if (IsMotorAutoRecoverable())
+            {
+                RemoteModeWhenHorizonMotorAlarm = Remote_Mode.Clone();
+                return;
+            }
 
-            if (!WagoDI.GetState(DI_ITEM.EMO) || _ResetAlarmSemaphoreSlim.CurrentCount == 0)
+            await Task.Delay(1000);
+            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;
             var input = signal?.Input;
-
             var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             if (input == DI_ITEM.Horizon_Motor_Alarm_1)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
-            AlarmManager.AddAlarm(alarmCode, false);
-            //暫時移除
-            //bool IsAGVAtChargeStation = lastVisitedMapPoint.IsCharge;
-            //if (!IsAGVAtChargeStation)
-            //{
-            //    AlarmManager.AddAlarm(alarmCode, false);
-            //    return;
-            //}
 
-            //if (AutoResetMotorTaskExecution != null && !AutoResetMotorTaskExecution.IsCompleted)
-            //{
-            //    await AutoResetMotorTaskExecution;
-            //}
+            if (Sub_Status != SUB_STATUS.IDLE && Sub_Status != SUB_STATUS.Charging)
+            {
+                AlarmManager.AddAlarm(alarmCode, false);
+                return;
+            }
 
-            //AutoResetMotorTaskExecution = AutoResetMotorAtChargeStationAsync(alarmCode, signal);
+            AlarmManager.AddWarning(alarmCode);
+        }
+        private SemaphoreSlim _AutoResetHorizonMotorSemaphosre = new SemaphoreSlim(1, 1);
+        protected virtual async void AutoResetHorizonMotor(object? sender, bool alarm)
+        {
+            bool isEMO = !WagoDI.GetState(DI_ITEM.EMO);
+            if (!alarm || isEMO || !IsMotorAutoRecoverable())
+                return;
+            clsIOSignal input = sender as clsIOSignal;
+            AutoReset();
+            async Task AutoReset()
+            {
+                try
+                {
+                    await _AutoResetHorizonMotorSemaphosre.WaitAsync();
+                    if (!IsAnyHorizonMotorAlarm())
+                    {
+                        LOG.INFO($"因馬達異常已清除,{input?.Name}異常自動復位取消");
+                        return;
+                    }
+                    LOG.WARN($"於{lastVisitedMapPoint.Graph.Display}中發生走行馬達異常({input?.Name})，進行自動復位");
+                    AlarmManager.AddWarning(input.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? AlarmCodes.Wheel_Motor_IO_Error_Right : AlarmCodes.Wheel_Motor_IO_Error_Left);
+                    await Task.Delay(1000);
+                    await Initialize();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    _AutoResetHorizonMotorSemaphosre.Release();
+                }
+            }
 
+            bool _IsMotorNoAlarm()
+            {
+                return !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) && !WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+            }
 
         }
-
         private async Task<bool> AutoResetMotorAtChargeStationAsync(AlarmCodes alarmCode, clsIOSignal signal)
         {
             AlarmManager.AddWarning(alarmCode);
@@ -632,6 +666,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await ResetMotor(false, "ResetMotorWithWait");
         }
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
+        private REMOTE_MODE RemoteModeWhenHorizonMotorAlarm = REMOTE_MODE.OFFLINE;
+
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
             _ = Task.Factory.StartNew(async () =>
