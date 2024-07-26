@@ -25,16 +25,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public double CurrentPosition { get => Data.position; }
 
         public override string alarm_locate_in_name => component_name.ToString();
-
         public override async Task<bool> CheckStateDataContent()
         {
             if (!await base.CheckStateDataContent())
                 return false;
+
+            if (((DriverState)StateData).errorCode == 0)
+                return true;
             DriverState _driverState = (DriverState)StateData;
             AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
             if (_Current_Alarm_Code == Current_Alarm_Code)
                 return true;
-
 
             if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
             {
@@ -46,20 +47,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             if (_Current_Alarm_Code != AlarmCodes.None)
             {
-                LOG.Critical($"{location} Driver Alarm , Code=_{_Current_Alarm_Code}({_driverState.errorCode})");
+                LOG.ERROR($"{location} Driver Alarm , Code=_{_Current_Alarm_Code}({_driverState.errorCode})");
             }
             if (_Current_Alarm_Code == AlarmCodes.Other_error && location == DRIVER_LOCATION.FORK)
             {
                 _Current_Alarm_Code = AlarmCodes.Fork_Pose_Change_Too_Large;
             }
-            await Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(1000);
-                if (((DriverState)StateData).errorCode == 0)
-                    return;
-                Current_Alarm_Code = _Current_Alarm_Code;
-            });
+            Current_Alarm_Code = _Current_Alarm_Code;
+
             return true;
         }
+
     }
 }
