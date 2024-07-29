@@ -672,11 +672,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-            await _softwareEmoSemaphoreSlim.WaitAsync().ConfigureAwait(false);
             try
             {
+                await _softwareEmoSemaphoreSlim.WaitAsync().ConfigureAwait(false);
                 LOG.WARN($"Software EMO!!! {alarmCode}");
-                AlarmManager.AddAlarm(alarmCode);
+                AlarmManager.AddAlarm(alarmCode, false);
                 _Sub_Status = SUB_STATUS.DOWN;
                 StoreStatusToDataBase();
                 HandshakeIOOff();
@@ -828,10 +828,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
 
-            await _ResetAlarmSemaphoreSlim.WaitAsync().ConfigureAwait(false);
 
             try
             {
+                await _ResetAlarmSemaphoreSlim.WaitAsync().ConfigureAwait(false);
+                if (IsResetAlarmWorking)
+                    return;
+                IsResetAlarmWorking = true;
+
                 BuzzerPlayer.Stop();
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
@@ -865,6 +869,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 _ResetAlarmSemaphoreSlim.Release();
                 Console.WriteLine(_ResetAlarmSemaphoreSlim.CurrentCount);
+                IsResetAlarmWorking = false;
+
             }
 
         }

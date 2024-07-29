@@ -597,6 +597,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+
+
+
+        protected bool IsMotorAutoRecoverable()
+        {
+            return BarcodeReader.Data.tagID != 0 && lastVisitedMapPoint.IsCharge;
+        }
+
+
+        protected virtual bool IsAnyHorizonMotorAlarm()
+        {
+            return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+        }
         private async Task<bool> AutoResetMotorAtChargeStationAsync(AlarmCodes alarmCode, clsIOSignal signal)
         {
             AlarmManager.AddWarning(alarmCode);
@@ -667,6 +680,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         private REMOTE_MODE RemoteModeWhenHorizonMotorAlarm = REMOTE_MODE.OFFLINE;
+        private bool IsResetAlarmWorking = false;
 
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
