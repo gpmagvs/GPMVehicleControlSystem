@@ -381,7 +381,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             }
 
-            if (action == ACTION_TYPE.Unload && Agv.HasAnyCargoOnAGV())
+            if (action == ACTION_TYPE.Unload)
             {
                 Agv.CSTReader.ValidCSTID = "TrayUnknow";
             }
