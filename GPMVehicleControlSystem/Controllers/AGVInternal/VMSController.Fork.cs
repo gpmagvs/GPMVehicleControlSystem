@@ -71,9 +71,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 LayerDatas = d.Value
             });
-            foreach (var item in datasetting)
+            foreach (KeyValuePair<int, clsWorkStationData> item in datasetting)
             {
-                var ff = forkAgv.WorkStations.Stations.FirstOrDefault(kp => kp.Key == item.Key);
+                KeyValuePair<int, clsWorkStationData> ff = forkAgv.WorkStations.Stations.FirstOrDefault(kp => kp.Key == item.Key);
                 if (ff.Value != null)
                 {
                     ff.Value.LayerDatas = item.Value.LayerDatas;
@@ -86,6 +86,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     });
                 }
             }
+            //remove not exist.
+            var tagsToStore = data.Keys;
+            forkAgv.WorkStations.Stations = forkAgv.WorkStations.Stations.Where(st => tagsToStore.Contains(st.Key))
+                                                                         .ToDictionary(st => st.Key, st => st.Value);
+
             bool confirm = forkAgv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });
         }
