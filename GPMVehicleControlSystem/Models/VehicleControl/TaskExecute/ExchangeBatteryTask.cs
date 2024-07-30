@@ -286,7 +286,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 throw new HandshakeException(unlockAlarmCode);
 
             //斷開電池電源(OFF =>短路,電源開啟/ ON=> 導通,電源關閉)
-            await CutOffBatteryOutput(BES);
+
+            if (action == EXCHANGE_BAT_ACTION.REMOVE_BATTERY)
+                await CutOffBatteryOutput(BES);
 
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, true);
             await WaitEQSignal(DI_ITEM.EQ_BUSY, true, timouts.TP2, token);
@@ -347,7 +349,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await WaitEQSignal(DI_ITEM.EQ_COMPT, true, Debugging ? 30 : 8, token);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await TsmcMiniAGV.WagoDO.SetState(BES, false);
-            await OpenBatteryOutput(BES);
+
             await WaitEQSignal(DI_ITEM.EQ_COMPT, false, timouts.TP5, token);
             await TsmcMiniAGV.WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}Battery-{batNo} {action} By Exchanger Success!";
@@ -358,6 +360,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 (bool lockSuccess, AlarmCodes lockAlarmCode) = await _LockBattery(bat, true);
                 if (!lockSuccess)
                     throw new HandshakeException(lockAlarmCode);
+
+                await OpenBatteryOutput(BES);
             }
             await Task.Delay(1000);
             return true;
