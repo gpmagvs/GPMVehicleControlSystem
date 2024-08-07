@@ -562,6 +562,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+                WorkStations.Stations = WorkStations.Stations.OrderBy(s => s.Key).ToDictionary(c => c.Key, c => c.Value);
                 string json = JsonConvert.SerializeObject(WorkStations, Formatting.Indented);
                 File.WriteAllText(WorkStationSettingsJsonFilePath, json);
                 logger.LogInformation($"WorkStation Settings Save done");

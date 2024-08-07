@@ -368,5 +368,44 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             agv.SetSub_Status(status);
         }
+
+        [HttpGet("DownloadEQHsSettings")]
+        public async Task<IActionResult> DownloadEQHsSettings()
+        {
+            return Ok(StaStored.CurrentVechicle.WorkStations.Stations);
+            return Ok(StaStored.CurrentVechicle.Parameters);
+        }
+
+        [HttpPost("SaveEQHsSettings")]
+        public async Task<IActionResult> SaveEQHsSettings([FromBody] List<clsWorkStationData> configurations)
+        {
+            try
+            {
+                Dictionary<int, Dictionary<int, clsStationLayerData>> odlLayoutDats = StaStored.CurrentVechicle.WorkStations.Stations.ToDictionary(opt => opt.Key, opt => opt.Value.LayerDatas);
+                StaStored.CurrentVechicle.WorkStations.Stations = configurations.ToDictionary(c => c.Tag, c => c);
+
+                foreach (var item in odlLayoutDats)
+                {
+                    if (StaStored.CurrentVechicle.WorkStations.Stations.ContainsKey(item.Key))
+                    {
+                        StaStored.CurrentVechicle.WorkStations.Stations[item.Key].LayerDatas = item.Value;
+                    }
+                }
+                StaStored.CurrentVechicle.SaveTeachDAtaSettings();
+                return Ok(new
+                {
+                    confirm = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    confirm = false,
+                    message = $"Save EQHs Settings Error({ex.Message})",
+                });
+            }
+        }
+
     }
 }
