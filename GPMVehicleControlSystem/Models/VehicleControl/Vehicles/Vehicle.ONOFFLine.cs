@@ -130,7 +130,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
             else
+            {
                 Remote_Mode = mode;
+                if (mode == REMOTE_MODE.ONLINE)
+                {
+                    DownloadMapFromServer();
+                }
+            }
 
 
             return result;

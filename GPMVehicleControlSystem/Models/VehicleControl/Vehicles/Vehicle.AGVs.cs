@@ -302,6 +302,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         _NavingMap.Segments = MapManager.CreateSegments(_NavingMap);
                         MapStore.SaveCurrentMap(_NavingMap, out string map_file_saved_path);
                         NavingMap = _NavingMap;
+                        Parameters.MapParam.LocalMapFileName = $"temp/{NavingMap.Name}.json";
+                        SaveParameters(Parameters);
                         logger.LogInformation($"Map Downloaded. Map Name : {NavingMap.Name}, Version: {NavingMap.Note}");
                         return (true, NavingMap);
 
