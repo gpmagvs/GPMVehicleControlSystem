@@ -32,7 +32,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
+                //派車HOST同步 MapUrl
+                param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:5216/api/Map";
                 StaStored.CurrentVechicle.Parameters = param;
+
                 Vehicle.SaveParameters(param);
                 return Ok(true);
             }
