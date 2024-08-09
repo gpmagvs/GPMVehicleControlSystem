@@ -20,6 +20,7 @@
 		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
 		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
 		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementWithResetOnIncrease</AssemblyFileVersionSettings>
+		<IsPublishable>True</IsPublishable>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<Optimize>False</Optimize>
@@ -34,11 +35,12 @@
 		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
 		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementOnDemand</AssemblyFileVersionSettings>
 		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemandWithResetOnIncrease.DayOfYearStamp.IncrementOnDemand</AssemblyVersionSettings>
+		<IsPublishable>True</IsPublishable>
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.1.222.1</AssemblyVersion>
-		<FileVersion>3.1.222.1</FileVersion>
+		<AssemblyVersion>3.1.222.11</AssemblyVersion>
+		<FileVersion>3.1.222.11</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
@@ -108,6 +110,12 @@
 		</Content>
 	</ItemGroup>
 	<ItemGroup>
+		<None Update="create_update_file_zip.bat">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="create_update_file_zip_with_wwwroot.bat">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="src\IO_Wago_Fork_AGV.ini">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -174,8 +182,11 @@
 			<UserProperties appsettings_1json__JsonSchema="" />
 		</VisualStudio>
 	</ProjectExtensions>
-	<Target Name="PostPublishScript" AfterTargets="Publish">
-		<!--<Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;AutoVersionModify.ps1&quot;&#xD;&#xA;call prebuild.bat" />-->
+
+	<Target Name="AfterPublish" AfterTargets="Publish">
+		<!-- 输出发布目录 -->
+		<Message Text="Publish Directory: $(PublishDir)" Importance="high" />
+		<WriteLinesToFile File="PublishOutputDirectory.txt" Lines="$(PublishDir)" Overwrite="true" />
 	</Target>
 </Project>
 
