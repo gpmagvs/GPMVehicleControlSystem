@@ -38,6 +38,16 @@ namespace GPMVehicleControlSystem.Models.WorkStation
                 {
                     workstation.Name = item.EqName;
                     workstation.ModbusTcpPort = item.AGVModbusGatewayPort;
+
+                    if (workstation.LayerDatas.Count == 0)
+                    {
+                        workstation.LayerDatas = new Dictionary<int, clsStationLayerData>()
+                        {
+                            {0, new clsStationLayerData() },
+                            {1, new clsStationLayerData() },
+                            {2, new clsStationLayerData() },
+                        };
+                    }
                 }
                 else
                 {
@@ -45,6 +55,12 @@ namespace GPMVehicleControlSystem.Models.WorkStation
                     {
                         Name = item.EqName,
                         ModbusTcpPort = item.AGVModbusGatewayPort,
+                        LayerDatas = new Dictionary<int, clsStationLayerData>()
+                        {
+                            {0, new clsStationLayerData() },
+                            {1, new clsStationLayerData() },
+                            {2, new clsStationLayerData() },
+                        }
                     });
                 }
             }

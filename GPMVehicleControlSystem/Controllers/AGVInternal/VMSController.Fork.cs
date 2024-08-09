@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         private object GetMappData()
         {
+            forkAgv.LoadWorkStationConfigs();
             Dictionary<int, clsWorkStationData> settings = forkAgv.ForkLifter.StationDatas;
             var mapped_data = settings.OrderBy(dat => dat.Key).Select(dat => new
             {

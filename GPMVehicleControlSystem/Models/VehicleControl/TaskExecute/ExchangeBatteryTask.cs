@@ -76,6 +76,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 this.bat_no = bat_no;
             }
             public BATTERY_LOCATION location;
+
             public bool IsExist
             {
                 get
@@ -86,6 +87,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             public TsmcMiniAGV agv { get; }
             public int bat_no { get; }
             public byte level { get; internal set; }
+            internal ushort voltage = 0;
         }
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
@@ -118,13 +120,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                          new clsBatInfo(TsmcMiniAGV, (int)Inspefic_Bat_loc)
                          {
                              location = Inspefic_Bat_loc,
-                             level   = TsmcMiniAGV.Batteries[_id].Data.batteryLevel
+                             level   = TsmcMiniAGV.Batteries[_id].Data.batteryLevel,
+                             voltage = TsmcMiniAGV.Batteries[_id].Data.Voltage,
                          }
                     };
                 }
                 else
                 {
-                    batInfos = batInfos.OrderBy(bat => bat.level).ToList().FindAll(bat => bat.level <= Agv.Parameters.InspectionAGV.ExchangeBatLevelThresholdVal).ToArray();
+                    batInfos = batInfos.OrderBy(bat => bat.voltage).ToList().FindAll(bat => bat.level <= Agv.Parameters.InspectionAGV.ExchangeBatLevelThresholdVal).ToArray();
                 }
                 string _batNosString = string.Join("&", batInfos.Select(bat => bat.bat_no));
                 TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}交換電池 : {_batNosString}";

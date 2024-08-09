@@ -422,14 +422,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (Agv.Parameters.LDULDParams.LeaveWorkStationNeedSendRequestToAGVS)
                 {
-                    bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
-                    if (!accept)
+                    if (RunningTaskData.IsLocalTask)
                     {
-                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                            return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+                        logger.Info($"注意! Local派工不需詢問派車系統是否可退出設備");
+                    }
+                    else
+                    {
 
-                        Agv.SetSub_Status(SUB_STATUS.DOWN);
-                        return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
+                        bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
+                        if (!accept)
+                        {
+                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                                return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
+
+                            Agv.SetSub_Status(SUB_STATUS.DOWN);
+                            return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
+                        }
                     }
                 }
 

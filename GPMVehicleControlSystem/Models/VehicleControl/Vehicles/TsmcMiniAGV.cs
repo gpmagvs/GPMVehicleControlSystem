@@ -1,11 +1,14 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using NLog;
+using NLog.Targets;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -111,7 +114,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDI.SubsSignalStateChange(DI_ITEM.Back_Left_Ultrasound_Sensor, HandleUltrasoundSensorTrigger);
 
             WagoDI.OnEMOButtonPressed += EMOButtonPressedHandler;//巡檢AGVEMO按鈕有獨立的INPUT
+
+            WagoDI.SubsSignalStateChange(DI_ITEM.Battery_1_Exist_3, HandleBattery1ExistStatusChanged);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Battery_2_Exist_3, HandleBattery2ExistStatusChanged);
         }
+        private void HandleBattery1ExistStatusChanged(object? sender, bool docked)
+        {
+            logger.LogTrace($"Battery 1 Docked? {docked}");
+            BatteryState clone = Batteries[1].Data.Clone();
+            clone.batteryLevel = 0;
+            Batteries[1].StateData = clone;
+        }
+
+        private void HandleBattery2ExistStatusChanged(object? sender, bool docked)
+        {
+            logger.LogTrace($"Battery 2 Docked? {docked}");
+            BatteryState clone = Batteries[2].Data.Clone();
+            clone.batteryLevel = 0;
+            Batteries[2].StateData = clone;
+        }
+
 
         private async void HandleSaftyPLCOutputStatusChanged(object? sender, bool io_state)
         {
@@ -560,6 +582,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2) ||
                WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_3) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_4);
         }
+
+        protected override void BatteryStatusUpdate(BatteryState _BatteryState)
+        {
+            Dictionary<ushort, DI_ITEM> batExistSensorMap = new Dictionary<ushort, DI_ITEM>()
+            {
+                { 1, DI_ITEM.Battery_1_Exist_3 },
+                { 2, DI_ITEM.Battery_2_Exist_3 }
+            };
+
+            ushort battery_id = _BatteryState.batteryID;
+            if (battery_id == 0)
+                return;
+
+            bool _isBatInstalled = WagoDI.GetState(batExistSensorMap[battery_id]);
+
+            if (Batteries.TryGetValue(battery_id, out clsBattery? battery))
+            {
+                _BatteryState.batteryLevel = (byte)(_isBatInstalled ? _BatteryState.batteryLevel : 0);
+                battery.StateData = _BatteryState;
+            }
+            else
+            {
+                Batteries.Add(battery_id, new clsBattery()
+                {
+                    StateData = _BatteryState,
+                });
+            }
+            Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
+        }
+
         #region Private Methods
         private void HandleAGVCInstrumentMeasureDone(clsMeasureDone result)
         {

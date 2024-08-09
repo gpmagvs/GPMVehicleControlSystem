@@ -526,7 +526,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public string WorkStationSettingsJsonFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/WorkStation.json");
 
-        private void LoadWorkStationConfigs()
+        internal void LoadWorkStationConfigs()
         {
             try
             {
@@ -542,8 +542,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
                 WorkStations = DeserializeWorkStationJson(json);
-
-
             }
             catch (Exception ex)
             {

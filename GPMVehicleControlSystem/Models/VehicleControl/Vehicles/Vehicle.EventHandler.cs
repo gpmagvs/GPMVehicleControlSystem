@@ -971,20 +971,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     TagNumber = Navigation.LastVisitedTag
                 } : NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == this.Navigation.LastVisitedTag);
                 lastVisitedMapPoint = _lastVisitedMapPoint == null ? new AGVSystemCommonNet6.MAP.MapPoint() { Name = "Unknown" } : _lastVisitedMapPoint;
-
-                ushort battery_id = _ModuleInformation.Battery.batteryID;
-                if (Batteries.TryGetValue(battery_id, out var battery))
-                {
-                    battery.StateData = _ModuleInformation.Battery;
-                }
-                else
-                {
-                    Batteries.Add(battery_id, new clsBattery()
-                    {
-                        StateData = _ModuleInformation.Battery,
-                    });
-                }
-                Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
+                BatteryStatusUpdate(_ModuleInformation.Battery);
 
                 if (!WaitingForChargeStatusChangeFlag)
                     JudgeIsBatteryCharging();
@@ -1002,6 +989,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _ModuleInformation = null;
             }
 
+        }
+
+        protected virtual void BatteryStatusUpdate(BatteryState _BatteryState)
+        {
+            ushort battery_id = _BatteryState.batteryID;
+            if (Batteries.TryGetValue(battery_id, out clsBattery? battery))
+            {
+                battery.StateData = _BatteryState;
+            }
+            else
+            {
+                Batteries.Add(battery_id, new clsBattery()
+                {
+                    StateData = _BatteryState,
+                });
+            }
+            Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
         }
 
 

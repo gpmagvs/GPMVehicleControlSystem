@@ -10,6 +10,7 @@
         public ushort BatteryID { get; internal set; }
 
         public BatteryPositionInfoVM SensorInfo { get; set; } = new BatteryPositionInfoVM();
+        public double Voltage { get; set; }
     }
     public class BatteryPositionInfoVM
     {
