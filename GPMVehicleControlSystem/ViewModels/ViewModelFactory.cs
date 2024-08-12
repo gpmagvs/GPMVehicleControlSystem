@@ -198,7 +198,7 @@ namespace GPMVehicleControlSystem.ViewModels
                 AGV.Batteries.ToList().FindAll(b => b.Value != null).Select(bat => new BatteryStateVM
                 {
                     BatteryLevel = bat.Value.Data.batteryLevel,
-                    Voltage = bat.Value.Data.Voltage,
+                    Voltage = bat.Value.Data.voltage,
                     ChargeCurrent = bat.Value.Data.chargeCurrent,
                     IsCharging = bat.Value.IsCharging(),
                     IsError = bat.Value.Current_Alarm_Code != AlarmCodes.None,

@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Service
         private async Task MonitorBatteryOverVoltage()
         {
             double threshold = Vehicle.Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval;//mV
-            List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.Voltage).ToList();
+            List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.voltage).ToList();
 
             bool isOverVotage = currentVoltages.Any(voltag => voltag >= threshold);
 

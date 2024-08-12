@@ -232,8 +232,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 List<clsBattery> batterys = Batteries.Values.ToList();
                 double _bat1_level = batterys.Count >= 1 ? batterys[0].Data.batteryLevel : -1;
                 double _bat2_level = batterys.Count >= 2 ? batterys[0].Data.batteryLevel : -1;
-                double _bat1_voltage = batterys.Count >= 1 ? batterys[0].Data.Voltage : -1;
-                double _bat2_voltage = batterys.Count >= 2 ? batterys[0].Data.Voltage : -1;
+                double _bat1_voltage = batterys.Count >= 1 ? batterys[0].Data.voltage : -1;
+                double _bat2_voltage = batterys.Count >= 2 ? batterys[0].Data.voltage : -1;
 
 
                 string _Task_Name = "";
