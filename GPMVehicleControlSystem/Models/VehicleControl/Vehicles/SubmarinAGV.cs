@@ -5,7 +5,9 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.AspNetCore.SignalR;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -17,7 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class SubmarinAGV : Vehicle
     {
 
-        public SubmarinAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
+        public SubmarinAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(logger, agvsLogger, frontendHubContext)
         {
 
         }

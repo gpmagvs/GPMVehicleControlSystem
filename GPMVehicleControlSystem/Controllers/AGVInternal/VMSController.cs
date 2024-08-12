@@ -39,6 +39,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task Where_r_u()
         {
             await Task.Delay(1);
+            agv.SendNotifyierToFrontend("Where are u command send.");
             _ = Task.Factory.StartNew(async () =>
             {
                 for (int i = 0; i < 2; i++)

@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using Microsoft.AspNetCore.SignalR;
 using static AGVSystemCommonNet6.clsEnums;
 
 namespace GPMVehicleControlSystem.Service
@@ -14,11 +15,13 @@ namespace GPMVehicleControlSystem.Service
         ILogger<VehicleFactoryService> logger;
         ILogger<Vehicle> vehicleLogger;
         ILogger<clsAGVSConnection> agvsLogger;
-        public VehicleFactoryService(ILogger<VehicleFactoryService> _logger, ILogger<Vehicle> _vehicleLogger, ILogger<clsAGVSConnection> _agvsLogger)
+        IHubContext<FrontendHub> hubContext;
+        public VehicleFactoryService(ILogger<VehicleFactoryService> _logger, ILogger<Vehicle> _vehicleLogger, ILogger<clsAGVSConnection> _agvsLogger, IHubContext<FrontendHub> _hubContext)
         {
             logger = _logger;
             vehicleLogger = _vehicleLogger;
             agvsLogger = _agvsLogger;
+            hubContext = _hubContext;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -54,18 +57,18 @@ namespace GPMVehicleControlSystem.Service
                 logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
                 if (param.AgvType == AGV_TYPE.FORK)
                 {
-                    StaStored.CurrentVechicle = new ForkAGV(vehicleLogger, agvsLogger);
+                    StaStored.CurrentVechicle = new ForkAGV(vehicleLogger, agvsLogger, hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
                 {
-                    StaStored.CurrentVechicle = new SubmarinAGV(vehicleLogger, agvsLogger);
+                    StaStored.CurrentVechicle = new SubmarinAGV(vehicleLogger, agvsLogger, hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
                 {
                     if (param.Version == 1)
-                        StaStored.CurrentVechicle = new TsmcMiniAGV(vehicleLogger, agvsLogger);
+                        StaStored.CurrentVechicle = new TsmcMiniAGV(vehicleLogger, agvsLogger, hubContext);
                     else
-                        StaStored.CurrentVechicle = new DemoMiniAGV(vehicleLogger, agvsLogger);
+                        StaStored.CurrentVechicle = new DemoMiniAGV(vehicleLogger, agvsLogger, hubContext);
                 }
 
                 logger.LogInformation($"Vehicle-{param.AgvType} Created！！");

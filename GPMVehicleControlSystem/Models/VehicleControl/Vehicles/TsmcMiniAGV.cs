@@ -6,7 +6,9 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.AspNetCore.SignalR;
 using NLog;
 using NLog.Targets;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -40,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public event EventHandler<clsMeasureResult> OnMeasureComplete;
 
-        public TsmcMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger) : base(logger, agvsLogger)
+        public TsmcMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(logger, agvsLogger, frontendHubContext)
         {
             WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_FORWARD},

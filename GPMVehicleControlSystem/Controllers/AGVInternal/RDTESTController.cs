@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.RDTEST;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -33,6 +34,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             StaRDTestManager.StopMoveTest();
             return Ok();
+        }
+
+        [HttpPost("AlarmTriggerTest")]
+        public async Task AlarmTriggerTest(AlarmCodes alarmCode)
+        {
+            agv.SoftwareEMO(alarmCode);
         }
     }
 }

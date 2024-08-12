@@ -13,7 +13,9 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using NLog;
 using RosSharp.RosBridgeClient;
@@ -282,12 +284,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsForkExtenable { get; private set; } = false;
         internal ILogger<Vehicle> logger;
         internal ILogger<clsAGVSConnection> agvsLogger;
-        public Vehicle(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger)
+        internal IHubContext<FrontendHub> frontendHubContext;
+        public Vehicle(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext)
         {
             try
             {
                 this.logger = logger;
                 this.agvsLogger = agvsLogger;
+                this.frontendHubContext = frontendHubContext;
                 HandShakeLogger = LogManager.GetCurrentClassLogger();
                 Parameters = LoadParameters(watch_file_change: true);
                 Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
@@ -967,6 +971,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+
+            if (alarmCode == AlarmCodes.Fork_Slot_Teach_Data_ERROR)
+            {
+                SendNotifyierToFrontend("因牙叉某一層高度教點數據皆為0，因安全考量禁止動作。\r\n若確定牙叉位置須為0，請將Up_Pose設定為0.01即可。", "牙叉高度設備確認", alarmCode);
+            }
+
+
             EndLaserObstacleMonitor();
             _ = Task.Run(() =>
             {
@@ -1123,7 +1134,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 BuzzerPlayer.Stop();
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
-                AGVS.ResetErrors();
+                AGVS?.ResetErrors();
                 IsMotorReseting = false;
                 await ResetMotor(IsTriggerByButton);
                 _ = Task.Factory.StartNew(async () =>
@@ -1447,6 +1458,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 確認當下是否可以進行Z軸回HOME動作
         /// </summary>
         /// <returns>true:可回HOME; false:禁止回HOME</returns>
-
+        internal async Task SendNotifyierToFrontend(string message, string title = "AGV Message", AlarmCodes alarmCode = AlarmCodes.None)
+        {
+            await frontendHubContext.Clients.All.SendAsync("AGV-Notify-Message", new { title = title, message = message, alarmCode = alarmCode });
+        }
     }
 }
