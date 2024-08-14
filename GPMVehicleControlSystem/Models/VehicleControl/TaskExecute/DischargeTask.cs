@@ -76,6 +76,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 await Task.Delay(1000);
                 Agv.SetIsCharging(false);
             });
+            IsBackToSecondaryPt = true;
             return await base.TransferTaskToAGVC();
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

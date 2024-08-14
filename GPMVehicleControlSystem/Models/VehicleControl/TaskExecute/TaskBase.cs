@@ -192,6 +192,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return CARGO_TRANSFER_MODE.EQ_Pick_and_Place;
             }
         }
+
+        public bool IsBackToSecondaryPt { get; internal set; } = false;
+
         /// <summary>
         /// 執行任務
         /// </summary>

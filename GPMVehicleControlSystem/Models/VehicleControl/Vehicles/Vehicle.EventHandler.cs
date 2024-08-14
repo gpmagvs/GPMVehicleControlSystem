@@ -318,8 +318,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var sensorName = signalObj.Name;
             var isTriggered = !input_status; //TODO 確認 A接點或B接點
             bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && AGVC.ActionStatus == ActionStatus.ACTIVE;
-
-            if (!isTriggered || !isNonNormalMoving)
+            bool isBackToSecondaryPtIng = _ExecutingTask != null && _ExecutingTask.IsBackToSecondaryPt;
+            if (!isTriggered || !isNonNormalMoving || isBackToSecondaryPtIng)
                 return;
 
             logger.LogWarning($"AGV進站過程中限動開關-{sensorName} 觸發!");

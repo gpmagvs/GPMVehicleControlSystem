@@ -413,6 +413,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             try
             {
+                IsBackToSecondaryPt = true;
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
                 if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
