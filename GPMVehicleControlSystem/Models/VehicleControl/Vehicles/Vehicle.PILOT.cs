@@ -781,7 +781,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return alarm == AlarmCodes.RightProtection_Area3 || alarm == AlarmCodes.LeftProtection_Area3 || alarm == AlarmCodes.BackProtection_Area3 || alarm == AlarmCodes.FrontProtection_Area3;
                 }
                 var newAlarms = alarmsNewCreated.Where(alarm => isAlarm(alarm));
-                AlarmManager.AddAlarm(newAlarms.Select(alarm => Tuple.Create(alarm, true)));
+                AlarmManager.AddWarning(newAlarms);
                 var newWarnings = alarmsNewCreated.Where(alarm => !isAlarm(alarm));
                 AlarmManager.AddWarning(newWarnings);
             }
