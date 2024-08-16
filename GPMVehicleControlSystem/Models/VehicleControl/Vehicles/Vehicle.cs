@@ -1269,6 +1269,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return simulation_cargo_status;
             }
 
+            if (!Parameters.CargoExistSensorParams.TraySensorMounted &&
+                Parameters.CargoExistSensorParams.RackSensorMounted && Parameters.CargoExistSensorParams.RackSensorNumber == 2)
+            {
+                //S1-5F
+
+                bool _rack1Exist = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
+                bool _rack2Exist = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
+                cargoType = CST_TYPE.Rack;
+                if (_rack1Exist && _rack2Exist)
+                    return CARGO_STATUS.HAS_CARGO_NORMAL;
+                else if (!_rack1Exist && !_rack2Exist)
+                    return CARGO_STATUS.NO_CARGO;
+                else
+                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
+            }
+
+
             bool isRackSensorMounted = Parameters.CargoExistSensorParams.RackSensorMounted;
             bool tray3SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_3 + "") != null;
             bool tray4SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_4 + "") != null;
