@@ -300,9 +300,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 });
             }
         }
-        internal bool IsEQHsSignalInitialState()
+        internal bool IsEQHsSignalInitialState(out AlarmCodes alarmCode)
         {
-            return !IsEQBusyOn() && !IsEQReadyOn() && !IsULReqOn(ACTION_TYPE.Unload) && !IsULReqOn(ACTION_TYPE.Load);
+            alarmCode = AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset;
+            if (IsEQBusyOn())
+            {
+                return false;
+            }
+            if (IsEQReadyOn())
+            {
+                alarmCode = AlarmCodes.Precheck_IO_Fail_EQ_READY;
+                return false;
+            }
+            if (IsULReqOn(ACTION_TYPE.Unload))
+            {
+                alarmCode = AlarmCodes.Precheck_IO_Fail_EQ_U_REQ;
+                return false;
+            }
+            if (IsULReqOn(ACTION_TYPE.Load))
+            {
+                alarmCode = AlarmCodes.Precheck_IO_Fail_EQ_L_REQ;
+                return false;
+            }
+            alarmCode = AlarmCodes.None;
+            return true;
         }
         public clsDynamicTrafficState DynamicTrafficState { get; internal set; } = new clsDynamicTrafficState();
 

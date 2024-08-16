@@ -157,7 +157,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                 bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
                 bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
-                bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
+                bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_L_REQ) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_U_REQ) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_READY) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_UP) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_LOW) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_GO) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
                                                                       alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
                                                                       alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
                 if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)

@@ -128,8 +128,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             return (false, AlarmCodes.Precheck_IO_Fail_EQ_GO);
                     }
 
-                    if (!Agv.IsEQHsSignalInitialState())
-                        return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);
+                    if (!Agv.IsEQHsSignalInitialState(out AlarmCodes alarmCode))
+                        return (false, alarmCode);
                 }
 
                 (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
