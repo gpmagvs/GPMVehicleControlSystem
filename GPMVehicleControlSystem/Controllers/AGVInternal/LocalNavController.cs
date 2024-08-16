@@ -114,14 +114,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             MapPoint? fromStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == fromtag);
             MapPoint? toStationFound = agv.NavingMap.Points.Values.ToList().FirstOrDefault(st => st.TagNumber == totag);
 
-            var _OrderInfo = new clsTaskDownloadData.clsOrderInfo
-            {
-                ActionName = action,
-                SourceName = fromStationFound?.Graph.Display,
-                DestineName = toStationFound?.Graph.Display,
-                SourceTag = fromStationFound.TagNumber,
-                DestineTag = toStationFound.TagNumber
-            };
             if (fromStationFound == null)
             {
                 return Ok(new TaskActionResult
@@ -139,6 +131,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
+            var _OrderInfo = new clsTaskDownloadData.clsOrderInfo
+            {
+                ActionName = action,
+                SourceName = fromStationFound?.Graph.Display,
+                DestineName = toStationFound?.Graph.Display,
+                SourceTag = fromStationFound.TagNumber,
+                DestineTag = toStationFound.TagNumber
+            };
             clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
 
             bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 || pt.Y > 100));

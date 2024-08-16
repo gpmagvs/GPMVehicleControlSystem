@@ -157,6 +157,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                 bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
                 bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
+                bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
+                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
                 if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)
                 {
                     AGVC.EmergencyStop();
@@ -209,11 +212,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 }
                 AGVC.OnAGVCActionChanged = null;
+
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
+                return;
+                if (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy && !_RunTaskData.IsLocalTask)
+                {
+                    //自動復歸並上線
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(2000);
+                        await AutoInitializeAndOnline();
+                    });
+                }
             });
 
 
         }
+
+        /// <summary>
+        /// 嘗試進行初始化並上線
+        /// </summary>
+        /// <returns></returns>
+        private async Task AutoInitializeAndOnline()
+        {
+            (bool confirm, string message) = await Initialize();
+            if (confirm)
+            {
+                logger.LogInformation($"嘗試自動初始化完成");
+                (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
+                if (success)
+                    logger.LogInformation($"嘗試自動初始化完成且上線成功");
+                else
+                    logger.LogError($"嘗試自動初始化完成但上線失敗({return_code})");
+            }
+            else
+            {
+                logger.LogError($"嘗試自動初始化但失敗({message})");
+            }
+        }
+
         private async Task EndLaserObsMonitorAsync()
         {
             Laser.ModeSwitch(LASER_MODE.Bypass, true);
