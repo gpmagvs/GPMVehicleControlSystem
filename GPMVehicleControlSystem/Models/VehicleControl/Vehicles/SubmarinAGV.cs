@@ -127,6 +127,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddWarning(input.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? AlarmCodes.Wheel_Motor_IO_Error_Right : AlarmCodes.Wheel_Motor_IO_Error_Left);
                     await Task.Delay(1000);
                     await Initialize();
+                    if (RemoteModeWhenHorizonMotorAlarm == REMOTE_MODE.ONLINE)
+                    {
+                        AutoInitializeAndOnline();
+                    }
                 }
                 catch (Exception)
                 {

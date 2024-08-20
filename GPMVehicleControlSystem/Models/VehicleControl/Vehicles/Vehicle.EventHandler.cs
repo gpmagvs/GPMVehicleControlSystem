@@ -812,7 +812,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
 
-            if (GetSub_Status() != SUB_STATUS.IDLE & GetSub_Status() != SUB_STATUS.Charging)
+            if (GetSub_Status() != SUB_STATUS.IDLE && GetSub_Status() != SUB_STATUS.Charging)
             {
                 AlarmManager.AddAlarm(alarmCode, false);
                 return;

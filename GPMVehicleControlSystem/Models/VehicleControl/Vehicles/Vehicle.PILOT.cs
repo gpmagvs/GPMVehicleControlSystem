@@ -240,7 +240,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 嘗試進行初始化並上線
         /// </summary>
         /// <returns></returns>
-        private async Task AutoInitializeAndOnline()
+        protected async Task AutoInitializeAndOnline()
         {
             (bool confirm, string message) = await Initialize();
             if (confirm)
