@@ -3,7 +3,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<AssemblyVersion>2.7.208</AssemblyVersion>
+		<AssemblyVersion>2.7.208.1</AssemblyVersion>
 		<InformationalVersion>2.7.0</InformationalVersion>
 		<AssemblyName>GPM_VCS</AssemblyName>
 		<NoWarn>4014</NoWarn>
@@ -141,7 +141,7 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Tools\CPUUsage\" />
+		<Folder Include="Tools\CPUUsage\" />
 	</ItemGroup>
 	<ProjectExtensions>
 		<VisualStudio>

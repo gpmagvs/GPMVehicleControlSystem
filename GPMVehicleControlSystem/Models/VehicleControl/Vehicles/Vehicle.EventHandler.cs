@@ -579,7 +579,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     LOG.WARN($"於{lastVisitedMapPoint.Graph.Display}中發生走行馬達異常({input?.Name})，進行自動復位");
                     AlarmManager.AddWarning(input.Input == DI_ITEM.Horizon_Motor_Alarm_1 ? AlarmCodes.Wheel_Motor_IO_Error_Right : AlarmCodes.Wheel_Motor_IO_Error_Left);
                     await Task.Delay(1000);
-                    await Initialize();
+                    (bool confirm, string message, string message_eng) = await Initialize();
+
+                    if (confirm && RemoteModeWhenHorizonMotorAlarm == REMOTE_MODE.ONLINE)
+                    {
+                        LOG.WARN($"自動復位完成");
+                        (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
+                        if (success)
+                        {
+                            LOG.WARN("自動上線完成");
+                        }
+                        else
+                        {
+                            LOG.ERROR($"自動上線失敗");
+                        }
+
+                    }
+                    else
+                    {
+                        LOG.ERROR($"自動復位失敗");
+                    }
                 }
                 catch (Exception)
                 {
