@@ -221,7 +221,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVC.OnAGVCActionChanged = null;
 
                 FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
-                return;
+
                 if (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy && !_RunTaskData.IsLocalTask)
                 {
                     //自動復歸並上線

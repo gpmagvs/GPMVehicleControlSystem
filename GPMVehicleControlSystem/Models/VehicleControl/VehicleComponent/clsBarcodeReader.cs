@@ -22,7 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (CurrentTag == 0)
                     return 99999.0;
-                return Math.Sqrt(Math.Pow(CurrentX, 2) + Math.Pow(CurrentX, 2));
+                return Math.Sqrt(Math.Pow(CurrentX, 2) + Math.Pow(CurrentY, 2));
             }
         }
 
