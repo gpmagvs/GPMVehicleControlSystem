@@ -319,7 +319,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
                 StopAllHandshakeTimer();
                 if (Sub_Status == SUB_STATUS.DOWN)
                     return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
@@ -346,7 +345,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
                 StopAllHandshakeTimer();
                 if (Sub_Status == SUB_STATUS.DOWN)
                     return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
@@ -442,7 +440,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (isEQGoOff)
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
                 LOG.ERROR($"[HANDSHAKE_EQ_TIMEOUT.TA3_Wait_EQ_BUSY_ON] {ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
-                LOG.Critical(ex);
                 StopAllHandshakeTimer();
                 var _alarm = AlarmCodes.None;
                 if (isEQGoOff)
@@ -486,7 +483,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StopAllHandshakeTimer();
                 bool IsEQOrAGVAlarmWhenEQBUSY = EQAlarmWhenEQBusyFlag || AGVAlarmWhenEQBusyFlag;
                 LOG.ERROR($"{ex.Message}-EQAlarmWhenEQBusyFlag={EQAlarmWhenEQBusyFlag},AGVAlarmWhenEQBusyFlag={AGVAlarmWhenEQBusyFlag}", ex);
-                LOG.Critical(ex);
                 AlarmCodes _alarm = AlarmCodes.None;
                 if (isEQGoOff)
                     _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
