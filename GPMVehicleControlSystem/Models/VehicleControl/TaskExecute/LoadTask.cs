@@ -405,6 +405,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     break;
                 }
             }
+            if (alarmCode != AlarmCodes.None)
+                logger.Warn($"車載狀態錯誤({alarmCode}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag}| 終點Tag={RunningTaskData.Destination}");
+
             return (alarmCode == AlarmCodes.None, alarmCode);
         }
 
@@ -417,6 +420,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 AlarmCodes checkstatus_alarm_code = AlarmCodes.None;
                 if ((checkstatus_alarm_code = CheckAGVStatus(check_park_position: false, check_cargo_exist_state: true)) != AlarmCodes.None)
                 {
+                    logger.Warn($"車載狀態錯誤({checkstatus_alarm_code}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag}| 終點Tag={RunningTaskData.Destination}");
                     return (false, checkstatus_alarm_code);
                 }
                 RecordExistSensorState();
@@ -750,21 +754,51 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
 
+            string parkDirection = "";
+            double parkError = 0;
+            double parkTolerance = Agv.Parameters.TagParkingTolerance;
             AlarmCodes alarm_code = AlarmCodes.None;
             if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                alarm_code = AlarmCodes.AGV_State_Cant_Move;
+                return AlarmCodes.AGV_State_Cant_Move;
 
-            else if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
-                alarm_code = AlarmCodes.AGV_BarcodeReader_Not_Match_Tag_of_Destination;
-            else if (check_park_position && Agv.BarcodeReader.DistanceToTagCenter > Agv.Parameters.TagParkingTolerance)
-                alarm_code = AlarmCodes.AGV_Park_Position_Too_Far_From_Tag_Of_Destination;
+            if (check_park_position && Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
+                return AlarmCodes.AGV_BarcodeReader_Not_Match_Tag_of_Destination;
+            if (check_park_position && _IsParkLocationTooFarFromTagCenter(Agv.BarcodeReader.CurrentAngle, ref parkTolerance, out parkDirection, out parkError))
+            {
+                logger.Error($"停車精度檢查失敗:方向= {parkDirection},誤差={parkError}/{parkTolerance}");
+                return AlarmCodes.AGV_Park_Position_Too_Far_From_Tag_Of_Destination;
+            }
             else
+            {
                 alarm_code = AlarmCodes.None;
+                logger.Info($"停車精度確認OK:方向 = {parkDirection},誤差={parkError}/{parkTolerance}");
+                return AlarmCodes.None;
+            }
 
-            if (alarm_code != AlarmCodes.None)
-                logger.Warn($"車載狀態錯誤({alarm_code}):{Agv.GetSub_Status()}-Barcode讀值:{Agv.BarcodeReader.CurrentTag},AGVC Last Visited Tag={Agv.Navigation.LastVisitedTag},距離Tag中心:{Agv.BarcodeReader.DistanceToTagCenter} mm | 終點Tag={RunningTaskData.Destination}");
+            //檢查停車精度,考慮當前航向角度決定要只用 X 或 Y方向的Tag中心誤差
+            bool _IsParkLocationTooFarFromTagCenter(double currentTheta, ref double tolerance, out string direction, out double error)
+            {
+                direction = "unknown";
+                error = 0;
+                if ((currentTheta >= -45 && currentTheta <= 45) || (currentTheta >= 135 || currentTheta <= -135))
+                {
+                    direction = "X";
+                    error = Agv.BarcodeReader.CurrentX;
+                    return Math.Abs(Agv.BarcodeReader.CurrentX) > tolerance;
+                }
+                else if ((currentTheta > 45 && currentTheta < 135) || (currentTheta > -135 && currentTheta < -45))
+                {
+                    direction = "Y";
+                    error = Agv.BarcodeReader.CurrentY;
+                    return Math.Abs(Agv.BarcodeReader.CurrentY) > tolerance;
+                }
+                else
+                {
+                    return false;
+                }
 
-            return alarm_code;
+
+            }
         }
 
         private async Task<(bool confirm, AlarmCodes alarmCode)> AGVCOMPTHandshake(bool statusDownWhenErr)
