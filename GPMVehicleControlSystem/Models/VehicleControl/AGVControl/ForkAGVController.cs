@@ -247,6 +247,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
+            await Task.Delay(800);
             if (BeforeForkStopActionRequesting.command == "")
                 return (true, "No Request excuting before fork stopped");
             VerticalCommandRequest request = BeforeForkStopActionRequesting.Clone();

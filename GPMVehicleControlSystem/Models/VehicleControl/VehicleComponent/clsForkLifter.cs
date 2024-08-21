@@ -376,25 +376,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             IsInitialing = true;
             bool _isInitializeDone = false;
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
-
+            //bool isStartAtDownLimit = !DIModule.GetState(DI_ITEM.Vertical_Down_Hardware_limit);
             try
             {
+                //if (isStartAtDownLimit)
+                //await BypassLimitSensor();
+
                 while (!_isInitializeDone)
                 {
                     bool hasCargo = !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_1) || !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_2);
 
                     SEARCH_DIRECTION search_direction = DetermineSearchDirection(CurrentForkLocation);
-
                     ForkStartSearch(search_direction, hasCargo);
-                    var result = await WaitForkReachHome(jumpOutIfReachLimitSensor: true);
-                    if (!result.isReachLimitSensor)
+
+                    (bool reachHome, bool isReachLimitSensor) = await WaitForkReachHome(jumpOutIfReachLimitSensor: true);
+                    if (!isReachLimitSensor)
                     {
                         await WaitForkLeaveHome();
                     }
                     else
                     {
                         await BypassLimitSensor();
-                        await Task.Delay(200);
+                        await Task.Delay(1000);
                     }
 
                     await UpSearchAndWaitLeaveHome(hasCargo);
@@ -408,17 +411,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         break;
                     }
                     _isInitializeDone = CurrentForkLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentHeightPosition - 0) < 0.01;
-                    await NoBypassLimitSensor();
                     await Task.Delay(1000);
                 }
-
-
             }
             catch (Exception ex)
             {
                 IsInitialing = IsInitialized = false;
                 logger.Fatal($"[ForkInitialize] FAIL. {ex.Message}");
                 return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
+            }
+            finally
+            {
+                await NoBypassLimitSensor();
             }
             IsInitialing = false;
             IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
@@ -441,16 +445,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             async Task UpSearchAndWaitLeaveHome(bool hasCargo)
             {
+                await ForkStopAsync();
+                await Task.Delay(100);
                 await ForkPositionInit();
                 await Task.Delay(500);
                 ForkStartSearch(SEARCH_DIRECTION.UP, hasCargo);
+
+                await WaitForkReachHome(jumpOutIfReachLimitSensor: false);
+                await WaitForkLeaveHome();
                 _ = Task.Factory.StartNew(async () =>
                 {
                     await Task.Delay(500);
                     await NoBypassLimitSensor();
                 });
-                await WaitForkReachHome(jumpOutIfReachLimitSensor: false);
-                await WaitForkLeaveHome();
                 await Task.Delay(500);
                 await ForkPose(CurrentHeightPosition + 0.3, 1);
             }
