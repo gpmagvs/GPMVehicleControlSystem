@@ -114,7 +114,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             var _oriMode = Remote_Mode;
-            (bool success, RETURN_CODE return_code) result = AGVS.TrySendOnlineModeChangeRequest(currentTag, mode).Result;
+            (bool success, RETURN_CODE return_code) result = await AGVS.TrySendOnlineModeChangeRequest(currentTag, mode);
 
             if (!result.success)
             {

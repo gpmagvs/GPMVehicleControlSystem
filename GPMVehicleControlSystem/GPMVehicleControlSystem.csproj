@@ -27,20 +27,19 @@
 		<WarningLevel>1</WarningLevel>
 		<ShouldCreateLogs>True</ShouldCreateLogs>
 		<AdvancedSettingsExpanded>True</AdvancedSettingsExpanded>
-		<UpdateAssemblyVersion>True</UpdateAssemblyVersion>
+		<UpdateAssemblyVersion>False</UpdateAssemblyVersion>
 		<UpdateAssemblyFileVersion>True</UpdateAssemblyFileVersion>
 		<UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
 		<UpdatePackageVersion>False</UpdatePackageVersion>
 		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
 		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
 		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementOnDemand</AssemblyFileVersionSettings>
-		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemandWithResetOnIncrease.DayOfYearStamp.IncrementOnDemand</AssemblyVersionSettings>
 		<IsPublishable>True</IsPublishable>
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.1.233.15</AssemblyVersion>
-		<FileVersion>3.1.233.15</FileVersion>
+		<AssemblyVersion>3.1.233.16</AssemblyVersion>
+		<FileVersion>3.1.233.16</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
