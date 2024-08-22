@@ -56,8 +56,8 @@ namespace GPMVehicleControlSystem.Tools.NetworkStatus
             {
                 if (match.Success)
                 {
-                    transmit = long.Parse(match.Groups[1].Value);
-                    recieve = long.Parse(match.Groups[2].Value);
+                    transmit = long.Parse(match.Groups[2].Value);
+                    recieve = long.Parse(match.Groups[1].Value);
                     break;
                 }
             }
