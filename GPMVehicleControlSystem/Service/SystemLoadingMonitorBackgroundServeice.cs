@@ -1,5 +1,6 @@
 ﻿using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.CPUUsage;
+using GPMVehicleControlSystem.Tools.NetworkStatus;
 using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Service
@@ -19,6 +20,18 @@ namespace GPMVehicleControlSystem.Service
         {
 
             CPUUaageBase cpuUsage = _GetCPUUsageInstance();
+            NetworkStatusBase networkStatus = _GetNetworkStatusInstance();
+
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(200);
+                    (double net_trasmited, double net_recieved) = await networkStatus.GetNetworkStatus();
+                    logger.LogInformation($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
+
+                }
+            });
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(5000);
@@ -43,6 +56,14 @@ namespace GPMVehicleControlSystem.Service
                 return new LinuxCPUUsage();
             else
                 return new CPUUaageBase();
+        }
+
+        private NetworkStatusBase _GetNetworkStatusInstance()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return new LinuxNetworkStatus();
+            else
+                return new NetworkStatusBase();
         }
     }
 }
