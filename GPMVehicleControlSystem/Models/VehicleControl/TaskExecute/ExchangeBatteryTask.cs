@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
@@ -105,12 +106,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                          location = BATTERY_LOCATION.RIGHT,
                          level = TsmcMiniAGV.Batteries[1].Data.batteryLevel,
-                         voltage=TsmcMiniAGV.Batteries[1].Data.voltage,
+                         voltage=(ushort)(TsmcMiniAGV.Batteries[1].Data.batteryLevel==0? 0.1: TsmcMiniAGV.Batteries[1].Data.voltage),
                     },
                     new clsBatInfo(TsmcMiniAGV,2){
                          location = BATTERY_LOCATION.LEFT,
                          level = TsmcMiniAGV.Batteries[2].Data.batteryLevel,
-                         voltage=TsmcMiniAGV.Batteries[2].Data.voltage,
+                         voltage=(ushort)(TsmcMiniAGV.Batteries[2].Data.batteryLevel==0? 0.1: TsmcMiniAGV.Batteries[2].Data.voltage),
                     }
                 };
 
@@ -249,7 +250,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (status == ActionStatus.SUCCEEDED)
                         _waitReachHomeDone.Set();
                 };
-                var gotoEntryPointTask = RunningTaskData.CreateGoHomeTaskDownloadData();
+                clsTaskDownloadData gotoEntryPointTask = RunningTaskData.Clone();
+                gotoEntryPointTask.Homing_Trajectory = gotoEntryPointTask.Homing_Trajectory.Reverse().ToArray();
+                gotoEntryPointTask.Homing_Trajectory[0] = gotoEntryPointTask.Homing_Trajectory[1].Clone();
                 AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
                 if (!result.Accept)
                     return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
