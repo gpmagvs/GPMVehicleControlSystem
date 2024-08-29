@@ -713,7 +713,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                 });
 
-
+                TryAutoInitialzeAndOnlineWhenAlarmOccur(alarmCode);
 
             }
             catch (Exception ex)
@@ -726,6 +726,76 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
+        private SemaphoreSlim _TryAutoInitialzeAndOnlineWhenAlarmOccurSemaphorseSlim = new SemaphoreSlim(1, 1);
+        private async Task TryAutoInitialzeAndOnlineWhenAlarmOccur(AlarmCodes alarmCode)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _TryAutoInitialzeAndOnlineWhenAlarmOccurSemaphorseSlim.WaitAsync();
+
+                    if (Sub_Status != SUB_STATUS.DOWN || Sub_Status == SUB_STATUS.Initializing)
+                        return;
+
+                    bool IsAGVOnMainPath = lastVisitedMapPoint.TagNumber % 2 != 0;
+                    if (!IsAGVOnMainPath) //不是在主幹道上禁止自動復歸上線
+                        return;
+
+                    AlarmCodes[] allowableAlarmCodes = new AlarmCodes[]
+                    {
+                       AlarmCodes.Precheck_IO_Fail_EQ_GO,
+                       AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset,
+                       AlarmCodes.EQP_PORT_HAS_OBSTACLE_BY_LSR,
+                       AlarmCodes.Handshake_Fail_TA1_EQ_L_REQ,
+                       AlarmCodes.Handshake_Fail_TA1_EQ_U_REQ,
+                       AlarmCodes.Handshake_Fail_TA2_EQ_READY,
+                       AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY,
+                       AlarmCodes.Handshake_Fail_TA5_EQ_L_REQ,
+                       AlarmCodes.Handshake_Fail_TA5_EQ_U_REQ,
+                       AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF,
+                       AlarmCodes.Handshake_Fail_AGV_DOWN,
+                    };
+
+                    bool allowed = allowableAlarmCodes.Contains(alarmCode);
+                    if (!allowed)
+                        return;
+                    await Task.Delay(1000);
+
+                    (bool confirm, string message, string message_eng) = await Initialize();
+
+                    if (confirm)
+                    {
+                        LOG.WARN($"自動復位完成[原因=可自動復歸異常發生後({alarmCode})]");
+
+                        (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
+                        if (success)
+                        {
+                            LOG.WARN($"自動上線完成[原因=可自動復歸異常發生後({alarmCode})]");
+                        }
+                        else
+                        {
+                            LOG.ERROR($"自動上線失敗[原因=可自動復歸異常發生後({alarmCode})]");
+                        }
+
+                    }
+                    else
+                    {
+                        LOG.ERROR($"自動復位失敗[原因=可自動復歸異常發生後({alarmCode})]");
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    _TryAutoInitialzeAndOnlineWhenAlarmOccurSemaphorseSlim?.Release();
+                }
+
+
+            });
+        }
+
         protected virtual void HandshakeIOOff()
         {
             SetAGV_TR_REQ(false);
