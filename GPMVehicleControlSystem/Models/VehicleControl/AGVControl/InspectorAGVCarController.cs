@@ -40,6 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public string InstrumentMeasureServiceName => "/command_action";
         public string BatteryLockControlServiceName => "/command_actionm";
 
+        protected override string SetCurrentTagServiceName { get; set; } = "/set_currentTagID";
         public InspectorAGVCarController()
         {
         }

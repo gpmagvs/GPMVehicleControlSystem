@@ -98,10 +98,22 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpPost("Localization")]
         public async Task<IActionResult> Localization([FromBody] clsLocalizationVM localization)
         {
-            LogAsync("Localization");
-            var result = await agv.Localization((ushort)localization.currentID, localization.x, localization.y);
+            var result = await agv.Localization((ushort)localization.currentID, localization.x, localization.y, localization.theata);
             var response = new { Success = result.confirm, Message = result.message };
-            LogResponseAsync("agv_offline", response: response);
+            return Ok(response);
+        }
+
+
+
+        /// <summary>
+        /// 定位
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("LocalizationWithCurrentTag")]
+        public async Task<IActionResult> LocalizationWithCurrentTag()
+        {
+            (bool confirm, string message) = await agv.LocalizationWithCurrentTag();
+            var response = new { Success = confirm, Message = message };
             return Ok(response);
         }
 

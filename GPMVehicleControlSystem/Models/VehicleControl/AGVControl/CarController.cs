@@ -619,7 +619,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             _ActionStatus = ActionStatus.NO_GOAL;
             _IsEmergencyStopFlag = true;
         }
-
+        protected virtual string SetCurrentTagServiceName { get; set; } = "/request_initial_robot_pose_with_tag";
         /// <summary>
         ///  由車載畫面設定機器人目前位置。
         /// </summary>
@@ -631,7 +631,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         public async Task<(bool confrim, string message)> SetCurrentTagID(ushort tagID, string map_name, double x, double y, double theta)
         {
-            SetcurrentTagIDResponse response = await rosSocket.CallServiceAndWait<SetcurrentTagIDRequest, SetcurrentTagIDResponse>("/set_currentTagID",
+            logger.Trace($"Call Service= {SetCurrentTagServiceName}");
+            SetcurrentTagIDResponse response = await rosSocket.CallServiceAndWait<SetcurrentTagIDRequest, SetcurrentTagIDResponse>(SetCurrentTagServiceName,
 
                 new SetcurrentTagIDRequest
                 {

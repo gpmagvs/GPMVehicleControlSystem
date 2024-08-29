@@ -1453,12 +1453,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 進行定位
         /// </summary>
         /// <returns></returns>
-        internal async Task<(bool confirm, string message)> Localization(ushort tagID, double x = -1, double y = -1)
+        internal async Task<(bool confirm, string message)> Localization(ushort tagID, double x, double y, double theta)
         {
-            double current_loc_x = x == -1 ? Navigation.Data.robotPose.pose.position.x : x;
-            double current_loc_y = y == -1 ? Navigation.Data.robotPose.pose.position.y : y;
-            double theta = Navigation.Angle;
-            (bool confrim, string message) result = await AGVC.SetCurrentTagID(tagID, "", current_loc_x, current_loc_y, theta);
+            (bool confrim, string message) result = await AGVC.SetCurrentTagID(tagID, "", x, y, theta);
             if (!result.confrim)
             {
                 AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
@@ -1466,6 +1463,70 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return result;
         }
 
+
+        internal async Task<(bool confirm, string message)> LocalizationWithCurrentTag()
+        {
+            logger.LogInformation($"開始進行車輛定位.");
+
+            try
+            {
+                //Get Current Tag 
+                double currentTag = BarcodeReader.Data.tagID;
+                if (currentTag == 0)
+                {
+                    logger.LogError($"[車輛定位] Tag讀取值=0,無法定位");
+                    return (false, "車子不在Tag上 無法定位");
+                }
+
+                //Get coordination by map data.
+                MapPoint mapPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == currentTag);
+                if (mapPoint == null)
+                {
+                    logger.LogError($"[車輛定位] 無法獲取當前點位資訊,無法定位");
+                    return (false, $"在圖資找不到Tag為 {currentTag} 的點");
+                }
+                logger.LogInformation($"[車輛定位] 獲取當前點位資訊. Tag={mapPoint.TagNumber}, ({mapPoint.X},{mapPoint.Y})");
+
+                double x = mapPoint.X;
+                double y = mapPoint.Y;
+                double theta = BarcodeReader.Data.theta * Math.PI / 180.0;//radian. 需要抓BarcodeReader角度讀值,以獲取當前AGV的角度
+                //pi = 180 
+                bool success = false;
+                string errMsg = "";
+                int _tryNum = 0;
+                while (!success)
+                {
+                    if (_tryNum > 5)
+                    {
+                        AlarmManager.AddAlarm(AlarmCodes.Localization_Fail, true);
+                        errMsg = $"定位失敗，嘗試定位已重試超過5次:需確認圖資座標是否與雷射地圖相符";
+                        break;
+                    }
+                    (bool confrim, string message) result = await AGVC.SetCurrentTagID(1, "", x, y, theta); //tagID=1
+                    logger.LogInformation($"[車輛定位] 定位=>({mapPoint.X},{mapPoint.Y},{theta})");
+                    if (!result.confrim) //只是確認service call 的結果 不是定位結果
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
+                        return result;
+                    }
+
+                    await Task.Delay(500);
+                    success = SickData.LocalizationStatus == 10;//確認定位狀態
+                    _tryNum++;
+                    if (success)
+                    {
+                        logger.LogInformation($"[車輛定位] 車輛定位成功! (嘗試次數:{_tryNum})");
+                    }
+                }
+
+
+                return (success, errMsg);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
         protected bool IsMotorAutoRecoverable()
         {
             return BarcodeReader.Data.tagID != 0 && lastVisitedMapPoint.IsCharge;
