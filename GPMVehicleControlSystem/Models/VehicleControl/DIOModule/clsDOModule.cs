@@ -1,6 +1,6 @@
-﻿using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using Modbus.Device;
+using NLog;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 
@@ -16,6 +16,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public clsDOModule(string IP, int Port) : base(IP, Port)
         {
+            logger = LogManager.GetLogger("DOModule");
             //ReadCurrentDOStatus();
         }
         public override bool Connected { get => _Connected; set => _Connected = value; }
@@ -33,7 +34,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 int.TryParse(iniHelper.GetValue("OUTPUT", "ShiftStart"), out ShiftStart);
                 int.TryParse(iniHelper.GetValue("OUTPUT", "ShiftSize"), out ShiftSize);
 
-                LOG.INFO($"DO Shift Start = {ShiftStart}, Shift Size = {ShiftSize}");
+                logger.Info($"DO Shift Start = {ShiftStart}, Shift Size = {ShiftSize}");
 
                 var do_names = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>().Select(i => i.ToString()).ToList();
                 for (ushort i = 0; i < Size; i++)
@@ -78,7 +79,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
+                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
             }
 
         }
@@ -100,7 +101,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 await Task.Delay(50); // 使用非阻塞的方式等待
                 if (!_Connected)
                 {
-                    LOG.WARN("DO Module try reconnecting..");
+                    logger.Warn("DO Module try reconnecting..");
                     Disconnect();
                     _Connected = await Connect();
                     continue;
@@ -113,7 +114,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR($"DO Read Coils Fail: {ex.Message}");
+                    logger.Error($"DO Read Coils Fail: {ex.Message}");
                     _Connected = false;
                     continue;
                 }
@@ -131,7 +132,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     catch (Exception ex)
                     {
                         OutputWriteRequestQueue.Enqueue(to_handle_obj);
-                        LOG.ERROR($"Error writing to device: {ex.Message}", ex);
+                        logger.Error($"Error writing to device: {ex.Message}", ex);
                         _Connected = false;
                     }
                 }
@@ -166,7 +167,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 await master?.WriteMultipleCoilsAsync(startAddress, writeStates);
                 if (tim.IsCancellationRequested)
                 {
-                    LOG.ERROR($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
+                    logger.Error($"Connected:{Connected} DO-" + to_handle_obj.signal.index + "Wago_IO_Write_Fail Error.");
                     throw new Exception($"DO Write Timeout.");
                 }
             }
@@ -195,7 +196,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
             if (DO.Output == null)
             {
-                LOG.WARN($"Output-{address} not defined, no write to IO module");
+                logger.Warn($"Output-{address} not defined, no write to IO module");
                 return false;
             }
             return await SetState(DO.Output, new bool[] { state });
@@ -244,7 +245,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"DO Start From {start_signal} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
+                logger.Error($"DO Start From {start_signal} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
@@ -342,7 +343,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 catch (Exception ex)
                 {
                 }
-                LOG.INFO($"Wago DO All OFF Done.");
+                logger.Info($"Wago DO All OFF Done.");
             }
         }
 

@@ -1,17 +1,11 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Tools;
-using MathNet.Numerics;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Modbus.Device;
-using System.Diagnostics;
+using NLog;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Security.AccessControl;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
@@ -76,14 +70,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     if (!value)
                         Task.Factory.StartNew(async () =>
                         {
-                            LOG.INFO($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
+                            logger.Info($"Wago Module Disconect(After Read I/O Timeout 5000ms,Still Disconnected.)");
                             Current_Alarm_Code = AlarmCodes.Wago_IO_Disconnect;
                         });
                     else
                     {
                         OnReConnected?.Invoke(this, null);
                         Current_Alarm_Code = AlarmCodes.None;
-                        LOG.INFO($"Wago Module Reconnected");
+                        logger.Info($"Wago Module Reconnected");
                     }
                 }
             }
@@ -101,6 +95,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         public ushort Size { get; set; }
         public int ShiftStart = 0;
         public int ShiftSize = 0;
+
+        protected Logger logger = LogManager.GetCurrentClassLogger();
         public clsDIModule()
         {
         }
@@ -110,7 +106,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             this.IP = IP;
             this.VMSPort = Port;
             this.IO_Interval_ms = IO_Interval_ms;
-            LOG.TRACE($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
+            logger = LogManager.GetLogger("DIModule");
+            logger.Trace($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
             ReadIOSettingsFromIniFile();
         }
 
@@ -164,7 +161,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 master.Transport.Retries = 5;
                 master.Transport.WaitToRetryMilliseconds = 100;
                 Current_Warning_Code = AlarmCodes.None;
-                LOG.INFO($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
+                logger.Info($"[{this.GetType().Name}]Wago Modbus TCP Connected!");
                 Connected = true;
                 return true;
             }
@@ -189,7 +186,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
             }
             finally
             {
@@ -232,7 +229,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex, show_console: false);
+                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
             }
         }
 
@@ -245,7 +242,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                LOG.ERROR("DO-" + signal + "Sbuscribe Error.", ex);
+                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
             }
         }
 
@@ -299,7 +296,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     var period = (DateTime.Now - lastReadTime).TotalMilliseconds;
                     if (period > 5000)
                     {
-                        LOG.Critical($"Wago Module Read Timeout!! ({period} ms) ");
+                        logger.Fatal($"Wago Module Read Timeout!! ({period} ms) ");
                         lastReadTime = DateTime.Now;
                         Disconnect();
                         Connected = false;
@@ -332,7 +329,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         bool[]? input = master?.ReadInputs(1, Start, Size);
                         if (input == null)
                         {
-                            LOG.Critical("DI Read inputs but null return, disconnect connection.");
+                            logger.Fatal("DI Read inputs but null return, disconnect connection.");
                             Disconnect();
                             Connected = false;
                             continue;
@@ -348,7 +345,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     }
                     catch (Exception ex)
                     {
-                        LOG.ERROR($"Wago IO Read Exception...{ex.Message}");
+                        logger.Error($"Wago IO Read Exception...{ex.Message}");
                         error_cnt++;
 
                         if (error_cnt >= 2)
