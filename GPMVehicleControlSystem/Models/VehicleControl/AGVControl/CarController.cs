@@ -490,7 +490,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
-
             (bool checkTaskConfirmed, TaskCommandGoal goalModified) = await CheckTaskCommandGoal(rosGoal);
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
@@ -548,7 +547,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
         }
 
-        private async Task<(bool confirmed, TaskCommandGoal goalModified)> CheckTaskCommandGoal(TaskCommandGoal newGoal)
+        protected virtual async Task<(bool confirmed, TaskCommandGoal goalModified)> CheckTaskCommandGoal(TaskCommandGoal newGoal)
         {
             try
             {

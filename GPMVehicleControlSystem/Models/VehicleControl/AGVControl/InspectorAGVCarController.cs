@@ -1,6 +1,7 @@
 ﻿//#define ServiceTest
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -139,7 +140,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             RunningTaskData = taskDownloadData;
             AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal rosgoal = RunningTaskData.RosTaskCommandGoal;
-
             rosgoal.pathInfo = JsonConvert.DeserializeObject<AMCPathInfo[]>(rosgoal.pathInfo.ToJson());
 
             return await SendGoal(rosgoal, action_timeout);
@@ -263,5 +263,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         }
 
+        protected override async Task<(bool confirmed, TaskCommandGoal goalModified)> CheckTaskCommandGoal(TaskCommandGoal newGoal)
+        {
+            return (true, newGoal);
+        }
     }
 }
