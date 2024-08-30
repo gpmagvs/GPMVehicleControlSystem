@@ -106,12 +106,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     {
                          location = BATTERY_LOCATION.RIGHT,
                          level = TsmcMiniAGV.Batteries[1].Data.batteryLevel,
-                         voltage=(ushort)(TsmcMiniAGV.Batteries[1].Data.batteryLevel==0? 0.1: TsmcMiniAGV.Batteries[1].Data.voltage),
+                         voltage=(ushort)(TsmcMiniAGV.Batteries[1].IsCommunicationError? 0.1: TsmcMiniAGV.Batteries[1].Data.voltage),
                     },
                     new clsBatInfo(TsmcMiniAGV,2){
                          location = BATTERY_LOCATION.LEFT,
                          level = TsmcMiniAGV.Batteries[2].Data.batteryLevel,
-                         voltage=(ushort)(TsmcMiniAGV.Batteries[2].Data.batteryLevel==0? 0.1: TsmcMiniAGV.Batteries[2].Data.voltage),
+                         voltage=(ushort)(TsmcMiniAGV.Batteries[2].IsCommunicationError? 0.1: TsmcMiniAGV.Batteries[2].Data.voltage),
                     }
                 };
 

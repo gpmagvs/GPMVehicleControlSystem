@@ -53,6 +53,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public delegate Task<bool> AlarmHappendDelegate(AlarmCodes alarm);
         public AlarmHappendDelegate OnAlarmHappened { get; set; }
 
+        private bool _IsCommunicationError = false;
+        public virtual bool IsCommunicationError
+        {
+            get => _IsCommunicationError;
+            set
+            {
+                if (_IsCommunicationError != value)
+                {
+                    _IsCommunicationError = value;
+                    if (_IsCommunicationError)
+                    {
+                        HandleCommunicationRecovery();
+                        logger.Warn($"[{component_name}] 數據狀態更新逾時");
+                    }
+                    else
+                    {
+                        logger.Info($"[{component_name}] 數據狀態更新已恢復");
+                        HandleCommunicationError();
+                    }
+                }
+            }
+        }
+
         public object Data { get; }
 
         /// <summary>
@@ -79,6 +102,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             else
                 return true;
+        }
+
+
+        private async Task UpdateStateMonitor()
+        {
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(1000);
+                    IsCommunicationError = (DateTime.Now - lastUpdateTime).TotalSeconds > 10;
+                }
+            });
+        }
+
+        protected virtual void HandleCommunicationError()
+        {
+
+        }
+        protected virtual void HandleCommunicationRecovery()
+        {
+
         }
     }
 }

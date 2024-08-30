@@ -28,6 +28,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
+        public override bool IsCommunicationError
+        {
+            get => base.IsCommunicationError || Data.voltage == 0;
+            set
+            {
+                base.IsCommunicationError = value;
+            }
+        }
+
+
 
         public int ChargeAmpThreshold { get; internal set; } = 650;
         public bool IsCharging()
@@ -56,6 +66,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 base.Current_Warning_Code = value;
             }
+        }
+
+        protected override void HandleCommunicationError()
+        {
+            base.HandleCommunicationError();
+            Current_Warning_Code = AlarmCodes.Battery_Status_Error_;
+        }
+
+        protected override void HandleCommunicationRecovery()
+        {
+            base.HandleCommunicationRecovery();
+            Current_Warning_Code = AlarmCodes.None;
         }
     }
 
