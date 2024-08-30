@@ -120,7 +120,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        /// <summary>
+        /// 註冊DIO狀態變化事件
+        /// </summary>
+        protected virtual void DIOStatusChangedEventRegist()
+        {
 
+            WagoDI.OnDisonnected += WagoDI_OnDisonnected;
+            WagoDI.OnReConnected += WagoDI_OnReConnected;
+            WagoDI.OnEMO += EMOTriggerHandler;
+            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
+            WagoDI.OnResetButtonPressed += HandleResetButtonPush;
+            WagoDI.SubsSignalStateChange(DI_ITEM.Panel_Reset_PB, Panel_Reset_Button_Input_State_Handler);
+            //WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
+
+            Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
+            {
+                { DI_ITEM.Limit_Switch_Sensor, HandleLimitSwitchSensorSignalChange},
+                { DI_ITEM.Fork_Frontend_Abstacle_Sensor, HandleForkFrontendObsSensorSignalChange},
+            };
+            foreach (KeyValuePair<DI_ITEM, Action<object, bool>> item in InputsEventsMap)
+            {
+                var _input = item.Key;
+                Action<object, bool> _handler = item.Value;
+                WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
+            }
+
+        }
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
         {
@@ -215,42 +241,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-
-        /// <summary>
-        /// 註冊DIO狀態變化事件
-        /// </summary>
-        protected virtual void DIOStatusChangedEventRegist()
-        {
-
-            WagoDI.OnDisonnected += WagoDI_OnDisonnected;
-            WagoDI.OnReConnected += WagoDI_OnReConnected;
-            WagoDI.OnEMO += EMOTriggerHandler;
-            WagoDI.OnBumpSensorPressed += WagoDI_OnBumpSensorPressed;
-            WagoDI.OnResetButtonPressed += HandleResetButtonPush;
-            WagoDI.SubsSignalStateChange(DI_ITEM.Panel_Reset_PB, Panel_Reset_Button_Input_State_Handler);
-            //WagoDI.OnResetButtonPressed += async (s, e) => await ResetAlarmsAsync(true);
-
-            Dictionary<DI_ITEM, Action<object, bool>> InputsEventsMap = new Dictionary<DI_ITEM, Action<object, bool>>()
-            {
-                //{ DI_ITEM.RightProtection_Area_Sensor_3, HandleSideLaserSignal},
-                //{ DI_ITEM.LeftProtection_Area_Sensor_3, HandleSideLaserSignal},
-                //{ DI_ITEM.FrontProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
-                //{ DI_ITEM.BackProtection_Area_Sensor_1, HandleLaserArea1SinalChange},
-                //{ DI_ITEM.FrontProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
-                //{ DI_ITEM.BackProtection_Area_Sensor_2, HandleLaserArea2SinalChange},
-                //{ DI_ITEM.FrontProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
-                //{ DI_ITEM.BackProtection_Area_Sensor_3, HandleLaserArea3SinalChange},
-                { DI_ITEM.Limit_Switch_Sensor, HandleLimitSwitchSensorSignalChange},
-            };
-            foreach (KeyValuePair<DI_ITEM, Action<object, bool>> item in InputsEventsMap)
-            {
-                var _input = item.Key;
-                Action<object, bool> _handler = item.Value;
-                WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
-            }
-
-        }
-
         private CancellationTokenSource _ResetButtonOnPressingCts = new CancellationTokenSource();
 
         private async void Panel_Reset_Button_Input_State_Handler(object? sender, bool pushed)
@@ -329,6 +319,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.AddWarning(AlarmCodes.Limit_Switch_Sensor);
             else
                 AlarmManager.AddAlarm(AlarmCodes.Limit_Switch_Sensor, false);
+        }
+        private void HandleForkFrontendObsSensorSignalChange(object? sender, bool input_status)
+        {
+            clsIOSignal signalObj = (clsIOSignal)sender;
+            string sensorName = signalObj.Name;
+
+            bool isTriggered = Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.A && input_status || Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.B && !input_status;
+            bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && _RunTaskData.Action_Type != ACTION_TYPE.Charge && AGVC.ActionStatus == ActionStatus.ACTIVE;
+            bool isBackToSecondaryPtIng = _ExecutingTask != null && _ExecutingTask.IsBackToSecondaryPt;
+            if (!isTriggered || !isNonNormalMoving || isBackToSecondaryPtIng)
+                return;
+
+            logger.LogWarning($"AGV進站過程中牙叉前端障礙物檢知Sensor觸發!({sensorName})");
+            bool isRecoverable = Parameters.SensorBypass.ForkFrontendObsSensorBypass;
+            if (isRecoverable)
+                AlarmManager.AddWarning(AlarmCodes.Fork_Frontend_has_Obstacle);
+            else
+                AlarmManager.AddAlarm(AlarmCodes.Fork_Frontend_has_Obstacle, false);
         }
 
         private bool HandleChargeTaskTryOpenChargeCircuit()

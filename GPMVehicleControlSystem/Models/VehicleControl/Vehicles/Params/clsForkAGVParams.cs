@@ -1,4 +1,6 @@
-﻿using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
@@ -30,6 +32,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsForkSpeedParams ManualModeOperationSpeed { get; set; } = new clsForkSpeedParams();
         public clsForkSpeedParams AutoModeOperationSpeed { get; set; } = new clsForkSpeedParams();
+        [JsonConverter(typeof(StringEnumConverter))]
+        public IO_CONEECTION_POINT_TYPE ObsSensorPointType { get; set; } = IO_CONEECTION_POINT_TYPE.A;
     }
     public class clsForkInit
     {

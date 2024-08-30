@@ -225,7 +225,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                         handler.Invoke(sender, e);
                     });
                 }
-                VCSInputs[Indexs[signal]].OnStateChanged += _HandleInputStateChanged; ;
+                clsIOSignal inputSignal = VCSInputs[Indexs[signal]];
+                inputSignal.OnStateChanged += _HandleInputStateChanged; ;
+                logger.Trace($"{inputSignal.Name} event registed.!");
             }
             catch (Exception ex)
             {

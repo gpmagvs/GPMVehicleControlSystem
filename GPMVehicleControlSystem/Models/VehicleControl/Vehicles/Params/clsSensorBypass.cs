@@ -10,5 +10,6 @@
         /// Bypass安裝在Z柱下方的Sensor(用來偵測車子是否衝過頭卡到設備)
         /// </summary>
         public bool AGVBodyLimitSensorBypass { get; set; } = true;
+        public bool ForkFrontendObsSensorBypass { get; set; } = false;
     }
 }
