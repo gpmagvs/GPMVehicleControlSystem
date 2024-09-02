@@ -117,7 +117,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 clsBattery.OnBatteryUnderVoltage += HandleBatteryUnderVoltage;
                 //clsBattery.OnBatteryOverTemperature += HandleBatteryOverTemperature;
             }
+            CarComponent.OnCommunicationError += CarComponent_OnCommunicationError;
 
+        }
+
+        private void CarComponent_OnCommunicationError(object? sender, CarComponent e)
+        {
+            CarComponent component = (CarComponent)e;
+            if (component.component_name == CarComponent.COMPOENT_NAME.BATTERY)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Battery_Status_Error_);
+            }
         }
 
         /// <summary>

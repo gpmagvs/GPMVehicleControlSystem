@@ -44,6 +44,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public CarComponent() : base()
         {
             logger = LogManager.GetLogger($"CarComponents/{GetType().Name}");
+            UpdateStateMonitor();
         }
 
         protected Message _StateData;
@@ -52,6 +53,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public delegate Task<bool> AlarmHappendDelegate(AlarmCodes alarm);
         public AlarmHappendDelegate OnAlarmHappened { get; set; }
+
+        public static event EventHandler<CarComponent> OnCommunicationError;
+        public static event EventHandler<CarComponent> OnCommunicationRecovery;
 
         private bool _IsCommunicationError = false;
         public virtual bool IsCommunicationError
@@ -64,13 +68,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     _IsCommunicationError = value;
                     if (_IsCommunicationError)
                     {
-                        HandleCommunicationRecovery();
+                        HandleCommunicationError();
                         logger.Warn($"[{component_name}] 數據狀態更新逾時");
+
                     }
                     else
                     {
                         logger.Info($"[{component_name}] 數據狀態更新已恢復");
-                        HandleCommunicationError();
+                        HandleCommunicationRecovery();
                     }
                 }
             }
@@ -88,8 +93,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             set
             {
                 _StateData = value;
-                CheckStateDataContent();
-                lastUpdateTime = DateTime.Now;
+                if (CheckStateDataContent())
+                    lastUpdateTime = DateTime.Now;
             }
         }
 
@@ -112,18 +117,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 while (true)
                 {
                     await Task.Delay(1000);
-                    IsCommunicationError = (DateTime.Now - lastUpdateTime).TotalSeconds > 10;
+                    _CommunicationErrorJudge();
                 }
             });
         }
 
+        protected virtual void _CommunicationErrorJudge()
+        {
+            double timeDiff = (DateTime.Now - lastUpdateTime).TotalSeconds;
+            //logger.Info($"[{component_name}]{timeDiff} sec");
+            IsCommunicationError = timeDiff > 10;
+        }
+
         protected virtual void HandleCommunicationError()
         {
-
+            //
         }
         protected virtual void HandleCommunicationRecovery()
         {
 
+            OnCommunicationRecovery?.Invoke(this, null);
         }
     }
 }

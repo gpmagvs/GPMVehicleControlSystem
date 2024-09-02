@@ -70,6 +70,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         protected override void HandleCommunicationError()
         {
+            logger.Info($"[Battery-{Data.batteryID}] state={Data.state}");
             base.HandleCommunicationError();
             Current_Warning_Code = AlarmCodes.Battery_Status_Error_;
         }
@@ -78,6 +79,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             base.HandleCommunicationRecovery();
             Current_Warning_Code = AlarmCodes.None;
+        }
+
+        protected override void _CommunicationErrorJudge()
+        {
+            if (Data.state == -1)
+            {
+                IsCommunicationError = true;
+                return;
+            }
+            base._CommunicationErrorJudge();
         }
     }
 
