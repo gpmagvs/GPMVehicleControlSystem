@@ -1521,7 +1521,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
 
                     await Task.Delay(500);
-                    success = SickData.LocalizationStatus == 10 && SickData.MapSocre >= 0.9;//確認定位狀態
+
+                    bool coordinationCheck()
+                    {
+                        double diffx = SickData.Data.x / 1000.0 - x;
+                        double diffy = SickData.Data.y / 1000.0 - y;
+                        double distanceBetween = Math.Sqrt(diffx * diffx + diffy * diffy);
+                        double currentTheta = BarcodeReader.Data.theta;
+                        double sickTheta = SickData.HeadingAngle;
+                        double diffOfTheta = currentTheta - sickTheta;
+                        logger.LogTrace($"Coordination Check of Sick Localization Result => Distance to TAG : {distanceBetween} m ; Theta Different : {diffOfTheta} degree");
+                        if (distanceBetween > 0.15)
+                        {
+                            logger.LogWarning($"Corrdination Check Fail => ({distanceBetween} m)");
+                            return false;
+                        }
+
+                        if (Math.Abs(diffOfTheta) > 5)
+                        {
+                            logger.LogWarning($"Theta Check Fail => ({diffOfTheta} m)");
+                            return false;
+                        }
+                        return true;
+                    }
+
+                    success = SickData.LocalizationStatus == 10 && SickData.MapSocre >= 0.9 && coordinationCheck(); //確認定位狀態
                     _tryNum++;
                     if (success)
                     {
