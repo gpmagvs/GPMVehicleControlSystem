@@ -1516,7 +1516,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
 
                     await Task.Delay(500);
-                    success = SickData.LocalizationStatus == 10;//確認定位狀態
+                    success = SickData.LocalizationStatus == 10 && SickData.MapSocre >= 0.9;//確認定位狀態
                     _tryNum++;
                     if (success)
                     {
