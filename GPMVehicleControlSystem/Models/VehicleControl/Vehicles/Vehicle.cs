@@ -1475,6 +1475,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
+                if (GetSub_Status() == SUB_STATUS.RUN || AGVC.ActionStatus == ActionStatus.ACTIVE)
+                {
+                    return (false, "車子在執行任務的過程中禁止執行定位動作");
+                }
+
                 //Get Current Tag 
                 double currentTag = BarcodeReader.Data.tagID;
                 if (currentTag == 0)

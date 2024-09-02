@@ -12,6 +12,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public double MapSocre => Data.map_match_status / 100.0;
         public double HeadingAngle => Data.heading / 1000.0;
 
+        private byte _MapMatchStatus;
+        private byte MapMatchStatus
+        {
+            get => _MapMatchStatus;
+            set
+            {
+                if (_MapMatchStatus != value)
+                {
+                    _MapMatchStatus = value;
+                    if (_MapMatchStatus == 0x30)
+                    {
+                        OnMapMatchStatusToLow?.Invoke(this, EventArgs.Empty);
+                    }
+                }
+            }
+        }
+
+        public static event EventHandler OnLocalizationStationError;
+        public static event EventHandler OnMapMatchStatusToLow;
         public override string alarm_locate_in_name => component_name.ToString();
 
         public bool _LaserModeSettingError = false;
@@ -53,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public byte LocalizationStatus { get; private set; } = 0x00;
+        public byte LocalizationStatus { get; private set; } = 0x10;
 
         public override void OnAlarmResetHandle()
         {
@@ -69,8 +88,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (LocalizationStatus != 10)
                 {
                     logger.Warn($"Map Compare Rate Too Low [From Sick Data]");
+                    OnLocalizationStationError?.Invoke(this, EventArgs.Empty);
                 }
             }
+
+            MapMatchStatus = Data.map_match_status;
             return true;
         }
 

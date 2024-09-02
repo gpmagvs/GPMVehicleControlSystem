@@ -118,7 +118,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //clsBattery.OnBatteryOverTemperature += HandleBatteryOverTemperature;
             }
             CarComponent.OnCommunicationError += CarComponent_OnCommunicationError;
+            clsSick.OnLocalizationStationError += ClsSick_OnLocalizationStationError;
+            clsSick.OnMapMatchStatusToLow += ClsSick_OnMapMatchStatusToLow;
 
+        }
+
+        private void ClsSick_OnMapMatchStatusToLow(object? sender, EventArgs e)
+        {
+            AlarmManager.AddAlarm(AlarmCodes.Map_Recognition_Rate_Too_Low, true);
+        }
+
+        private void ClsSick_OnLocalizationStationError(object? sender, EventArgs e)
+        {
+            AlarmManager.AddAlarm(AlarmCodes.Localization_Fail, false);
         }
 
         private void CarComponent_OnCommunicationError(object? sender, CarComponent e)
