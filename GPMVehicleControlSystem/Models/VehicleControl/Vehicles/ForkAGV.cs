@@ -299,8 +299,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     if (forkInitizeResult.done)
                     {
+                        (bool confirm, AlarmCodes alarm_code) home_action_response = (false, AlarmCodes.None);
                         //self test Home action 
-                        (bool confirm, AlarmCodes alarm_code) home_action_response = await ForkLifter.ForkGoHome();
+                        if (Parameters.ForkAGV.HomePoseUseStandyPose)
+                        {
+                            (bool confirm, string message) = await ForkLifter.ForkPose(Parameters.ForkAGV.StandbyPose, 1, true);
+                            home_action_response.confirm = confirm;
+                            home_action_response.alarm_code = confirm ? AlarmCodes.None : AlarmCodes.Fork_Action_Aborted;
+                        }
+                        else
+                        {
+                            home_action_response = await ForkLifter.ForkGoHome();
+                        }
                         if (!home_action_response.confirm)
                         {
                             _forklift_init_result = (false, home_action_response.alarm_code.ToString());

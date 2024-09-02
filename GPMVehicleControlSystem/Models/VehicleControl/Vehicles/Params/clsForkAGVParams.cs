@@ -13,8 +13,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public double VehielLengthWitchForkArmExtend { get; set; } = 160.0;
         public double UplimitPose { get; set; } = 35;
         public double DownlimitPose { get; set; } = 0;
-
         public double UplimitPoseSettingMax { get; set; } = 35;
+        public double StandbyPose { get; set; } = 10;
+        public bool HomePoseUseStandyPose { get; set; } = true;
+
         /// <summary>
         /// 是否搭載PIN
         /// </summary>
