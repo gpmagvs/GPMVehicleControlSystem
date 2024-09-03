@@ -63,14 +63,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void AGVSPingSuccessHandler()
         {
-            await Task.Delay(1).ConfigureAwait(false);
             logger.LogTrace($"AGVS Network restored. ");
             AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
         }
 
         private async void AGVSPingFailHandler()
         {
-            await Task.Delay(1).ConfigureAwait(false);
             logger.LogTrace($"AGVS Network Ping Fail.... ");
             AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
         }
