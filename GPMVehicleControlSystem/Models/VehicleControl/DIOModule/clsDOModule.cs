@@ -79,8 +79,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             try
             {
-
-                VCSOutputs[Indexs[signal]].OnStateChanged += handler;
+                void _HandleInputStateChanged(object? sender, bool e)
+                {
+                    Task.Run(() =>
+                    {
+                        handler.Invoke(sender, e);
+                    });
+                }
+                VCSOutputs[Indexs[signal]].OnStateChanged += _HandleInputStateChanged;
             }
             catch (Exception ex)
             {
