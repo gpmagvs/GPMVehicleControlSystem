@@ -3,7 +3,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<AssemblyVersion>2.7.242.1</AssemblyVersion>
+		<AssemblyVersion>2.7.247.3</AssemblyVersion>
 		<InformationalVersion>2.7.0</InformationalVersion>
 		<AssemblyName>GPM_VCS</AssemblyName>
 		<NoWarn>4014</NoWarn>
@@ -31,6 +31,8 @@
 	<ItemGroup>
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="NLog" Version="5.3.2" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.11" />
 		<PackageReference Include="NModbus4.Core" Version="1.0.2" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
