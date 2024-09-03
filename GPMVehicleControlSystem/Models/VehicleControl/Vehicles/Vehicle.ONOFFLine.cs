@@ -107,7 +107,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //檢查是否停在禁止上線的TAG位置
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online_At_Virtual_Point);
                 }
-                if (IsNoCargoButIDExist)
+                if (!bypassStatusCheck && IsNoCargoButIDExist)
                 {
                     return (false, RETURN_CODE.AGV_HasIDBut_No_Cargo);
                 }

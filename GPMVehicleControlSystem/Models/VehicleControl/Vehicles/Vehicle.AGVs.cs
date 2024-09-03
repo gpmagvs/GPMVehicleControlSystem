@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static AGVSystemCommonNet6.MAP.MapPoint;
+using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Notify;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -21,6 +23,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private Queue<FeedbackData> ActionFinishReportFailQueue = new Queue<FeedbackData>();
         private SemaphoreSlim TaskDispatchFlowControlSemaphoreSlim = new SemaphoreSlim(1, 1);
+        /// <summary>
+        /// 記憶OnlineMode Query發生T1 Timeout 當下的上線狀態。
+        /// </summary>
+        private REMOTE_MODE _onlineModeWhenOnlineQueryActionT1Timeout = REMOTE_MODE.OFFLINE;
         private async Task AGVSInit()
         {
             string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
@@ -39,6 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnDisconnected += AGVS_OnDisconnected;
             AGVS.OnTaskFeedBack_T1Timeout += Handle_AGVS_TaskFeedBackT1Timeout;
             AGVS.OnOnlineModeQuery_T1Timeout += Handle_AGVS_OnlineModeQuery_T1Timeout;
+            AGVS.OnOnlineModeQuery_Recovery += Handle_AGVS_OnOnlineModeQuery_Recovery;
             AGVS.OnRunningStatusReport_T1Timeout += Handle_AGVS_RunningStatusReport_T1Timeout;
             AGVS.OnPingFail += AGVSPingFailHandler;
             AGVS.OnPingSuccess += AGVSPingSuccessHandler;
@@ -60,6 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
+
 
         private async void AGVSPingSuccessHandler()
         {
@@ -240,12 +248,66 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void Handle_AGVS_RunningStatusReport_T1Timeout(object? sender, EventArgs e)
         {
             AlarmManager.AddWarning(AlarmCodes.RunningStatusReport_T1_Timeout);
-
         }
 
         private void Handle_AGVS_OnlineModeQuery_T1Timeout(object? sender, EventArgs e)
         {
+            _onlineModeWhenOnlineQueryActionT1Timeout = Remote_Mode.Clone();
+            Remote_Mode = REMOTE_MODE.OFFLINE;
             AlarmManager.AddWarning(AlarmCodes.OnlineModeQuery_T1_Timeout);
+        }
+
+        private void Handle_AGVS_OnOnlineModeQuery_Recovery(object? sender, EventArgs e)
+        {
+            logger.LogInformation("Online Mode Query Request Restored!");
+            AlarmManager.ClearAlarm(AlarmCodes.OnlineModeQuery_T1_Timeout);
+
+            if (_onlineModeWhenOnlineQueryActionT1Timeout == REMOTE_MODE.ONLINE)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        (bool success, RETURN_CODE return_code) result = (false, RETURN_CODE.NG);
+                        int tryCnt = 1;
+                        while (!result.success)
+                        {
+                            logger.LogInformation($"Try Online To AGVS because remote mode when T1 is Online...(第{tryCnt}次嘗試)");
+
+                            if (GetSub_Status() == SUB_STATUS.DOWN)
+                            {
+                                logger.LogWarning($"Try Online To AGVS CANCELED, Because AGV Status is DOWN now.");
+                                return;
+                            }
+
+                            if (AGVS.IsOnlineModeQueryTimeout)
+                            {
+                                logger.LogWarning($"Try Online To AGVS CANCELED, Because Online Mode Query T1 Timeout occuring aggin..");
+                                return;
+                            }
+                            if (tryCnt >= 11)
+                            {
+                                logger.LogWarning($"Try Online To AGVS CANCELED, Because retry count > 10.");
+                                return;
+                            }
+                            result = await Online_Mode_Switch(REMOTE_MODE.ONLINE, bypassStatusCheck: true);
+                            string returyResultStr = $"{(result.success ? "成功" : "失敗")} , Return Code = {result.return_code}";
+                            logger.LogInformation($"Try Online To AGVS because remote mode when T1 is Online...(第{tryCnt}次嘗試)=>{returyResultStr}");
+                            await Task.Delay(1000);
+                            tryCnt++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, ex.Message);
+                    }
+                    finally
+                    {
+                        logger.LogInformation($"Retry ONLINE process in Handle_AGVS_OnOnlineModeQuery_Recovery callback is done.");
+                    }
+
+                });
+            }
         }
 
         private void Handle_AGVS_TaskFeedBackT1Timeout(object? sender, FeedbackData feedbackData)
