@@ -125,12 +125,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void ClsSick_OnMapMatchStatusToLow(object? sender, EventArgs e)
         {
-            AlarmManager.AddAlarm(AlarmCodes.Map_Recognition_Rate_Too_Low, true);
+            AlarmManager.AddWarning(AlarmCodes.Map_Recognition_Rate_Too_Low);
         }
 
         private void ClsSick_OnLocalizationStationError(object? sender, EventArgs e)
         {
-            AlarmManager.AddAlarm(AlarmCodes.Localization_Fail, false);
+            AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
         }
 
         private void CarComponent_OnCommunicationError(object? sender, CarComponent e)
