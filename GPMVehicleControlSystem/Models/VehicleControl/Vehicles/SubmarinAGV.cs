@@ -6,7 +6,9 @@ using AGVSystemCommonNet6.Vehicle_Control;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using NLog;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -114,7 +116,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO] = state; });
                 LOG.INFO($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
             }
+
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_L_REQ, PIOStatusLogHandler);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_U_REQ, PIOStatusLogHandler);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_READY, PIOStatusLogHandler);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_BUSY, PIOStatusLogHandler);
+            WagoDI.SubsSignalStateChange(DI_ITEM.EQ_GO, PIOStatusLogHandler);
+
+
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_VALID, PIOStatusLogHandler);
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_TR_REQ, PIOStatusLogHandler);
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, PIOStatusLogHandler);
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, PIOStatusLogHandler);
+            WagoDO.SubsSignalStateChange(DO_ITEM.AGV_COMPT, PIOStatusLogHandler);
+
         }
+
+        private void PIOStatusLogHandler(object sender, bool e)
+        {
+            if (!IsHandshaking)
+                return;
+            clsIOSignal signal = (clsIOSignal)sender;
+            Logger logger = GetHsIOLogger();
+            logger.Info($"[{signal.Address}]{signal.Name} => {(e ? "1" : "0")}");
+        }
+
+
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
         {
             AGVC = new SubmarinAGVControl(RosBridge_IP, RosBridge_Port);

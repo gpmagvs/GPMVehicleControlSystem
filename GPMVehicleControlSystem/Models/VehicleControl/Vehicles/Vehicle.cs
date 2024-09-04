@@ -15,6 +15,7 @@ using GPMVehicleControlSystem.Models.WebsocketMiddleware;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using NLog;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
@@ -1146,6 +1147,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
             return (true, "");
+        }
+
+
+        public Logger GetHsIOLogger()
+        {
+            string taskID = _RunTaskData?.Task_Name;
+            Logger logger = LogManager.GetLogger($"HandshakeLogByOrder/{taskID}");
+            return logger;
         }
     }
 }

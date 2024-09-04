@@ -11,6 +11,7 @@ using System.Reflection;
 using static AGVSystemCommonNet6.clsEnums;
 using NLog;
 using NLog.Web;
+using System.Threading.Tasks;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -19,6 +20,7 @@ LinuxTools.SaveCurrentProcessPID();
 var param = Vehicle.LoadParameters();
 Logger logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Info($"GPM VCS Program Start :: APP Version:V.{StaStored.APPVersion}");
+
 _ = Task.Run(() =>
 {
     LOG.SetLogFolderName(param.LogFolder);

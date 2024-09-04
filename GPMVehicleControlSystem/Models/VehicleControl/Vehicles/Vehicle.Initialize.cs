@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using Microsoft.OpenApi.Extensions;
+using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -236,6 +237,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal virtual async void ResetHandshakeSignals()
         {
+
+            Logger logger = GetHsIOLogger();
+            logger.Info($"Reset PIO Status of AGV.");
 
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);

@@ -216,3 +216,4 @@ VCS_Release
 /GPMVehicleControlSystem/IMU_MaxMin_Record.json
 /GPMVehicleControlSystem/cst_read_id.txt
 /GPMVehicleControlSystem/publish.cmd
+/GPMVehicleControlSystem/internal-nlog-AspNetCore.txt

@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Modbus.Device;
+using NLog;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -251,6 +252,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal bool IsEQHsSignalInitialState()
         {
+            Logger logger = GetHsIOLogger();
+            logger.Info($"Check PIO Status of EQ.");
+
+            logger.Info($"[EQ IO Check] EQ_BUSY  => {IsEQBusyOn()}");
+            logger.Info($"[EQ IO Check] EQ_READY => {IsEQReadyOn()}");
+            logger.Info($"[EQ IO Check] EQ_U_REQ => {IsULReqOn(ACTION_TYPE.Unload)}");
+            logger.Info($"[EQ IO Check] EQ_L_REQ => {IsULReqOn(ACTION_TYPE.Load)}");
+
             return !IsEQBusyOn() && !IsEQReadyOn() && !IsULReqOn(ACTION_TYPE.Unload) && !IsULReqOn(ACTION_TYPE.Load);
         }
         public clsDynamicTrafficState DynamicTrafficState { get; internal set; } = new clsDynamicTrafficState();
@@ -309,6 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 HandshakeStatusText = $"等待設備{(action == ACTION_TYPE.Load ? "[載入]" : "[移出]")} 訊號...";
                 LOG.Critical("[EQ Handshake] 等待EQ LU_REQ ON");
+                GetHsIOLogger().Info("等待EQ LU_REQ ON..");
                 StartTimer(HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON);
                 waitEQSignalCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON]));
                 wait_eq_UL_req_ON.Start();
@@ -333,6 +343,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 waitEQReadyOnCST.CancelAfter(TimeSpan.FromSeconds(Parameters.EQHSTimeouts[HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON]));
                 HandshakeStatusText = $"等待設備 READY 訊號...";
                 LOG.Critical("[EQ Handshake] 等待EQ Ready ON...");
+                GetHsIOLogger().Info("等待EQ Ready ON...");
                 wait_eq_ready.Start();
                 wait_eq_ready.Wait(waitEQReadyOnCST.Token);
                 if (isEQGoOff)
@@ -341,17 +352,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WatchE84AlarmWhenAGVBUSY();
                 EndTimer(HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON);
                 HandshakeStatusText = $"AGV進入設備中...";
+                GetHsIOLogger().Info("AGV進入設備中.");
                 return (true, AlarmCodes.None);
             }
             catch (Exception ex)
             {
                 StopAllHandshakeTimer();
                 if (Sub_Status == SUB_STATUS.DOWN)
+                {
+                    GetHsIOLogger().Info("AGV Status Down");
                     return (false, AlarmCodes.Handshake_Fail_AGV_DOWN);
+                }
                 if (isEQGoOff)
+                {
+                    GetHsIOLogger().Error(AlarmCodes.Handshake_Fail_EQ_GO);
                     return (false, AlarmCodes.Handshake_Fail_EQ_GO);
+                }
                 if (IsEQDown)
+                {
+                    GetHsIOLogger().Error(AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
                     return (false, AlarmCodes.Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_READY);
+                }
                 return (false, AlarmCodes.Handshake_Fail_TA2_EQ_READY);
             }
 
@@ -383,6 +404,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 HandshakeStatusText = $"等待設備開始動作...";
                 LOG.Critical("[EQ Handshake] 等待EQ BUSY ON ");
+                GetHsIOLogger().Info("等待EQ BUSY ON ");
                 while (!IsEQBusyOn() && !isEQGoOff && IsEQReadyOn())
                 {
                     if (Sub_Status == SUB_STATUS.DOWN)
@@ -402,6 +424,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 HandshakeStatusText = $"等待設備完成動作...";
                 LOG.Critical("[EQ Handshake] 等待EQ BUSY OFF");
+                GetHsIOLogger().Info("等待EQ BUSY OFF ");
 
                 if (waitEQ_BUSY_OFF_CTS.IsCancellationRequested)
                 {
@@ -445,11 +468,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (isEQGoOff)
                     _alarm = AlarmCodes.Handshake_Fail_EQ_GO;
                 else if (!IsEQReadyOn())
+                {
+                    GetHsIOLogger().Error(AlarmCodes.Handshake_Fail_EQ_READY_OFF);
                     _alarm = AlarmCodes.Handshake_Fail_EQ_READY_OFF;
+                }
                 else if (Sub_Status == SUB_STATUS.DOWN)
+                {
+                    GetHsIOLogger().Error(AlarmCodes.Handshake_Fail_AGV_DOWN);
                     _alarm = AlarmCodes.Handshake_Fail_AGV_DOWN;
+                }
                 else
+                {
+                    GetHsIOLogger().Error(AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON);
                     _alarm = AlarmCodes.Handshake_Fail_TA3_EQ_BUSY_ON;
+                }
                 AlarmCodeWhenHandshaking = _alarm;
                 return (false, _alarm);
             }
@@ -476,6 +508,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SetAGVBUSY(true);
                 WatchE84AlarmWhenAGVBUSY();
                 HandshakeStatusText = $"AGV退出設備中...";
+                GetHsIOLogger().Info($"AGV退出設備中...");
                 return (true, AlarmCodes.None);
             }
             catch (Exception ex)
@@ -495,6 +528,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     _alarm = AlarmCodes.None;
                 AlarmCodeWhenHandshaking = _alarm;
+                if (_alarm != AlarmCodes.None)
+                    GetHsIOLogger().Error(_alarm);
                 return (_alarm == AlarmCodes.None, _alarm);
             }
 
@@ -512,6 +547,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task wait_eq_UL_req_OFF = new Task(() =>
             {
                 LOG.WARN("[EQ Handshake] 等待 EQ_L_U_REQ OFF");
+                GetHsIOLogger().Info("等待 EQ_L_U_REQ OFF");
                 while (IsULReqOn(action) && !isEQGoOff)
                 {
                     if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
@@ -522,6 +558,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task wait_eq_ready_off = new Task(() =>
             {
                 LOG.WARN("[EQ Handshake] 等待 EQ READY OFF");
+                GetHsIOLogger().Info("等待 EQ READY OFF");
                 while (IsEQReadyOn() && !isEQGoOff)
                 {
                     if (wait_eq_l_u_req_off_cts.IsCancellationRequested)
@@ -602,6 +639,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 else
                     _alarm = AlarmCodes.Handshake_Fail_TA5_EQ_READY_NOT_OFF;
                 AlarmCodeWhenHandshaking = _alarm;
+                GetHsIOLogger().Error(_alarm);
                 return (false, _alarm);
             }
 

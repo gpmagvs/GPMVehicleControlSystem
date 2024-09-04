@@ -10,6 +10,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -91,6 +92,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
             {
+                Logger logger = Agv.GetHsIOLogger();
+                logger.Info($"Handshake Start.");
                 Agv.IsHandshaking = true;
                 Agv.HandshakeStatusText = $"{(action == ACTION_TYPE.Load ? "[放貨]" : "[取貨]")} 任務開始";
                 if (Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS)
@@ -112,7 +115,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
 
                     if (!Agv.IsEQHsSignalInitialState())
+                    {
+                        logger.Error($"EQ PIO Init. Status Check Fail => {AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset}");
                         return (false, AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset);
+                    }
                 }
 
                 if (Agv.Parameters.PlayHandshakingMusic)
