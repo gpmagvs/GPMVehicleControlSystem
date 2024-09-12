@@ -27,7 +27,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 退至二次定位點不等待就定位牙叉即開始回HOME
         /// </summary>
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary { get; set; } = true;
-        public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = true;
+        /// <summary>
+        /// 開始從充電樁退出時就下降牙叉
+        /// </summary>
+        public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = false;
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
         public clsForkInit InitParams = new clsForkInit();
