@@ -280,7 +280,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             else if (AgvType == AGV_TYPE.FORK)
             {
-                VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                try
+                {
+                    VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                }
+                catch (Exception ex)
+                {
+                }
             }
         }
 
