@@ -332,6 +332,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag)
                 };
 
+                BuzzerPlayer.Alarm();
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
 
@@ -340,9 +341,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         await Task.Delay(1000);
                     }
                     await Startup();
-
                     HandshakeLog("Hello!World!");
-
                 });
             }
             catch (Exception ex)
@@ -428,7 +427,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await DOSignalDefaultSetting();
                 await ResetMotor(false);
                 DIOStatusChangedEventRegist();
-                BuzzerPlayer.Alarm();
                 AlarmManager.Active = true;
                 AlarmManager.RecordAlarm(AlarmCodes.None);
                 if (HasAnyCargoOnAGV() && CSTReader != null)
