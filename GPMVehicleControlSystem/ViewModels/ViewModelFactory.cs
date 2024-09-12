@@ -16,6 +16,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Service;
+using GPMVehicleControlSystem.Models.Buzzer;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
@@ -100,7 +101,13 @@ namespace GPMVehicleControlSystem.ViewModels
                     IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
                     InitializingStatusText = AGV.InitializingStatusText,
                     AMCAGVSensorState = GetSensorsActiveState(),
-                    IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord
+                    IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord,
+                    BuzzerState = new AGVCStatusVM.BuzzerModuleState
+                    {
+                        isPlaying = BuzzerPlayer.IsPlaying,
+                        player = BuzzerPlayer.APLAYER != null ? "linux-aplay" : "ros-sound-play",
+                        playingAudio = BuzzerPlayer.PlayingAudio
+                    }
 
 
                 };

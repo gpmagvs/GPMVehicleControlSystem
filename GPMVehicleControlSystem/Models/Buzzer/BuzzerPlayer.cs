@@ -15,6 +15,19 @@ namespace GPMVehicleControlSystem.Models.Buzzer
     public class BuzzerPlayer
     {
         static Logger logger => LogManager.GetCurrentClassLogger();
+
+        public static bool IsPlaying => IsAlarmPlaying || IsActionPlaying || IsMovingPlaying || IsGotoChargeStationPlaying || IsMeasurePlaying || IsExchangeBatteryPlaying || IsHandshakingPlaying;
+        public static SOUNDS SoundPlaying { get; private set; } = SOUNDS.Stop;
+        public static string PlayingAudio
+        {
+            get
+            {
+                if (!IsPlaying)
+                    return "";
+                return SoundPlaying.ToString();
+            }
+        }
+
         public static RosSocket rossocket;
         internal static bool IsAlarmPlaying = false;
         internal static bool IsActionPlaying = false;
@@ -28,6 +41,30 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         public delegate SOUNDS BuzzerMovePlayDelate();
         public static BuzzerMovePlayDelate BeforeBuzzerMovePlay;
         private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+        internal static APlayer APLAYER = null;
+        public static void DeterminePlayerUse()
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Unix)
+                return;
+            // 初始化 Process 对象
+            Process process = new Process();
+            process.StartInfo.FileName = "bash";
+            process.StartInfo.Arguments = "-c \"which aplay\""; // 使用 bash -c 來執行命令
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.Start();
+            string result = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (!string.IsNullOrEmpty(result))
+            {
+                APLAYER = new APlayer();
+                Console.WriteLine("which aplay result: " + result);
+                Console.WriteLine("Will use aplay to play audios!!");
+            }
+        }
         public static void Alarm()
         {
             if (IsAlarmPlaying)
@@ -80,6 +117,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             try
             {
+                SoundPlaying = sound;
                 await semaphore.WaitAsync();
 
                 if (sound == SOUNDS.Stop)
@@ -97,6 +135,14 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 }
 
                 logger.Info($"Playing Sound : {sound}");
+
+                if (APLAYER != null)
+                {
+                    logger.Info($"Playing with APLAYER : {sound}");
+                    APLAYER.PlayAudio(sound, out string errorMsg);
+                    return;
+                }
+
                 Thread playsound_thred = new Thread(() =>
                 {
                     try

@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.MAP;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using static AGVSystemCommonNet6.clsEnums;
@@ -99,6 +100,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public Dictionary<string, bool> AMCAGVSensorState { get; set; } = new Dictionary<string, bool>();
         public clsIMU.clsMaxMinGvalDataSaveModel IMUMaxMinValRecord { get; set; } = new clsIMU.clsMaxMinGvalDataSaveModel();
 
+        public BuzzerModuleState BuzzerState { get; set; } = new();
         public class clsTransferInfoViewModel
         {
             public string Action { get; set; } = "";
@@ -127,6 +129,12 @@ namespace GPMVehicleControlSystem.ViewModels
 
         }
 
+        public class BuzzerModuleState
+        {
+            public string player { get; set; } = "ros-sound-play";
+            public bool isPlaying { get; set; } = false;
+            public string playingAudio { get; set; } = "";
+        }
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)

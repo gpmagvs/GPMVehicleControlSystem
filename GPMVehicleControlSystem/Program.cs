@@ -15,7 +15,8 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.ResponseCompression;
 using NLog;
 using NLog.Web;
-
+using GPMVehicleControlSystem.Models.Buzzer;
+BuzzerPlayer.DeterminePlayerUse();
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();

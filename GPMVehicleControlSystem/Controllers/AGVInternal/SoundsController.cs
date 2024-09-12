@@ -90,5 +90,28 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             StaStored.VolumnAdjuster.VolumeControl(Tools.SystemVolumnAdjuster.ADJUST_ACTION.SET, percentage);
             return Ok();
         }
+
+        [HttpPost("aplaytest")]
+        public async Task<IActionResult> aplaytest(string audioPath = "/home/gpm/param/sounds/alarm.wav")
+        {
+            try
+            {
+                APlayer player = new APlayer();
+                bool success = player.PlayAudio(audioPath, out string error);
+                return Ok(new
+                {
+                    result = success,
+                    message = error
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    result = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }
