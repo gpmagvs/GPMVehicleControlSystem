@@ -694,10 +694,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _RunTaskData = new clsTaskDownloadData();
             SaveParameters(Parameters);
             //嘗試定位
-            _ = Task.Run(async () =>
-            {
-                await LocalizationWithCurrentTag();
-            });
+            //_ = Task.Run(async () =>
+            //{
+            //    await LocalizationWithCurrentTag();
+            //});
             HandshakeStatusText = "";
             IsHandshaking = false;
             return await Task.Run(async () =>

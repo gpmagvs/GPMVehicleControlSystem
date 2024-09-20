@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal clsCST CstInformation = new clsCST() { CST_Type = CST_TYPE.None };
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
-            height = taskDownloadData.Height;
+            height = Agv.Parameters.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS ? taskDownloadData.Height : taskDownloadData.Height - 1;
             DetermineHandShakeSetting();
             HandleCSTType();
         }
