@@ -62,7 +62,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IMU.OnOptionsFetching += () => { return Parameters.ImpactDetection; };
             IMU.OnMaxMinGvalChanged += Handle_IMU_OnMaxMinGvalChanged;
             clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
-            OnParamEdited += (param) => { this.Parameters = param; };
+            OnParamEdited += (param) =>
+            {
+                if (param == null)
+                    return;//卡控 null value 
+                this.Parameters = param;
+            };
 
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>
             {

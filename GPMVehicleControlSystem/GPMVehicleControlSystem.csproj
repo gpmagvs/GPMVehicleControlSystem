@@ -67,6 +67,9 @@
 		<Content Update="src\WorkStation.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
+		<Content Update="uploads\IMU_MaxMin_Record.json">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Content>
 		<Content Update="wwwroot\agv.png">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</Content>
@@ -137,6 +140,9 @@
 		</None>
 		<None Update="src\sounds\traverse_right.mp3">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="uploads\Microsoft.Extensions.ObjectPool.dll">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
 		<None Update="wwwroot">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -462,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         CSTReader.OnCSTIDUpdated += (sender, newCstID) =>
                         {
                             Parameters.lastCstIDStore = newCstID;
-                            SaveParameters(Parameters);
+                            SaveParameters(Parameters).GetAwaiter().GetResult(); ;
                             LOG.INFO($"更新貨物ID --> {(Parameters.lastCstIDStore == "" ? "(空白)" : Parameters.lastCstIDStore)} 並儲存於參數檔成功");
                         };
                     }

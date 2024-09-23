@@ -8,6 +8,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        private static SemaphoreSlim saveParamSemaphoreSlim = new SemaphoreSlim(1, 1);
         private clsVehicelParam _Parameters = new clsVehicelParam();
         public clsVehicelParam Parameters
         {
@@ -66,16 +67,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 clsVehicelParam? Parameters = new clsVehicelParam();
                 string param_file = filepath != null ? filepath : ParametersFilePath.ToString();
+                if (watch_file_change)
+                {
+                    InitWatchConfigFileChange(param_file);
+                }
                 if (File.Exists(param_file))
                 {
                     string param_json = File.ReadAllText(param_file);
                     Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
                 }
-                SaveParameters(Parameters);
-                if (watch_file_change)
-                {
-                    InitWatchConfigFileChange(param_file);
-                }
+
+                if (Parameters == null)
+                    throw new NullReferenceException();
+
+                SaveParameters(Parameters).GetAwaiter().GetResult();
+
                 return Parameters;
             }
             catch (Exception ex)
@@ -111,10 +117,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             configFileChangedWatcher.EnableRaisingEvents = true;
         }
 
-        public static void SaveParameters(clsVehicelParam Parameters)
+        public static async Task SaveParameters(clsVehicelParam Parameters)
         {
-            string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
-            File.WriteAllText(ParametersFilePath, param_json);
+            try
+            {
+                await saveParamSemaphoreSlim.WaitAsync();
+                if (configFileChangedWatcher != null)
+                    configFileChangedWatcher.EnableRaisingEvents = false;
+                string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
+                File.WriteAllText(ParametersFilePath, param_json);
+                if (configFileChangedWatcher != null)
+                    configFileChangedWatcher.EnableRaisingEvents = true;
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                saveParamSemaphoreSlim.Release();
+            }
         }
 
         internal static void StartConfigChangedWatcher()

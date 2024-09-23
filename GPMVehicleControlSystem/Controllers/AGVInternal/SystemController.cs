@@ -22,7 +22,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             try
             {
                 StaStored.CurrentVechicle.Parameters = param;
-                Vehicle.SaveParameters(param);
+                Vehicle.SaveParameters(param).GetAwaiter().GetResult();
                 return Ok(true);
             }
             catch (Exception)
