@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -14,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     public class DischargeTask : ChargeTask
     {
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Discharge;
-
+        protected override int ExitPointTag => this.RunningTaskData.Homing_Trajectory.Last().Point_ID;
         public DischargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
@@ -81,6 +82,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            (bool exitPortConfirmed, AlarmCodes alarmCode) = await ExitPortRequest();
+            if (!exitPortConfirmed)
+            {
+                return (false, alarmCode);
+            }
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
             {

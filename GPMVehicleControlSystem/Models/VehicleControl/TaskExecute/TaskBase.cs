@@ -166,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
-                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data))
                 {
                     return data.ModbusTcpPort;
                 }
@@ -176,6 +176,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
         }
+
+        public EQ_HS_METHOD HandshakeProtocol
+        {
+            get
+            {
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data))
+                {
+                    return data.HandShakeConnectionMode;
+                }
+                else
+                {
+                    return EQ_HS_METHOD.PIO;
+                }
+            }
+        }
+
         public WORKSTATION_HS_METHOD eqHandshakeMode { get; set; }
         public CARGO_TRANSFER_MODE CargoTransferMode
         {
@@ -766,6 +782,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
             }
             return true;
+        }
+
+        protected async virtual Task<(bool success, AlarmCodes alarmCode)> ExitPortRequest()
+        {
+            if (!Agv.Parameters.LDULDParams.LeaveWorkStationNeedSendRequestToAGVS)
+                return (true, AlarmCodes.None);
+            if (RunningTaskData.IsLocalTask)
+            {
+                logger.Info($"注意! Local派工不需詢問派車系統是否可退出設備");
+                return (true, AlarmCodes.None);
+            }
+
+            bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
+            if (accept)
+                return (true, AlarmCodes.None);
+            else
+            {
+                return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
+            }
+        }
+        protected virtual int ExitPointTag => 0;
+
+        private async Task<bool> WaitAGVSAcceptLeaveWorkStationAsync(int timeout = 300)
+        {
+            try
+            {
+                bool accept = false;
+                Agv.HandshakeStatusText = $"等待派車允許AGV退出設備..";
+                using CancellationTokenSource cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Agv.DirectionLighter.WaitPassLights(300);
+                while (!accept)
+                {
+                    await Task.Delay(1000);
+                    if (cancelCts.IsCancellationRequested)
+                        break;
+                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                        return false;
+
+                    if (Agv.Parameters.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS)
+                    {
+                        accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
+                        Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
+                    }
+                    else
+                    {
+                        accept = await Agv.AGVS.Exist_Request(ExitPointTag);
+                        Agv.HandshakeStatusText = $"等待派車允許AGV退出至Tag-{ExitPointTag}-{stopwatch.Elapsed}";
+                    }
+                }
+
+                return accept;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            finally
+            {
+                Agv.DirectionLighter.AbortFlash();
+            }
+
         }
 
         protected virtual void Dispose(bool disposing)

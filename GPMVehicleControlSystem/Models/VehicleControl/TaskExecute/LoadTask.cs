@@ -27,6 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     {
         private ManualResetEvent _WaitBackToHomeDonePause = new ManualResetEvent(false);
         private ActionStatus _BackHomeActionDoneStatus = ActionStatus.PENDING;
+
         public enum CST_ID_NO_MATCH_ACTION
         {
             REPORT_READER_RESULT,
@@ -52,6 +53,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         internal WORKSTATION_HS_METHOD _eqHandshakeMode;
 
         internal clsCST CstInformation = new clsCST() { CST_Type = CST_TYPE.None };
+
+        protected override int ExitPointTag => RunningTaskData.Homing_Trajectory.First().Point_ID;
         public LoadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             height = Agv.Parameters.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS ? taskDownloadData.Height : taskDownloadData.Height - 1;
@@ -107,7 +110,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (IsNeedHandshake)
             {
-                bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS;
+                bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS || HandshakeProtocol == Vehicle.EQ_HS_METHOD.MODBUS;
                 Agv.HandshakeStatusText = "AGV交握訊號重置...";
                 Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimersAndEvents();
@@ -115,13 +118,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Agv.HandshakeStatusText = _is_modbus_hs ? "建立Modbus連線..." : "確認光IO EQ GO訊號...";
                 if (_is_modbus_hs)
                 {
-                    var modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
+                    clsEQHandshakeModbusTcp modbusTcp = new clsEQHandshakeModbusTcp(Agv.Parameters.ModbusIO, destineTag, ModBusTcpPort);
                     if (!modbusTcp.Start(Agv.AGVS, Agv.AGVHsSignalStates, Agv.EQHsSignalStates))
                         return (false, AlarmCodes.Waiting_EQ_Handshake);
                 }
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
                 {
-                    if (!Agv.IsEQGOOn())
+                    if (!_is_modbus_hs && !Agv.IsEQGOOn())
                     {
                         await Task.Delay(200);
                         if (!Agv.IsEQGOOn())
@@ -132,7 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         return (false, alarmCode);
                 }
 
-                (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action);
+                (bool eqready, AlarmCodes alarmCode) HSResult = await Agv.WaitEQReadyON(action, watchEQGO: !_is_modbus_hs);
                 await Task.Delay(1000);
                 if (!HSResult.eqready)
                 {
@@ -424,26 +427,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return (false, checkstatus_alarm_code);
                 }
                 RecordExistSensorState();
-
-                if (Agv.Parameters.LDULDParams.LeaveWorkStationNeedSendRequestToAGVS)
+                (bool exitPortConfirmed, AlarmCodes alarmCode) = await ExitPortRequest();
+                if (!exitPortConfirmed)
                 {
-                    if (RunningTaskData.IsLocalTask)
-                    {
-                        logger.Info($"注意! Local派工不需詢問派車系統是否可退出設備");
-                    }
-                    else
-                    {
-
-                        bool accept = await WaitAGVSAcceptLeaveWorkStationAsync(Agv.Parameters.LDULDParams.LeaveWorkStationRequestTimeout);
-                        if (!accept)
-                        {
-                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                                return (false, AlarmCodes.AGV_State_Cant_do_this_Action);
-
-                            Agv.SetSub_Status(SUB_STATUS.DOWN);
-                            return (false, AlarmCodes.AGVS_Leave_Workstation_Response_Timeout);
-                        }
-                    }
+                    return (false, alarmCode);
                 }
 
                 Agv.DirectionLighter.Backward(delay: 800);
@@ -500,39 +487,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 Console.WriteLine(ex.Message + ex.StackTrace);
                 throw;
             }
-        }
-
-        private async Task<bool> WaitAGVSAcceptLeaveWorkStationAsync(int timeout = 300)
-        {
-            try
-            {
-                bool accept = false;
-                Agv.HandshakeStatusText = $"等待派車允許AGV退出設備..";
-                using CancellationTokenSource cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                Agv.DirectionLighter.WaitPassLights(300);
-                while (!accept)
-                {
-                    await Task.Delay(1000);
-                    if (cancelCts.IsCancellationRequested)
-                        break;
-                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                        return false;
-                    accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
-                    Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
-                }
-
-                return accept;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-            finally
-            {
-                Agv.DirectionLighter.AbortFlash();
-            }
-
         }
 
         private void BackToHomeActionDoneCallback(ActionStatus status)

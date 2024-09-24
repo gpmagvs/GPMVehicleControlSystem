@@ -1,11 +1,8 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
-using AGVSystemCommonNet6.HttpTools;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using Modbus.Device;
-using Modbus.Extensions.Enron;
-using System.Diagnostics.Metrics;
+using NLog;
 using System.Net.Sockets;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsModbusDIOParams;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
@@ -27,6 +24,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private Dictionary<Vehicle.AGV_HSSIGNAL, bool> aGVHsSignalStates;
         private Dictionary<Vehicle.EQ_HSSIGNAL, clsHandshakeSignalState> eQHsSignalStates;
         public bool Connected { get; private set; } = false;
+
+        private Logger logger = LogManager.GetLogger("HandshakeWithModbusTcpLog");
         public clsEQHandshakeModbusTcp()
         {
             StaStored.ConnectingEQHSModbus = this;
@@ -37,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.EQTag = EQTag;
             this.Port = ModbusPort;
             StaStored.ConnectingEQHSModbus = this;
+            logger.Info($"clsEQHandshakeModbusTcp instance created! EQTag={EQTag},ModbusPort= {ModbusPort}");
         }
         public bool Start(clsAGVSConnection AGVS, Dictionary<AGV_HSSIGNAL, bool> aGVHsSignalStates, Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState> eQHsSignalStates)
         {
@@ -46,22 +46,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 this.aGVHsSignalStates = aGVHsSignalStates;
                 this.eQHsSignalStates = eQHsSignalStates;
                 IP = AGVS.IP;
+                logger.Info($"Start running. AGVS PC IP(Modbus Server IP)={IP}");
                 if (Port == -1)
                 {
                     GetEQInfoFromAGVs();
                     Port = eqOptions.AGVModbusGatewayPort;
+                    logger.Warn($"ModbusServer Port not assign. Get EQ Info. from AGVs => Port ={Port}");
                 }
                 bool connected = Connected = Connect();
                 if (!connected)
                 {
                     return false;
                 }
+                logger.Info($"Modbus Server Connected! IOSignalExchangeProcess Start!");
                 IOSignalExchangeProcess();
                 return true;
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
                 return false;
             }
 
@@ -75,7 +78,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await Task.Run(async () =>
             {
                 HandshakingModbusTcpProcessCancel = new CancellationTokenSource();
-                LOG.WARN($"Handshake Signal excahge via ModbusTcp Process START");
+                logger.Warn($"Handshake Signal excahge via ModbusTcp Process START");
+                bool[] lastAGVOutputs = new bool[8];
+                bool[] lastEQInputs = new bool[8];
                 while (true)
                 {
                     await Task.Delay(100);
@@ -99,28 +104,46 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         outputs[2] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY];
                         outputs[3] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_READY];
                         outputs[4] = aGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
+
+
+                        string currentOuputsStr = string.Join(",", outputs);
+                        string lastOuputsStr = string.Join(",", lastAGVOutputs);
+
+                        if (currentOuputsStr != lastOuputsStr)
+                        {
+                            logger.Trace($"AGV HS Signal Changed=>AGV_VALID={outputs[0]},AGV_TR_REQ={outputs[1]},AGV_BUSY={outputs[2]},AGV_READY={outputs[3]},AGV_COMPT={outputs[4]}");
+                        }
                         WriteAGVOutputs(outputs);
-                        var inputs = ReadEQOutputs();
+                        lastAGVOutputs = outputs.ToArray();
+                        bool[] inputs = ReadEQOutputs();
                         eQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ].State = inputs[0];
                         eQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ].State = inputs[1];
                         eQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = inputs[2];
                         eQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = inputs[3];
+                        string currentEQInputsStr = string.Join(",", inputs);
+                        string lastEQInputsStr = string.Join(",", lastEQInputs);
+
+                        if (currentEQInputsStr != lastEQInputsStr)
+                        {
+                            logger.Trace($"EQ HS Signal Changed=>EQ_L_REQ={inputs[0]},EQ_U_REQ={inputs[1]},EQ_READY={inputs[2]},EQ_BUSY={inputs[3]}");
+                        }
+                        lastEQInputs = inputs.ToArray();
                     }
                     catch (Exception ex)
                     {
-                        LOG.ERROR("clsEQHandshakeModbusTcp-IOSignalExchangeProcess Error", ex);
+                        logger.Error("clsEQHandshakeModbusTcp-IOSignalExchangeProcess Error", ex);
                         Disconnect();
                     }
                 }
                 Disconnect();
-                LOG.WARN($"Handshake Signal excahge via ModbusTcp Process END");
+                logger.Warn($"Handshake Signal excahge via ModbusTcp Process END");
             });
         }
         private bool Connect()
         {
             try
             {
-                LOG.TRACE($"[Modbus Tcp] Try connect to {IP}:{Port}");
+                logger.Trace($"[Modbus Tcp] Try connect to {IP}:{Port}");
                 var client = new TcpClient(IP, Port);
                 master = ModbusIpMaster.CreateIp(client);
                 master.Transport.ReadTimeout = 1000;

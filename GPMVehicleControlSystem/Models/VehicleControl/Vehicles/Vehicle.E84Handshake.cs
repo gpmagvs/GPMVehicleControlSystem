@@ -367,7 +367,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 開始與EQ進行交握;
         /// - AGV VALID ON => 等待L/U_REQ ON => TR_REQ ON => 等待EQ READY ON
         /// </summary>
-        internal async Task<(bool eqready, AlarmCodes alarmCode)> WaitEQReadyON(ACTION_TYPE action)
+        internal async Task<(bool eqready, AlarmCodes alarmCode)> WaitEQReadyON(ACTION_TYPE action, bool watchEQGO = true)
         {
             hs_abnormal_happen_cts = new CancellationTokenSource();
             IsEQGoOFF_When_Handshaking = IsEQREQOFF_when_wait_EQREADY_when_handshaking = IsAGVAbnormal_when_handshaking = IsEQAbnormal_when_handshaking = IsEQBusy_when_AGV_Busy = false;
@@ -375,7 +375,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
 
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.PIO)
+            if (watchEQGO)
                 WatchE84EQGOSignalWhenHSStart();
 
             EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
