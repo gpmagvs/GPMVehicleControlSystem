@@ -532,7 +532,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void HandleEQGOOff(object? sender, EventArgs e)
         {
             EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF -= HandleEQGOOff;
-            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
+            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] && !ExecutingTaskEntity.IsBackToSecondaryPt)
             {
                 IsEQGoOFF_When_Handshaking = true;
                 hs_abnormal_happen_cts.Cancel();
