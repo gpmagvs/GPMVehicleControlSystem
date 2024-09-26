@@ -193,7 +193,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!manualCheckSettings.Enabled)
                 return;
 
-            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, out CheckPointModel checkPointModel);
+            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, ACTION_TYPE.Load, out CheckPointModel checkPointModel);
             if (!modelExist || !checkPointModel.Enabled || checkPointModel.TriggerMoment != CHECK_MOMENT.BEFORE_LOAD)
                 return;
             InvokeCargoManualCheckNotify(checkPointModel);
@@ -205,13 +205,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return;
         }
 
-        protected bool TryGetCheckPointModelByTag(int tag, out CheckPointModel checkPointModel)
+        protected bool TryGetCheckPointModelByTag(int tag, ACTION_TYPE action, out CheckPointModel checkPointModel)
         {
             checkPointModel = null;
             if (Agv.Parameters.ManualCheckCargoStatus.CheckPoints == null || Agv.Parameters.ManualCheckCargoStatus.CheckPoints.Count == 0)
                 return false;
 
-            checkPointModel = Agv.Parameters.ManualCheckCargoStatus.CheckPoints.FirstOrDefault(x => x.CheckPointTag == tag);
+            checkPointModel = Agv.Parameters.ManualCheckCargoStatus.CheckPoints.FirstOrDefault(x => x.CheckPointTag == tag &&
+                                                                                x.TriggerMoment == (action == ACTION_TYPE.Load ? CHECK_MOMENT.BEFORE_LOAD : CHECK_MOMENT.AFTER_UNLOAD));
             return checkPointModel != null;
         }
 

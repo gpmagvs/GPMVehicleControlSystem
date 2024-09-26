@@ -92,5 +92,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             else
                 return Ok(new { confirm = false, message = errMsg });
         }
+
+        [HttpPost("SaveManualCheckCargoConfiguration")]
+        public async Task SaveManualCheckCargoConfiguration([FromBody] clsManualCheckCargoStatusParams configs)
+        {
+            configs.CheckPoints = configs.CheckPoints.OrderBy(pt => pt.CheckPointTag).ToList();
+            agv.Parameters.ManualCheckCargoStatus = configs;
+            Vehicle.SaveParameters(agv.Parameters);
+        }
     }
 }

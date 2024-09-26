@@ -92,7 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!manualCheckSettings.Enabled)
                 return;
 
-            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, out CheckPointModel checkPointModel);
+            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, ACTION_TYPE.Unload, out CheckPointModel checkPointModel);
             if (!modelExist || checkPointModel.TriggerMoment != CHECK_MOMENT.AFTER_UNLOAD)
                 return;
             InvokeCargoManualCheckNotify(checkPointModel);
