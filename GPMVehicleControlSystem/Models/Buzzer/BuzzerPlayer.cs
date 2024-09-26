@@ -107,7 +107,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             if (IsWaitingCargoStatusCheckPlaying)
                 return;
-            Play(SOUNDS.Exchange);
+            Play(SOUNDS.WaitingCargoStatusCheck);
         }
         internal static void Stop()
         {
