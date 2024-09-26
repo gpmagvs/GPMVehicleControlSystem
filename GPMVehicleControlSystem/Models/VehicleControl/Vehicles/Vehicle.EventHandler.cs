@@ -24,6 +24,7 @@ using GPMVehicleControlSystem.Tools;
 using Microsoft.EntityFrameworkCore.Internal;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
+using Microsoft.AspNetCore.SignalR;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -121,6 +122,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsSick.OnLocalizationStationError += ClsSick_OnLocalizationStationError;
             clsSick.OnMapMatchStatusToLow += ClsSick_OnMapMatchStatusToLow;
 
+            LoadTask.OnManualCheckCargoStatusTrigger += LoadTask_OnManualCheckCargoStatusTrigger;
+
+        }
+
+        private ManualResetEvent WaitOperatorCheckCargoStatusDone = new ManualResetEvent(false);
+        private bool LoadTask_OnManualCheckCargoStatusTrigger(Params.clsManualCheckCargoStatusParams.CheckPointModel checkPointData)
+        {
+            WaitOperatorCheckCargoStatusDone.Reset();
+            frontendHubContext.Clients.All.SendAsync("ManualCheckCargoStatus", checkPointData);
+            bool checkDone = WaitOperatorCheckCargoStatusDone.WaitOne(TimeSpan.FromSeconds(checkPointData.Timeout));
+            logger.LogInformation($"Operator Check Cargo Status Timeout:{!checkDone}");
+            return checkDone;
+        }
+        internal void ManualCheckCargoStatusDone(string userName = "")
+        {
+            logger.LogInformation($"Operator {userName} Check Cargo Status Done.");
+            WaitOperatorCheckCargoStatusDone.Set();
         }
 
         private void ClsSick_OnMapMatchStatusToLow(object? sender, EventArgs e)

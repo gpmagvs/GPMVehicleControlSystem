@@ -166,5 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsCargoExistSensorParams CargoExistSensorParams { get; set; } = new clsCargoExistSensorParams();
         public clsAdvanceParams Advance { get; set; } = new clsAdvanceParams();
+
+        public clsManualCheckCargoStatusParams ManualCheckCargoStatus { get; set; } = new clsManualCheckCargoStatusParams();
     }
 }

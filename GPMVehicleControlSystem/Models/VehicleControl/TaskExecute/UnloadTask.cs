@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
@@ -78,6 +79,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return forkHeightChangeReuslt;
+        }
+
+        protected override async Task ManualCheckCargoStatusPrcessBeforeAction()
+        {
+            //Do nothing
+            return;
+        }
+        protected override async Task ManualCheckCargoStatusPrcessAfterAction()
+        {
+            Vehicles.Params.clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
+            if (!manualCheckSettings.Enabled)
+                return;
+
+            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, out CheckPointModel checkPointModel);
+            if (!modelExist || checkPointModel.TriggerMoment != CHECK_MOMENT.AFTER_UNLOAD)
+                return;
+            InvokeCargoManualCheckNotify(checkPointModel);
         }
     }
 }

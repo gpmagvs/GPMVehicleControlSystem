@@ -15,6 +15,7 @@ using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -27,6 +28,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     {
         private ManualResetEvent _WaitBackToHomeDonePause = new ManualResetEvent(false);
         private ActionStatus _BackHomeActionDoneStatus = ActionStatus.PENDING;
+
+        public delegate bool CheckCargotatusDelegate(CheckPointModel checkPointData);
+        public static event CheckCargotatusDelegate OnManualCheckCargoStatusTrigger;
 
         public enum CST_ID_NO_MATCH_ACTION
         {
@@ -108,6 +112,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             RecordLDULDStateToDB();
 
+            await ManualCheckCargoStatusPrcessBeforeAction();
+
             if (IsNeedHandshake)
             {
                 bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS || HandshakeProtocol == Vehicle.EQ_HS_METHOD.MODBUS;
@@ -178,6 +184,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 logger.Trace($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
             }
             return await base.BeforeTaskExecuteActions();
+        }
+
+
+        protected virtual async Task ManualCheckCargoStatusPrcessBeforeAction()
+        {
+            Vehicles.Params.clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
+            if (!manualCheckSettings.Enabled)
+                return;
+
+            bool modelExist = TryGetCheckPointModelByTag(Agv.Navigation.LastVisitedTag, out CheckPointModel checkPointModel);
+            if (!modelExist || !checkPointModel.Enabled || checkPointModel.TriggerMoment != CHECK_MOMENT.BEFORE_LOAD)
+                return;
+            InvokeCargoManualCheckNotify(checkPointModel);
+        }
+
+        protected virtual async Task ManualCheckCargoStatusPrcessAfterAction()
+        {
+            //Do nothing
+            return;
+        }
+
+        protected bool TryGetCheckPointModelByTag(int tag, out CheckPointModel checkPointModel)
+        {
+            checkPointModel = null;
+            if (Agv.Parameters.ManualCheckCargoStatus.CheckPoints == null || Agv.Parameters.ManualCheckCargoStatus.CheckPoints.Count == 0)
+                return false;
+
+            checkPointModel = Agv.Parameters.ManualCheckCargoStatus.CheckPoints.FirstOrDefault(x => x.CheckPointTag == tag);
+            return checkPointModel != null;
+        }
+
+        protected void InvokeCargoManualCheckNotify(CheckPointModel checkPointModel)
+        {
+            bool? _checked = OnManualCheckCargoStatusTrigger?.Invoke(checkPointModel); //if _checked is false=> Timeout. Nobody check the cargo status.
+            this.logger.Trace($"Manual Check Cargo Status Triggered by CheckPoint Tag {checkPointModel.CheckPointTag} => Result:{_checked}");
         }
 
         private async Task<(bool confirm, AlarmCodes alarm_code)> TryDetectObstacleInEQPort()
@@ -581,6 +622,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 lduld_record.EndTime = DateTime.Now;
                 DBhelper.ModifyUDLUDRecord(lduld_record);
                 Agv.IsHandshaking = false;
+
+                await ManualCheckCargoStatusPrcessAfterAction();
+
                 return AlarmCodes.None;
             }
             else
