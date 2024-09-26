@@ -131,8 +131,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             WaitOperatorCheckCargoStatusDone.Reset();
             frontendHubContext.Clients.All.SendAsync("ManualCheckCargoStatus", checkPointData);
+            BuzzerPlayer.WaitingCargoStatusCheck();
             bool checkDone = WaitOperatorCheckCargoStatusDone.WaitOne(TimeSpan.FromSeconds(checkPointData.Timeout));
             logger.LogInformation($"Operator Check Cargo Status Timeout:{!checkDone}");
+            BuzzerPlayer.Stop();
             return checkDone;
         }
         internal void ManualCheckCargoStatusDone(string userName = "")
