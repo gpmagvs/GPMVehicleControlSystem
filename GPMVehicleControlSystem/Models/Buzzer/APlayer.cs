@@ -73,6 +73,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     return PlayAudio($"{audiosFolder}/action.wav", out errorMessage);
                 case SOUNDS.GoToChargeStation:
                     return PlayAudio($"{audiosFolder}/goto_charge.wav", out errorMessage);
+                case SOUNDS.WaitingCargoStatusCheck:
+                    return PlayAudio($"{audiosFolder}/waiting_cargo_status_check.wav", out errorMessage);
                 default:
                     return false;
             }

@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
     {
         static Logger logger => LogManager.GetCurrentClassLogger();
 
-        public static bool IsPlaying => IsAlarmPlaying || IsActionPlaying || IsMovingPlaying || IsGotoChargeStationPlaying || IsMeasurePlaying || IsExchangeBatteryPlaying || IsHandshakingPlaying;
+        public static bool IsPlaying => IsAlarmPlaying || IsActionPlaying || IsMovingPlaying || IsGotoChargeStationPlaying || IsMeasurePlaying || IsExchangeBatteryPlaying || IsHandshakingPlaying || IsWaitingCargoStatusCheckPlaying;
         public static SOUNDS SoundPlaying { get; private set; } = SOUNDS.Stop;
         public static string PlayingAudio
         {
@@ -36,6 +36,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsMeasurePlaying = false;
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
+        internal static bool IsWaitingCargoStatusCheckPlaying = false;
         public delegate bool OnBuzzerPlayDelate();
         public static OnBuzzerPlayDelate OnBuzzerPlay;
         public delegate SOUNDS BuzzerMovePlayDelate();
@@ -102,6 +103,12 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 return;
             Play(SOUNDS.Exchange);
         }
+        internal static void WaitingCargoStatusCheck()
+        {
+            if (IsWaitingCargoStatusCheckPlaying)
+                return;
+            Play(SOUNDS.Exchange);
+        }
         internal static void Stop()
         {
             Play(SOUNDS.Stop);
@@ -122,7 +129,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
                 if (sound == SOUNDS.Stop)
                 {
-                    IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = false;
+                    IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = IsWaitingCargoStatusCheckPlaying = false;
                 }
                 else
                 {
@@ -132,6 +139,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     IsAlarmPlaying = sound == SOUNDS.Alarm;
                     IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
                     IsHandshakingPlaying = sound == SOUNDS.Handshaking;
+                    IsWaitingCargoStatusCheckPlaying = sound == SOUNDS.WaitingCargoStatusCheck;
                 }
 
                 logger.Info($"Playing Sound : {sound}");

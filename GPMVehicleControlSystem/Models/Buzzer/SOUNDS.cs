@@ -9,6 +9,7 @@
         Measure,
         Exchange,
         Handshaking,
-        GoToChargeStation
+        GoToChargeStation,
+        WaitingCargoStatusCheck
     }
 }
