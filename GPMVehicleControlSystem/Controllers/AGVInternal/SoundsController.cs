@@ -1,8 +1,10 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsSoundsParams;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -90,14 +92,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             StaStored.VolumnAdjuster.VolumeControl(Tools.SystemVolumnAdjuster.ADJUST_ACTION.SET, percentage);
             return Ok();
         }
-
+        [HttpPost("StopAplay")]
+        public async Task<IActionResult> StopAplay()
+        {
+            BuzzerPlayer.APLAYER.Stop();
+            return Ok();
+        }
         [HttpPost("aplaytest")]
         public async Task<IActionResult> aplaytest(string audioPath = "/home/gpm/param/sounds/alarm.wav")
         {
             try
             {
-                APlayer player = new APlayer();
-                bool success = player.PlayAudio(audioPath, out string error);
+                bool success = BuzzerPlayer.APLAYER.PlayAudio(audioPath, out string error);
                 return Ok(new
                 {
                     result = success,
@@ -113,5 +119,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
         }
+
+        [HttpPost("SaveAudioPath")]
+        public async Task<IActionResult> SaveAudioPath([FromBody] AudioPathes pathes)
+        {
+            StaStored.CurrentVechicle.Parameters.SoundsParams.audioPathes = pathes;
+            Vehicle.SaveParameters(StaStored.CurrentVechicle.Parameters);
+            return Ok();
+        }
+
     }
 }

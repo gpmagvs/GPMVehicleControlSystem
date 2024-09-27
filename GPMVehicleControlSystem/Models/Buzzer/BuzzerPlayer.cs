@@ -148,6 +148,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 
         public static async Task PlayInBackground(SOUNDS sound)
         {
+            if (APLAYER == null)
+                return;
             await Task.Run(() =>
             {
                 APLAYER.PlayAudioBackground(sound, out string errorMsg);
@@ -183,6 +185,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 {
                     logger.Info($"Playing with APLAYER : {sound}");
                     APLAYER.PlayAudio(sound, out string errorMsg);
+                    logger.Info($"Playing with APLAYER Done: {errorMsg}");
                     return;
                 }
 

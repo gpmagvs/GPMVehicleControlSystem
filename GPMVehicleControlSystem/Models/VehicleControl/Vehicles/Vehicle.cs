@@ -332,7 +332,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag)
                 };
 
-                BuzzerPlayer.Alarm();
                 Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
                 {
 
@@ -342,6 +341,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     await Startup();
                     HandshakeLog("Hello!World!");
+                    BuzzerPlayer.Alarm();
                 });
             }
             catch (Exception ex)

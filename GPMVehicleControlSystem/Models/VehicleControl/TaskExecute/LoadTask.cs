@@ -197,6 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!modelExist || !checkPointModel.Enabled || checkPointModel.TriggerMoment != CHECK_MOMENT.BEFORE_LOAD)
                 return;
             InvokeCargoManualCheckNotify(checkPointModel);
+            BuzzerPlayer.Action();
         }
 
         protected virtual async Task ManualCheckCargoStatusPrcessAfterAction()
