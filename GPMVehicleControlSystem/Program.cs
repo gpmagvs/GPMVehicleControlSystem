@@ -63,6 +63,7 @@ try
     builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
     builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
     builder.Services.AddHostedService<BatteryStateMonitorBackgroundService>();
+    builder.Services.AddHostedService<RotaionAndSlowDownBGSoundBackgroundService>();
     builder.Services.Configure<JsonOptions>(options =>
     {
         options.SerializerOptions.PropertyNamingPolicy = null;

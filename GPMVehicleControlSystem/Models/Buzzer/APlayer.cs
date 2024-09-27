@@ -5,9 +5,11 @@ namespace GPMVehicleControlSystem.Models.Buzzer
     public class APlayer
     {
         List<Process> playingProcesses = new List<Process>();
+        Dictionary<SOUNDS, Process> BGPlayingProcesses = new();
         Process playingProcess = new();
         SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
         bool stopFlag = false;
+        bool BGStopFlag = false;
         public APlayer()
         {
 
@@ -52,33 +54,53 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             Stop().GetAwaiter().GetResult();
             errorMessage = "";
+            Console.WriteLine($"APlay PlayAudio Method Invoked.({sound})");
+            string audioPath = GetAudioPath(sound);
+            if (sound == SOUNDS.Stop)
+            {
+                Stop().GetAwaiter().GetResult();
+                return true;
+            }
+            return PlayAudio(audioPath, out errorMessage);
+        }
+
+        private string GetAudioPath(SOUNDS sound)
+        {
             string audiosFolder = "/home/gpm/param/sounds";
             Console.WriteLine($"APlay PlayAudio Method Invoked.({sound})");
             switch (sound)
             {
                 case SOUNDS.Alarm:
-                    return PlayAudio($"{audiosFolder}/alarm.wav", out errorMessage);
+                    return $"{audiosFolder}/alarm.wav";
                 case SOUNDS.Move:
-                    return PlayAudio($"{audiosFolder}/move.wav", out errorMessage);
+                    return $"{audiosFolder}/move.wav";
                 case SOUNDS.Action:
-                    return PlayAudio($"{audiosFolder}/action.wav", out errorMessage);
+                    return $"{audiosFolder}/action.wav";
                 case SOUNDS.Stop:
-                    Stop().GetAwaiter().GetResult();
-                    return true;
+                    return "";
                 case SOUNDS.Measure:
-                    return PlayAudio($"{audiosFolder}/measure.wav", out errorMessage);
+                    return $"{audiosFolder}/measure.wav";
                 case SOUNDS.Exchange:
-                    return PlayAudio($"{audiosFolder}/exchange.mp3", out errorMessage);
+                    return $"{audiosFolder}/exchange.mp3";
                 case SOUNDS.Handshaking:
-                    return PlayAudio($"{audiosFolder}/action.wav", out errorMessage);
+                    return $"{audiosFolder}/action.wav";
                 case SOUNDS.GoToChargeStation:
-                    return PlayAudio($"{audiosFolder}/goto_charge.wav", out errorMessage);
+                    return $"{audiosFolder}/goto_charge.wav";
                 case SOUNDS.WaitingCargoStatusCheck:
-                    return PlayAudio($"{audiosFolder}/waiting_cargo_status_check.wav", out errorMessage);
+                    return $"{audiosFolder}/waiting_cargo_status_check.wav";
+                case SOUNDS.SlowDownVoice:
+                    return $"{audiosFolder}/speed_slow_down.wav";
+                case SOUNDS.SlowDownMusic:
+                    return $"{audiosFolder}/slow_down_2.wav";
+                case SOUNDS.RotatingVoice:
+                    return $"{audiosFolder}/vehicle_rotating.wav";
+                case SOUNDS.RotatingMusic:
+                    return $"{audiosFolder}/vehicle_rotating2.wav";
                 default:
-                    return false;
+                    return "";
             }
         }
+
         internal bool PlayAudio(string audioPath, out string errorMessage)
         {
             errorMessage = "";
@@ -135,5 +157,56 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             }
         }
 
+        internal void PlayAudioBackground(SOUNDS sound, out string errorMsg)
+        {
+            errorMsg = string.Empty;
+            string audioPath = GetAudioPath(sound);
+            if (sound == SOUNDS.Stop)
+            {
+
+                BGStopFlag = true;
+                foreach (var process in BGPlayingProcesses.Values)
+                {
+                    try
+                    {
+                        process?.Kill();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+                return;
+            }
+            BGStopFlag = false;
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        Process bgPlayingProcess = Process.Start("aplay", audioPath);
+                        if (BGPlayingProcesses.TryGetValue(sound, out Process playingProcess))
+                        {
+                            playingProcess?.Kill();
+                        }
+                        BGPlayingProcesses.Add(sound, bgPlayingProcess);
+                        bgPlayingProcess.WaitForExit();
+
+                        if (BGPlayingProcesses.TryGetValue(sound, out var _playingProcess))
+                        {
+                            _playingProcess?.Kill();
+                            BGPlayingProcesses.Remove(sound);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
+                    }
+                    if (BGStopFlag)
+                        break;
+                    await Task.Delay(100);
+                }
+            });
+        }
     }
 }

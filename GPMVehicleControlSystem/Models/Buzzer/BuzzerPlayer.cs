@@ -37,6 +37,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal static bool IsExchangeBatteryPlaying = false;
         internal static bool IsHandshakingPlaying = false;
         internal static bool IsWaitingCargoStatusCheckPlaying = false;
+        internal static bool IsRotatingPlaying = false;
+        internal static bool IsSlowDownPlaying = false;
         public delegate bool OnBuzzerPlayDelate();
         public static OnBuzzerPlayDelate OnBuzzerPlay;
         public delegate SOUNDS BuzzerMovePlayDelate();
@@ -109,9 +111,32 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 return;
             Play(SOUNDS.WaitingCargoStatusCheck);
         }
+        internal static void SlowDown()
+        {
+            if (IsSlowDownPlaying)
+                return;
+            IsSlowDownPlaying = true;
+            PlayInBackground(SOUNDS.Stop).GetAwaiter().GetResult();
+            PlayInBackground(SOUNDS.SlowDownVoice);
+        }
+
+        internal static void Rotating()
+        {
+            if (IsRotatingPlaying)
+                return;
+            IsRotatingPlaying = true;
+            PlayInBackground(SOUNDS.Stop).GetAwaiter().GetResult();
+            PlayInBackground(SOUNDS.RotatingVoice);
+        }
         internal static void Stop()
         {
             Play(SOUNDS.Stop);
+            BackgroundStop();
+        }
+        internal static void BackgroundStop()
+        {
+            IsRotatingPlaying = IsSlowDownPlaying = false;
+            PlayInBackground(SOUNDS.Stop);
         }
         public static async Task<bool> UpdateMusicService(SOUNDS sound)
         {
@@ -119,6 +144,14 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             logger.Info($"Call /update_music :{request.ToJson()}");
             UpdateMusicResponse response = await rossocket.CallServiceAndWait<UpdateMusicRequest, UpdateMusicResponse>("/update_music", request);
             return response != null ? response.success : false;
+        }
+
+        public static async Task PlayInBackground(SOUNDS sound)
+        {
+            await Task.Run(() =>
+            {
+                APLAYER.PlayAudioBackground(sound, out string errorMsg);
+            });
         }
         public static async void Play(SOUNDS sound)
         {
@@ -140,6 +173,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
                     IsHandshakingPlaying = sound == SOUNDS.Handshaking;
                     IsWaitingCargoStatusCheckPlaying = sound == SOUNDS.WaitingCargoStatusCheck;
+                    IsSlowDownPlaying = sound == SOUNDS.SlowDownVoice;
+                    IsRotatingPlaying = sound == SOUNDS.RotatingVoice;
                 }
 
                 logger.Info($"Playing Sound : {sound}");

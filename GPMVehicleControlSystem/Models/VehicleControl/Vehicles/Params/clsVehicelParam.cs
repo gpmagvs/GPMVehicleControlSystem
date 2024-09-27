@@ -168,5 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsAdvanceParams Advance { get; set; } = new clsAdvanceParams();
 
         public clsManualCheckCargoStatusParams ManualCheckCargoStatus { get; set; } = new clsManualCheckCargoStatusParams();
+
+        public clsSoundsParams SoundsParams { get; set; } = new clsSoundsParams();
     }
 }

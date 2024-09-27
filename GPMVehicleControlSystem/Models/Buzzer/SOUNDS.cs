@@ -10,6 +10,10 @@
         Exchange,
         Handshaking,
         GoToChargeStation,
-        WaitingCargoStatusCheck
+        WaitingCargoStatusCheck,
+        SlowDownVoice,
+        SlowDownMusic,
+        RotatingVoice,
+        RotatingMusic,
     }
 }
