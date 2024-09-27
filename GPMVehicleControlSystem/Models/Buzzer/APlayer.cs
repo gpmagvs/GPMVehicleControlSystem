@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.Buzzer
 {
@@ -10,6 +11,17 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
         bool stopFlag = false;
         bool BGStopFlag = false;
+
+        clsSoundsParams.AudioPathes AudioPathes
+        {
+            get
+            {
+                if (StaStored.CurrentVechicle == null)
+                    return new();
+                return StaStored.CurrentVechicle.Parameters.SoundsParams.audioPathes;
+            }
+        }
+
         public APlayer()
         {
 
@@ -71,31 +83,31 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             switch (sound)
             {
                 case SOUNDS.Alarm:
-                    return $"{audiosFolder}/alarm.wav";
+                    return AudioPathes.alarm;
                 case SOUNDS.Move:
-                    return $"{audiosFolder}/move.wav";
+                    return AudioPathes.move;
                 case SOUNDS.Action:
-                    return $"{audiosFolder}/action.wav";
+                    return AudioPathes.action;
                 case SOUNDS.Stop:
                     return "";
                 case SOUNDS.Measure:
-                    return $"{audiosFolder}/measure.wav";
+                    return AudioPathes.measure;
                 case SOUNDS.Exchange:
-                    return $"{audiosFolder}/exchange.mp3";
+                    return AudioPathes.batteryExchange;
                 case SOUNDS.Handshaking:
-                    return $"{audiosFolder}/action.wav";
+                    return AudioPathes.action;
                 case SOUNDS.GoToChargeStation:
-                    return $"{audiosFolder}/goto_charge.wav";
+                    return AudioPathes.goToCharge;
                 case SOUNDS.WaitingCargoStatusCheck:
-                    return $"{audiosFolder}/waiting_cargo_status_check.wav";
+                    return AudioPathes.waitingCargoStatusCheck;
                 case SOUNDS.SlowDownVoice:
-                    return $"{audiosFolder}/speed_slow_down.wav";
+                    return AudioPathes.slowDown_voice;
                 case SOUNDS.SlowDownMusic:
-                    return $"{audiosFolder}/slow_down_2.wav";
+                    return AudioPathes.slowDown;
                 case SOUNDS.RotatingVoice:
-                    return $"{audiosFolder}/vehicle_rotating.wav";
+                    return AudioPathes.rotating_voice;
                 case SOUNDS.RotatingMusic:
-                    return $"{audiosFolder}/vehicle_rotating2.wav";
+                    return AudioPathes.rotating;
                 default:
                     return "";
             }
