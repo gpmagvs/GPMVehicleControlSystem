@@ -1,0 +1,409 @@
+{
+  "Last_Editor": "dev",
+  "Version": "template",
+  "Stations": {
+    "2": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 2,
+      "Name": "",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 6502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 30.0,
+          "Down_Pose": 15.4
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "32": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOI_1_L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "34": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOI_1_R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "40": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "QV#R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "42": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "QV#L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "44": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "STK#L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "46": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "STK#R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "52": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOS#1#L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "54": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOS#1#R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "62": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOI_2_R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "64": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOI_2_L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "66": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOS#2#L",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    },
+    "68": {
+      "Notes": {
+        "HandShakeModeHandShakeMode ": "設備交握模式- 0:不需交握,1:需交握",
+        "HandShakeConnectionMode ": "設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬",
+        "CargoTransferMode ": "貨物轉移模式- 0:設備動作,1:AGV動作",
+        "ForkArmExtend ": "牙叉是否需要伸出- true:需伸出,false:不需伸出"
+      },
+      "Tag": 0,
+      "Name": "AOS#2#R",
+      "HandShakeModeHandShakeMode": 0,
+      "HandShakeConnectionMode": 0,
+      "CargoTransferMode": 1,
+      "ModbusTcpPort": 502,
+      "Up_Pose_Limit": 5.0,
+      "Down_Pose_Limit": 0.0,
+      "ForkArmExtend": false,
+      "LayerDatas": {
+        "0": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "1": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        },
+        "2": {
+          "Up_Pose": 0.0,
+          "Down_Pose": 0.0
+        }
+      }
+    }
+  }
+}

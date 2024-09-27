@@ -1,0 +1,83 @@
+{
+  "Version": 1,
+  "Options": {
+    "pathColor": "rgb(212, 212, 212)",
+    "fontSizeOfDisplayName": 12,
+    "fontSizeOfAsCandicates": 16,
+    "Rotation": 90.0,
+    "EQIcons": [
+      "/images/eq-icon.png",
+      "/images/rack.png"
+    ],
+    "gridSize": 3.0,
+    "defaultShowBackgroudImage": false
+  },
+  "Name": "Map_MECSE",
+  "Note": "v240321.3",
+  "PointIndex": 0,
+  "Map_Image_Size": [
+    1280,
+    1600
+  ],
+  "Map_Image_Boundary": [
+    -20.7424,
+    -25.928,
+    20.7424,
+    25.928
+  ],
+  "Points": {
+    "0": {
+      "X": -0.0,
+      "Y": 0.0,
+      "Name": "0",
+      "TagNumber": 0,
+      "Direction": 0,
+      "Direction_Secondary_Point": 0,
+      "AGV_Alarm": false,
+      "Enable": true,
+      "IsStandbyPoint": false,
+      "IsSegment": false,
+      "IsOverlap": false,
+      "IsParking": false,
+      "IsAvoid": false,
+      "IsVirtualPoint": false,
+      "IsAutoDoor": false,
+      "IsExtinguishing": false,
+      "IsTrafficCheckPoint": false,
+      "InvolvePoint": "",
+      "RegistsPointIndexs": [],
+      "StationType": 0,
+      "LsrMode": 0,
+      "Speed": 1.0,
+      "Bay": "",
+      "Graph": {
+        "Display": "原點",
+        "X": -0.2933537914662647,
+        "Y": 1.4256204524795812,
+        "ImageName": "",
+        "IsBezierCurvePoint": false,
+        "BezierCurveID": ""
+      },
+      "Target": {},
+      "DodgeMode": 0,
+      "SpinMode": 0,
+      "SubMap": "",
+      "AutoDoor": {
+        "KeyName": "",
+        "KeyPassword": ""
+      },
+      "MotionInfo": {
+        "ControlBypass": {
+          "GroundHoleCCD": "",
+          "GroundHoleSensor": "",
+          "UltrasonicSensor": ""
+        }
+      },
+      "Region": ""
+    }
+  },
+  "BezierCurves": {},
+  "Segments": [],
+  "Regions": [],
+  "Bays": {}
+}
