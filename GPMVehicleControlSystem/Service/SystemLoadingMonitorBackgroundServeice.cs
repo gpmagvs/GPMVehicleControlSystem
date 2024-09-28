@@ -26,7 +26,7 @@ namespace GPMVehicleControlSystem.Service
             {
                 while (true)
                 {
-                    await Task.Delay(200);
+                    await Task.Delay(5000);
                     (double net_trasmited, double net_recieved) = await networkStatus.GetNetworkStatus();
                     logger.LogInformation($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
 

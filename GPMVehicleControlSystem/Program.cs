@@ -122,22 +122,7 @@ try
         }
     });
 
-    var imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
-    Directory.CreateDirectory(imageFolder);
-    var fileProvider = new PhysicalFileProvider(imageFolder);
-    var requestPath = "/Download";
-
-    // Enable displaying browser links.
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = fileProvider,
-        RequestPath = requestPath
-    });
-    app.UseDirectoryBrowser(new DirectoryBrowserOptions
-    {
-        FileProvider = fileProvider,
-        RequestPath = requestPath
-    });
+    StaticFileProviderInit(app);
 
     app.UseRouting();
     app.UseVueRouterHistory();
@@ -154,4 +139,48 @@ catch (Exception ex)
 finally
 {
     LogManager.Shutdown();
+}
+
+static void StaticFileProviderInit(WebApplication app)
+{
+    string imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
+    Directory.CreateDirectory(imageFolder);
+    PhysicalFileProvider fileProvider = new PhysicalFileProvider(imageFolder);
+    string requestPath = "/Download";
+
+    // Enable displaying browser links.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = fileProvider,
+        RequestPath = requestPath
+    });
+    app.UseDirectoryBrowser(new DirectoryBrowserOptions
+    {
+        FileProvider = fileProvider,
+        RequestPath = requestPath
+    });
+
+    try
+    {
+        string audioFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/sounds");
+        Directory.CreateDirectory(audioFolder);
+        PhysicalFileProvider audioFileProvider = new PhysicalFileProvider(audioFolder);
+        // Enable displaying browser links.
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = audioFileProvider,
+            RequestPath = "/audios"
+        });
+        app.UseDirectoryBrowser(new DirectoryBrowserOptions
+        {
+            FileProvider = audioFileProvider,
+            RequestPath = "/audios"
+        });
+
+        app.Logger.LogInformation(audioFolder);
+    }
+    catch (Exception)
+    {
+
+    }
 }
