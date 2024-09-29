@@ -128,5 +128,45 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok();
         }
 
+        [HttpGet("GetUsableAudios")]
+        public async Task<IActionResult> GetAudiosFromParamSoundsFolder()
+        {
+            return Ok(AudioManager.GetAudiosInDisk());
+        }
+        [HttpDelete]
+        public async Task<IActionResult> DeleteAudioFile(string audioName)
+        {
+            AudioManager.Delete(audioName);
+            return Ok();
+        }
+        /// <summary>
+        /// 0:Alarm,1:Move,2:Action,3:Stop,4:Measuer,5:Exchange,6:Handshaking,7:GoToChargeStation
+        /// </summary>
+        /// <param name="sound"></param>
+        /// <returns></returns>
+        [HttpPost("UploadAudio")]
+        [DisableRequestSizeLimit]
+        public async Task<IActionResult> UploadAudio()
+        {
+            var file = Request.Form.Files[0];
+            if (file.Length > 100 * 1024 * 1024) // 100MB
+            {
+                return BadRequest("檔案大小超過 100MB。");
+            }
+
+            if (file.Length > 0)
+            {
+                await AudioManager.HandleAudioUpload(file);
+                return Ok(new
+                {
+                    success = true,
+                    message = "音檔上傳更新成功。"
+                });
+            }
+
+            return BadRequest("未接收到任何檔案。");
+        }
+
+
     }
 }
