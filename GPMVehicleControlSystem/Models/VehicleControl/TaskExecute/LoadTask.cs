@@ -1,3 +1,4 @@
+#define YM_4FAOI
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
@@ -8,6 +9,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
+using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -271,8 +273,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             lduld_record.WorkStationTag = destineTag;
             DBhelper.AddUDULDRecord(lduld_record);
         }
-
+#if YM_4FAOI
         private void DetermineHandShakeSetting()
+        {
+            IsNeedHandshake = true;
+            eqHandshakeMode = WORKSTATION_HS_METHOD.HS;
+        }
+#else
+private void DetermineHandShakeSetting()
         {
             if (IsJustAGVPickAndPlaceAtWIPPort)
             {
@@ -295,6 +303,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 IsNeedHandshake = true;
             }
         }
+#endif
+
         private void CheckEQDIOStates()
         {
             if (Agv.EQDIOStates == null)
@@ -364,78 +374,91 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
-            Agv.DirectionLighter.CloseAll();
-            RecordParkLoction();
-            (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
-            _eqHandshakeMode = eqHandshakeMode;
-            IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
-            logger.Trace($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}|_eqHandshakeMode:{_eqHandshakeMode}|isNeedArmExtend:{isNeedArmExtend}");
-            if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
+            try
             {
-                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
-                {
-                    logger.Trace($"Cargo Transfer - ForkExtendOutAsync");
-                    var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
-                }
 
-                logger.Trace($"Cargo Transfer TryCheckAGVStatus");
-                var checkStatusResult = await TryCheckAGVStatus();
-                if (!checkStatusResult.success)
-                    return (false, checkStatusResult.alarmCode);
-
-                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
+                logger.Trace($"Load/Unload Action after AGVC Move done in port.");
+#if !YM_4FAOI
+            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+#endif
+                Agv.DirectionLighter.CloseAll();
+                RecordParkLoction();
+                (bool hs_success, AlarmCodes alarmCode) HSResult = new(false, AlarmCodes.None);
+                _eqHandshakeMode = eqHandshakeMode;
+                //IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
+                // logger.Trace($"Cargo Transfer Mode of TAG-{destineTag} ==> {CargoTransferMode}|_eqHandshakeMode:{_eqHandshakeMode}|isNeedArmExtend:{isNeedArmExtend}");
+                logger.Trace($"Load/Unload Action after AGVC Move done in port. CargoTransferMode : {CargoTransferMode} |  _eqHandshakeMode:{_eqHandshakeMode} | isNeedArmExtend:{isNeedArmExtend}");
+                if (_eqHandshakeMode == WORKSTATION_HS_METHOD.HS)
                 {
-                    logger.Trace($"Cargo Transfer WaitEQBusyOnAndOFF");
-                    HSResult = await Agv.WaitEQBusyOnAndOFF(action);
-                    if (HSResult.hs_success)
+                    if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
                     {
-                        _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: true);
-                        lduld_record.EQActionFinishTime = DateTime.Now;
-                        DBhelper.ModifyUDLUDRecord(lduld_record);
+                        logger.Trace($"Cargo Transfer - ForkExtendOutAsync");
+                        var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
+                    }
+
+                    logger.Trace($"Cargo Transfer TryCheckAGVStatus");
+                    var checkStatusResult = await TryCheckAGVStatus();
+                    if (!checkStatusResult.success)
+                        return (false, checkStatusResult.alarmCode);
+
+                    if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place)
+                    {
+                        logger.Trace($"Cargo Transfer WaitEQBusyOnAndOFF");
+                        HSResult = await Agv.WaitEQBusyOnAndOFF(action);
+                        if (HSResult.hs_success)
+                        {
+                            _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: true);
+                            lduld_record.EQActionFinishTime = DateTime.Now;
+                            DBhelper.ModifyUDLUDRecord(lduld_record);
+                        }
+                        else
+                        {
+
+                            logger.Error($"Wait EQ Busy On/Off result Fail({HSResult.alarmCode})");
+                            return (false, HSResult.alarmCode);
+                        }
                     }
                     else
                     {
-
-                        logger.Error($"Wait EQ Busy On/Off result Fail({HSResult.alarmCode})");
-                        return (false, HSResult.alarmCode);
+                        logger.Trace($"AGV Pick and Place not need Wait EQ Busy ON/OFF.");
                     }
+                    //放貨完成->清除CST帳籍
+                    if (action == ACTION_TYPE.Load)
+                        Agv.CSTReader.ValidCSTID = "";
+
+                }
+
+                Agv.DirectionLighter.CloseAll();
+                back_to_secondary_flag = false;
+                await Task.Delay(1000);
+
+                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
+                {
+                    ForkLifter.ForkShortenInAsync();
                 }
                 else
                 {
-                    logger.Trace($"AGV Pick and Place not need Wait EQ Busy ON/OFF.");
+                    (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
+                    if (!forkActionResult.success)
+                        return forkActionResult;
+
                 }
-                //放貨完成->清除CST帳籍
-                if (action == ACTION_TYPE.Load)
+
+                if (action == ACTION_TYPE.Unload)
+                {
+                    Agv.CSTReader.ValidCSTID = "TrayUnknow";
+                }
+                else
                     Agv.CSTReader.ValidCSTID = "";
 
+
+                return await StartBackToHome();
             }
-
-            Agv.DirectionLighter.CloseAll();
-            back_to_secondary_flag = false;
-            await Task.Delay(1000);
-
-            if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
+            catch (Exception ex)
             {
-                ForkLifter.ForkShortenInAsync();
+                logger.Error(ex);
+                return (false, AlarmCodes.Code_Error_In_System);
             }
-            else
-            {
-                (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
-                if (!forkActionResult.success)
-                    return forkActionResult;
-
-            }
-
-            if (action == ACTION_TYPE.Unload)
-            {
-                Agv.CSTReader.ValidCSTID = "TrayUnknow";
-            }
-            else
-                Agv.CSTReader.ValidCSTID = "";
-
-
-            return await StartBackToHome();
 
         }
 
@@ -598,7 +621,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             await Agv.QueryVirtualID(query_cause, cst_type);
                             break;
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH:
-
+                            IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
                             if (IsNeedQueryVirutalStation)
                             {
                                 logger.Trace($"Station {destineTag} is need to query virtual id from AGVS when ID Not Match");
@@ -639,9 +662,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void RecordParkLoction()
         {
-            lduld_record.ParkLocX = Agv.Navigation.Data.robotPose.pose.position.x;
-            lduld_record.ParkLocY = Agv.Navigation.Data.robotPose.pose.position.y;
-            DBhelper.ModifyUDLUDRecord(lduld_record);
+            try
+            {
+
+                lduld_record.ParkLocX = Agv.Navigation.Data.robotPose.pose.position.x;
+                lduld_record.ParkLocY = Agv.Navigation.Data.robotPose.pose.position.y;
+                DBhelper.ModifyUDLUDRecord(lduld_record);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
         }
 
         private void RecordExistSensorState()
@@ -659,7 +690,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             DBhelper.ModifyUDLUDRecord(lduld_record);
         }
+
+#if YM_4FAOI
+        private bool isNeedArmExtend => false;
+#else
         private bool isNeedArmExtend => Agv.WorkStations.Stations[destineTag].ForkArmExtend;
+#endif
 
         private async Task<(bool success, AlarmCodes alarmcode)> ForkActionsInWorkStation()
         {

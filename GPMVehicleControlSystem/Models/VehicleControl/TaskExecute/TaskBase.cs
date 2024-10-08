@@ -1,3 +1,4 @@
+#define YM_4FAOI
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.MAP;
@@ -192,7 +193,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
-        public WORKSTATION_HS_METHOD eqHandshakeMode { get; set; }
+        public WORKSTATION_HS_METHOD eqHandshakeMode { get; set; } = WORKSTATION_HS_METHOD.HS;
+
+#if YM_4FAOI
+        public CARGO_TRANSFER_MODE CargoTransferMode => CARGO_TRANSFER_MODE.EQ_Pick_and_Place;
+#else
         public CARGO_TRANSFER_MODE CargoTransferMode
         {
             get
@@ -208,6 +213,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     return CARGO_TRANSFER_MODE.EQ_Pick_and_Place;
             }
         }
+#endif
+
 
         public bool IsBackToSecondaryPt { get; internal set; } = false;
 
