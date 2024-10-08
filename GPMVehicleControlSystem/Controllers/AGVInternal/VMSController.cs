@@ -1,24 +1,15 @@
-﻿
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using System.Text;
-using GPMVehicleControlSystem.Models;
-using GPMVehicleControlSystem.Models.VehicleControl;
-using GPMVehicleControlSystem.Models.Buzzer;
-using AGVSystemCommonNet6.AGVDispatch.Messages;
-using static AGVSystemCommonNet6.clsEnums;
+﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using Microsoft.AspNetCore.Identity;
-
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using static SQLite.SQLite3;
-using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.WorkStation;
-using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.WorkStation;
+using Microsoft.AspNetCore.Mvc;
+using static AGVSystemCommonNet6.clsEnums;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -78,7 +69,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            LOG.TRACE($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
+            logger.LogTrace($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
             bool confirm = await agv.Auto_Mode_Siwtch(mode);
             return Ok(new
             {
@@ -93,7 +84,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             try
             {
                 logger.LogTrace($"車載用戶請求AGV {mode}");
-                LOG.WARN($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 string _message = "";
 
@@ -347,7 +337,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("LDULDWithoutEntryControl")]
         public async Task<IActionResult> LDULDWithoutEntryControl(bool actived)
         {
-            LOG.TRACE($"Remote user try change LDULD_Task_No_Entry to {actived}");
+            logger.LogTrace($"Remote user try change LDULD_Task_No_Entry to {actived}");
             if (!actived)
             {
                 if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
@@ -356,7 +346,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 }
             }
             agv.Parameters.LDULD_Task_No_Entry = actived;
-            LOG.TRACE($"Remote user change LDULD_Task_No_Entry to {actived}!!");
+            logger.LogTrace($"Remote user change LDULD_Task_No_Entry to {actived}!!");
             return Ok(0);
         }
         [HttpGet("WorkStationData")]

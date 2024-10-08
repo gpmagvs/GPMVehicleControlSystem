@@ -33,6 +33,7 @@ namespace GPMVehicleControlSystem.Service
                 AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
                 bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
                 DBhelper.Initialize();
+                AlarmManager.RecoveryAlarmDB();
 
                 logger.LogTrace("Database Initialize done");
                 var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");

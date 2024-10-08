@@ -1,6 +1,4 @@
-﻿using AGVSystemCommonNet6;
-using AGVSystemCommonNet6.Log;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Net.Sockets;
 using System.Text;
 
@@ -34,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
-                    LOG.ERROR(ex);
+                    logger.LogError(ex, ex.Message);
                     CIMSocket = null;
                     CreateSocketCIM();
                     return false;
@@ -49,14 +47,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 var CIMSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 CIMSocket.Connect(cimIP, 6100);
-                LOG.INFO($"成功與CIM建立Socket通訊({cimIP}:6100) !!!", color: ConsoleColor.Green);
+                logger.LogInformation($"成功與CIM建立Socket通訊({cimIP}:6100) !!!");
                 return CIMSocket;
             }
             catch (Exception ex)
             {
                 Task.Factory.StartNew(async () =>
                 {
-                    LOG.ERROR($"無法與CIM建立Socket通訊({cimIP}:6100)...Rerty");
+                    logger.LogError($"無法與CIM建立Socket通訊({cimIP}:6100)...Rerty");
                     await Task.Delay(10000);
                     CIMSocket = CreateSocketCIM();
 
@@ -73,12 +71,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 var _CIMSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 _CIMSocket.Connect(cimIP, 5200);
-                LOG.INFO($"成功與CIM建立Socket通訊({cimIP}:5200) !!!", color: ConsoleColor.Green);
+                logger.LogInformation($"成功與CIM建立Socket通訊({cimIP}:5200) !!!");
                 return _CIMSocket;
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"無法與CIM建立Socket通訊({cimIP}:5200)...Rerty");
+                logger.LogError($"無法與CIM建立Socket通訊({cimIP}:5200)...Rerty");
                 return null;
             }
         }
@@ -121,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 EQDIOStates = null;
                             }
                         }
-                        //LOG.INFO(EQDIOStates.ToJson());
+                        //logger.LogInformation(EQDIOStates.ToJson());
                     }
                     catch (Exception ex)
                     {
@@ -154,15 +152,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<TransferData> QueryTaskInfoFromCIM(string taskName)
         {
-            LOG.WARN($"Try Get Task-{taskName} transfer info from CIM");
+            logger.LogWarning($"Try Get Task-{taskName} transfer info from CIM");
             TransferData transferData = new TransferData();
             var socket = CreateAGVsDataBaseSocket();
             if (socket != null)
             {
                 string cmd = "QueryTaskInfo:" + taskName;
-                LOG.INFO($"Send {cmd}");
+                logger.LogInformation($"Send {cmd}");
                 int i = socket.Send(Encoding.ASCII.GetBytes(cmd), SocketFlags.None);
-                LOG.INFO($"Send {cmd} _{i}");
+                logger.LogInformation($"Send {cmd} _{i}");
                 bool isJsonDataRecieved = false;
                 string stringRev = "";
                 CancellationTokenSource cancelReq = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -171,17 +169,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(1);
                     if (cancelReq.IsCancellationRequested)
                     {
-                        LOG.ERROR($"TIMEOUT=> Download Transfer Infomation From CIM TIMEOUT!");
+                        logger.LogError($"TIMEOUT=> Download Transfer Infomation From CIM TIMEOUT!");
                         break;
                     }
                     int ava = socket.Available;
-                    LOG.TRACE($"Available :{ava}");
+                    logger.LogTrace($"Available :{ava}");
                     if (ava > 0)
                     {
                         byte[] buffer = new byte[ava];
                         socket.Receive(buffer, ava, SocketFlags.None);
                         stringRev += Encoding.ASCII.GetString(buffer, 0, ava);
-                        LOG.TRACE($"{stringRev}");
+                        logger.LogTrace($"{stringRev}");
                         if (stringRev.ToLower().Contains("error:"))
                         {
                             break;

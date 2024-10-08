@@ -1,10 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using RosSharp.RosBridgeClient.MessageTypes.Tf2;
-using System.Reflection.Metadata;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -24,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         private bool CSTReaderDoneActionHandle(CSTReaderCommandRequest request, out CSTReaderCommandResponse response)
         {
-            LOG.TRACE($"CST Reader Action done,  {request.ToString()}");
+            logger.Trace($"CST Reader Action done,  {request.ToString()}");
             CSTActionResult = request.command;
             response = new CSTReaderCommandResponse
             {
@@ -48,7 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private void StopCmdAckHandler(CSTReaderCommandResponse t)
         {
-            LOG.INFO($"Stop CST Reader Cmd, CST READER ACK = {t.ToJson()}.");
+            logger.Info($"Stop CST Reader Cmd, CST READER ACK = {t.ToJson()}.");
         }
 
         CSTReaderCommandResponse? cst_reader_confirm_ack = null;
@@ -64,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             int retry_cnt = 0;
             if (cst_type == CST_TYPE.None || (int)cst_type == -1)
             {
-                LOG.ERROR($"從派車接收到的 CST TYPE={cst_type}({(int)cst_type})=> 沒有定義");
+                logger.Error($"從派車接收到的 CST TYPE={cst_type}({(int)cst_type})=> 沒有定義");
                 if (OnCstTriggerButTypeUnknown == null)
                     AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
                 else
@@ -73,11 +70,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
             }
             cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
-            LOG.WARN($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
+            logger.Warn($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
             while (cst_reader_confirm_ack == null)
             {
                 await Task.Delay(1);
-                LOG.TRACE($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
+                logger.Trace($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
                 string id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
                 {
                     command = cst_reader_command,
@@ -91,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 else
                 {
                     await AbortCSTReader();
-                    LOG.ERROR($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
+                    logger.Error($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
                     wait_cst_ack_MRE.Reset();
                     retry_cnt++;
                     if (retry_cnt > 3)
@@ -103,19 +100,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
             if (cst_reader_confirm_ack == null)
             {
-                LOG.INFO("Trigger CST Reader fail. CSTReader no reply");
+                logger.Info("Trigger CST Reader fail. CSTReader no reply");
                 OnCSTReaderActionDone?.Invoke(this, "");
                 return (false, false);
             }
             if (!cst_reader_confirm_ack.confirm)
             {
-                LOG.INFO("Trigger CST Reader fail. Confirm=False");
+                logger.Info("Trigger CST Reader fail. Confirm=False");
                 OnCSTReaderActionDone?.Invoke(this, "");
                 return (false, false);
             }
             else
             {
-                LOG.INFO("Trigger CST Reader Success. Wait CST Reader Action Done.", false);
+                logger.Info("Trigger CST Reader Success. Wait CST Reader Action Done.", false);
                 CSTActionDone = false;
                 CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
                 Task TK = new Task(async () =>
@@ -132,19 +129,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 try
                 {
                     TK.Wait(waitCstActionDoneCts.Token);
-                    LOG.INFO($"CST Reader Action Done, Action Result : command = {CSTActionResult}--");
+                    logger.Info($"CST Reader Action Done, Action Result : command = {CSTActionResult}--");
                     if (CSTActionResult != "done")
                         AbortCSTReader();
 
                     await Task.Delay(1000);
                     var cst_id = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
-                    LOG.TRACE($"Inovke CSTReaderAction Done event with CST ID = {cst_id}", false);
+                    logger.Trace($"Inovke CSTReaderAction Done event with CST ID = {cst_id}", false);
                     OnCSTReaderActionDone?.Invoke(this, cst_id);
                     return (true, true);
                 }
                 catch (OperationCanceledException)
                 {
-                    LOG.WARN("Trigger CST Reader Timeout");
+                    logger.Warn("Trigger CST Reader Timeout");
                     AbortCSTReader();
                     OnCSTReaderActionDone?.Invoke(this, "");
                     return (true, false);
@@ -165,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private void CstReaderConfirmedAckHandler(CSTReaderCommandResponse ack)
         {
             cst_reader_confirm_ack = ack;
-            LOG.TRACE($"Service /CSTReader_action, ACK = {ack.ToJson()} ");
+            logger.Trace($"Service /CSTReader_action, ACK = {ack.ToJson()} ");
             wait_cst_ack_MRE.Set();
         }
     }

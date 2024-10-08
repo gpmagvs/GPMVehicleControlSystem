@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 
@@ -141,7 +140,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     DriverAlarmCode = AlarmCodes.Motor_Parameters_Error;
                 else
                 {
-                    LOG.Critical($"Not Define Driver Error Code Happened , Error Code = {code}");
                     DriverAlarmCode = AlarmCodes.Other_error;
                 }
             }

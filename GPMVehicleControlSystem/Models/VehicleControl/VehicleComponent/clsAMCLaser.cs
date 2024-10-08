@@ -1,12 +1,4 @@
-﻿
-using AGVSystemCommonNet6;
-using AGVSystemCommonNet6.Abstracts;
-using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
-using RosSharp.RosBridgeClient;
-using System.Reflection;
+﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -37,7 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public clsAMCLaser(clsDOModule DOModule, clsDIModule DIModule) : base(DOModule, DIModule)
         {
-            LOG.INFO($"AMC Laser instance created!");
+            logger.Info($"AMC Laser instance created!");
         }
 
         public new AMC_LASER_MODE Mode
@@ -70,8 +62,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await ModeSwitch(AgvsLsrSetting);
                 await SideLaserModeSwitch(AgvsLsrSetting);
-                LOG.INFO($"[AMC]雷射設定組 = {AgvsLsrSetting}", true);
-                LOG.WARN($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
+                logger.Info($"[AMC]雷射設定組 = {AgvsLsrSetting}", true);
+                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
             }
             else
             {
@@ -79,12 +71,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     await ModeSwitch(laserMode);
                     await SideLaserModeSwitch(laserMode);
-                    LOG.INFO($"[AMC]雷射設定組 = {laserMode}", true);
-                    LOG.INFO($"AGVC Direction = {direction}, Laser Mode Changed to {laserMode}");
+                    logger.Info($"[AMC]雷射設定組 = {laserMode}", true);
+                    logger.Info($"AGVC Direction = {direction}, Laser Mode Changed to {laserMode}");
                 }
                 else
                 {
-                    LOG.WARN($"AGVC Direction = {direction} But Laser Mode Not Defined!!!!");
+                    logger.Warn($"AGVC Direction = {direction} But Laser Mode Not Defined!!!!");
 
                 }
             }
@@ -101,7 +93,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 while (true)
                 {
                     await Task.Delay(10);
-                    LOG.WARN($"Try Side Laser Output Setting  as {mode_int}");
+                    logger.Warn($"Try Side Laser Output Setting  as {mode_int}");
                     if (try_count > retry_times_limit)
                         return false;
                     bool writeSuccess = await DOModule.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, writeBools);
@@ -109,12 +101,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         break;
                     try_count++;
                 }
-                LOG.INFO($"Side Laser Output Setting as {mode_int} Success({try_count})");
+                logger.Info($"Side Laser Output Setting as {mode_int} Success({try_count})");
                 return true;
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                logger.Error(ex);
                 return false;
             }
             finally

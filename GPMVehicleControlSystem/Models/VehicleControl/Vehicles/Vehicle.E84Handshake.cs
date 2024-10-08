@@ -1,18 +1,8 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
-using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Models.WorkStation;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
-using Modbus.Device;
 using NLog;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -22,7 +12,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
 
         Logger HandShakeLogger;
-
         public enum HANDSHAKE_AGV_TIMEOUT
         {
             Normal,
@@ -356,7 +345,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON -= HandleEQBusyONAfterAGVBUSY;
             if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY])
             {
-                LOG.Critical("EQ Busy ON when AGV Busy!!");
+                HandShakeLogger.Warn("EQ Busy ON when AGV Busy!!");
                 IsEQBusy_when_AGV_Busy = true;
                 hs_abnormal_happen_cts.Cancel();
                 ExecutingTaskEntity.Abort(AlarmCodes.Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY);
@@ -396,7 +385,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                HandShakeLogger.Fatal(ex);
                 return (false, AlarmCodes.Handshake_Fail);
             }
             return (true, AlarmCodes.None);
@@ -404,7 +393,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void StartWatchAGVStatusAsync()
         {
-            LOG.TRACE($"Start Watch AGV Status");
+            HandShakeLogger.Trace($"Start Watch AGV Status");
             while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
             {
                 await Task.Delay(1);
@@ -414,12 +403,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         IsAGVAbnormal_when_handshaking = true;
                         hs_abnormal_happen_cts.Cancel();
-                        LOG.TRACE($"Watch AGV Status Finish(AGV DOWN)");
+                        HandShakeLogger.Trace($"Watch AGV Status Finish(AGV DOWN)");
                     }
                     return;
                 }
             }
-            LOG.TRACE($"Watch AGV Status Finish(Handshake Finish)");
+            HandShakeLogger.Trace($"Watch AGV Status Finish(Handshake Finish)");
         }
 
         private void HandleEQReadOFF(object? sender, EventArgs e)
@@ -428,11 +417,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT])
             {
                 //normal
-                LOG.TRACE($"EQ READY Normal OFF When AGV_COMPT ON");
+                HandShakeLogger.Trace($"EQ READY Normal OFF When AGV_COMPT ON");
             }
             else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State || Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS) //EQ GO ON著/若沒有光IO則不管
             {
-                LOG.WARN($"EQ READY OFF When Handshaking running");
+                HandShakeLogger.Warn($"EQ READY OFF When Handshaking running");
                 IsEQAbnormal_when_handshaking = true;
                 hs_abnormal_happen_cts.Cancel();
                 ExecutingTaskEntity.Abort(AlarmCodes.Handshake_Fail_EQ_READY);
@@ -472,7 +461,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex);
+                HandShakeLogger.Fatal(ex);
                 return (false, AlarmCodes.Handshake_Fail);
             }
             return (true, AlarmCodes.None);

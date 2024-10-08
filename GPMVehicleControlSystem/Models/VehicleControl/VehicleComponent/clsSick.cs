@@ -95,25 +95,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             MapMatchStatus = Data.map_match_status;
             return true;
         }
-
-        private void LogSickRawData(RawMicroScanDataMsg sick_scanner_raw_data)
-        {
-            try
-            {
-                string json = JsonConvert.SerializeObject(sick_scanner_raw_data, Formatting.Indented);
-                string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), Path.Combine(AppSettingsHelper.LogFolder, "SickData"));
-                Directory.CreateDirectory(LogFolder);
-                var fileName = Path.Combine(LogFolder, "tmp_sick_data.json");
-                using (StreamWriter writer = new StreamWriter(fileName))
-                {
-                    writer.WriteLine($"{DateTime.Now} {json}");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"紀錄sick data 的過程中發生錯誤 {ex.Message}", ex);
-            }
-        }
-
     }
 }

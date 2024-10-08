@@ -1,6 +1,4 @@
-﻿using AGVSystemCommonNet6;
-using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -8,7 +6,6 @@ using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Microsoft.AspNetCore.Mvc;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -102,7 +99,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (agv.WorkStations.Stations.TryGetValue(eq_tag, out var options))
             {
                 options.HandShakeModeHandShakeMode = need_handshake ? WORKSTATION_HS_METHOD.HS : WORKSTATION_HS_METHOD.NO_HS;
-                LOG.TRACE($"WorkStation-{eq_tag} Handshake Mode changed to {options.HandShakeModeHandShakeMode}");
+                logger.LogTrace($"WorkStation-{eq_tag} Handshake Mode changed to {options.HandShakeModeHandShakeMode}");
             }
             bool confirm = agv.SaveTeachDAtaSettings();
             return Ok(new { confirm, data = GetMappData() });
@@ -258,7 +255,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 forkAgv.ForkLifter.IsManualOperation = true;
                 var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
-                LOG.WARN($"USER adjust fork position from web ui:pose to = {pose_to}");
+                logger.LogWarning($"USER adjust fork position from web ui:pose to = {pose_to}");
                 (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
                 forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.success, message = result.message });

@@ -1,11 +1,11 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using NLog;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models
 {
     public static class StaSysControl
     {
-
+        private static Logger _logger = LogManager.GetCurrentClassLogger();
         public static void KillRunningVCSProcesses()
         {
             var currentProcessId = Process.GetCurrentProcess().Id;
@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Models
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                LOG.WARN("System will close after 1 sec...");
+                _logger.Warn("System will close after 1 sec...");
                 await Task.Delay(1000);
                 Environment.Exit(0);
             });
@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                LOG.WARN($"System will restart after 1 sec...(exe:{Environment.ProcessPath})");
+                _logger.Warn($"System will restart after 1 sec...(exe:{Environment.ProcessPath})");
                 await Task.Delay(1000);
                 Process _p = new Process();
                 _p.StartInfo = new ProcessStartInfo
