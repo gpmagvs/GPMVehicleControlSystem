@@ -1,4 +1,4 @@
-#define YM_4FAOI
+//#define YM_4FAOI
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
@@ -280,7 +280,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             eqHandshakeMode = WORKSTATION_HS_METHOD.HS;
         }
 #else
-private void DetermineHandShakeSetting()
+        private void DetermineHandShakeSetting()
         {
             if (IsJustAGVPickAndPlaceAtWIPPort)
             {
@@ -379,7 +379,7 @@ private void DetermineHandShakeSetting()
 
                 logger.Trace($"Load/Unload Action after AGVC Move done in port.");
 #if !YM_4FAOI
-            Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
 #endif
                 Agv.DirectionLighter.CloseAll();
                 RecordParkLoction();

@@ -1,4 +1,4 @@
-#define YM_4FAOI
+//#define YM_4FAOI
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.MAP;
