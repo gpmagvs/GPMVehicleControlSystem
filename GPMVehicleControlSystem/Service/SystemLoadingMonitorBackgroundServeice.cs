@@ -1,5 +1,7 @@
-﻿using GPMVehicleControlSystem.Tools;
+﻿using AGVSystemCommonNet6;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.CPUUsage;
+using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.Tools.NetworkStatus;
 using System.Runtime.InteropServices;
 
@@ -20,18 +22,8 @@ namespace GPMVehicleControlSystem.Service
         {
 
             CPUUaageBase cpuUsage = _GetCPUUsageInstance();
-            NetworkStatusBase networkStatus = _GetNetworkStatusInstance();
-
-            _ = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    await Task.Delay(5000);
-                    (double net_trasmited, double net_recieved) = await networkStatus.GetNetworkStatus();
-                    logger.LogInformation($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
-
-                }
-            });
+            StartNetworkStatusMonitor();
+            StartDiskStatusMonitor();
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(5000);
@@ -49,6 +41,35 @@ namespace GPMVehicleControlSystem.Service
             }
         }
 
+        private async Task StartNetworkStatusMonitor()
+        {
+            NetworkStatusBase networkStatus = _GetNetworkStatusInstance();
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(5000);
+                    (double net_trasmited, double net_recieved) = await networkStatus.GetNetworkStatus();
+                    logger.LogInformation($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
+
+                }
+            });
+        }
+
+        private async Task StartDiskStatusMonitor()
+        {
+            IDiskUsageMonitor diskMonitor = _GetDiskUsageMonitorInstance();
+            _ = Task.Run(async () =>
+            {
+
+                while (true)
+                {
+                    List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
+                    Console.WriteLine(disksStates.ToJson());
+                    await Task.Delay(5000);
+                }
+            });
+        }
 
         private CPUUaageBase _GetCPUUsageInstance()
         {
@@ -64,6 +85,11 @@ namespace GPMVehicleControlSystem.Service
                 return new LinuxNetworkStatus();
             else
                 return new NetworkStatusBase();
+        }
+
+        private IDiskUsageMonitor _GetDiskUsageMonitorInstance()
+        {
+            return new LinuxDiskUsageMonitor();
         }
     }
 }

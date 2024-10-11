@@ -4,6 +4,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.Tools;
+using GPMVehicleControlSystem.Tools.DiskUsage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -15,10 +16,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     public class SystemController : ControllerBase
     {
         private SystemUpdateService _sysUpdateService;
+        private LinuxDiskUsageMonitor _diskUsageMonitor;
 
-        public SystemController(SystemUpdateService sysUpdateService)
+        public SystemController(SystemUpdateService sysUpdateService, LinuxDiskUsageMonitor diskUsageMonitor)
         {
             _sysUpdateService = sysUpdateService;
+            _diskUsageMonitor = diskUsageMonitor;
         }
 
         [HttpGet("Settings")]
@@ -100,5 +103,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             agv.Parameters.ManualCheckCargoStatus = configs;
             Vehicle.SaveParameters(agv.Parameters);
         }
+
+        [HttpDelete("DeleteOldLogData")]
+        public async Task DeleteOldLogData(DateTime timeLessThan)
+        {
+            await _diskUsageMonitor.DeleteOldVCSLogData(timeLessThan);
+        }
+
+        [HttpPost("RunShellCommand")]
+        public async Task RunShellCommand(string command)
+        {
+            Tools.LinuxTools.RunShellCommand(command);
+        }
+
     }
 }

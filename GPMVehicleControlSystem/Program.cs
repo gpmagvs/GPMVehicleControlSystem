@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using NLog;
 using NLog.Web;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Tools.DiskUsage;
 BuzzerPlayer.DeterminePlayerUse();
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -59,6 +60,7 @@ try
     builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
     builder.Services.AddDirectoryBrowser();
     builder.Services.AddSingleton<SystemUpdateService>();
+    builder.Services.AddScoped<LinuxDiskUsageMonitor>();
     builder.Services.AddHostedService<VehicleFactoryService>();
     builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
     builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();

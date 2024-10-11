@@ -17,4 +17,3 @@ REM 使用 PowerShell 压缩文件和目录
 powershell Compress-Archive -Path %files% -DestinationPath %zipfile%
 
 echo Files and directory have been compressed into %zipfile%
-pause

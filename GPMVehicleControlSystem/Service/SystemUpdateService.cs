@@ -16,20 +16,30 @@ namespace GPMVehicleControlSystem.Service
                 {
                     string currentDirectory = Directory.GetCurrentDirectory();
                     string zipFileTempFolder = Path.Combine(currentDirectory, "_temp");
+                    try
+                    {
+                        Directory.Delete(zipFileTempFolder, true); //刪除現有的 _temp
+                    }
+                    catch (Exception)
+                    {
+                    }
                     Console.WriteLine($"Create temp folder : {zipFileTempFolder}");
                     Directory.CreateDirectory(zipFileTempFolder);
-
+                    Directory.CreateDirectory(Path.Combine(zipFileTempFolder, "wwwroot"));
                     //store zip file and unzip to current folder
                     // 1. store zip file
-                    var filePath = Path.Combine(zipFileTempFolder, file.FileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    string zipFilePath = Path.Combine(Directory.GetCurrentDirectory(), file.FileName);
+                    using (FileStream stream = new FileStream(zipFilePath, FileMode.Create))
                     {
                         await file.CopyToAsync(stream);
                     }
+                    //要先提高權限 _temp資料夾
+                    Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}");
                     //2 unzip to current folder
-                    ZipFile.ExtractToDirectory(filePath, zipFileTempFolder, true);
-                    File.Delete(filePath);
+                    Tools.LinuxTools.RunShellCommand($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"");
 
+                    //ZipFile.ExtractToDirectory(zipFilePath, zipFileTempFolder, true);
+                    File.Delete(zipFilePath);
                     //// backup 
                     //BackupCurrentProgram(out string errMsg);
 

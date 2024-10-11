@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Log;
+using NLog;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Tools
@@ -6,6 +7,9 @@ namespace GPMVehicleControlSystem.Tools
     public class LinuxTools
     {
         internal static double Memory = 0;
+
+        static Logger Logger = LogManager.GetCurrentClassLogger();
+
         public static void FindTerminals()
         {
             string command = "ps aux | grep -E 'bash|sh'";
@@ -51,6 +55,48 @@ namespace GPMVehicleControlSystem.Tools
         {
             var currentProcess = Process.GetCurrentProcess();
             return currentProcess.WorkingSet64 / 1024 / 1024;
+        }
+
+        /// <summary>
+        /// 創建 Process 來執行 shell 命令
+        /// </summary>
+        /// <param name="command"></param>
+        public static void RunShellCommand(string command)
+        {
+            Logger.Info($"Run Shell Command-> {command}");
+            Process process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash", // 使用 Bash 作為 shell
+                    Arguments = $"-c \"{command}\"", // 使用 -c 執行命令
+                    RedirectStandardOutput = true, // 導向標準輸出
+                    RedirectStandardError = true,  // 導向錯誤輸出
+                    UseShellExecute = false, // 不使用 shell 執行
+                    CreateNoWindow = true // 不創建窗口
+                }
+            };
+
+            // 開始執行命令
+            process.Start();
+
+            // 讀取標準輸出與錯誤
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            // 等待進程完成
+            process.WaitForExit();
+
+            // 顯示命令執行的輸出結果
+            if (!string.IsNullOrEmpty(output))
+            {
+                Logger.Info("輸出: " + output);
+            }
+
+            // 顯示錯誤（如果有）
+            if (!string.IsNullOrEmpty(error))
+            {
+                Logger.Error("錯誤: " + error);
+            }
         }
     }
 
