@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Service
                     continue;
 
                 await MonitorBatteryOverVoltage();
-                await MonitorBatteryOverTemperature();
+                await MonitorBatteryErrorStatus();
             }
         }
 
@@ -54,7 +54,7 @@ namespace GPMVehicleControlSystem.Service
             }
         }
 
-        private async Task MonitorBatteryOverTemperature()
+        private async Task MonitorBatteryErrorStatus()
         {
             try
             {
@@ -66,11 +66,17 @@ namespace GPMVehicleControlSystem.Service
                     byte errorCode = Vehicle.Batteries.FirstOrDefault(bat => bat.Value.Data.errorCode != 0).Value.Data.errorCode;
                     AlarmCodes alCode = errorCode.ToBatteryAlarmCode();
                     bool _isTimePassEnough = (DateTime.Now - lastOverTemperatureDetectedTime).TotalSeconds > 5;
-                    if (_isTimePassEnough)
+                    if (_isTimePassEnough) //若電池欠壓，仍要可以初始化上線，趕緊可派去充電
                     {
-                        AlarmManager.AddAlarm(alCode, false);
-                        lastOverTemperatureDetectedTime = DateTime.Now;
-                        Vehicle.BatteryStatusOverview.SetAsDownStatus(alCode);
+                        if (alCode == AlarmCodes.Under_Voltage)
+                            AlarmManager.AddWarning(alCode);
+                        else
+                        {
+                            AlarmManager.AddAlarm(alCode, false);
+                            lastOverTemperatureDetectedTime = DateTime.Now;
+                            Vehicle.BatteryStatusOverview.SetAsDownStatus(alCode);
+                        }
+
                     }
                 }
                 else
