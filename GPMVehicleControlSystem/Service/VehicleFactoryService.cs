@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Tools.DiskUsage;
 using Microsoft.AspNetCore.SignalR;
 using static AGVSystemCommonNet6.clsEnums;
 
@@ -34,6 +35,8 @@ namespace GPMVehicleControlSystem.Service
                 bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
                 DBhelper.Initialize();
                 AlarmManager.RecoveryAlarmDB();
+
+                await _DeleteOldLogAndAlarm(param.Log.LogKeepDays);
 
                 logger.LogTrace("Database Initialize done");
                 var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
@@ -85,6 +88,16 @@ namespace GPMVehicleControlSystem.Service
                 AlarmManager.AddAlarm(AlarmCodes.None, true);
 
             }
+        }
+
+        private async Task _DeleteOldLogAndAlarm(int days)
+        {
+            DateTime timeLimit = DateTime.Now.AddDays(-1 * days);
+            // delete log
+            IDiskUsageMonitor diskUsageMonitor = new LinuxDiskUsageMonitor();
+            await diskUsageMonitor.DeleteOldVCSLogData(timeLimit);
+            // delete alarms of database
+            AlarmManager.RemoveOldAlarmFromDB(timeLimit);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

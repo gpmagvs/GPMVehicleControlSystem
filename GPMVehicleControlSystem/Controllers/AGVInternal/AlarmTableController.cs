@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,6 +32,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> GetAlarmClassifies()
         {
             return Ok(DBhelper.Query.QueryAlarmCodeClassifies());
+        }
+
+        [HttpDelete("DeleteOldAlarms")]
+        public async Task DeleteOldAlarms(DateTime timeEarlyTo)
+        {
+            AlarmManager.RemoveOldAlarmFromDB(timeEarlyTo);
         }
     }
 }
