@@ -130,7 +130,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler OnSTOPCmdRequesting;
         public delegate CST_TYPE delgateOnCstTypeUnknown();
         public delgateOnCstTypeUnknown OnCstTriggerButTypeUnknown;
-        public delegate bool SpeedRecoveryRequestingDelegate();
+        public delegate (bool confirmed, string message) SpeedRecoveryRequestingDelegate();
         public SpeedRecoveryRequestingDelegate OnSpeedRecoveryRequesting;
         public delegate SendActionCheckResult BeforeSendActionToAGVCDelegate();
         public BeforeSendActionToAGVCDelegate OnActionSendToAGVCRaising;
@@ -451,10 +451,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery & OnSpeedRecoveryRequesting != null)
             {
 
-                var speed_recoverable = OnSpeedRecoveryRequesting();
-                if (!speed_recoverable && CheckLaserStatus)
+                (bool confirmed, string message) = OnSpeedRecoveryRequesting();
+                if (!confirmed && CheckLaserStatus)
                 {
-                    logger.Info($"[ROBOT_CONTROL_CMD] 要求車控速度恢復但尚有雷射觸發中");
+                    logger.Info($"[ROBOT_CONTROL_CMD] {message}");
                     return false;
                 }
             }
@@ -505,6 +505,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 logger.Warn($"[SendGoal] Action Status is not PENDING or ACTIVE. Current Status = {_ActionStatus}");
                 _ActionStatus = ActionStatus.NO_GOAL;
+            }
+            SendActionCheckResult? preCheckWhenActionGoalSendToAGVC = OnActionSendToAGVCRaising?.Invoke();
+
+            if (!preCheckWhenActionGoalSendToAGVC.Accept)
+            {
+                return preCheckWhenActionGoalSendToAGVC;
             }
 
             actionClient.goal = goalModified;

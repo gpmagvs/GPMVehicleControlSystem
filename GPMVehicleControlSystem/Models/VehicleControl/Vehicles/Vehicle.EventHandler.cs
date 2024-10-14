@@ -411,9 +411,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogWarning($"AGV Status Error:[{imu_event_data.Imu_AlarmCode}]\nLocation: ({locInfo},{thetaInfo}).\nState={imu_event_data.ToJson()}");
         }
 
-        private bool HandleSpeedReconveryRequesetRaised()
+        private (bool confirmed, string message) HandleSpeedReconveryRequesetRaised()
         {
-            return IsAllLaserNoTrigger();
+            if (!IsAllLaserNoTrigger())
+                return (false, "要求車控速度恢復但尚有雷射觸發中");
+            return (true, "");
         }
 
         /// <summary>
@@ -422,9 +424,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         private SendActionCheckResult HandleSendActionGoalToAGVCRaised()
         {
-            var _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-            if (AGVSResetCmdFlag)
+            SendActionCheckResult _confirmResult = new(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+            if (TaskCycleStopStatus == TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST)
             {
+                logger.LogWarning($"Before Action Goal Send to AGVC Check Fail => Cycle Stop Request is Raising Now!");
                 _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED);
             }
             logger.LogTrace($"Before Action Goal Send to AGVC Check Result = {_confirmResult.ToJson()}");

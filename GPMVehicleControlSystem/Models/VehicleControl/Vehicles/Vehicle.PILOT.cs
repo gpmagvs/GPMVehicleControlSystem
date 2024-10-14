@@ -84,9 +84,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Pending,
             Running,
         }
-
+        public enum TASK_CANCEL_STATUS
+        {
+            RECEIVED_CYCLE_STOP_REQUEST,
+            EXECUTING_CYCLE_STOP_REQUEST,
+            FINISH_CYCLE_STOP_REQUEST,
+        }
         public TASK_DISPATCH_STATUS TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
-
+        public TASK_CANCEL_STATUS TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
         /// <summary>
         /// 執行派車系統任務
         /// </summary>
@@ -125,6 +130,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 logger.LogError(ex, ex.Message);
                 SoftwareEMO(AlarmCodes.Code_Error_In_System);
+                TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
                 return;
             }
             finally
@@ -133,104 +139,117 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             await Task.Run(async () =>
             {
-                if (AGV_Reset_Flag)
-                    return;
-                //LDULDRecord
-                IsLaserRecoveryHandled = false;
-                bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
-                _RunTaskData.IsEQHandshake = _isNeedHandshaking;
-                AGV_Reset_Flag = AGVSResetCmdFlag = false;
-                TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
-                List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-                logger.LogTrace($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}");
-                if (alarmCodes.Any(al => al == AlarmCodes.Replan))
+                try
                 {
-                    logger.LogWarning("Replan.");
-                    return;
-                }
-                if (alarmCodes.Any(al => al == AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised))
-                {
-                    logger.LogWarning("AGVS Cancel Request Raised and AGV is executing cycle stop action");
-                    return;
-                }
-
-                IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
-                bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
-                bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
-                bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_L_REQ) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_U_REQ) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_READY) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_UP) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_LOW) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_GO) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
-                                                                      alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
-                if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)
-                {
-                    AGVC.EmergencyStop();
-                    _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
-                    if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
+                    if (AGV_Reset_Flag)
+                        return;
+                    //LDULDRecord
+                    IsLaserRecoveryHandled = false;
+                    bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
+                    _RunTaskData.IsEQHandshake = _isNeedHandshaking;
+                    AGV_Reset_Flag = AGVSResetCmdFlag = false;
+                    TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
+                    List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
+                    logger.LogTrace($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}");
+                    if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                     {
-                        alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
-                        await Task.Delay(200);
+                        logger.LogWarning("Replan.");
+                        return;
+                    }
+                    if (alarmCodes.Any(al => al == AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised))
+                    {
+                        logger.LogWarning("AGVS Cancel Request Raised and AGV is executing cycle stop action");
+                        return;
                     }
 
-                    if (_isNeedHandshaking && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
+                    IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
+                    bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
+                    bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
+                    bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_L_REQ) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_U_REQ) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_READY) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_UP) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Handshake_Fail_EQ_READY_LOW) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_GO) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
+                                                                          alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
+                    if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)
                     {
-                        alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
-                    }
-                    try
-                    {
-                        await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
-                    }
-                    catch (TaskCanceledException ex)
-                    {
-                        logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
-                    }
-                    finally
-                    {
-                        SetSub_Status(SUB_STATUS.DOWN);
-                    }
-                    alarmCodes.ForEach(alarm =>
-                    {
-                        AlarmManager.AddAlarm(alarm, false);
-                    });
-                    _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
-                    logger.LogError($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+                        AGVC.EmergencyStop();
+                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                        if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
+                        {
+                            alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
+                            await Task.Delay(200);
+                        }
 
-                    TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+                        if (_isNeedHandshaking && IsAGVAbnormal_when_handshaking && !alarmCodes.Contains(AlarmCodes.Handshake_Fail_AGV_DOWN))
+                        {
+                            alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
+                        }
+                        try
+                        {
+                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                        }
+                        catch (TaskCanceledException ex)
+                        {
+                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
+                        }
+                        finally
+                        {
+                            SetSub_Status(SUB_STATUS.DOWN);
+                        }
+                        alarmCodes.ForEach(alarm =>
+                        {
+                            AlarmManager.AddAlarm(alarm, false);
+                        });
+                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                        logger.LogError($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+
+                        TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+                    }
+                    else
+                    {
+                        AlarmManager.ClearAlarm();
+                        try
+                        {
+                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                        }
+                        catch (TaskCanceledException ex)
+                        {
+                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
+                        }
+                        finally
+                        {
+                            SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
+                        }
+                    }
+                    AGVC.OnAGVCActionChanged = null;
+
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
+
+                    if (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy && !_RunTaskData.IsLocalTask)
+                    {
+                        //自動復歸並上線
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(2000);
+                            await AutoInitializeAndOnline();
+                        });
+                    }
                 }
-                else
+                catch (Exception)
                 {
-                    AlarmManager.ClearAlarm();
-                    try
-                    {
-                        await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
-                    }
-                    catch (TaskCanceledException ex)
-                    {
-                        logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
-                    }
-                    finally
-                    {
-                        SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
-                    }
+
+                    throw;
                 }
-                AGVC.OnAGVCActionChanged = null;
-
-                FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
-
-                if (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy && !_RunTaskData.IsLocalTask)
+                finally
                 {
-                    //自動復歸並上線
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(2000);
-                        await AutoInitializeAndOnline();
-                    });
+                    TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
                 }
+
             });
 
 
