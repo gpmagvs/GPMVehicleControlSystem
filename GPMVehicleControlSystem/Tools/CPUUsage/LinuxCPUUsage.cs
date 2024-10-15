@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using System.Security.Cryptography;
 
 namespace GPMVehicleControlSystem.Tools.CPUUsage
 {
@@ -24,7 +25,6 @@ namespace GPMVehicleControlSystem.Tools.CPUUsage
             }
             catch (Exception ex)
             {
-                LOG.ERROR("Get CPU Loading Fail(Linux Base) :" + ex.Message);
                 return -1;
             }
         }
@@ -40,6 +40,12 @@ namespace GPMVehicleControlSystem.Tools.CPUUsage
                                    .ToArray();
                 return cpuTimes;
             }
+        }
+
+        public override async Task<string> GetTop10CupUseProcess()
+        {
+            LinuxTools.RunShellCommand("ps -eo pid,comm,%mem,%cpu --sort=-%cpu | head -n 11 | awk 'NR==1 {print} NR>1 {print $1\",\"$2\",\"$3\",\"$4}'", out string output, out string error);
+            return output;
         }
     }
 }

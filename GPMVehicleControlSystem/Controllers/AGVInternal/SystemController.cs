@@ -111,9 +111,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpPost("RunShellCommand")]
-        public async Task RunShellCommand(string command)
+        public async Task<IActionResult> RunShellCommand(string command)
         {
-            Tools.LinuxTools.RunShellCommand(command);
+            Tools.LinuxTools.RunShellCommand(command, out string output, out string error);
+            return Ok(new { output, error });
         }
 
     }

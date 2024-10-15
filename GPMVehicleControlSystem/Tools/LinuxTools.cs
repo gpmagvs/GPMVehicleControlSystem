@@ -57,12 +57,16 @@ namespace GPMVehicleControlSystem.Tools
             return currentProcess.WorkingSet64 / 1024 / 1024;
         }
 
+
+
         /// <summary>
         /// 創建 Process 來執行 shell 命令
         /// </summary>
         /// <param name="command"></param>
-        public static void RunShellCommand(string command)
+        public static void RunShellCommand(string command, out string output, out string error)
         {
+            output = "";
+            error = "";
             Logger.Info($"Run Shell Command-> {command}");
             Process process = new Process
             {
@@ -81,8 +85,8 @@ namespace GPMVehicleControlSystem.Tools
             process.Start();
 
             // 讀取標準輸出與錯誤
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
+            output = process.StandardOutput.ReadToEnd();
+            error = process.StandardError.ReadToEnd();
             // 等待進程完成
             process.WaitForExit();
 

@@ -28,9 +28,10 @@ namespace GPMVehicleControlSystem.Service
             {
                 await Task.Delay(5000);
                 double cpu = await cpuUsage.GetCPU();
+                string top10Output = await cpuUsage.GetTop10CupUseProcess();
                 double ram = LinuxTools.GetMemUsedMB();
                 logger.LogInformation($"CPU:{cpu} % / RAM:{ram} MB");
-
+                logger.LogInformation(top10Output);
                 //if (ram > 500)
                 //{
                 //    GC.Collect();
@@ -65,7 +66,8 @@ namespace GPMVehicleControlSystem.Service
                 while (true)
                 {
                     List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
-                    Console.WriteLine(disksStates.ToJson());
+                    logger.LogInformation(disksStates.ToJson(Newtonsoft.Json.Formatting.None));
+                    //Console.WriteLine(disksStates.ToJson());
                     await Task.Delay(5000);
                 }
             });

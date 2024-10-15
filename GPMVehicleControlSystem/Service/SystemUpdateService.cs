@@ -34,9 +34,9 @@ namespace GPMVehicleControlSystem.Service
                         await file.CopyToAsync(stream);
                     }
                     //要先提高權限 _temp資料夾
-                    Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}");
+                    Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
                     //2 unzip to current folder
-                    Tools.LinuxTools.RunShellCommand($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"");
+                    Tools.LinuxTools.RunShellCommand($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"", out _, out _);
 
                     //ZipFile.ExtractToDirectory(zipFilePath, zipFileTempFolder, true);
                     File.Delete(zipFilePath);
