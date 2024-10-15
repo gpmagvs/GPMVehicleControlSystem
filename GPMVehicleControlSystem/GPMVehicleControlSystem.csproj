@@ -38,8 +38,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.1.288.6</AssemblyVersion>
-		<FileVersion>3.1.288.6</FileVersion>
+		<AssemblyVersion>3.1.289.3</AssemblyVersion>
+		<FileVersion>3.1.289.3</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
@@ -63,6 +63,7 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
 		<PackageReference Include="System.Windows.Extensions" Version="7.0.0" />
 		<PackageReference Include="VueRouterHistory" Version="1.1.1" />
+		<PackageReference Include="YamlDotNet" Version="16.1.3" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AGVSystemCommonNet6\AGVSystemCommonNet6.csproj" />

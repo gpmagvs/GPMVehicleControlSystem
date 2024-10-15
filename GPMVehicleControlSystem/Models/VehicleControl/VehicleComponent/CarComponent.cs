@@ -1,16 +1,20 @@
 ﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using NLog;
 using RosSharp.RosBridgeClient;
+using System.Dynamic;
 using System.Runtime.InteropServices;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     /// <summary>
     /// 車控發佈的 module_information 各元件狀態
     /// </summary>
-    public abstract class CarComponent : AGVAlarmReportable
+    public abstract class CarComponent : AGVAlarmReportable, RosNodeParamImportAbstract
     {
 
+        public virtual string RosParmYamlPath => "rosparam.yaml";
 
         public enum COMPOENT_NAME
         {
@@ -44,6 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public CarComponent() : base()
         {
             logger = LogManager.GetLogger($"CarComponents/{GetType().Name}");
+            RosNodeSettingParam = ImportRosNodeParam();
             UpdateStateMonitor();
         }
 
@@ -137,6 +142,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
 
             OnCommunicationRecovery?.Invoke(this, null);
+        }
+        public dynamic RosNodeSettingParam { get; set; } = new ExpandoObject();
+        public virtual dynamic ImportRosNodeParam()
+        {
+            if (!File.Exists(this.RosParmYamlPath))
+                return new ExpandoObject();
+            string fileContent = File.ReadAllText(this.RosParmYamlPath);
+            IDeserializer deserializer = new DeserializerBuilder()
+                                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                                    .Build();
+            dynamic yamlObject = deserializer.Deserialize<dynamic>(fileContent);
+            return yamlObject;
         }
     }
 }

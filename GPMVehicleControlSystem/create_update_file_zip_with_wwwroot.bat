@@ -8,7 +8,7 @@ REM 获取 .bat 文件所在目录
 set "current_dir=%~dp0"
 
 REM 定义要压缩的文件和目录
-set files="%current_dir%GPM_VCS.deps.json","%current_dir%GPM_VCS.dll","%current_dir%GPM_VCS.pdb","%current_dir%GPM_VCS.xml","%current_dir%AGVSystemCommonNet6.dll","%current_dir%AGVSystemCommonNet6.pdb","%current_dir%RosBridgeClient.dll","%current_dir%RosBridgeClient.pdb","%current_dir%KGSWebAGVSystemAPI.dll","%current_dir%KGSWebAGVSystemAPI.pdb","%current_dir%EquipmentManagment.dll","%current_dir%EquipmentManagment.pdb","%current_dir%GPM_VCS.runtimeconfig.json","%current_dir%wwwroot"
+set files="%current_dir%GPM_VCS.deps.json","%current_dir%GPM_VCS.dll","%current_dir%GPM_VCS.pdb","%current_dir%GPM_VCS.xml","%current_dir%AGVSystemCommonNet6.dll","%current_dir%AGVSystemCommonNet6.pdb","%current_dir%RosBridgeClient.dll","%current_dir%RosBridgeClient.pdb","%current_dir%KGSWebAGVSystemAPI.dll","%current_dir%KGSWebAGVSystemAPI.pdb","%current_dir%EquipmentManagment.dll","%current_dir%EquipmentManagment.pdb","%current_dir%GPM_VCS.runtimeconfig.json","%current_dir%YamlDotNet.dll","%current_dir%wwwroot"
 
 REM 创建 zip 文件
 set zipfile=%current_dir%VCS_Update_Files_Created_With_wwwroot_!datetime!.zip

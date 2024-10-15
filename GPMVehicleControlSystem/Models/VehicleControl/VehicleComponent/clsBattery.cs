@@ -1,10 +1,13 @@
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsBattery : CarComponent
     {
+
+        public override string RosParmYamlPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "catkin_ws\\src\\gpm_project\\battery\\param\\battery_setting.yaml");
         public static event EventHandler<clsBattery> OnBatteryUnderVoltage;
         public static event EventHandler<clsBattery> OnBatteryOverTemperature;
         /// <summary>
@@ -37,7 +40,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
+        public bool TryGetOverVoltageThreshold(out double threshold)
+        {
+            threshold = -1;
+            try
+            {
+                string _threshold = RosNodeSettingParam["/battery/Alarm/overVoltage"];
+                return double.TryParse(_threshold, out threshold);
 
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
 
         public int ChargeAmpThreshold { get; internal set; } = 650;
         public bool IsCharging()
@@ -90,6 +106,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
             base._CommunicationErrorJudge();
         }
+
     }
 
     public class clsStateCheckSpec

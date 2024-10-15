@@ -579,6 +579,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                     TaskCycleStopStatus = TASK_CANCEL_STATUS.EXECUTING_CYCLE_STOP_REQUEST;
                     bool result = await AGVC.ResetTask(mode);
+
+                    if (TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE)
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
+
                     return result;
                 }
             }
