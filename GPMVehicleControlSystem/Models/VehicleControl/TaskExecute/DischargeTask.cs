@@ -82,14 +82,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            if (Agv.Parameters.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS)
-            {
-                (bool exitPortConfirmed, AlarmCodes alarmCode) = await ExitPortRequest();
-                if (!exitPortConfirmed)
-                {
-                    return (false, alarmCode);
-                }
-            }
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
             if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
             {
