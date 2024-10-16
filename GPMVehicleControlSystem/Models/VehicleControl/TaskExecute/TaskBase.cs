@@ -56,6 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             get
             {
+                bool isAGVSKGBase = Agv.Parameters.VMSParam.Protocol == VMS_PROTOCOL.KGS;
                 if (Agv.Parameters.AgvType != AGV_TYPE.FORK)
                     return false;
 
@@ -205,8 +206,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 if (IsJustAGVPickAndPlaceAtWIPPort || action == ACTION_TYPE.Park)
                     return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
 
-                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data))
                 {
+                    if (data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0)
+                        return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
                     return data.CargoTransferMode;
                 }
                 else

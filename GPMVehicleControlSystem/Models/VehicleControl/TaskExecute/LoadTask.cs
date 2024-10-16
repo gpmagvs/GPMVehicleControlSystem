@@ -282,14 +282,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 #else
         private void DetermineHandShakeSetting()
         {
-            if (IsJustAGVPickAndPlaceAtWIPPort)
+            bool existHandshakeModeSetting = Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data);
+
+            if (IsJustAGVPickAndPlaceAtWIPPort || (existHandshakeModeSetting && data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0))
             {
                 IsNeedHandshake = false;
                 eqHandshakeMode = WORKSTATION_HS_METHOD.NO_HS;
                 logger.Info($"[{action}] Tag_{destineTag} is WIP and NOT FIRST Layer (Height={height}): Handshake Mode:{eqHandshakeMode}");
                 return;
             }
-            if (Agv.WorkStations.Stations.TryGetValue(destineTag, out var data))
+
+            if (existHandshakeModeSetting)
             {
                 WORKSTATION_HS_METHOD mode = data.HandShakeModeHandShakeMode;
                 eqHandshakeMode = mode;

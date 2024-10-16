@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.Models.WorkStation
     {
         EQ_Pick_and_Place,
         AGV_Pick_and_Place,
+        ONLY_FIRST_SLOT_EQ_Pick_and_Place,
     }
     public class clsWorkStationModel
     {
@@ -76,7 +77,7 @@ namespace GPMVehicleControlSystem.Models.WorkStation
         {
             { "HandShakeModeHandShakeMode ","設備交握模式- 0:不需交握,1:需交握" },
             { "HandShakeConnectionMode ","設備交握通訊模式- 0:光IO,1:Modbuus,2:模擬" },
-            { "CargoTransferMode ","貨物轉移模式- 0:設備動作,1:AGV動作" },
+            { "CargoTransferMode ","貨物轉移模式- 0:設備動作,1:AGV動作,2:僅第一層設備動作" },
             { "ForkArmExtend ","牙叉是否需要伸出- true:需伸出,false:不需伸出" },
         };
         public int Tag { get; set; }
