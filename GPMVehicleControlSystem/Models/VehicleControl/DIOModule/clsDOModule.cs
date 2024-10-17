@@ -88,9 +88,40 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             bool connected = _Connected = await base.Connect();
             if (OutputWriteWorkTask == null)
+            {
+                if (connected)
+                    SyncCoilsFromModule();
                 OutputWriteWorkTask = Task.Run(() => OutputWriteWorker());
+            }
             return connected;
         }
+
+        private void SyncCoilsFromModule()
+        {
+            try
+            {
+
+                logger.Info($"Start Sync Coils From Module | Start-{Start},Size-{Size}");
+                bool[] states = master?.ReadCoils(Start, Size);
+                int index = 0;
+                logger.Trace(string.Join(",", states.Select(b => b ? 1 : 0)));
+                foreach (bool _bolState in states)
+                {
+                    clsIOSignal? _DO = VCSOutputs.FirstOrDefault(k => k.index == index);
+                    if (_DO != null)
+                    {
+                        _DO.State = _bolState;
+                    }
+                    index += 1;
+                }
+                logger.Info("Sync Coils From Module done.");
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Sync Coils From Module Fail : " + ex.Message);
+            }
+        }
+
         private async void OutputWriteWorker()
         {
             int reconnect_cnt = 0;

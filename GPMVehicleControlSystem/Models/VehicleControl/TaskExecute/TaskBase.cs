@@ -208,8 +208,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data))
                 {
-                    if (data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0)
-                        return CARGO_TRANSFER_MODE.AGV_Pick_and_Place;
+                    if (data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place)
+                        return height > 0 ? CARGO_TRANSFER_MODE.AGV_Pick_and_Place : CARGO_TRANSFER_MODE.EQ_Pick_and_Place;
                     return data.CargoTransferMode;
                 }
                 else
