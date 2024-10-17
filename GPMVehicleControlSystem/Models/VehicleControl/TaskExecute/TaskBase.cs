@@ -402,9 +402,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.HandshakeStatusText = "AGV牙叉動作中";
                     logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度");
 
-                    var _position = CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_;
+                    FORK_HEIGHT_POSITION _position = _GetForkPositionToReachAtSecondaryPoint(action);
 
-                    var forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
+                    (double position, bool success, AlarmCodes alarm_code) forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
                     if (!forkGoTeachPositionResult.success)
                         alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
                     else
@@ -432,6 +432,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
             return (alarmCodes.Count == 0, alarmCodes);
         }
+
+        /// <summary>
+        /// 取得牙叉應上升的位置
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        private FORK_HEIGHT_POSITION _GetForkPositionToReachAtSecondaryPoint(ACTION_TYPE action)
+        {
+            return action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_; //僅考慮當前任務是 Load or Unload決定上升位置
+            //return CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_;
+        }
+
         protected virtual void BuzzerPlayMusic(ACTION_TYPE action)
         {
             if (action == ACTION_TYPE.None)
@@ -722,6 +734,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInSecondaryPtOfWorkStation(int Height, FORK_HEIGHT_POSITION position)
         {
+
+            //Self check. 
+            if (action == ACTION_TYPE.Unload && position != FORK_HEIGHT_POSITION.DOWN_)
+                return (0, false, AlarmCodes.Fork_Cannot_Move_To_Up_Pose_When_Unload_Action_Executing);
+
+            //Self check. 
+            if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position != FORK_HEIGHT_POSITION.DOWN_)
+                return (0, false, AlarmCodes.Fork_Cannot_Move_To_Down_Pose_When_Load_Action_Executing);
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
             _ = Task.Run(async () =>

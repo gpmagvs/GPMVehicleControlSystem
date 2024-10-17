@@ -55,16 +55,6 @@
     "CN": "Wago IO寫入異常"
   },
   {
-    "Code": 150,
-    "Description": "PLC MC Disconnect",
-    "CN": "PLC MC連線異常"
-  },
-  {
-    "Code": 160,
-    "Description": "PLC MC Initial Fail",
-    "CN": "PLC MC初始異常"
-  },
-  {
     "Code": 200,
     "Description": "Not Yet Initial",
     "CN": "尚未初始化"
@@ -85,9 +75,29 @@
     "CN": "電池2未Lock"
   },
   {
+    "Code": 223,
+    "Description": "Battery Not UnLock",
+    "CN": "電池未解鎖"
+  },
+  {
+    "Code": 224,
+    "Description": "Battery1 Not UnLock",
+    "CN": "電池1未解鎖"
+  },
+  {
+    "Code": 225,
+    "Description": "Battery2 Not UnLock",
+    "CN": "電池2未解鎖"
+  },
+  {
     "Code": 250,
     "Description": "Action Timeout",
     "CN": "機構動作逾時"
+  },
+  {
+    "Code": 251,
+    "Description": "Fork Action Aborted",
+    "CN": "牙叉動作中止"
   },
   {
     "Code": 260,
@@ -340,9 +350,24 @@
     "CN": "牙叉高度參數異常"
   },
   {
+    "Code": 714,
+    "Description": "Fork Pose Change Too Large",
+    "CN": "牙叉姿態變化過大"
+  },
+  {
     "Code": 715,
     "Description": "Fork Action Fail When Reach Secondary Point",
     "CN": "抵達二次定位點時牙叉動作失敗"
+  },
+  {
+    "Code": 716,
+    "Description": "Unload Action But Fork Pose Not DOWN",
+    "CN": "Unload 任務牙叉應上升至Down_Pose"
+  },
+  {
+    "Code": 717,
+    "Description": "Load Action But Fork Pose Not UP",
+    "CN": "Load 任務牙叉應上升至Up_Pose"
   },
   {
     "Code": 800,
@@ -550,6 +575,16 @@
     "CN": "無法進行Online, 目前Tag已設為禁止上線"
   },
   {
+    "Code": 1072,
+    "Description": "Cant Online In Equipment",
+    "CN": "無法在設備內上線"
+  },
+  {
+    "Code": 1073,
+    "Description": "Cant Online At Virtual Point",
+    "CN": "無法在虛擬點上線"
+  },
+  {
     "Code": 1110,
     "Description": "FrontProtection_Area2",
     "CN": "AGV前方遠處障礙物"
@@ -613,6 +648,11 @@
     "Code": 1550,
     "Description": "Secondary Done But is Wrong Pos",
     "CN": "移動完成但位置錯誤"
+  },
+  {
+    "Code": 1551,
+    "Description": "AGV Location Not Secondary",
+    "CN": "AGV位置不在二次定位點"
   },
   {
     "Code": 1560,
@@ -815,6 +855,16 @@
     "CN": "卡夾ID讀取失敗"
   },
   {
+    "Code": 1851,
+    "Description": "Read Cst ID Fail Service Done But Topic No CSTID",
+    "CN": "讀取卡夾ID失敗,服務完成但主題無CSTID"
+  },
+  {
+    "Code": 1852,
+    "Description": "Read Cst ID But Cargo Type Known",
+    "CN": "讀取卡夾ID但貨物類型已知"
+  },
+  {
     "Code": 1860,
     "Description": "Cst ID Not Match",
     "CN": "卡夾ID不相符"
@@ -960,9 +1010,19 @@
     "CN": "GPM控車異常Abort"
   },
   {
+    "Code": 2401,
+    "Description": "Can not Pass Task to Motion Control",
+    "CN": "無法將任務傳遞給運動控制"
+  },
+  {
     "Code": 2410,
     "Description": "Action Server Not Ready",
     "CN": "Action Server連線逾時"
+  },
+  {
+    "Code": 2411,
+    "Description": "Motion control Disconnected",
+    "CN": "運動控制斷開連接"
   },
   {
     "Code": 2500,
@@ -1045,6 +1105,51 @@
     "CN": "交握逾時"
   },
   {
+    "Code": 3211,
+    "Description": "Handshake Timeout TA2 EQ READY Not On",
+    "CN": "交握逾時 TA2 EQ READY 未開啟"
+  },
+  {
+    "Code": 3212,
+    "Description": "Handshake Timeout TA3 EQ BUSY Not ON",
+    "CN": "交握逾時 TA3 EQ BUSY 未開啟"
+  },
+  {
+    "Code": 3213,
+    "Description": "Handshake Timeout TA5 EQ READY Not OFF",
+    "CN": "交握逾時 TA5 EQ READY 未關閉"
+  },
+  {
+    "Code": 3214,
+    "Description": "Handshake Timeout TA1 EQ L REQ Not On",
+    "CN": "交握逾時 TA1 EQ L REQ 未開啟"
+  },
+  {
+    "Code": 3215,
+    "Description": "Handshake Timeout TA1 EQ U REQ Not On",
+    "CN": "交握逾時 TA1 EQ U REQ 未開啟"
+  },
+  {
+    "Code": 3216,
+    "Description": "Handshake Timeout TA4 EQ BUSY Not OFF",
+    "CN": "交握逾時 TA4 EQ BUSY 未關閉"
+  },
+  {
+    "Code": 3217,
+    "Description": "Handshake Timeout TA5 EQ L REQ Not OFF",
+    "CN": "交握逾時 TA5 EQ L REQ 未關閉"
+  },
+  {
+    "Code": 3218,
+    "Description": "Handshake Timeout TA5 EQ U REQ Not OFF",
+    "CN": "交握逾時 TA5 EQ U REQ 未關閉"
+  },
+  {
+    "Code": 3219,
+    "Description": "Handshake Fail AGV DOWN",
+    "CN": "交握失敗 AGV DOWN"
+  },
+  {
     "Code": 3220,
     "Description": "Precheck IO Fail(X20~X28)",
     "CN": "交握事前檢查訊號錯誤(X20~X28)"
@@ -1085,29 +1190,14 @@
     "CN": "設備PIO狀態尚未復歸"
   },
   {
-    "Code": 3230,
-    "Description": "Handshake_Fail_EQ_BUSY_ON",
-    "CN": "Handshake_Fail_EQ_BUSY_ON"
-  },
-  {
     "Code": 3231,
     "Description": "Handshake_Fail_EQ_BUSY_OFF",
-    "CN": "Handshake_Fail_EQ_BUSY_OFF"
+    "CN": "交握失敗-等待設備_EQ_BUSY OFF逾時"
   },
   {
     "Code": 3232,
     "Description": "Handshake_Fail_AGV_DOWN",
     "CN": "交握失敗-AGV發生異常"
-  },
-  {
-    "Code": 3233,
-    "Description": "Handshake_Fail_EQ_Busy_ON_When_AGV_BUSY",
-    "CN": "交握失敗-設備於AGV動作時開始動作"
-  },
-  {
-    "Code": 3234,
-    "Description": "Handshake_Fail_EQ_READY_OFF",
-    "CN": "交握失敗-設備發生異常(EQ_READY訊號OFF)"
   },
   {
     "Code": 3235,
@@ -1117,82 +1207,77 @@
   {
     "Code": 3236,
     "Description": "Handshake_Fail_EQ_BUSY_NOT_OFF",
-    "CN": "Handshake_Fail_EQ_BUSY_NOT_OFF"
-  },
-  {
-    "Code": 3237,
-    "Description": "Handshake_Fail_TA1_EQ_L_REQ",
-    "CN": "交握失敗-等待設備_EQ_L_REQ ON逾時(T1)"
-  },
-  {
-    "Code": 3238,
-    "Description": "Handshake_Fail_TA1_EQ_U_REQ",
-    "CN": "交握失敗-等待設備_EQ_U_REQ ON逾時(T1)"
-  },
-  {
-    "Code": 3239,
-    "Description": "Handshake_Fail_TA2_EQ_READY",
-    "CN": "交握失敗-等待設備_EQ_READY ON逾時(T2)"
-  },
-  {
-    "Code": 3240,
-    "Description": "Handshake_Fail_TA3_EQ_BUSY_ON",
-    "CN": "交握失敗-等待設備EQ_BUSY ON逾時(T3)"
-  },
-  {
-    "Code": 3241,
-    "Description": "Handshake_Fail_TA4_EQ_BUSY_OFF",
-    "CN": "交握失敗-等待設備EQ_BUSY OFF逾時(T4)"
-  },
-  {
-    "Code": 3242,
-    "Description": "Handshake_Fail_TA5_EQ_L_REQ",
-    "CN": "交握失敗-等待設備_EQ_L_REQ OFF逾時(T5)"
-  },
-  {
-    "Code": 3243,
-    "Description": "Handshake_Fail_TA5_EQ_U_REQ",
-    "CN": "交握失敗-等待設備_EQ_U_REQ OFF逾時(T5)"
-  },
-  {
-    "Code": 3244,
-    "Description": "Handshake_Fail_TA5_EQ_READY_NOT_OFF",
-    "CN": "交握失敗-等待設備_EQ_READY OFF逾時(T5)"
-  },
-  {
-    "Code": 3245,
-    "Description": "Handshake_Fail_EQ_LU_REQ_OFF_WHEN_WAIT_EADY",
-    "CN": "交握失敗-等待設備 EQ_READY的過程中 LU_REQ訊號丟失"
+    "CN": "交握失敗-等待設備_EQ_BUSY ON逾時"
   },
   {
     "Code": 3280,
     "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_ON"
+    "CN": "交握失敗 BAT EXG EQ VALID 訊號未開啟"
   },
   {
     "Code": 3281,
     "Description": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_VALID_NOT_OFF"
+    "CN": "交握失敗 BAT EXG EQ VALID 訊號未關閉"
   },
   {
     "Code": 3282,
     "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_ON"
+    "CN": "交握失敗 BAT EXG EQ TR_REQ 訊號未開啟"
   },
   {
     "Code": 3283,
     "Description": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_TRREQ_NOT_OFF"
+    "CN": "交握失敗 BAT EXG EQ TR_REQ 訊號未關閉"
   },
   {
     "Code": 3284,
     "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_ON"
+    "CN": "交握失敗 BAT EXG EQ COMPT 信號未開啟"
   },
   {
     "Code": 3285,
     "Description": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF",
-    "CN": "Handshake_Fail_BAT_EXG_EQ_COMPT_NOT_OFF"
+    "CN": "交握失敗 BAT EXG EQ COMPT 信號未關閉"
+  },
+  {
+    "Code": 3286,
+    "Description": "Handshake Fail BAT EXG EQ Check Result NOT ON",
+    "CN": "交握失敗 BAT EXG EQ 檢查結果未開啟"
+  },
+  {
+    "Code": 3287,
+    "Description": "Handshake Fail BAT EXG EQ Check Result NOT OFF",
+    "CN": "交握失敗 BAT EXG EQ 檢查結果未關閉"
+  },
+  {
+    "Code": 3288,
+    "Description": "Handshake Fail BAT EXG EQ Check Ready NOT ON",
+    "CN": "交握失敗 BAT EXG EQ 檢查準備未開啟"
+  },
+  {
+    "Code": 3289,
+    "Description": "Handshake Fail BAT EXG EQ Check Ready NOT OFF",
+    "CN": "交握失敗 BAT EXG EQ 檢查準備未關閉"
+  },
+  {
+    "Code": 3290,
+    "Description": "Handshake Fail BAT EXG EQ BUSY OFF TIMEOUT",
+    "CN": "交握失敗 BAT EXG EQ BUSY 關閉超時"
+  },
+  {
+    "Code": 3291,
+    "Description": "Handshake Fail BAT Remove Timeout",
+    "CN": "交握失敗 BAT 移除超時"
+  },
+  {
+    "Code": 3292,
+    "Description": "Handshake Fail BAT Install Timeout",
+    "CN": "交握失敗 BAT 安裝超時"
+  },
+  {
+    "Code": 3293,
+    "Description": "Handshake Fail BAT EXG EQ VALID OFF WHEN HANDSHAKING",
+    "CN": "交握失敗 BAT EXG EQ VALID 在交握時關閉"
   },
   {
     "Code": 3300,
@@ -1238,6 +1323,11 @@
     "Code": 3506,
     "Description": "Running Status Report To AGVS T1 Timeout",
     "CN": "AGV狀態上報派車逾時(T1)"
+  },
+  {
+    "Code": 3507,
+    "Description": "AGVS Leave Workstation Response Timeout",
+    "CN": "AGVS 離開工作站響應超時"
   },
   {
     "Code": 4010,
@@ -1905,9 +1995,19 @@
     "CN": "電池低溫_2"
   },
   {
+    "Code": 5083,
+    "Description": "Battery Short Circuit",
+    "CN": "電池短路"
+  },
+  {
     "Code": 7000,
     "Description": "EQP_PORT_HAS_OBSTACLE_BY_LSR",
     "CN": "雷射偵測到設備Port內有障礙物"
+  },
+  {
+    "Code": 8000,
+    "Description": "Auto Door Ouput Not Defined",
+    "CN": "自動門輸出未定義"
   },
   {
     "Code": 9990,
@@ -1945,48 +2045,238 @@
     "CN": "雷射組數數值錯誤(雷射IN/CIN Output數值寫入錯誤)"
   },
   {
-    "Code": 860015,
-    "Description": "Handshake_Fail_EQ_BUSY_ON",
-    "CN": "Waiting EQ BUSY ON Timeout"
+    "Code": 10011,
+    "Description": "Code Error In System",
+    "CN": "系統代碼錯誤"
   },
   {
-    "Code": 860005,
-    "Description": "ROS Bridge Server Disconnect",
-    "CN": "ROS Bridge Server 斷線"
+    "Code": 10012,
+    "Description": "Subscribe ROS Topic Err",
+    "CN": "訂閱 ROS 主題錯誤"
   },
   {
-    "Code": 860021,
-    "Description": "Fork_WorkStation_Teach_Data_Not_Found_Tag",
-    "CN": "此設備尚未設定牙叉高度參數"
+    "Code": 10013,
+    "Description": "ROS Bridge server Disconnect",
+    "CN": "ROS Bridge Server 斷開"
   },
   {
-    "Code": 860022,
-    "Description": "Fork_WorkStation_Teach_Data_Not_Found_Tag",
-    "CN": "此設備尚未設定多層牙叉高度參數"
+    "Code": 10014,
+    "Description": "AGV Pose Angle Not Match To Sick Angle",
+    "CN": "AGV 姿態角度與 Sick 角度不匹配"
   },
   {
-    "Code": 860023,
-    "Description": "Fork_Arm_Pose_Error",
-    "CN": "牙叉手臂水平位置異常"
+    "Code": 10015,
+    "Description": "USER Press SoftwareEMO But Exception Occur",
+    "CN": "用戶按下 SoftwareEMO 但發生異常"
   },
   {
-    "Code": 860025,
-    "Description": "Fork_Frontend_has_Obstacle",
-    "CN": "牙叉前端障礙物"
+    "Code": 10016,
+    "Description": "EQP LOAD BUT EQP HAS OBSTACLE",
+    "CN": "準備向設備載入貨物但有障礙物"
   },
   {
-    "Code": 860026,
-    "Description": "Fork Has Cargo But Initialize Action Running",
-    "CN": "始化執行中時AGV車上有貨物警告"
+    "Code": 10017,
+    "Description": "EQP UNLOAD BUT EQP HAS NO CARGO",
+    "CN": "準備從設備取出貨物但設備無貨物"
   },
   {
-    "Code": 860027,
+    "Code": 10018,
+    "Description": "Cant Change Online Mode Code Error",
+    "CN": "變更ONLINE模式時發生程式內部錯誤"
+  },
+  {
+    "Code": 10019,
+    "Description": "Cant TransferTask TO AGVC",
+    "CN": "無法將任務轉移到 AGVC"
+  },
+  {
+    "Code": 10020,
+    "Description": "Motion control Wrong Unknown Code",
+    "CN": "車控Motion Control發生未知代碼"
+  },
+  {
+    "Code": 10021,
+    "Description": "UserAbort Initialize Process",
+    "CN": "用戶中止初始化過程"
+  },
+  {
+    "Code": 10022,
+    "Description": "Sick Lidar Communication Error",
+    "CN": "Sick 雷射雷達通信錯誤"
+  },
+  {
+    "Code": 10023,
+    "Description": "Fork WorkStation Teach Data Not Found Tag",
+    "CN": "Tag未定義牙叉高度教點數據"
+  },
+  {
+    "Code": 10024,
+    "Description": "Fork WorkStation Teach Data Not Found layer",
+    "CN": "未定義的牙叉高度層"
+  },
+  {
+    "Code": 10025,
+    "Description": "Fork Arm Pose Error",
+    "CN": "牙叉伸縮臂位置錯誤"
+  },
+  {
+    "Code": 10026,
+    "Description": "Destine Point Is Virtual Point",
+    "CN": "目標點是虛擬點"
+  },
+  {
+    "Code": 10027,
+    "Description": "Fork Frontend has Obstacle",
+    "CN": "牙叉前端有障礙物"
+  },
+  {
+    "Code": 10028,
+    "Description": "Fork Has Cargo But Initialize Running",
+    "CN": "牙叉有貨物但初始化正在運行"
+  },
+  {
+    "Code": 10029,
     "Description": "Fork Disabled",
-    "CN": "牙叉功能已被關閉"
+    "CN": "牙叉已禁用"
   },
   {
-    "Code": 860029,
-    "Description": "AGV Cant Go To Workstation When Fork is Disabled",
-    "CN": "AGV無法在牙叉功能關閉時進入工位"
+    "Code": 10030,
+    "Description": "AGV Cant Goto Workstation When Fork Is Disabled",
+    "CN": "牙叉禁用時 AGV 無法前往工作站"
+  },
+  {
+    "Code": 10031,
+    "Description": "Fork Initialize Process Interupt",
+    "CN": "牙叉初始化過程中斷"
+  },
+  {
+    "Code": 10032,
+    "Description": "Fork Initialize Process Error Occur",
+    "CN": "牙叉初始化過程發生錯誤"
+  },
+  {
+    "Code": 10033,
+    "Description": "Fork Initialized But Home Input Not ON",
+    "CN": "牙叉初始化完成但Z軸原點檢知訊號未ON"
+  },
+  {
+    "Code": 10034,
+    "Description": "Fork Go Home But Home Sensor Signal Error",
+    "CN": "牙叉回原點但Z軸原點檢知訊號錯誤"
+  },
+  {
+    "Code": 10035,
+    "Description": "Fork Initialized But Driver Position Not ZERO",
+    "CN": "牙叉已初始化但驅動器位置不為零"
+  },
+  {
+    "Code": 10036,
+    "Description": "Laser Mode Switch Fail DO Write Fail",
+    "CN": "雷射模式切換失敗 DO 寫入失敗"
+  },
+  {
+    "Code": 10037,
+    "Description": "Laser Mode Switch Fail Exception",
+    "CN": "雷射模式切換失敗異常"
+  },
+  {
+    "Code": 10038,
+    "Description": "Laser Mode Switch Fail Timeout",
+    "CN": "雷射模式切換超時"
+  },
+  {
+    "Code": 10039,
+    "Description": "Laser Mode Switch But SICK OUPUT NOT UPDATE",
+    "CN": "雷射模式切換但 SICK 輸出未更新"
+  },
+  {
+    "Code": 10040,
+    "Description": "Localization Fail",
+    "CN": "定位失敗"
+  },
+  {
+    "Code": 10041,
+    "Description": "Measure Result Data Report Fail",
+    "CN": "測量結果上報失敗"
+  },
+  {
+    "Code": 10042,
+    "Description": "Exception When AGVC AGVS Task Reset Abort",
+    "CN": "AGVC AGVS 任務重置中止時發生異常"
+  },
+  {
+    "Code": 10043,
+    "Description": "Exception When AGVC AGVS Task Reset CycleStop",
+    "CN": "AGVC AGVS 任務重置循環停止時發生異常"
+  },
+  {
+    "Code": 10044,
+    "Description": "GetVirtualIDFail",
+    "CN": "獲取虛擬 ID 失敗"
+  },
+  {
+    "Code": 10045,
+    "Description": "AGV BarcodeReader Not Match Tag of Destination",
+    "CN": "AGV Barcode Reader讀值與目的地Tag不匹配"
+  },
+  {
+    "Code": 10046,
+    "Description": "AGV Park Position Too Far From Tag Of Destination",
+    "CN": "AGV 停車位置離目的地Tag太遠"
+  },
+  {
+    "Code": 10047,
+    "Description": "Fork Arm Action Timeout",
+    "CN": "牙叉動作超時"
+  },
+  {
+    "Code": 10048,
+    "Description": "Fork Arm Action Error",
+    "CN": "牙叉動作錯誤"
+  },
+  {
+    "Code": 10049,
+    "Description": "Replan",
+    "CN": "重新規劃路徑"
+  },
+  {
+    "Code": 10050,
+    "Description": "Limit Switch Sensor Trigger",
+    "CN": "車體限位開關感應器觸發"
+  },
+  {
+    "Code": 10051,
+    "Description": "Send Goal to AGV But AGVS Cancel Req Raised",
+    "CN": "向AGV發送走行任務但AGV正在取消任務"
+  },
+  {
+    "Code": 10052,
+    "Description": "Fork Slot Teach Data ERROR",
+    "CN": "牙叉教點數據錯誤"
+  },
+  {
+    "Code": 10053,
+    "Description": "Battery Low Level Auto PC Shutdown",
+    "CN": "電池電量低車載電腦自動關機"
+  },
+  {
+    "Code": 10054,
+    "Description": "Battery Over Voltage When Charging",
+    "CN": "充電時電池過壓"
+  },
+  {
+    "Code": 10055,
+    "Description": "Reject AGVS Task",
+    "CN": "拒絕 AGVS 任務"
+  },
+  {
+    "Code": 10056,
+    "Description": "Fork Cannot Go Home At Non Normal Point",
+    "CN": "牙叉無法於非主幹道TAG位置進行回原點動作"
+  },
+  {
+    "Code": 40400,
+    "Description": "Unknown",
+    "CN": "未知錯誤"
   }
 ]
