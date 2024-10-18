@@ -108,6 +108,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     return AudioPathes.rotating_voice;
                 case SOUNDS.RotatingMusic:
                     return AudioPathes.rotating;
+                case SOUNDS.Backward:
+                    return AudioPathes.backward;
                 default:
                     return "";
             }

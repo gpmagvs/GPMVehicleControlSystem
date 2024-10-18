@@ -501,6 +501,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 {
                     return (false, alarmCode);
                 }
+                if (Agv.Parameters.SoundsParams.BackToSecondaryPtPlayAudio)
+                    BuzzerPlayer.PlayInBackground(SOUNDS.Backward);
 
                 Agv.DirectionLighter.Backward(delay: 800);
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();

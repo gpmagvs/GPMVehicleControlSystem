@@ -6,9 +6,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
     public class clsSoundsParams
     {
 
+        public bool SlowDownPlayAudio { get; set; } = true;
+        public bool RotatingPlayAudio { get; set; } = true;
+        public bool BackToSecondaryPtPlayAudio { get; set; } = true;
         public SlowDownAndRotatinSoundPlay slowDownAndRotatinSoundPlay { get; set; } = new SlowDownAndRotatinSoundPlay();
 
         public AudioPathes audioPathes { get; set; } = new AudioPathes();
+
         public class AudioPathes
         {
             public string move { get; set; } = "/home/gpm/param/sounds/move.wav";
@@ -22,6 +26,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             public string rotating_voice { get; set; } = "/home/gpm/param/sounds/vehicle_rotating.wav";
             public string slowDown_voice { get; set; } = "/home/gpm/param/sounds/slow_down.wav";
             public string waitingCargoStatusCheck { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
+            public string backward { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
         }
 
         public class SlowDownAndRotatinSoundPlay

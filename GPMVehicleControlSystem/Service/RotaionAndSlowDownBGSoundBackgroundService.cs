@@ -49,6 +49,13 @@ namespace GPMVehicleControlSystem.Service
             {
                 while (true)
                 {
+
+                    if (AgvInstance == null || !AgvInstance.Parameters.SoundsParams.RotatingPlayAudio)
+                    {
+                        await Task.Delay(10);
+                        continue;
+                    }
+
                     SUB_STATUS currentSubState = AgvInstance.GetSub_Status();
                     switch (RotateStatus)
                     {
@@ -128,6 +135,11 @@ namespace GPMVehicleControlSystem.Service
             {
                 while (true)
                 {
+                    if (AgvInstance == null || !AgvInstance.Parameters.SoundsParams.SlowDownPlayAudio)
+                    {
+                        await Task.Delay(10);
+                        continue;
+                    }
                     SUB_STATUS currentSubState = AgvInstance.GetSub_Status();
                     ROBOT_CONTROL_CMD currentRoboControlCmd = AgvInstance.AGVC.CurrentSpeedControlCmd;
 

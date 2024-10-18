@@ -15,5 +15,6 @@
         SlowDownMusic,
         RotatingVoice,
         RotatingMusic,
+        Backward
     }
 }
