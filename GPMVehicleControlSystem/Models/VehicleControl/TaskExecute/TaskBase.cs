@@ -42,6 +42,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         protected double ExpectedForkPostionWhenEntryWorkStation = 0;
         protected NLog.Logger logger;
+        /// <summary>
+        /// 等待車控完成移動的timeout時間
+        /// </summary>
+        public virtual int MoveActionTimeout => -1;
         public MapPoint DestineMapPoint
         {
             get
@@ -350,12 +354,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
         }
-
         protected virtual async Task WaitTaskDoneAsync()
         {
-            logger.Trace($"等待AGV完成 [{action}] 任務");
-            _wait_agvc_action_done_pause.WaitOne();
-            logger.Trace($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
+            logger.Trace($"等待AGV完成 [{action}] 移動任務");
+            bool intime = _wait_agvc_action_done_pause.WaitOne(MoveActionTimeout);
+            if (!intime)
+                task_abort_alarmcode = AlarmCodes.Action_Timeout;
+            logger.Trace($"AGV完成 [{action}] 移動任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
         }
 
         private async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action)

@@ -13,6 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public delegate bool BeforeOpenChargeCircuitdelegate();
         public static BeforeOpenChargeCircuitdelegate OnChargeCircuitOpening;
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Charge;
+        public override int MoveActionTimeout => Agv.Parameters.LDULDParams.MoveActionTimeoutInSec * 1000;
 
         public ChargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {

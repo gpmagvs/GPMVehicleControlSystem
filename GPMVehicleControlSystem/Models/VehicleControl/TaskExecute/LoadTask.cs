@@ -33,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public delegate bool CheckCargotatusDelegate(CheckPointModel checkPointData);
         public static event CheckCargotatusDelegate OnManualCheckCargoStatusTrigger;
-
+        public override int MoveActionTimeout => Agv.Parameters.LDULDParams.MoveActionTimeoutInSec * 1000;
         public enum CST_ID_NO_MATCH_ACTION
         {
             REPORT_READER_RESULT,
@@ -537,8 +537,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
                         logger.Trace("等待二次定位回HOME位置任務完成...");
-                        _WaitBackToHomeDonePause.WaitOne();
+                        bool inTime = _WaitBackToHomeDonePause.WaitOne(MoveActionTimeout);
                         AGVCActionStatusChaged -= BackToHomeActionDoneCallback;
+                        if (!inTime)
+                            task_abort_alarmcode = AlarmCodes.Action_Timeout;
+
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
                             Agv.SetSub_Status(SUB_STATUS.DOWN);

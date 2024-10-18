@@ -15,5 +15,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public int LeaveWorkStationRequestTimeout { get; set; } = 300;
 
         public bool BypassFrontLaserWhenEntryEQ { get; set; } = true;
+
+        public int MoveActionTimeoutInSec { get; set; } = 30;
+
     }
 }
