@@ -232,12 +232,25 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> TriggerCSTReaderWithCargoType(CST_TYPE cargo_type)
         {
             (bool request_success, bool action_done) ret = await agv.AGVC.TriggerCSTReader(cargo_type);
-            string barcode = "ERROR";
-            if (ret.action_done)
+            try
             {
-                barcode = agv.CSTReader.Data.data;
+                await agv.AGVC.CSTReadServiceSemaphoreSlim.WaitAsync();
+                string barcode = "ERROR";
+                if (ret.action_done)
+                {
+                    barcode = agv.CSTReader.ValidCSTID;
+                }
+                return Ok(new { barcode });
             }
-            return Ok(new { barcode });
+            catch (Exception ex)
+            {
+                return Ok(new { ex.Message });
+            }
+            finally
+            {
+                agv.AGVC.CSTReadServiceSemaphoreSlim.Release();
+            }
+
         }
 
 

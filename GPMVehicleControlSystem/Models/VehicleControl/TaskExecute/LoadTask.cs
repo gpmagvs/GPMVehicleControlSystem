@@ -925,44 +925,62 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
-            CancellationTokenSource cts = new CancellationTokenSource();
-            cts.CancelAfter(3000);
-            while (Agv.CSTReader.Data.data == "")
+            try
             {
-                await Task.Delay(1);
-                if (cts.IsCancellationRequested)
+                await Agv.AGVC.CSTReadServiceSemaphoreSlim.WaitAsync();
+                CancellationTokenSource cts = new CancellationTokenSource();
+                cts.CancelAfter(3000);
+                while (Agv.CSTReader.Data.data == "")
                 {
-                    return (false, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID);
+                    await Task.Delay(1);
+                    if (cts.IsCancellationRequested)
+                    {
+                        return (false, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID);
+                    }
                 }
-            }
-            var cst_id_expect = RunningTaskData.CST.First().CST_ID.Trim();
 
-            if (cst_id_expect == "")
+                var reader_valid_id = Agv.CSTReader.ValidCSTID.Trim();
+                var reader_actual_read_id = Agv.CSTReader.realTimeCSTIDRecievedFromModuleInfo.Trim().ToUpper();
+
+                var cst_id_expect = RunningTaskData.CST.First().CST_ID.Trim();
+                if (cst_id_expect == "")
+                {
+                    logger.Info($"CST READ {reader_valid_id} but ID Expect Read From AGVS Task Download is empty");
+                    return (true, AlarmCodes.None);
+                }
+
+
+
+                if (Agv.Parameters.CSTIDReadNotMatchSimulation)
+                {
+                    logger.Error($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
+                    return (false, AlarmCodes.Cst_ID_Not_Match);
+                }
+
+
+                if (reader_valid_id == "ERROR" || string.IsNullOrEmpty(reader_valid_id) || reader_actual_read_id == "ERROR" || reader_actual_read_id == "ERROR")
+                {
+                    logger.Error($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
+                    return (false, AlarmCodes.Read_Cst_ID_Fail);
+                }
+                if (reader_valid_id != cst_id_expect)
+                {
+                    logger.Error($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
+                    return (false, AlarmCodes.Cst_ID_Not_Match);
+                }
+                Agv.CSTReader.ValidCSTID = reader_valid_id;
                 return (true, AlarmCodes.None);
-
-            var reader_valid_id = Agv.CSTReader.ValidCSTID.Trim();
-            var reader_actual_read_id = Agv.CSTReader.Data.data.Trim().ToUpper();
-
-
-            if (Agv.Parameters.CSTIDReadNotMatchSimulation)
-            {
-                logger.Error($"[ID NOT MATCH SIMULATION] AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
-                return (false, AlarmCodes.Cst_ID_Not_Match);
             }
-
-
-            if (reader_valid_id == "ERROR" || reader_actual_read_id == "ERROR" || reader_actual_read_id == "ERROR")
+            catch (Exception ex)
             {
-                logger.Error($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
+                logger.Error($"Exception Occur when CSTBarcodeRead method invoke => {ex.Message},{ex.StackTrace}");
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
-            if (reader_valid_id != cst_id_expect)
+            finally
             {
-                logger.Error($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
-                return (false, AlarmCodes.Cst_ID_Not_Match);
+                Agv.AGVC.CSTReadServiceSemaphoreSlim.Release();
             }
-            Agv.CSTReader.ValidCSTID = reader_valid_id;
-            return (true, AlarmCodes.None);
+
         }
 
 

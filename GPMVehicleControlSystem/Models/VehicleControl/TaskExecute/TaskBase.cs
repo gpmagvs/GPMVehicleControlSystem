@@ -736,11 +736,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
 
             //Self check. 
-            if (action == ACTION_TYPE.Unload && position != FORK_HEIGHT_POSITION.DOWN_)
+            if (action == ACTION_TYPE.Unload && position == FORK_HEIGHT_POSITION.UP_)
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Up_Pose_When_Unload_Action_Executing);
 
             //Self check. 
-            if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position != FORK_HEIGHT_POSITION.DOWN_)
+            if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position == FORK_HEIGHT_POSITION.DOWN_)
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Down_Pose_When_Load_Action_Executing);
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();

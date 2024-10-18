@@ -92,7 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 異常碼
         /// </summary>
         public Dictionary<AlarmCodes, DateTime> ErrorCodes = new Dictionary<AlarmCodes, DateTime>();
-        public Message StateData
+        public virtual Message StateData
         {
             get => _StateData;
             set

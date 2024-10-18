@@ -205,6 +205,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         private bool TryConnecting = false;
         internal bool _IsEmergencyStopFlag = false;
+
+        internal SemaphoreSlim CSTReadServiceSemaphoreSlim { get; private set; } = new SemaphoreSlim(1, 1);
+
         public class SendActionCheckResult
         {
             public enum SEND_ACTION_GOAL_CONFIRM_RESULT

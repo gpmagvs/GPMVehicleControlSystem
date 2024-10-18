@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -12,6 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// </summary>
         public event EventHandler<string> OnCSTReaderActionDone;
         private bool CSTActionDone = false;
+        private ManualResetEvent WaitCSTReadActionDone = new ManualResetEvent(false);
         private string CSTActionResult = "";
         /// <summary>
         /// CST READER 完成動作的 callback
@@ -28,7 +30,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 confirm = true
             };
             CSTActionDone = true;
-
+            WaitCSTReadActionDone.Set();
             return true;
         }
         /// <summary>
@@ -53,101 +55,138 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
-
-            await Task.Delay(1);
-            wait_cst_ack_MRE = new ManualResetEvent(false);
-            cst_reader_confirm_ack = null;
-            var cst_reader_command = "read_try";
-            int retry_cnt = 0;
-            if (cst_type == CST_TYPE.None || (int)cst_type == -1)
+            bool _request_success = false;
+            bool _action_done = false;
+            try
             {
-                logger.Error($"從派車接收到的 CST TYPE={cst_type}({(int)cst_type})=> 沒有定義");
-                if (OnCstTriggerButTypeUnknown == null)
-                    AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
-                else
-                {
-                    cst_type = OnCstTriggerButTypeUnknown();
-                }
-            }
-            cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
-            logger.Warn($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
-            while (cst_reader_confirm_ack == null)
-            {
+                await CSTReadServiceSemaphoreSlim.WaitAsync();
                 await Task.Delay(1);
-                logger.Trace($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
-                string id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
+                wait_cst_ack_MRE = new ManualResetEvent(false);
+                cst_reader_confirm_ack = null;
+                var cst_reader_command = "read_try";
+                int retry_cnt = 0;
+                if (cst_type == CST_TYPE.None || (int)cst_type == -1)
                 {
-                    command = cst_reader_command,
-                    model = "FORK"
-                });
-                wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(10));
-                if (cst_reader_confirm_ack != null)
-                {
-                    break;
-                }
-                else
-                {
-                    await AbortCSTReader();
-                    logger.Error($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
-                    wait_cst_ack_MRE.Reset();
-                    retry_cnt++;
-                    if (retry_cnt > 3)
+                    logger.Error($"從派車接收到的 CST TYPE={cst_type}({(int)cst_type})=> 沒有定義");
+                    if (OnCstTriggerButTypeUnknown == null)
+                        AlarmManager.AddWarning(AlarmCodes.Read_Cst_ID_But_Cargo_Type_Known);
+                    else
                     {
+                        cst_type = OnCstTriggerButTypeUnknown();
+                    }
+                }
+                cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
+                logger.Warn($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
+                WaitCSTReadActionDone.Reset();
+                while (cst_reader_confirm_ack == null)
+                {
+                    await Task.Delay(1);
+                    logger.Trace($"Call Service /CSTReader_action, command = {cst_reader_command} , model = FORK", false);
+                    string id = rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", CstReaderConfirmedAckHandler, new CSTReaderCommandRequest()
+                    {
+                        command = cst_reader_command,
+                        model = "FORK"
+                    });
+                    wait_cst_ack_MRE.WaitOne(TimeSpan.FromSeconds(10));
+                    if (cst_reader_confirm_ack != null)
+                    {
+
                         break;
                     }
-                }
-            }
-
-            if (cst_reader_confirm_ack == null)
-            {
-                logger.Info("Trigger CST Reader fail. CSTReader no reply");
-                OnCSTReaderActionDone?.Invoke(this, "");
-                return (false, false);
-            }
-            if (!cst_reader_confirm_ack.confirm)
-            {
-                logger.Info("Trigger CST Reader fail. Confirm=False");
-                OnCSTReaderActionDone?.Invoke(this, "");
-                return (false, false);
-            }
-            else
-            {
-                logger.Info("Trigger CST Reader Success. Wait CST Reader Action Done.", false);
-                CSTActionDone = false;
-                CancellationTokenSource waitCstActionDoneCts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
-                Task TK = new Task(async () =>
-                {
-                    while (!CSTActionDone)
+                    else
                     {
-                        if (waitCstActionDoneCts.IsCancellationRequested)
+                        await AbortCSTReader();
+                        logger.Error($"Call Service  /CSTReader_action, command  Timeout. CST READER NO ACK.  Retry... ");
+                        wait_cst_ack_MRE.Reset();
+                        retry_cnt++;
+                        if (retry_cnt > 3)
+                        {
                             break;
-                        await Task.Delay(1);
+                        }
+                    }
+                }
+
+                if (cst_reader_confirm_ack == null)
+                {
+                    logger.Info("Trigger CST Reader fail. CSTReader no reply");
+                    OnCSTReaderActionDone?.Invoke(this, "");
+                    return (false, false);
+                }
+                if (!cst_reader_confirm_ack.confirm)
+                {
+                    logger.Info("Trigger CST Reader fail. Confirm=False");
+                    OnCSTReaderActionDone?.Invoke(this, "");
+                    return (false, false);
+                }
+                else
+                {
+                    _request_success = true;
+                    logger.Info("Trigger CST Reader Success. Wait CST Reader Action Done.", false);
+                    CSTActionDone = false;
+
+                    try
+                    {
+                        bool isActionDoneInTime = WaitCSTReadActionDone.WaitOne(TimeSpan.FromSeconds(10));
+                        _action_done = isActionDoneInTime;
+                        bool ActionDoneReturn = CSTActionResult == "done";
+                        if (!ActionDoneReturn || !isActionDoneInTime)
+                        {
+                            AbortCSTReader();
+                            logger.Error($"Wait CST Action  Fail  Return Result Done:{ActionDoneReturn}, In-Time:{isActionDoneInTime}");
+                            OnCSTReaderActionDone?.Invoke(this, "ERROR");
+                            return (true, false);
+                        }
+
+                        await Task.Delay(800);
+                        string cst_id = "";
+
+                        CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+                        while (isReadFail(out cst_id))
+                        {
+                            await Task.Delay(1000);
+                            logger.Warn($"Wait CST Reader Try read done...{cst_id}");
+                            if (cancel.IsCancellationRequested)
+                            {
+                                AbortCSTReader();
+                                OnCSTReaderActionDone?.Invoke(this, "ERROR");
+                                return (false, false);
+                            }
+                        }
+
+                        await Task.Delay(800);
+                        cst_id = module_info.CSTReader.data.Trim();
+                        logger.Info($"CST Reader Action Done, Action Result : command = {CSTActionResult}--CST DATA = {cst_id}");
+                        bool isReadFail(out string cst_id_ret)
+                        {
+                            cst_id_ret = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
+                            return cst_id_ret == "ERROR" || string.IsNullOrEmpty(cst_id_ret);
+                        }
+
+                        OnCSTReaderActionDone?.Invoke(this, cst_id);
+                        return (true, true);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _action_done = false;
+                        logger.Warn("Trigger CST Reader Timeout");
+                        AbortCSTReader();
+                        OnCSTReaderActionDone?.Invoke(this, "");
+                        return (true, false);
                     }
 
-                });
-                TK.Start();
-                try
-                {
-                    TK.Wait(waitCstActionDoneCts.Token);
-                    logger.Info($"CST Reader Action Done, Action Result : command = {CSTActionResult}--");
-                    if (CSTActionResult != "done")
-                        AbortCSTReader();
-
-                    await Task.Delay(1000);
-                    var cst_id = CSTActionResult == "error" ? "ERROR" : this.module_info.CSTReader.data.Trim();
-                    logger.Trace($"Inovke CSTReaderAction Done event with CST ID = {cst_id}", false);
-                    OnCSTReaderActionDone?.Invoke(this, cst_id);
-                    return (true, true);
-                }
-                catch (OperationCanceledException)
-                {
-                    logger.Warn("Trigger CST Reader Timeout");
-                    AbortCSTReader();
-                    OnCSTReaderActionDone?.Invoke(this, "");
-                    return (true, false);
                 }
 
             }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+                return (false, false);
+            }
+            finally
+            {
+            }
+
 
         }
         /// <summary>
