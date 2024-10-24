@@ -32,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
             int vms_port = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].Port;
             //AGVS
-            AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP, logger: agvsLogger);
+            AGVS = new clsAGVSConnection(vms_ip, vms_port, Parameters.VMSParam.LocalIP, logger: agvsLogger, msgHsDuration: Parameters.VMSParam.MsgHsDuration);
             AGVS.Setup(Parameters.SID, Parameters.VehicleName);
             AGVS.UseWebAPI = Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
             AGVS.OnWebAPIProtocolGetRunningStatus += HandleWebAPIProtocolGetRunningStatus;
