@@ -357,9 +357,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected virtual async Task WaitTaskDoneAsync()
         {
             logger.Trace($"等待AGV完成 [{action}] 移動任務");
-            bool intime = _wait_agvc_action_done_pause.WaitOne(MoveActionTimeout);
-            if (!intime)
-                task_abort_alarmcode = AlarmCodes.Action_Timeout;
+            _wait_agvc_action_done_pause.WaitOne();
             logger.Trace($"AGV完成 [{action}] 移動任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
         }
 

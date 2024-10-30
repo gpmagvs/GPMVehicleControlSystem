@@ -24,6 +24,8 @@ namespace GPMVehicleControlSystem.Service
             CPUUaageBase cpuUsage = _GetCPUUsageInstance();
             StartNetworkStatusMonitor();
             StartDiskStatusMonitor();
+
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(5000);

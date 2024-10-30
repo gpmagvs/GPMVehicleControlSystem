@@ -6,9 +6,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
     public class clsSoundsParams
     {
 
-        public bool SlowDownPlayAudio { get; set; } = true;
-        public bool RotatingPlayAudio { get; set; } = true;
-        public bool BackToSecondaryPtPlayAudio { get; set; } = true;
+        public bool SlowDownPlayAudio { get; set; } = false;
+        public bool RotatingPlayAudio { get; set; } = false;
+        public bool BackToSecondaryPtPlayAudio { get; set; } = false;
         public SlowDownAndRotatinSoundPlay slowDownAndRotatinSoundPlay { get; set; } = new SlowDownAndRotatinSoundPlay();
 
         public AudioPathes audioPathes { get; set; } = new AudioPathes();

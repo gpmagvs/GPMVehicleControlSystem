@@ -502,7 +502,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 _IsEmergencyStopFlag = false;
 
             CycleStopActionExecuting = false;
-            logger.Info("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson());
+            logger.Info("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(Formatting.None));
 
             if (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
             {

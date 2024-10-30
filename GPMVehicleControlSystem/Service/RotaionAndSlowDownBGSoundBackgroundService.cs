@@ -49,10 +49,10 @@ namespace GPMVehicleControlSystem.Service
             {
                 while (true)
                 {
+                    await Task.Delay(100);
 
                     if (AgvInstance == null || !AgvInstance.Parameters.SoundsParams.RotatingPlayAudio)
                     {
-                        await Task.Delay(10);
                         continue;
                     }
 
@@ -124,7 +124,6 @@ namespace GPMVehicleControlSystem.Service
                             break;
                     }
 
-                    await Task.Delay(100);
                 }
             });
         }
@@ -135,9 +134,9 @@ namespace GPMVehicleControlSystem.Service
             {
                 while (true)
                 {
+                    await Task.Delay(100);
                     if (AgvInstance == null || !AgvInstance.Parameters.SoundsParams.SlowDownPlayAudio)
                     {
-                        await Task.Delay(10);
                         continue;
                     }
                     SUB_STATUS currentSubState = AgvInstance.GetSub_Status();

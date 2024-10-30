@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public bool BypassFrontLaserWhenEntryEQ { get; set; } = true;
 
-        public int MoveActionTimeoutInSec { get; set; } = 30;
+        public int MoveActionTimeoutInSec { get; set; } = 60;
 
     }
 }

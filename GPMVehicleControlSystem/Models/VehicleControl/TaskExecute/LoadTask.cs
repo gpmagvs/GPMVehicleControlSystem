@@ -29,6 +29,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     public class LoadTask : TaskBase
     {
         private ManualResetEvent _WaitBackToHomeDonePause = new ManualResetEvent(false);
+        private ManualResetEvent _waitMoveToPortDonePause = new ManualResetEvent(false);
         private ActionStatus _BackHomeActionDoneStatus = ActionStatus.PENDING;
 
         public delegate bool CheckCargotatusDelegate(CheckPointModel checkPointData);
@@ -184,6 +185,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             else
             {
                 logger.Trace($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
+                _waitMoveToPortDonePause.Reset();
             }
             return await base.BeforeTaskExecuteActions();
         }
@@ -371,6 +373,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             _WaitBackToHomeDonePause.Set();
             logger.Warn($"[Abort Task] {action} Task Abort, Alarm Code = {alarm_code}");
         }
+
+        protected override async Task WaitTaskDoneAsync()
+        {
+            Stopwatch _stopWatch = Stopwatch.StartNew();
+            logger.Trace($"等待AGV完成 [{action}] 任務");
+            logger.Info($"等待AGV完成 [{action}] -移動至設備 (Timeout : {MoveActionTimeout})");
+            bool inTime = _waitMoveToPortDonePause.WaitOne(MoveActionTimeout);
+            _stopWatch.Stop();
+            if (inTime)
+            {
+                task_abort_alarmcode = AlarmCodes.None;
+                logger.Info($"AGV已完成 [{action}] -移動至設備任務(Time Spend: {_stopWatch.Elapsed})");
+                _wait_agvc_action_done_pause.WaitOne();
+                logger.Trace($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
+            }
+            else
+            {
+                task_abort_alarmcode = AlarmCodes.Action_Timeout;
+                logger.Error($"等待AGV完成 [{action}] -移動至設備任務 逾時!(Time Spend: {_stopWatch.Elapsed}) Alarm Code:=>{task_abort_alarmcode}.]");
+            }
+        }
         /// <summary>
         /// AGV停車停好在設備後的動作
         /// </summary>
@@ -379,7 +402,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             try
             {
-
+                _waitMoveToPortDonePause.Set();
                 logger.Trace($"Load/Unload Action after AGVC Move done in port.");
 #if !YM_4FAOI
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
@@ -536,18 +559,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
-                        logger.Trace("等待二次定位回HOME位置任務完成...");
+                        logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) sec");
+                        Stopwatch _stopWatch = Stopwatch.StartNew();
                         bool inTime = _WaitBackToHomeDonePause.WaitOne(MoveActionTimeout);
+                        _stopWatch.Stop();
                         AGVCActionStatusChaged -= BackToHomeActionDoneCallback;
                         if (!inTime)
                             task_abort_alarmcode = AlarmCodes.Action_Timeout;
 
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
+                            logger.Info($"AGV [{action}] -退出至二次定位點任務逾時!(Time Spend: {_stopWatch.Elapsed})");
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
-                        logger.Trace("車控回HOME位置任務完成");
+                        logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_stopWatch.Elapsed})");
+                        //logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
                     }

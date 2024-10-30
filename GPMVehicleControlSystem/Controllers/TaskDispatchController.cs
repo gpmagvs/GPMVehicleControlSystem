@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Controllers
         {
             await Task.Factory.StartNew(() =>
             {
-                string bodyJson = body == null ? "" : body.ToJson();
+                string bodyJson = body == null ? "" : body.ToJson(Formatting.None);
                 Agv.AGVS.logger.LogTrace($"({method}) api route= /api/TaskDispatch/{api_name},body={bodyJson}");
             });
         }
@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Controllers
         {
             await Task.Factory.StartNew(() =>
             {
-                string bodyJson = response == null ? "" : response.ToJson();
+                string bodyJson = response == null ? "" : response.ToJson(Formatting.None);
                 Agv.AGVS.logger.LogTrace($"({method}) api route= /api/TaskDispatch/{api_name},Response={bodyJson}");
             });
         }
