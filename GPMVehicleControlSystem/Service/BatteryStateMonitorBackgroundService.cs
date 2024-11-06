@@ -27,56 +27,9 @@ namespace GPMVehicleControlSystem.Service
 
                 if (Vehicle == null)
                     continue;
-
-                //await MonitorBatteryOverVoltage();
                 await MonitorBatteryErrorStatus();
             }
         }
-
-        private async Task MonitorBatteryOverVoltage()
-        {
-            List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.voltage).ToList();
-            List<AlarmCodes> alarmCodes = Vehicle.Batteries.Select(bat => bat.Value.Current_Alarm_Code).ToList();
-            bool TryGetOVThresFromRosNodeParam(out double threshold)
-            {
-                threshold = 29200;
-                try
-                {
-                    KeyValuePair<ushort, clsBattery> batPari = Vehicle.Batteries.FirstOrDefault(b => b.Value.TryGetOverVoltageThreshold(out _));
-                    if (batPari.Value == null)
-                        return false;
-
-                    return batPari.Value.TryGetOverVoltageThreshold(out threshold);
-
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-
-            bool thresholdGetFromRosNodeParam = TryGetOVThresFromRosNodeParam(out double _treshold_by_ros_node_param);
-            double threshold = thresholdGetFromRosNodeParam ? _treshold_by_ros_node_param : Vehicle.Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval;//mV
-
-            bool hasOVAlarm = alarmCodes.Any(code => code == AlarmCodes.Over_Voltage);
-            bool isOVByOverThresholdInSys = currentVoltages.Any(voltag => voltag >= threshold);
-            bool isOverVotage = hasOVAlarm || isOVByOverThresholdInSys;
-
-            if (isOverVotage)
-            {
-                logger.LogWarning($"電池過壓偵測-OV異常碼:{hasOVAlarm}, 超過閥值:{isOVByOverThresholdInSys}");
-                if (Vehicle.IsChargeCircuitOpened)
-                {
-                    string voltagesStr = string.Join(" mV,", currentVoltages);
-                    logger.LogWarning($"Battery over-voltage when charging. Cut-off charge circuit!({voltagesStr})");
-                    await Vehicle.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
-                    Vehicle.SetIsCharging(false);
-                    AlarmManager.AddAlarm(AlarmCodes.Battery_Over_Voltage_When_Charging, true);
-                    Vehicle.SetSub_Status(Vehicle.IsInitialized ? Vehicle.AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN);
-                }
-            }
-        }
-
         private async Task MonitorBatteryErrorStatus()
         {
             try
