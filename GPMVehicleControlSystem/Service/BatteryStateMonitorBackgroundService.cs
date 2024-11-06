@@ -20,7 +20,7 @@ namespace GPMVehicleControlSystem.Service
         private Vehicle Vehicle => StaStored.CurrentVechicle;
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-
+            logger.LogInformation($"Start");
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(1000);
@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Service
                 if (Vehicle == null)
                     continue;
 
-                await MonitorBatteryOverVoltage();
+                //await MonitorBatteryOverVoltage();
                 await MonitorBatteryErrorStatus();
             }
         }
@@ -36,6 +36,7 @@ namespace GPMVehicleControlSystem.Service
         private async Task MonitorBatteryOverVoltage()
         {
             List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.voltage).ToList();
+            List<AlarmCodes> alarmCodes = Vehicle.Batteries.Select(bat => bat.Value.Current_Alarm_Code).ToList();
             bool TryGetOVThresFromRosNodeParam(out double threshold)
             {
                 threshold = 29200;
@@ -56,10 +57,14 @@ namespace GPMVehicleControlSystem.Service
 
             bool thresholdGetFromRosNodeParam = TryGetOVThresFromRosNodeParam(out double _treshold_by_ros_node_param);
             double threshold = thresholdGetFromRosNodeParam ? _treshold_by_ros_node_param : Vehicle.Parameters.BatteryModule.CutOffChargeRelayVoltageThreshodlval;//mV
-            bool isOverVotage = currentVoltages.Any(voltag => voltag >= threshold);
+
+            bool hasOVAlarm = alarmCodes.Any(code => code == AlarmCodes.Over_Voltage);
+            bool isOVByOverThresholdInSys = currentVoltages.Any(voltag => voltag >= threshold);
+            bool isOverVotage = hasOVAlarm || isOVByOverThresholdInSys;
 
             if (isOverVotage)
             {
+                logger.LogWarning($"電池過壓偵測-OV異常碼:{hasOVAlarm}, 超過閥值:{isOVByOverThresholdInSys}");
                 if (Vehicle.IsChargeCircuitOpened)
                 {
                     string voltagesStr = string.Join(" mV,", currentVoltages);
@@ -76,23 +81,42 @@ namespace GPMVehicleControlSystem.Service
         {
             try
             {
-
-                bool isBatError = Vehicle.Batteries.Any(bat => bat.Value.Data.errorCode != 0);
+                List<AlarmCodes> batAlarmCodes = Vehicle.Batteries.Select(bat => bat.Value.Data.errorCode.ToBatteryAlarmCode())
+                                                                  .Where(code => code != AlarmCodes.None)
+                                                                  .ToList();
+                bool isBatError = batAlarmCodes.Any();
                 if (isBatError)
                 {
-
                     byte errorCode = Vehicle.Batteries.FirstOrDefault(bat => bat.Value.Data.errorCode != 0).Value.Data.errorCode;
-                    AlarmCodes alCode = errorCode.ToBatteryAlarmCode();
+                    //AlarmCodes alCode = errorCode.ToBatteryAlarmCode();
+
                     bool _isTimePassEnough = (DateTime.Now - lastOverTemperatureDetectedTime).TotalSeconds > 5;
                     if (_isTimePassEnough) //若電池欠壓，仍要可以初始化上線，趕緊可派去充電
                     {
-                        if (alCode == AlarmCodes.Under_Voltage)
-                            AlarmManager.AddWarning(alCode);
-                        else
+                        foreach (AlarmCodes alCode in batAlarmCodes)
                         {
-                            AlarmManager.AddAlarm(alCode, false);
-                            lastOverTemperatureDetectedTime = DateTime.Now;
-                            Vehicle.BatteryStatusOverview.SetAsDownStatus(alCode);
+                            if (alCode == AlarmCodes.Under_Voltage)
+                                AlarmManager.AddWarning(alCode);
+                            else
+                            {
+                                AlarmManager.AddAlarm(alCode, false);
+                                lastOverTemperatureDetectedTime = DateTime.Now;
+                                Vehicle.BatteryStatusOverview.SetAsDownStatus(alCode);
+                                if (alCode == AlarmCodes.Over_Voltage && Vehicle.IsChargeCircuitOpened)
+                                {
+                                    logger.LogWarning($"{alCode} 異常觸發,且充電迴路開啟中=>需斷開充電迴路");
+                                    List<double> currentVoltages = Vehicle.Batteries.Select(bat => (double)bat.Value.Data.voltage).ToList();
+                                    string voltagesStr = string.Join(" mV,", currentVoltages);
+                                    logger.LogWarning($"Battery over-voltage when charging. Cut-off charge circuit!({voltagesStr})");
+                                    await Vehicle.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
+                                    Vehicle.SetIsCharging(false);
+                                    AlarmManager.AddAlarm(AlarmCodes.Battery_Over_Voltage_When_Charging, true);
+                                    Vehicle.SetSub_Status(Vehicle.IsInitialized ? Vehicle.AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN);
+                                }
+
+
+                            }
+
                         }
 
                     }
