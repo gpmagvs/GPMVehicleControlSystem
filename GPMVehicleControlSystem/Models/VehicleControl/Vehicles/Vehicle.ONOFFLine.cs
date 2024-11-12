@@ -90,7 +90,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 if (currentTag == 0)//檢查Tag
                     return (false, RETURN_CODE.AGV_Need_Park_Above_Tag);
-                if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal && !lastVisitedMapPoint.IsCharge)
+
+
+                if (lastVisitedMapPoint.StationType != STATION_TYPE.Normal && !lastVisitedMapPoint.IsCharge && !_IsParkAtBuffer())
                 {
                     AlarmManager.AddWarning(AlarmCodes.Cant_Online_In_Equipment);
                     return (false, RETURN_CODE.Current_Tag_Cannot_Online_In_Equipment);
@@ -111,6 +113,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     return (false, RETURN_CODE.AGV_HasIDBut_No_Cargo);
                 }
+
+
+                bool _IsParkAtBuffer()
+                {
+                    return lastVisitedMapPoint.StationType == STATION_TYPE.Buffer || lastVisitedMapPoint.StationType == STATION_TYPE.Charge_Buffer;
+                }
+
             }
             await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
             var _oriMode = Remote_Mode;
