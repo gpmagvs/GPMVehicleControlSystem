@@ -132,6 +132,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
         {
+            ForkAGVController agvc = sender as ForkAGVController;
+            bool isInitializing = agvc.IsInitializing;
             //throw new NotImplementedException();
             logger.LogTrace($"Fork Star Run (Started by:{request.command})");
             bool isGoUpAction = request.command == "pose" && request.target > ForkLifter.CurrentHeightPosition;

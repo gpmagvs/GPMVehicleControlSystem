@@ -43,6 +43,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
         public VerticalCommandRequest BeforeForkStopActionRequesting { get; set; } = new VerticalCommandRequest();
+        public bool IsInitializing { get; internal set; } = false;
+
         public double InitForkSpeed = 1;
         public ForkAGVController()
         {

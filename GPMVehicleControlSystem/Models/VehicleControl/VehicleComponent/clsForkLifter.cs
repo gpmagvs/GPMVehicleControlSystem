@@ -227,12 +227,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //    return (false, AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
             //else
         }
-        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true)
+        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true, bool bypassCheck = false)
         {
-            if (pose < forkAGV.Parameters.ForkAGV.DownlimitPose)
-                pose = forkAGV.Parameters.ForkAGV.DownlimitPose;
-            else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
-                pose = forkAGV.Parameters.ForkAGV.UplimitPose;
+            if (!bypassCheck)
+            {
+                if (pose < forkAGV.Parameters.ForkAGV.DownlimitPose)
+                    pose = forkAGV.Parameters.ForkAGV.DownlimitPose;
+                else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
+                    pose = forkAGV.Parameters.ForkAGV.UplimitPose;
+            }
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
@@ -375,6 +378,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             logger.Info($"Fork 初始化動作開始，速度={InitForkSpeed}");
             IsInitialing = true;
             bool _isInitializeDone = false;
+            (this.forkAGV.AGVC as ForkAGVController).IsInitializing = true;
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
             //bool isStartAtDownLimit = !DIModule.GetState(DI_ITEM.Vertical_Down_Hardware_limit);
             try
@@ -424,6 +428,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await NoBypassLimitSensor();
             }
+            (this.forkAGV.AGVC as ForkAGVController).IsInitializing = false;
             IsInitialing = false;
             IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
             logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
@@ -458,8 +463,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     await Task.Delay(500);
                     await NoBypassLimitSensor();
                 });
-                await Task.Delay(500);
-                await ForkPose(CurrentHeightPosition + 0.3, 1);
+                await Task.Delay(hasCargo ? 1200 : 500);
+                await ForkPose(CurrentHeightPosition + 0.3, 0.3, bypassCheck: true);
             }
 
             async Task<(bool reachHome, bool isReachLimitSensor)> WaitForkReachHome(bool jumpOutIfReachLimitSensor)
@@ -490,6 +495,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
 
                 await ForkStopAsync();
+                await Task.Delay(500);
             }
             async Task NoBypassLimitSensor()
             {
