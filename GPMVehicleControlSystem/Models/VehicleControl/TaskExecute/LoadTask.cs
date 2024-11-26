@@ -102,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            if (Agv.Parameters.LDULD_Task_No_Entry)
+            if (Agv.Parameters.LDULD_Task_No_Entry && !IsDestineStationBuffer)
             {
                 return await base.BeforeTaskExecuteActions();
             }
@@ -761,6 +761,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 //check arm position 
             }
 
+            //在RACK取放貨且是空取空放模式
+            if (IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
+            {
+                Agv.simulation_cargo_status = action == ACTION_TYPE.Load ? Vehicle.CARGO_STATUS.NO_CARGO : Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL;//模擬在席
+                return (true, AlarmCodes.None);
+            }
 
             (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
             ExpectedForkPostionWhenEntryWorkStation = fork_height_change_result.position;

@@ -55,6 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
         public STATION_TYPE DestineStationType => DestineMapPoint == null ? STATION_TYPE.Unknown : DestineMapPoint.StationType;
+        public bool IsDestineStationBuffer => DestineStationType == STATION_TYPE.Buffer || DestineStationType == STATION_TYPE.Charge_Buffer || (DestineStationType == STATION_TYPE.Buffer_EQ && height > 0);
 
         public bool IsJustAGVPickAndPlaceAtWIPPort
         {
@@ -257,7 +258,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     $"\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}" +
                     $"\r\nHeight:{RunningTaskData.Height}", false);
 
-                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry)
+                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer)
                 {
                     (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(height, action);
                     if (!forkActionsResult.success)
@@ -281,7 +282,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
                 //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
-                if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && Agv.Parameters.LDULD_Task_No_Entry)
+                if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && !IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
                 {
                     logger.Trace("空取空放!");
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
@@ -443,6 +444,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <returns></returns>
         private FORK_HEIGHT_POSITION _GetForkPositionToReachAtSecondaryPoint(ACTION_TYPE action)
         {
+            //在RACK取放貨且是空取空放模式
+            if (IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
+                return FORK_HEIGHT_POSITION.DOWN_;
+
             return action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_; //僅考慮當前任務是 Load or Unload決定上升位置
             //return CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place ? (action == ACTION_TYPE.Load ? FORK_HEIGHT_POSITION.UP_ : FORK_HEIGHT_POSITION.DOWN_) : FORK_HEIGHT_POSITION.DOWN_;
         }
@@ -739,11 +744,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
 
             //Self check. 
-            if (action == ACTION_TYPE.Unload && position == FORK_HEIGHT_POSITION.UP_)
+            if (!Agv.Parameters.LDULD_Task_No_Entry && action == ACTION_TYPE.Unload && position == FORK_HEIGHT_POSITION.UP_)
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Up_Pose_When_Unload_Action_Executing);
 
             //Self check. 
-            if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position == FORK_HEIGHT_POSITION.DOWN_)
+            if (!Agv.Parameters.LDULD_Task_No_Entry && (action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position == FORK_HEIGHT_POSITION.DOWN_)
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Down_Pose_When_Load_Action_Executing);
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
@@ -757,7 +762,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
 
             logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-            (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1).Result;
+            (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, Agv.Parameters.LDULD_Task_No_Entry).Result;
             _wait_fork_reach_position_cst.Cancel();
             return result;
         }

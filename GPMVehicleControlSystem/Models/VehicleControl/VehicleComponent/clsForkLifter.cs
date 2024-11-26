@@ -691,7 +691,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <param name="height">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed)
+        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed, bool bypassFinalCheck = false)
         {
             double target = 0;
             try
@@ -754,7 +754,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
                 logger.Trace($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
                 //Final Check
-                if (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
+                if (!bypassFinalCheck && ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
                     return (target, false, AlarmCodes.Fork_Height_Setting_Error);
 
                 return (target, true, AlarmCodes.None);
