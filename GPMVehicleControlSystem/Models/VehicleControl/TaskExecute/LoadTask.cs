@@ -187,6 +187,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 logger.Trace($"EQ (TAG-{destineTag}) [設備Port內無障礙物] 允許侵入");
                 _waitMoveToPortDonePause.Reset();
             }
+
+            BuzzerPlayer.Action();
             return await base.BeforeTaskExecuteActions();
         }
 
@@ -374,6 +376,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             logger.Warn($"[Abort Task] {action} Task Abort, Alarm Code = {alarm_code}");
         }
 
+        internal void ResetActionTimeoutManualResetSignals()
+        {
+            _waitMoveToPortDonePause.Set();
+            _WaitBackToHomeDonePause.Set();
+            logger.Trace("ResetActionTimeoutManualResetSignals");
+        }
+
         protected override async Task WaitTaskDoneAsync()
         {
             Stopwatch _stopWatch = Stopwatch.StartNew();
@@ -555,6 +564,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                             ForkHomeProcess();
 
+
                         _WaitBackToHomeDonePause.Reset();
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
@@ -587,6 +597,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 Console.WriteLine(ex.Message + ex.StackTrace);
                 throw;
+            }
+            finally
+            {
+                _WaitBackToHomeDonePause.Set();
             }
         }
 
@@ -652,12 +666,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     switch (query_cause)
                     {
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL:
-                            logger.Trace($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
-                            await Agv.QueryVirtualID(query_cause, cst_type);
+                            if (Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
+                            {
+                                logger.Trace($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
+                                await Agv.QueryVirtualID(query_cause, cst_type);
+                            }
                             break;
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.NOT_MATCH:
-                            IsNeedQueryVirutalStation = Agv.Parameters.StationNeedQueryVirtualID.Contains(destineTag);
-                            if (IsNeedQueryVirutalStation)
+
+                            if (Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
                             {
                                 logger.Trace($"Station {destineTag} is need to query virtual id from AGVS when ID Not Match");
                                 await Agv.QueryVirtualID(query_cause, cst_type);
@@ -1063,5 +1080,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             Agv.DirectionLighter.Forward();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            ResetActionTimeoutManualResetSignals();
+            base.Dispose(disposing);
+        }
     }
 }

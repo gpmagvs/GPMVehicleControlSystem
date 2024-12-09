@@ -225,7 +225,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
 
         public bool IsBackToSecondaryPt { get; internal set; } = false;
-
+        private DateTime startTime = DateTime.MinValue;
         /// <summary>
         /// 執行任務
         /// </summary>
@@ -304,6 +304,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 }
                 else
                 {
+                    startTime = DateTime.Now;
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {
@@ -343,6 +344,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
                         await WaitTaskDoneAsync();
+
+                        if ((DateTime.Now - startTime).TotalSeconds < 2)
+                            await Task.Delay(1000);
                         AGVCActionStatusChaged -= HandleAGVActionChanged;
                         return new List<AlarmCodes>() { task_abort_alarmcode };
                     }
