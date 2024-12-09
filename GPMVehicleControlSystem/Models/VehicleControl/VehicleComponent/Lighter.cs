@@ -95,7 +95,7 @@ namespace AGVSystemCommonNet6.Abstracts
 
 
 
-        public abstract void CloseAll(int delay_ms = 10);
-        public abstract void OpenAll();
+        public abstract Task CloseAll(int delay_ms = 10);
+        public abstract Task OpenAll();
     }
 }

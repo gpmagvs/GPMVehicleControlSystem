@@ -8,12 +8,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     /// </summary>
     public class clsInspectorAGVDirectionLighter : clsDirectionLighter
     {
-        public clsInspectorAGVDirectionLighter( ) : base()
+        public clsInspectorAGVDirectionLighter() : base()
         {
 
         }
 
-        public override void OpenAll()
+        public override async Task OpenAll()
         {
             try
             {
@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public override void CloseAll(int delay_ms = 10)
+        public override async Task CloseAll(int delay_ms = 10)
         {
             try
             {

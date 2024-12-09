@@ -17,7 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
         }
 
-        public override async void CloseAll(int delay_ms = 10)
+        public override async Task CloseAll(int delay_ms = 10)
         {
             try
             {
@@ -27,7 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
                 await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-              
+
             }
             catch (Exception ex)
             {
@@ -35,7 +35,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public override async void OpenAll()
+        public override async Task OpenAll()
         {
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, true);
             await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, true);
