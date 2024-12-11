@@ -261,12 +261,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             await Agv.WagoDO.SetState(DO_ITEM.Front_LsrBypass, false);
             await Task.Delay(800);
 
+            Agv.DirectionLighter.Flash(new DO_ITEM[2] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, 200);
+
             bool _front_area_1_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_1);
             bool _front_area_2_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2);
             bool _front_area_3_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_3);
             bool _front_area_4_obs = !Agv.WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_4);
             await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
             await Agv.Laser.FrontBackLasersEnable(true, false);
+
+            Agv.DirectionLighter.AbortFlash();
+
             return _front_area_1_obs || _front_area_2_obs || _front_area_3_obs || _front_area_4_obs;
         }
 

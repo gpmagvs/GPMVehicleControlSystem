@@ -766,6 +766,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             });
 
             logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
+            await ForkLifter.ForkStopAsync();
+            await Task.Delay(1000);
             (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, Agv.Parameters.LDULD_Task_No_Entry).Result;
             _wait_fork_reach_position_cst.Cancel();
             return result;

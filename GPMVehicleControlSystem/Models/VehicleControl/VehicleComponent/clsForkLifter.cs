@@ -718,13 +718,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 double positionError = 0;
 
                 await ForkStopAsync();
-                await Task.Delay(200);
-
+                await Task.Delay(1000);
                 logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
 
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
-
-
                 double _errorTorlence = 0.5;
                 while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
                 {
