@@ -21,11 +21,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         private SystemUpdateService _sysUpdateService;
         private LinuxDiskUsageMonitor _diskUsageMonitor;
         private readonly IHubContext<FrontendHub> hubContext;
-        public SystemController(SystemUpdateService sysUpdateService, LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext)
+        private readonly ParameterRestore parameterRestore;
+        public SystemController(SystemUpdateService sysUpdateService, ParameterRestore parameterRestore, LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext)
         {
             _sysUpdateService = sysUpdateService;
             _diskUsageMonitor = diskUsageMonitor;
             this.hubContext = hubContext;
+            this.parameterRestore = parameterRestore;
         }
 
         [HttpGet("Settings")]
@@ -131,6 +133,30 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<ConnectionStateVM> GetConnectionStateVM()
         {
             return ViewModelFactory.GetConnectionStatesVM();
+        }
+
+        [HttpPost("RestoreVCS_ParamFile")]
+        [DisableRequestSizeLimit]
+        public async Task<IActionResult> RestoreVCS_ParamFile()
+        {
+            var file = Request.Form.Files[0];
+            if (file.Length > 100 * 1024 * 1024) // 100MB
+            {
+                return BadRequest("檔案大小超過 100MB。");
+            }
+            (bool confirm, string message) result = await parameterRestore.RestoreVCSParam(file);
+
+            if (result.confirm)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await parameterRestore.BrocastRestartSystemByVCSParamReplaced();
+                    await Task.Delay(5000);
+                    StaSysControl.SystemRestart();
+                });
+            }
+
+            return Ok(result);
         }
     }
 }

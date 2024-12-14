@@ -62,6 +62,7 @@ try
     builder.Services.AddDirectoryBrowser();
     builder.Services.AddSingleton<SystemUpdateService>();
     builder.Services.AddScoped<LinuxDiskUsageMonitor>();
+    builder.Services.AddScoped<ParameterRestore>();
     builder.Services.AddHostedService<VehicleFactoryService>();
     builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
     builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
