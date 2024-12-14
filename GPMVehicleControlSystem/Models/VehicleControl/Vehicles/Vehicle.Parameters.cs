@@ -1,5 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using GPMVehicleControlSystem.Service;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using NLog;
 using System.Text;
@@ -85,13 +87,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public static async Task<(bool, string)> SaveParameters(clsVehicelParam Parameters)
+        public static async Task<(bool, string)> SaveParameters(clsVehicelParam Parameters, IHubContext<FrontendHub> hubContext = null)
         {
             try
             {
                 await writeParamsToFileSemaphoreSlim.WaitAsync();
                 string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
                 File.WriteAllText(ParametersFilePath, param_json);
+
+                if (hubContext != null)
+                {
+                    try
+                    {
+                        await hubContext.Clients.All.SendAsync("ParameterChanged", Parameters);
+                    }
+                    catch (Exception ex)
+                    {
+                        StaStored.CurrentVechicle.logger.LogError(ex, ex.Message);
+                    }
+                }
+
                 return (true, "");
             }
             catch (Exception ex)

@@ -188,6 +188,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 WagoDI.SubsSignalStateChange(_input, new EventHandler<bool>(_handler));
             }
 
+            WagoDO.SubsSignalStateChange(DO_ITEM.Recharge_Circuit, (sender, state) => { frontendHubContext?.Clients.All.SendAsync("ReChargeCircuitChanged", state); });
+
         }
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)

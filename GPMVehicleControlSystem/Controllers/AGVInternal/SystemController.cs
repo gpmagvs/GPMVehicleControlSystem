@@ -9,6 +9,7 @@ using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -19,11 +20,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     {
         private SystemUpdateService _sysUpdateService;
         private LinuxDiskUsageMonitor _diskUsageMonitor;
-
-        public SystemController(SystemUpdateService sysUpdateService, LinuxDiskUsageMonitor diskUsageMonitor)
+        private readonly IHubContext<FrontendHub> hubContext;
+        public SystemController(SystemUpdateService sysUpdateService, LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext)
         {
             _sysUpdateService = sysUpdateService;
             _diskUsageMonitor = diskUsageMonitor;
+            this.hubContext = hubContext;
         }
 
         [HttpGet("Settings")]
@@ -46,7 +48,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 //派車HOST同步 MapUrl
                 param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:5216/api/Map";
                 StaStored.CurrentVechicle.Parameters = param;
-                (bool confirm, string errorMsg) = await Vehicle.SaveParameters(param);
+                (bool confirm, string errorMsg) = await Vehicle.SaveParameters(param, this.hubContext);
                 return Ok(new { confirm = confirm, errorMsg = errorMsg });
             }
             catch (Exception ex)
@@ -108,7 +110,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             configs.CheckPoints = configs.CheckPoints.OrderBy(pt => pt.CheckPointTag).ToList();
             agv.Parameters.ManualCheckCargoStatus = configs;
-            (bool confirm, string errorMsg) = await Vehicle.SaveParameters(agv.Parameters);
+            (bool confirm, string errorMsg) = await Vehicle.SaveParameters(agv.Parameters, this.hubContext);
             return Ok(new { confirm, errorMsg });
         }
 
