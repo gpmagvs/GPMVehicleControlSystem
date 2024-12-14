@@ -1,10 +1,12 @@
-﻿using AGVSystemCommonNet6.Log;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.DiskUsage;
+using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -27,7 +29,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Settings")]
         public async Task<IActionResult> GetParameters()
         {
-            return Ok(StaStored.CurrentVechicle.Parameters);
+            StaStored.CurrentVechicle.Parameters.EditKey = DateTime.Now.ToString("yyyyMMddHHmmssffff");
+            clsVehicelParam parameters = StaStored.CurrentVechicle.Parameters.Clone();
+            return Ok(parameters);
         }
 
         [HttpPost("SaveParameters")]
@@ -35,16 +39,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
+                if (param.EditKey != StaStored.CurrentVechicle.Parameters.EditKey)
+                    throw new Exception("修改的參數未與系統同步");
+                if (param.IsUIDefault)
+                    throw new Exception("無效參數!將可能會造成系統異常");
                 //派車HOST同步 MapUrl
                 param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:5216/api/Map";
                 StaStored.CurrentVechicle.Parameters = param;
-
-                Vehicle.SaveParameters(param);
-                return Ok(true);
+                (bool confirm, string errorMsg) = await Vehicle.SaveParameters(param);
+                return Ok(new { confirm = confirm, errorMsg = errorMsg });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return Ok(false);
+                return Ok(new { confirm = false, errorMsg = ex.Message });
             }
         }
 
@@ -97,11 +104,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpPost("SaveManualCheckCargoConfiguration")]
-        public async Task SaveManualCheckCargoConfiguration([FromBody] clsManualCheckCargoStatusParams configs)
+        public async Task<IActionResult> SaveManualCheckCargoConfiguration([FromBody] clsManualCheckCargoStatusParams configs)
         {
             configs.CheckPoints = configs.CheckPoints.OrderBy(pt => pt.CheckPointTag).ToList();
             agv.Parameters.ManualCheckCargoStatus = configs;
-            Vehicle.SaveParameters(agv.Parameters);
+            (bool confirm, string errorMsg) = await Vehicle.SaveParameters(agv.Parameters);
+            return Ok(new { confirm, errorMsg });
         }
 
         [HttpDelete("DeleteOldLogData")]
@@ -117,5 +125,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(new { output, error });
         }
 
+        [HttpGet("ConnectionStatus")]
+        public async Task<ConnectionStateVM> GetConnectionStateVM()
+        {
+            return ViewModelFactory.GetConnectionStatesVM();
+        }
     }
 }

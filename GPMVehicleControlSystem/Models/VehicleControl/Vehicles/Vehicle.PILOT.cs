@@ -522,9 +522,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
         {
             Parameters.LastVisitedTag = newVisitedNodeTag;
-            configFileChangedWatcher.EnableRaisingEvents = false;
             SaveParameters(Parameters);
-            configFileChangedWatcher.EnableRaisingEvents = true;
         }
 
         internal async Task ReportMeasureResult(clsMeasureResult measure_result)

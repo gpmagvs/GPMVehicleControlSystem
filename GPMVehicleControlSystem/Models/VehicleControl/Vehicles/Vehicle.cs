@@ -293,7 +293,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 this.agvsLogger = agvsLogger;
                 this.frontendHubContext = frontendHubContext;
                 HandShakeLogger = LogManager.GetCurrentClassLogger();
-                Parameters = LoadParameters(watch_file_change: true);
+                Parameters = LoadParameters();
                 Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
                 IMU.Options = Parameters.ImpactDetection;
                 CIMConnectionInitialize();
@@ -418,8 +418,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             CommonEventsRegist();
             AGVSInit();
-            StartConfigChangedWatcher();
-
             try
             {
                 SyncHandshakeSignalStates();
@@ -1042,6 +1040,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             Task.Run(async () =>
             {
+                CancellationTokenSource cancell = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                while (!AGVS.Connected)
+                {
+                    await Task.Delay(1000);
+                    if (cancell.IsCancellationRequested)
+                    {
+                        AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
+                        return;
+                    }
+                }
                 try
                 {
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());

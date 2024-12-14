@@ -2,7 +2,7 @@
 {
     public class clsBatteryParam
     {
-        public string BatteryLogFolder { get; set; } = "C:\\Users\\jinwei\\Documents\\GPM LOG";
+        public string BatteryLogFolder { get; set; } = "/home/gpm/GPMLog";
         public bool Recharge_Circuit_Auto_Control_In_ManualMode { get; set; } = true;
         public bool ChargeWhenLevelLowerThanThreshold { get; set; } = true;
 

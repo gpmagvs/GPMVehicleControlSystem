@@ -14,6 +14,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
     }
     public class clsVehicelParam
     {
+        public string EditKey { get; set; } = "V3";
+        public bool IsUIDefault { get; set; } = false;
         public Dictionary<string, string> Descrption { get; set; } = new Dictionary<string, string>() {
             { "AgvType(車款)","0:叉車AGV,1:YUNTECH_FORK_AGV, 2:巡檢AGV, 3:潛盾AGV" },
             { "OrderInfoFetchSource(任務訂單訊息來源)","0:從派車任務內容, 1:接收CIM呼叫API" },

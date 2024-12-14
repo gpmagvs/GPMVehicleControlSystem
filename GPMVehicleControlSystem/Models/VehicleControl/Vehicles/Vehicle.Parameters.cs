@@ -8,6 +8,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+        private static SemaphoreSlim writeParamsToFileSemaphoreSlim = new SemaphoreSlim(1, 1);
         private clsVehicelParam _Parameters = new clsVehicelParam();
         public clsVehicelParam Parameters
         {
@@ -15,8 +16,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             set
             {
                 _Parameters = value;
-                TryChangeAGVSOptions(value);
-                ModifyAGVSMessageEncoder(value.AGVsMessageEncoding);
+                //TryChangeAGVSOptions(value);
+                //ModifyAGVSMessageEncoder(value.AGVsMessageEncoding);
                 logger.LogInformation($"Parameters updated");
             }
         }
@@ -61,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
         public static Action<clsVehicelParam> OnParamEdited;
-        public static clsVehicelParam LoadParameters(string filepath = null, bool watch_file_change = false)
+        public static clsVehicelParam LoadParameters(string filepath = null)
         {
             Logger logger = LogManager.GetLogger(typeof(Vehicle).Name);
             try
@@ -74,10 +75,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
                 }
                 SaveParameters(Parameters);
-                if (watch_file_change)
-                {
-                    InitWatchConfigFileChange(param_file);
-                }
                 logger.Trace("Parameters Load done");
                 return Parameters;
             }
@@ -88,51 +85,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        static FileSystemWatcher configFileChangedWatcher;
-        private static async void InitWatchConfigFileChange(string filePath)
-        {
-            configFileChangedWatcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath));
-            configFileChangedWatcher.Changed += ConfigFileChangedWatcher_Changed;
-        }
-
-        private static async void ConfigFileChangedWatcher_Changed(object sender, FileSystemEventArgs e)
+        public static async Task<(bool, string)> SaveParameters(clsVehicelParam Parameters)
         {
             try
             {
-                configFileChangedWatcher.EnableRaisingEvents = false;
-                await Task.Delay(1000);
-                //copy 
-                var file_copy = Path.Combine(Path.GetTempPath(), $"parameters_temp_{DateTime.Now.Ticks}.json");
-                File.Copy(ParametersFilePath, file_copy, true);
-                var updated_param = LoadParameters(file_copy, false);
-                if (updated_param != null & OnParamEdited != null)
-                {
-                    OnParamEdited(updated_param);
-                }
-                else
-                {
-
-                }
+                await writeParamsToFileSemaphoreSlim.WaitAsync();
+                string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
+                File.WriteAllText(ParametersFilePath, param_json);
+                return (true, "");
             }
             catch (Exception ex)
             {
+                return (false, ex.Message);
             }
             finally
             {
-                configFileChangedWatcher.EnableRaisingEvents = true;
+                writeParamsToFileSemaphoreSlim.Release();
             }
-
-        }
-
-        public static void SaveParameters(clsVehicelParam Parameters)
-        {
-            string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
-            File.WriteAllText(ParametersFilePath, param_json);
-        }
-
-        internal static void StartConfigChangedWatcher()
-        {
-            configFileChangedWatcher.EnableRaisingEvents = true;
         }
     }
 }

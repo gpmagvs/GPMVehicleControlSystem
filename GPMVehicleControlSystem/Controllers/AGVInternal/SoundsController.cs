@@ -124,8 +124,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> SaveAudioPath([FromBody] AudioPathes pathes)
         {
             StaStored.CurrentVechicle.Parameters.SoundsParams.audioPathes = pathes;
-            Vehicle.SaveParameters(StaStored.CurrentVechicle.Parameters);
-            return Ok();
+            (bool confirm, string errorMsg) = await Vehicle.SaveParameters(StaStored.CurrentVechicle.Parameters);
+            return Ok(new { confirm = confirm, errorMsg = errorMsg });
         }
 
         [HttpGet("GetUsableAudios")]
