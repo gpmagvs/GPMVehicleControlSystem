@@ -17,6 +17,7 @@ using NLog;
 using NLog.Web;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Tools.DiskUsage;
+using System.Collections.Generic;
 BuzzerPlayer.DeterminePlayerUse();
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -143,46 +144,67 @@ finally
     LogManager.Shutdown();
 }
 
+
 static void StaticFileProviderInit(WebApplication app)
 {
-    string imageFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads");
-    Directory.CreateDirectory(imageFolder);
-    PhysicalFileProvider fileProvider = new PhysicalFileProvider(imageFolder);
-    string requestPath = "/Download";
 
-    // Enable displaying browser links.
-    app.UseStaticFiles(new StaticFileOptions
+    List<clsStaticFileProvider> providers = new List<clsStaticFileProvider>()
     {
-        FileProvider = fileProvider,
-        RequestPath = requestPath
-    });
-    app.UseDirectoryBrowser(new DirectoryBrowserOptions
-    {
-        FileProvider = fileProvider,
-        RequestPath = requestPath
-    });
-
-    try
-    {
-        string audioFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/sounds");
-        Directory.CreateDirectory(audioFolder);
-        PhysicalFileProvider audioFileProvider = new PhysicalFileProvider(audioFolder);
-        // Enable displaying browser links.
-        app.UseStaticFiles(new StaticFileOptions
+        new clsStaticFileProvider()
         {
-            FileProvider = audioFileProvider,
-            RequestPath = "/audios"
-        });
-        app.UseDirectoryBrowser(new DirectoryBrowserOptions
+             folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Downloads"),
+             routePath = "/Download"
+        },
+        new clsStaticFileProvider()
         {
-            FileProvider = audioFileProvider,
-            RequestPath = "/audios"
-        });
+             folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/sounds"),
+             routePath = "/audios"
+        },
+        new clsStaticFileProvider()
+        {
+             folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param"),
+             routePath = "/param"
+        },
+        new clsStaticFileProvider()
+        {
+             folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "GPM_AGV_LOG"),
+             routePath = "/log"
+        },
+    };
 
-        app.Logger.LogInformation(audioFolder);
-    }
-    catch (Exception)
+
+    foreach (clsStaticFileProvider provider in providers)
     {
+        try
+        {
+            Directory.CreateDirectory(provider.folder);
+            PhysicalFileProvider _FileProvider = new PhysicalFileProvider(provider.folder);
+            // Enable displaying browser links.
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = _FileProvider,
+                ServeUnknownFileTypes = true,  // 允許未知檔案類型
+                DefaultContentType = "application/octet-stream",  // 預設下載的 content type
+                RequestPath = provider.routePath
+            });
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions
+            {
+                FileProvider = _FileProvider,
+                RequestPath = provider.routePath
+            });
 
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
+}
+
+
+internal class clsStaticFileProvider
+{
+    internal string folder { get; set; } = "";
+    internal string routePath { get; set; } = "/";
+
 }
