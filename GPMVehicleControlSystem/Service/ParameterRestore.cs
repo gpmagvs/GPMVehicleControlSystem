@@ -47,10 +47,5 @@ namespace GPMVehicleControlSystem.Service
         {
             File.Copy(fromFilePath, VCS_ParamsJsonFilePath, true);
         }
-
-        internal async Task BrocastRestartSystemByVCSParamReplaced()
-        {
-            hubContext?.Clients.All.SendAsync($"AGV-Notify-Message", new { title = "參數檔案更新", message = "System will restart after 5 second.", alarmCode = 3383 });
-        }
     }
 }
