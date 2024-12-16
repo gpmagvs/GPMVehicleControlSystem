@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
@@ -7,6 +8,11 @@ namespace GPMVehicleControlSystem.Service
 {
     public class SystemUpdateService
     {
+        private readonly IHubContext<FrontendHub> hubContext;
+        public SystemUpdateService(IHubContext<FrontendHub> hubContext)
+        {
+            this.hubContext = hubContext;
+        }
 
         internal async Task<(bool confirm, string message)> SystemUpdateWithFileUpload(IFormFile file)
         {
@@ -44,7 +50,7 @@ namespace GPMVehicleControlSystem.Service
                     //BackupCurrentProgram(out string errMsg);
 
                     string scriptFile = Path.Combine(currentDirectory, "update.sh");
-                    File.WriteAllText(scriptFile, $"sleep 1 && killall -9 GPM_VCS 2>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
+                    File.WriteAllText(scriptFile, $"sleep 5 && killall -9 GPM_VCS 2>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
                         $"&& cd {currentDirectory} && ./GPM_VCS");
 
                     Process.Start("chmod", $"777 {scriptFile}").WaitForExit();
@@ -58,7 +64,6 @@ namespace GPMVehicleControlSystem.Service
                     };
                     // Start the process
                     Process process = Process.Start(startInfo);
-
                     return (true, "");
                 }
                 catch (Exception ex)
@@ -193,6 +198,25 @@ namespace GPMVehicleControlSystem.Service
             {
                 Directory.Delete(folderPath, true);
             }
+        }
+
+        internal async Task BrocastRestartSystemCountDownNotify(string? reason = "", int duration = 5)
+        {
+            _ = Task.Run(async () =>
+            {
+                int countDown = duration;
+                while (true)
+                {
+                    hubContext?.Clients.All.SendAsync($"AGV-Notify-Message", new { title = $"系統重啟中{(string.IsNullOrEmpty(reason) ? "" : $"({reason})")}", message = $"System will restart after {countDown} second.", alarmCode = 3384 });
+                    await Task.Delay(1000);
+                    countDown--;
+                    if (countDown == 0)
+                    {
+                        break;
+                    }
+
+                }
+            });
         }
     }
 }

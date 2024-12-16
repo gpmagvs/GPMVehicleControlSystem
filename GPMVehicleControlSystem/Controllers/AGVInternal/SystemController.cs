@@ -22,12 +22,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         private LinuxDiskUsageMonitor _diskUsageMonitor;
         private readonly IHubContext<FrontendHub> hubContext;
         private readonly ParameterRestore parameterRestore;
-        public SystemController(SystemUpdateService sysUpdateService, ParameterRestore parameterRestore, LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext)
+        private readonly SystemUpdateService systemUpdateService;
+        public SystemController(SystemUpdateService sysUpdateService, ParameterRestore parameterRestore
+                                , LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext, SystemUpdateService systemUpdateService)
         {
             _sysUpdateService = sysUpdateService;
             _diskUsageMonitor = diskUsageMonitor;
             this.hubContext = hubContext;
             this.parameterRestore = parameterRestore;
+            this.systemUpdateService = systemUpdateService;
         }
 
         [HttpGet("Settings")]
@@ -150,7 +153,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 _ = Task.Run(async () =>
                 {
-                    await parameterRestore.BrocastRestartSystemByVCSParamReplaced();
+                    systemUpdateService.BrocastRestartSystemCountDownNotify("系統參數更新", 5);
                     await Task.Delay(5000);
                     StaSysControl.SystemRestart();
                 });

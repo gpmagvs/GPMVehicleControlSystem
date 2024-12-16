@@ -88,6 +88,12 @@ namespace GPMVehicleControlSystem.Controllers
                     return BadRequest("檔案大小超過 100MB。");
                 }
                 (bool confirm, string message) result = await _updateService.SystemUpdateWithFileUpload(file);
+
+                if (result.confirm)
+                {
+                    _ = _updateService.BrocastRestartSystemCountDownNotify("系統更新", 5);
+                }
+
                 return Ok(result);
             }
         }
