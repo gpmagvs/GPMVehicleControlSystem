@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private TaskBase _ExecutingTask;
-        public TaskBase ExecutingTaskEntity
+        public TaskBase? ExecutingTaskEntity
         {
             get => _ExecutingTask;
             set
@@ -146,11 +146,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //LDULDRecord
                     IsLaserRecoveryHandled = false;
                     bool _isNeedHandshaking = ExecutingTaskEntity.IsNeedHandshake;
+                    string _taskSimplex = ExecutingTaskEntity.RunningTaskData.Task_Simplex;
                     _RunTaskData.IsEQHandshake = _isNeedHandshaking;
                     AGV_Reset_Flag = AGVSResetCmdFlag = false;
                     TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                     List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
-                    logger.LogTrace($"Execute Task Done-{ExecutingTaskEntity?.RunningTaskData.Task_Simplex}");
+                    logger.LogTrace($"Execute Task Done-{_taskSimplex}");
                     if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                     {
                         logger.LogWarning("Replan.");
@@ -165,6 +166,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                     bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
                     bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
+
+                    bool IsAutoInitWhenExecuteMoveAction = IsAGVNowIsDown && action == ACTION_TYPE.None && GetAutoInitAcceptStateWithCargoStatus();
+
                     bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset) ||
                                                                           alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_L_REQ) ||
                                                                           alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_U_REQ) ||
@@ -229,8 +233,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGVC.OnAGVCActionChanged = null;
 
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
-
-                    if (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy && !_RunTaskData.IsLocalTask)
+                    if ((IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
                         //自動復歸並上線
                         _ = Task.Run(async () =>
@@ -255,6 +258,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
+        private bool GetAutoInitAcceptStateWithCargoStatus()
+        {
+            bool hasCargoOnAGV = HasAnyCargoOnAGV();
+            return hasCargoOnAGV ?
+                Parameters.Advance.AutoInitAndOnlineWhenMoveWithCargo :
+                Parameters.Advance.AutoInitAndOnlineWhenMoveWithoutCargo;
+        }
+
         /// <summary>
         /// 嘗試進行初始化並上線
         /// </summary>
@@ -267,13 +278,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 logger.LogInformation($"嘗試自動初始化完成");
                 (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
                 if (success)
-                    logger.LogInformation($"嘗試自動初始化完成且上線成功");
+                {
+                    SendNotifyierToFrontend($"AGV自動初始化完成且上線成功!");
+                    logger.LogInformation($"AGV自動初始化完成且上線成功");
+                }
                 else
-                    logger.LogError($"嘗試自動初始化完成但上線失敗({return_code})");
+                {
+                    SendNotifyierToFrontend($"AGV自動初始化完成但上線失敗({return_code})");
+                    logger.LogError($"AGV自動初始化完成但上線失敗({return_code})");
+                }
             }
             else
             {
-                logger.LogError($"嘗試自動初始化但失敗({message})");
+                SendNotifyierToFrontend($"AGV嘗試自動初始化但失敗:{message}");
+                logger.LogError($"AGV嘗試自動初始化但失敗:{message})");
             }
         }
 
@@ -287,7 +305,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 BuzzerPlayer.Stop();
         }
 
-        private TaskBase CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
+        private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
         {
             TaskBase? _ExecutingTaskEntity = null;
             var action = taskDownloadData.Action_Type;
