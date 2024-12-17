@@ -278,10 +278,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ForkLifter.Enable)
                 {
                     ForkLifter.ForkShortenInAsync();
-                    if (HasAnyCargoOnAGV())
-                    {
-                        AlarmManager.AddWarning(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
-                    }
                     InitializingStatusText = "牙叉原點覆歸...";
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
@@ -321,8 +317,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (!Parameters.SensorBypass.BeltSensorBypass)
                         await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
-
-                    AlarmManager.ClearAlarm(AlarmCodes.Fork_Has_Cargo_But_Initialize_Running);
                     _forklift_init_result = (forkInitizeResult.done, forkInitizeResult.alarm_code.ToString());
                 }
                 else
