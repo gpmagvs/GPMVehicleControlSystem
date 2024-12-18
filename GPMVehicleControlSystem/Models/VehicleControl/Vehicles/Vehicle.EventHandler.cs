@@ -119,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //clsBattery.OnBatteryOverTemperature += HandleBatteryOverTemperature;
             }
             CarComponent.OnCommunicationError += CarComponent_OnCommunicationError;
-            clsSick.OnLocalizationStationError += ClsSick_OnLocalizationStationError;
+            //clsSick.OnLocalizationStationError += ClsSick_OnLocalizationStationError;
             clsSick.OnMapMatchStatusToLow += ClsSick_OnMapMatchStatusToLow;
 
             LoadTask.OnManualCheckCargoStatusTrigger += LoadTask_OnManualCheckCargoStatusTrigger;
