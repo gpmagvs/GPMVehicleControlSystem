@@ -58,6 +58,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
+            try
+            {
+                CST_TYPE orderCstTypeRequest = this.RunningTaskData.CST.FirstOrDefault().CST_Type;
+                CST_TYPE currentCargoType = Agv.CargoStateStorer.GetCargoType();
+                if (currentCargoType != orderCstTypeRequest)
+                {
+                    if (currentCargoType == CST_TYPE.Tray)
+                        return (false, AlarmCodes.Cst_Type_Not_Match_Rack_But_Get_Tray);
+                    else
+                        return (false, AlarmCodes.Cst_Type_Not_Match_Tray_But_Get_Rack);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
+
             if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
                 return (false, AlarmCodes.Has_Job_Without_Cst);
 
