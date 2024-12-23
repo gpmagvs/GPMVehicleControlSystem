@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using WebSocketSharp;
 using NLog;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 {
@@ -293,7 +294,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                         string _cst_id = action == ACTION_TYPE.Load ? "" : RunningTaskData.CST.FirstOrDefault() == null ? "" : RunningTaskData.CST.First().CST_ID;//取貨[Unload]需模擬拍照=>從派車任務中拿CSTID
                         logger.Trace($"空取空放-貨物在席狀態模擬-{_cargo_status_simulation},CST ID= {_cst_id}");
 
-                        _agv.simulation_cargo_status = _cargo_status_simulation;
+                        _agv.CargoStateStorer.simulation_cargo_status = _cargo_status_simulation;
                         _agv.CSTReader.ValidCSTID = _cst_id;
                     }
                     await Task.Delay(2000);

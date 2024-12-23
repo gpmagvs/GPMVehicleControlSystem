@@ -76,8 +76,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     Current_LASER_MODE = GetLaserModeDescription(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
-                    ForkHasLoading = AGV.HasAnyCargoOnAGV(),
-                    CargoExist = AGV.HasAnyCargoOnAGV(),
+                    ForkHasLoading = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
+                    CargoExist = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     IsForkExtenable = AGV.IsForkExtenable,
                     HandShakeSignals = new
                     {

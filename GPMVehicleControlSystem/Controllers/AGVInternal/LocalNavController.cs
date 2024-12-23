@@ -64,14 +64,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     });
 
 
-                if (agv.HasAnyCargoOnAGV() && action == ACTION_TYPE.Unload)
+                if (agv.CargoStateStorer.HasAnyCargoOnAGV(agv.Parameters.LDULD_Task_No_Entry) && action == ACTION_TYPE.Unload)
                     return Ok(new
                     {
                         accpet = false,
                         error_message = $"AGV車上有貨物不可進行取貨任務"
                     });
 
-                if (!agv.HasAnyCargoOnAGV() && action == ACTION_TYPE.Load)
+                if (!agv.CargoStateStorer.HasAnyCargoOnAGV(agv.Parameters.LDULD_Task_No_Entry) && action == ACTION_TYPE.Load)
                     return Ok(new
                     {
                         accpet = false,

@@ -15,6 +15,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Notify;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -457,8 +458,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryTemperatures = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.maxCellTemperature).ToArray();
                 var status = new clsRunningStatus
                 {
-                    Cargo_Status = CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
-                    CargoType = GetCargoType(),
+                    Cargo_Status = CargoStateStorer.GetCargoStatus(Parameters.LDULD_Task_No_Entry) == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
+                    CargoType = (int)CargoStateStorer.GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
                     Electric_Temperatures = batteryTemperatures,
@@ -510,8 +511,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new RunningStatus
                 {
-                    Cargo_Status = CargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
-                    CargoType = GetCargoType(),
+                    Cargo_Status = CargoStateStorer.GetCargoStatus(Parameters.LDULD_Task_No_Entry) == CARGO_STATUS.HAS_CARGO_NORMAL ? 1 : 0,
+                    CargoType = (int)CargoStateStorer.GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
                     Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,

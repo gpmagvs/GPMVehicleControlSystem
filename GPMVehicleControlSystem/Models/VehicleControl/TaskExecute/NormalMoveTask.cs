@@ -6,6 +6,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using RosSharp.RosBridgeClient.Actionlib;
 using SQLitePCL;
@@ -218,7 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
+            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL)
             {
                 if (!Agv.IsCargoBiasDetecting)
                 {
@@ -268,18 +269,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 logger.Info($"Start Cargo Bias Detection.");
-                while (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
+                while (_GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
                     if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
                     {
                         break;
                     }
-                    if (Agv.CargoStatus == Vehicle.CARGO_STATUS.HAS_CARGO_BUT_BIAS || Agv.CargoStatus == Vehicle.CARGO_STATUS.NO_CARGO)
+                    if (_GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_BUT_BIAS || _GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.NO_CARGO)
                     {
                         logger.Warn($"貨物傾倒偵測觸發-Check1");
                         await Task.Delay(500); //避免訊號瞬閃導致誤偵測
-                        if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL)
+                        if (_GetCargoStatus() != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL)
                         {
                             logger.Error($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             Agv.IsCargoBiasTrigger = true;
@@ -287,6 +288,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                             break;
                         }
                     }
+                }
+                CARGO_STATUS _GetCargoStatus()
+                {
+                    return Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry);
                 }
                 Agv.IsCargoBiasDetecting = false;
             });

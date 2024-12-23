@@ -11,6 +11,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
@@ -39,25 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     /// </summary>
     public abstract partial class Vehicle
     {
-        public enum CARGO_STATUS
-        {
-            /// <summary>
-            /// 沒有貨物(通常為所有在席訊號皆ON)
-            /// </summary>
-            NO_CARGO,
-            /// <summary>
-            /// 有貨物且正常裝載(通常為所有在席訊號皆OFF)
-            /// </summary>
-            HAS_CARGO_NORMAL,
-            /// <summary>
-            /// 有貨物但傾斜(部分在席訊號OFF/部分ON)
-            /// </summary>
-            HAS_CARGO_BUT_BIAS,
-            /// <summary>
-            /// 無載物功能(如巡檢AGV)
-            /// </summary>
-            NO_CARGO_CARRARYING_CAPABILITY
-        }
+
         public enum VMS_PROTOCOL
         {
             KGS,
@@ -107,6 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Name = "No_load",
             Points = new Dictionary<int, MapPoint>()
         };
+        public CargoStateStore CargoStateStorer;
         public bool IsHasCSTReader => CSTReader != null;
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
@@ -128,13 +112,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 里程數
         /// </summary>
         public double Odometry;
-        public virtual CARGO_STATUS CargoStatus
-        {
-            get
-            {
-                return GetCargoStatus();
-            }
-        }
         protected virtual List<CarComponent> CarComponents
         {
             get
@@ -213,11 +190,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 是否為有料無帳的狀態
         /// </summary>
-        public bool IsNoCargoButIDExist => !HasAnyCargoOnAGV() && CSTReader.ValidCSTID != "";
+        public bool IsNoCargoButIDExist => !CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) && CSTReader.ValidCSTID != "";
         /// <summary>
         /// 是否為有帳無料的狀態
         /// </summary>
-        public bool IsCargoExistButNoID => CSTReader.ValidCSTID == "" && HasAnyCargoOnAGV();
+        public bool IsCargoExistButNoID => CSTReader.ValidCSTID == "" && CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry);
 
         private async Task StoreStatusToDataBase()
         {
@@ -319,9 +296,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AgvType = Parameters.AgvType,
                     Version = Parameters.Version
                 };
-
                 DirectionLighter.DOModule = WagoDO;
-
+                CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext);
                 StatusLighter = new clsStatusLighter(WagoDO);
                 CreateLaserInstance();
 
@@ -427,7 +403,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 DIOStatusChangedEventRegist();
                 AlarmManager.Active = true;
                 AlarmManager.RecordAlarm(AlarmCodes.None);
-                if (HasAnyCargoOnAGV() && CSTReader != null)
+                if (CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) && CSTReader != null)
                 {
                     CSTReader.ReadCSTIDFromLocalStorage();
                 }
@@ -436,6 +412,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 logger.LogTrace($"AGV 搭載極限Sensor?{IsLimitSwitchSensorMounted}");
                 logger.LogTrace($"AGV 牙叉可伸縮?{IsForkExtenable}");
+
+                CargoStateStorer.HandleCargoExistSensorStateChanged(this, EventArgs.Empty);
 
                 IsSystemInitialized = true;
 
@@ -650,127 +628,148 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public async Task<(bool confirm, string message)> Initialize()
         {
-
-            if (!ModuleInformationUpdatedInitState)
+            try
             {
-                return (false, $"與車控系統通訊異常，不可進行初始化");
-            }
-
-            if (BatteryStatusOverview.StatusDown)
-            {
-                return (false, $"電池狀態異常!禁止初始化!({BatteryStatusOverview.DownStatusDescription})");
-            }
-
-            if (GetSub_Status() == SUB_STATUS.RUN)
-            {
-                return (false, $"當前狀態不可進行初始化(任務執行中)");
-            }
-
-            if (GetSub_Status() != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || GetSub_Status() == SUB_STATUS.Initializing))
-            {
-                string reason_string = GetSub_Status() != SUB_STATUS.RUN ? (GetSub_Status() == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
-                return (false, $"當前狀態不可進行初始化({reason_string})");
-            }
-
-            if (lastVisitedMapPoint.IsEquipment && lastVisitedMapPoint.StationType != STATION_TYPE.Elevator)
-            {
-                return (false, "AGV位於設備內禁止初始化，請將AGV移動至道路Tag上");
-            }
-
-            if (WagoDI.Current_Alarm_Code != AlarmCodes.None || WagoDO.Current_Alarm_Code != AlarmCodes.None)
-            {
-                return (false, "IO 模組異常");
-            }
-            EndLaserObstacleMonitor();
-            BuzzerPlayer.Stop();
-            DirectionLighter.CloseAll();
-            orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
-            IsWaitForkNextSegmentTask = false;
-            AGVSResetCmdFlag = false;
-            InitializeCancelTokenResourece = new CancellationTokenSource();
-            AlarmManager.ClearAlarm();
-            _RunTaskData = new clsTaskDownloadData();
-            SaveParameters(Parameters);
-            //嘗試定位
-            //_ = Task.Run(async () =>
-            //{
-            //    await LocalizationWithCurrentTag();
-            //});
-            HandshakeStatusText = "";
-            IsHandshaking = false;
-            return await Task.Run(async () =>
-            {
-                StopAllHandshakeTimer();
-                StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
-                try
+                if (!ModuleInformationUpdatedInitState)
                 {
-                    IsMotorReseting = false;
-                    await ResetMotor(false);
-                    (bool, string) result = await PreActionBeforeInitialize();
-                    if (!result.Item1)
+                    throw new VehicleInitializeException($"與車控系統通訊異常，不可進行初始化", true);
+                }
+
+                if (BatteryStatusOverview.StatusDown)
+                {
+                    throw new VehicleInitializeException($"電池狀態異常!禁止初始化!({BatteryStatusOverview.DownStatusDescription})", true);
+                }
+
+                if (GetSub_Status() == SUB_STATUS.RUN)
+                {
+                    throw new VehicleInitializeException($"當前狀態不可進行初始化(任務執行中)");
+                }
+
+                if (GetSub_Status() != SUB_STATUS.DOWN && (AGVC.ActionStatus == ActionStatus.ACTIVE || GetSub_Status() == SUB_STATUS.Initializing))
+                {
+                    string reason_string = GetSub_Status() != SUB_STATUS.RUN ? (GetSub_Status() == SUB_STATUS.Initializing ? "初始化程序執行中" : "任務進行中") : "AGV狀態為RUN";
+                    throw new VehicleInitializeException($"當前狀態不可進行初始化({reason_string})");
+                }
+
+                if (lastVisitedMapPoint.IsEquipment && lastVisitedMapPoint.StationType != STATION_TYPE.Elevator)
+                {
+                    throw new VehicleInitializeException("AGV位於設備內禁止初始化，請將AGV移動至道路Tag上", true);
+                }
+
+                if (WagoDI.Current_Alarm_Code != AlarmCodes.None || WagoDO.Current_Alarm_Code != AlarmCodes.None)
+                {
+                    throw new VehicleInitializeException("IO 模組異常", true);
+                }
+
+                if (CargoStateStorer.GetCargoType() == CST_TYPE.Unknown)
+                    throw new VehicleInitializeException("初始化檢查失敗-裝載未知類型的貨物", true);
+                if (CargoStateStorer.TrayCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
+                if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+
+                EndLaserObstacleMonitor();
+                BuzzerPlayer.Stop();
+                DirectionLighter.CloseAll();
+                orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
+                IsWaitForkNextSegmentTask = false;
+                AGVSResetCmdFlag = false;
+                InitializeCancelTokenResourece = new CancellationTokenSource();
+                AlarmManager.ClearAlarm();
+                _RunTaskData = new clsTaskDownloadData();
+                SaveParameters(Parameters);
+                //嘗試定位
+                //_ = Task.Run(async () =>
+                //{
+                //    await LocalizationWithCurrentTag();
+                //});
+                HandshakeStatusText = "";
+                IsHandshaking = false;
+                return await Task.Run(async () =>
+                {
+                    StopAllHandshakeTimer();
+                    StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
+                    try
                     {
+                        IsMotorReseting = false;
+                        await ResetMotor(false);
+                        (bool, string) result = await PreActionBeforeInitialize();
+                        if (!result.Item1)
+                        {
+                            IsInitialized = false;
+                            _Sub_Status = SUB_STATUS.ALARM;
+                            BuzzerPlayer.Alarm();
+                            StatusLighter.AbortFlash();
+                            return result;
+                        }
+
+                        InitializingStatusText = "初始化開始";
+                        SetSub_Status(SUB_STATUS.Initializing);
                         IsInitialized = false;
-                        _Sub_Status = SUB_STATUS.ALARM;
+
+                        result = await InitializeActions(InitializeCancelTokenResourece);
+                        if (!result.Item1)
+                        {
+                            SetSub_Status(SUB_STATUS.STOP);
+                            IsInitialized = false;
+                            StatusLighter.AbortFlash();
+                            return result;
+                        }
+                        await Task.Delay(500);
+                        InitializingStatusText = "雷射模式切換(Bypass)..";
+                        await Task.Delay(200);
+
+                        if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                            await (Laser as clsAMCLaser).ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bypass16);
+                        else
+                            await Laser.ModeSwitch(LASER_MODE.Bypass);
+
+
+                        await Laser.AllLaserDisable();
+
+                        StatusLighter.AbortFlash();
+                        DirectionLighter.CloseAll();
+
+                        InitializingStatusText = "初始化完成!";
+                        await Task.Delay(500);
+                        SetSub_Status(SUB_STATUS.IDLE);
+                        AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                        CarController.AGVS_SPEED_CONTROL_REQUEST = CarController.ROBOT_CONTROL_CMD.NONE;
+                        IsInitialized = true;
+                        logger.LogInformation("Init done, and Laser mode chaged to Bypass");
+                        clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                        return (true, "");
+                    }
+                    catch (TaskCanceledException ex)
+                    {
+                        StatusLighter.AbortFlash();
+                        _Sub_Status = SUB_STATUS.DOWN;
+                        IsInitialized = false;
+                        logger.LogCritical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
+                        return (false, $"AGV Initizlize Task Canceled! : \r\n{ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusLighter.AbortFlash();
+                        _Sub_Status = SUB_STATUS.DOWN;
                         BuzzerPlayer.Alarm();
-                        StatusLighter.AbortFlash();
-                        return result;
-                    }
-
-                    InitializingStatusText = "初始化開始";
-                    SetSub_Status(SUB_STATUS.Initializing);
-                    IsInitialized = false;
-
-                    result = await InitializeActions(InitializeCancelTokenResourece);
-                    if (!result.Item1)
-                    {
-                        SetSub_Status(SUB_STATUS.STOP);
                         IsInitialized = false;
-                        StatusLighter.AbortFlash();
-                        return result;
+                        return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
                     }
-                    await Task.Delay(500);
-                    InitializingStatusText = "雷射模式切換(Bypass)..";
-                    await Task.Delay(200);
 
-                    if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                        await (Laser as clsAMCLaser).ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bypass16);
-                    else
-                        await Laser.ModeSwitch(LASER_MODE.Bypass);
+                }, InitializeCancelTokenResourece.Token);
 
-
-                    await Laser.AllLaserDisable();
-
-                    StatusLighter.AbortFlash();
-                    DirectionLighter.CloseAll();
-
-                    InitializingStatusText = "初始化完成!";
-                    await Task.Delay(500);
-                    SetSub_Status(SUB_STATUS.IDLE);
-                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                    CarController.AGVS_SPEED_CONTROL_REQUEST = CarController.ROBOT_CONTROL_CMD.NONE;
-                    IsInitialized = true;
-                    logger.LogInformation("Init done, and Laser mode chaged to Bypass");
-                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-                    return (true, "");
-                }
-                catch (TaskCanceledException ex)
-                {
-                    StatusLighter.AbortFlash();
-                    _Sub_Status = SUB_STATUS.DOWN;
-                    IsInitialized = false;
-                    logger.LogCritical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
-                    return (false, $"AGV Initizlize Task Canceled! : \r\n{ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    StatusLighter.AbortFlash();
-                    _Sub_Status = SUB_STATUS.DOWN;
+            }
+            catch (VehicleInitializeException ex)
+            {
+                if (ex.alarmBuzzerOn)
                     BuzzerPlayer.Alarm();
-                    IsInitialized = false;
-                    return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
-                }
+                return (false, ex.Message);
+            }
+            finally
+            {
 
-            }, InitializeCancelTokenResourece.Token);
+            }
         }
 
         protected virtual async Task<(bool, string)> PreActionBeforeInitialize()
@@ -1237,16 +1236,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
         /// <summary>
-        /// 取得載物的類型 0:tray, 1:rack , 200:tray
-        /// </summary>
-        /// <returns></returns>
-        protected virtual int GetCargoType()
-        {
-            GetCargoStatus(out CST_TYPE cargoType);
-            return (int)cargoType;
-        }
-
-        /// <summary>
         /// Auto/Manual 模式切換
         /// </summary>
         /// <param name="mode"></param>
@@ -1266,120 +1255,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return true;
         }
-        internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
-        protected virtual CARGO_STATUS GetCargoStatus()
-        {
-            return GetCargoStatus(out _);
-        }
-
-        protected virtual CARGO_STATUS GetCargoStatus(out CST_TYPE cargoType)
-        {
-            cargoType = CST_TYPE.None;
-            if (Parameters.LDULD_Task_No_Entry)
-            {
-                return simulation_cargo_status;
-            }
-
-            if (!Parameters.CargoExistSensorParams.TraySensorMounted &&
-                Parameters.CargoExistSensorParams.RackSensorMounted && Parameters.CargoExistSensorParams.RackSensorNumber == 2)
-            {
-                //S1-5F
-
-                bool _rack1Exist = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1);
-                bool _rack2Exist = !WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2);
-                cargoType = CST_TYPE.Rack;
-                if (_rack1Exist && _rack2Exist)
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-                else if (!_rack1Exist && !_rack2Exist)
-                    return CARGO_STATUS.NO_CARGO;
-                else
-                    return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-            }
-
-
-            bool isRackSensorMounted = Parameters.CargoExistSensorParams.RackSensorMounted;
-            bool tray3SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_3 + "") != null;
-            bool tray4SensorMounted = WagoDI.VCSInputs.FirstOrDefault(input => input.Name == DI_ITEM.TRAY_Exist_Sensor_4 + "") != null;
-
-            bool _tray1Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_1);
-            bool _tray2Input = WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_2);
-            bool _tray3Input = tray3SensorMounted ? WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_3) : _tray1Input;
-            bool _tray4Input = tray4SensorMounted ? WagoDI.GetState(DI_ITEM.TRAY_Exist_Sensor_4) : _tray2Input;
-
-            bool _rack1Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_1) : _tray1Input;
-            bool _rack2Input = isRackSensorMounted ? WagoDI.GetState(DI_ITEM.RACK_Exist_Sensor_2) : _tray2Input;
-
-            Dictionary<DI_ITEM, bool> trayExistInputStates = new Dictionary<DI_ITEM, bool>()
-            {
-                { DI_ITEM.TRAY_Exist_Sensor_1, _tray1Input},
-                { DI_ITEM.TRAY_Exist_Sensor_2, _tray2Input},
-                { DI_ITEM.TRAY_Exist_Sensor_3, _tray3Input},
-                { DI_ITEM.TRAY_Exist_Sensor_4, _tray4Input},
-            };
-            Dictionary<DI_ITEM, bool> rackExistInputStates = new Dictionary<DI_ITEM, bool>()
-            {
-                { DI_ITEM.RACK_Exist_Sensor_1, _rack1Input},
-                { DI_ITEM.RACK_Exist_Sensor_2, _rack2Input},
-            };
-
-            IO_CONEECTION_POINT_TYPE sensorPointType = Parameters.CargoExistSensorParams.SensorPointType;
-            switch (sensorPointType)
-            {
-                case IO_CONEECTION_POINT_TYPE.A:
-                    bool _isTraySensorAllOn = trayExistInputStates.Values.All(state => state);
-                    bool _isRackSensorAllOn = rackExistInputStates.Values.All(state => state);
-                    bool _isTraySensorAnyOn = trayExistInputStates.Values.Any(state => state);
-                    bool _isRackSensorAnyOn = rackExistInputStates.Values.Any(state => state);
-
-                    if (_isTraySensorAllOn || _isRackSensorAllOn)
-                    {
-                        cargoType = _isTraySensorAllOn ? CST_TYPE.Tray : CST_TYPE.Rack;
-                        return CARGO_STATUS.HAS_CARGO_NORMAL;
-                    }
-                    else if (_isTraySensorAnyOn || _isRackSensorAnyOn)
-                    {
-                        cargoType = _isTraySensorAnyOn ? CST_TYPE.Tray : CST_TYPE.Rack;
-                        return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                    }
-                    else
-                    {
-                        cargoType = CST_TYPE.None;
-                        return CARGO_STATUS.NO_CARGO;
-                    }
-                case IO_CONEECTION_POINT_TYPE.B:
-                    bool _isTraySensorAllOff = trayExistInputStates.Values.All(state => !state);
-                    bool _isRackSensorAllOff = rackExistInputStates.Values.All(state => !state);
-                    bool _isTraySensorAnyOff = trayExistInputStates.Values.Any(state => !state);
-                    bool _isRackSensorAnyOff = rackExistInputStates.Values.Any(state => !state);
-
-                    if (_isTraySensorAllOff || _isRackSensorAllOff)
-                    {
-                        cargoType = _isTraySensorAllOff ? CST_TYPE.Tray : CST_TYPE.Rack;
-                        return CARGO_STATUS.HAS_CARGO_NORMAL;
-                    }
-                    else if (_isTraySensorAnyOff || _isRackSensorAnyOff)
-                    {
-                        cargoType = _isTraySensorAnyOff ? CST_TYPE.Tray : CST_TYPE.Rack;
-                        return CARGO_STATUS.HAS_CARGO_BUT_BIAS;
-                    }
-                    else
-                    {
-                        cargoType = CST_TYPE.None;
-                        return CARGO_STATUS.NO_CARGO;
-                    }
-                default:
-                    return CARGO_STATUS.HAS_CARGO_NORMAL;
-            }
-
-        }
-
-
-        internal virtual bool HasAnyCargoOnAGV()
-        {
-            var currentCargoStatus = GetCargoStatus();
-            return currentCargoStatus != CARGO_STATUS.NO_CARGO;
-        }
-
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
         {
             logger.LogInformation($"Query Virtual ID From AGVS  QueryType={QueryType.ToString()},CstType={CstType.ToString()}");

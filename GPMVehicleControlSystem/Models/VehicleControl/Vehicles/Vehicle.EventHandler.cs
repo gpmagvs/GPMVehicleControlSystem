@@ -25,6 +25,7 @@ using Microsoft.EntityFrameworkCore.Internal;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 using Microsoft.AspNetCore.SignalR;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -74,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 bool _rightBypass = Parameters.SensorBypass.RightSideLaserBypass;
                 return (_leftBypass, _rightBypass);
             };
-            clsOrderInfo.OnGetPortExistStatus += () => { return HasAnyCargoOnAGV(); };
+            clsOrderInfo.OnGetPortExistStatus += () => { return CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry); };
             OnParamEdited += (param) => { this.Parameters = param; };
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>
             {
@@ -189,7 +190,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             WagoDO.SubsSignalStateChange(DO_ITEM.Recharge_Circuit, (sender, state) => { frontendHubContext?.Clients.All.SendAsync("ReChargeCircuitChanged", state); });
-
+            CargoStateStore.trayExistSensorItems.ForEach(sensor =>
+            {
+                WagoDI.SubsSignalStateChange(sensor, (sender, state) => { CargoStateStorer.HandleCargoExistSensorStateChanged(sender, EventArgs.Empty); });
+            });
+            CargoStateStore.rackExistSensorItems.ForEach(sensor =>
+            {
+                WagoDI.SubsSignalStateChange(sensor, (sender, state) => { CargoStateStorer.HandleCargoExistSensorStateChanged(sender, EventArgs.Empty); });
+            });
         }
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)

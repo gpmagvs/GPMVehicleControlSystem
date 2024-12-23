@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
-            if (Agv.HasAnyCargoOnAGV())
+            if (Agv.CargoStateStorer.HasAnyCargoOnAGV(Agv.Parameters.LDULD_Task_No_Entry))
                 return (false, AlarmCodes.Has_Cst_Without_Job);
 
             return (true, AlarmCodes.None);
@@ -58,7 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
-            if (Agv.CargoStatus != Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
                 return (false, AlarmCodes.Has_Job_Without_Cst);
 
             return (true, AlarmCodes.None);

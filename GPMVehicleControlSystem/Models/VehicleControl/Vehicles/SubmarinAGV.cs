@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
@@ -71,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //向AGVS請求移除卡匣
             logger.LogTrace($"使用者進行'移除卡匣'操作");
             CSTReader.ValidCSTID = "";
-            simulation_cargo_status = CARGO_STATUS.NO_CARGO;
+            CargoStateStorer.simulation_cargo_status = CARGO_STATUS.NO_CARGO;
             return RETURN_CODE.OK;
         }
 

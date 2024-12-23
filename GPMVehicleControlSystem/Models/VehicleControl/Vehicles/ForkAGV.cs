@@ -292,7 +292,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
-                        double _speed_of_init = HasAnyCargoOnAGV() ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
+                        double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
                         forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
                     }
                     if (forkInitizeResult.done)

@@ -786,7 +786,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //在RACK取放貨且是空取空放模式
             if (IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
             {
-                Agv.simulation_cargo_status = action == ACTION_TYPE.Load ? Vehicle.CARGO_STATUS.NO_CARGO : Vehicle.CARGO_STATUS.HAS_CARGO_NORMAL;//模擬在席
+                Agv.CargoStateStorer.simulation_cargo_status = action == ACTION_TYPE.Load ? Vehicles.CargoStates.CARGO_STATUS.NO_CARGO : Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL;//模擬在席
                 return (true, AlarmCodes.None);
             }
 
@@ -1055,7 +1055,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
-            if (!Agv.HasAnyCargoOnAGV())
+            if (!Agv.CargoStateStorer.HasAnyCargoOnAGV(Agv.Parameters.LDULD_Task_No_Entry))
                 return (false, AlarmCodes.Has_Job_Without_Cst);
 
             return (true, AlarmCodes.None);
@@ -1072,7 +1072,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
                 return (true, AlarmCodes.None);
 
-            if (Agv.CargoStatus != Vehicle.CARGO_STATUS.NO_CARGO) //不該有料卻有料
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
 
             Agv.CSTReader.ValidCSTID = "";
