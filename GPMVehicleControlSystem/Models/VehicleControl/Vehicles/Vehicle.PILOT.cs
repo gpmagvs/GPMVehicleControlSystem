@@ -260,7 +260,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private bool GetAutoInitAcceptStateWithCargoStatus()
         {
-            bool hasCargoOnAGV = HasAnyCargoOnAGV();
+            bool hasCargoOnAGV = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry);
             return hasCargoOnAGV ?
                 Parameters.Advance.AutoInitAndOnlineWhenMoveWithCargo :
                 Parameters.Advance.AutoInitAndOnlineWhenMoveWithoutCargo;
