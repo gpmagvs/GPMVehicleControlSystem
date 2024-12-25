@@ -15,22 +15,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
         }
 
-        protected override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
-        {
-            return (true, AlarmCodes.None);
-        }
-
-        internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
+        internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
             if (!CSTTrigger)
             {
-                var cst_id_expect = RunningTaskData.CST.First().CST_ID;
-                if (cst_id_expect == null || cst_id_expect == "")
+                clsCST? cstInfo = RunningTaskData.CST.FirstOrDefault();
+                if (cstInfo == null)
+                {
+                    Agv.CSTReader.ValidCSTID = "";
                     return (true, AlarmCodes.None);
+                }
+                string cst_id_expect = cstInfo.CST_ID;
+                if (cst_id_expect == null || cst_id_expect == "")
+                {
+                    Agv.CSTReader.ValidCSTID = "";
+                    return (true, AlarmCodes.None);
+                }
                 Agv.CSTReader.ValidCSTID = cst_id_expect;
                 return (true, AlarmCodes.None);
             }
-            return CSTBarcodeRead().Result;
+            return CSTBarcodeRead(cancellationToken).Result;
         }
 
         /// <summary>
@@ -56,8 +60,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.HandshakeStatusText = "檢查在席狀態.(車上應有物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
+            {
+                Agv.CSTReader.ValidCSTID = "TrayUnknow";
                 return (true, AlarmCodes.None);
+            }
 
+
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
+                return (false, AlarmCodes.Has_Job_Without_Cst);
+            Agv.CSTReader.ValidCSTID = "TrayUnknow";
             try
             {
                 CST_TYPE orderCstTypeRequest = this.RunningTaskData.CST.FirstOrDefault().CST_Type;
@@ -75,9 +86,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 logger.Error(ex);
             }
-
-            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
-                return (false, AlarmCodes.Has_Job_Without_Cst);
 
             return (true, AlarmCodes.None);
         }

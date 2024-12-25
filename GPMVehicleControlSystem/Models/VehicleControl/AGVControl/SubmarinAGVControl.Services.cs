@@ -14,6 +14,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler<string> OnCSTReaderActionDone;
         private bool CSTActionDone = false;
         private ManualResetEvent WaitCSTReadActionDone = new ManualResetEvent(false);
+        private ManualResetEvent WaitCSTStopActionDone = new ManualResetEvent(false);
         private string CSTActionResult = "";
         /// <summary>
         /// CST READER 完成動作的 callback
@@ -23,7 +24,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         private bool CSTReaderDoneActionHandle(CSTReaderCommandRequest request, out CSTReaderCommandResponse response)
         {
-            logger.Trace($"CST Reader Action done,  {request.ToString()}");
+            logger.Trace($"CST Reader Action done, Response = {request.ToJson()}");
             CSTActionResult = request.command;
             response = new CSTReaderCommandResponse
             {
@@ -40,14 +41,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <exception cref="NotImplementedException"></exception>
         public override async Task<(bool request_success, bool action_done)> AbortCSTReader()
         {
+            WaitCSTStopActionDone.Reset();
             rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", StopCmdAckHandler,
               new CSTReaderCommandRequest() { command = "stop", model = "FORK" });
+
+            bool inTime = WaitCSTStopActionDone.WaitOne(TimeSpan.FromSeconds(3));
+            if (!inTime)
+                return (true, false);
             return (true, true);
         }
 
         private void StopCmdAckHandler(CSTReaderCommandResponse t)
         {
             logger.Info($"Stop CST Reader Cmd, CST READER ACK = {t.ToJson()}.");
+            WaitCSTStopActionDone.Set();
         }
 
         CSTReaderCommandResponse? cst_reader_confirm_ack = null;
@@ -60,7 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             try
             {
                 await CSTReadServiceSemaphoreSlim.WaitAsync();
-                await Task.Delay(1);
+                await AbortCSTReader();
                 wait_cst_ack_MRE = new ManualResetEvent(false);
                 cst_reader_confirm_ack = null;
                 var cst_reader_command = "read_try";
@@ -140,12 +147,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         await Task.Delay(800);
                         string cst_id = "";
 
-                        CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(3)); //這邊是要檢查 module_info.CSTReader.data 結果 
 
                         while (isReadFail(out cst_id))
                         {
                             await Task.Delay(1000);
-                            logger.Warn($"Wait CST Reader Try read done...{cst_id}");
+                            logger.Warn($"Wait and Checkout ModuleInfo.CSTReader.data:{cst_id}");
                             if (cancel.IsCancellationRequested)
                             {
                                 AbortCSTReader();

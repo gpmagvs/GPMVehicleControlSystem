@@ -472,25 +472,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 back_to_secondary_flag = false;
                 await Task.Delay(1000);
 
-                if (CargoTransferMode == CARGO_TRANSFER_MODE.EQ_Pick_and_Place && ForkLifter != null && isNeedArmExtend)
-                {
+                (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
+                if (!forkActionResult.success)
+                    return forkActionResult;
+
+                //檢查在席
+                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
+                if (!CstExistCheckResult.confirm)
+                    return (false, CstExistCheckResult.alarmCode);
+
+                if (ForkLifter != null && isNeedArmExtend)
                     ForkLifter.ForkShortenInAsync();
-                }
-                else
-                {
-                    (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
-                    if (!forkActionResult.success)
-                        return forkActionResult;
-
-                }
-
-                if (action == ACTION_TYPE.Unload)
-                {
-                    Agv.CSTReader.ValidCSTID = "TrayUnknow";
-                }
-                else
-                    Agv.CSTReader.ValidCSTID = "";
-
 
                 return await StartBackToHome();
             }
@@ -618,6 +610,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         private async Task<AlarmCodes> AfterBackHomeActions(ActionStatus status)
         {
+
             if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
             {
                 logger.Warn($"車控/車載狀態錯誤(車控Action 狀態:{status},車載狀態 {Agv.GetSub_Status()})");
@@ -627,6 +620,39 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (status == ActionStatus.SUCCEEDED)
             {
+                bool isForkReachStandyHeight = false;
+                bool AsyncCSTReadSuccess = action == ACTION_TYPE.Load ? true : false;
+                CancellationTokenSource asyncCSTReadCancellationTokenSource = new CancellationTokenSource();
+                if (action == ACTION_TYPE.Unload)
+                {
+                    //邊降邊拍
+                    AsyncCSTReadSuccess = false;
+                    _ = Task.Run(async () =>
+                    {
+                        (bool success, AlarmCodes alarmCode) AsyncCstReaderTriggerResult = (false, AlarmCodes.Read_Cst_ID_Fail);
+                        while (!isForkReachStandyHeight)
+                        {
+                            try
+                            {
+                                await Task.Delay(1, asyncCSTReadCancellationTokenSource.Token);
+                                AsyncCstReaderTriggerResult = await CSTBarcodeReadAfterAction(asyncCSTReadCancellationTokenSource.Token);
+                                AsyncCSTReadSuccess = AsyncCstReaderTriggerResult.success;
+                                if (AsyncCSTReadSuccess)
+                                {
+                                    break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                AsyncCSTReadSuccess = false;
+                                return;
+                            }
+                        }
+
+                    });
+
+                }
+
                 await Task.Delay(200);
                 if (Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                 {
@@ -648,7 +674,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Task.WaitAll(new Task[] { forkGoHomeTask });
                     logger.Trace($"[Async Action] Fork is at safe height Now");
                 }
-
+                asyncCSTReadCancellationTokenSource.Cancel();
+                isForkReachStandyHeight = true;
                 var HSResult = await AGVCOMPTHandshake(statusDownWhenErr: false);
                 //RestoreEQHandshakeConnectionMode();
                 if (!HSResult.confirm)
@@ -658,7 +685,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     Agv.ResetHandshakeSignals();
                 }
 
-                (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = CSTBarcodeReadAfterAction().Result;
+                (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = AsyncCSTReadSuccess ? (true, AlarmCodes.None) : CSTBarcodeReadAfterAction(new CancellationToken()).Result;
                 if (!CstBarcodeCheckResult.success)
                 {
                     AlarmCodes cst_read_fail_alarm = CstBarcodeCheckResult.alarmCode;
@@ -795,64 +822,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 
-            //檢查在席
-            (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
-            if (!CstExistCheckResult.confirm)
-                return (false, CstExistCheckResult.alarmCode);
-
-            if (isNeedArmExtend)
-            {
-                await Task.Delay(700);
-                var FormArmShortenTask = Task.Run(async () =>
-                {
-                    Agv.HandshakeStatusText = "AGV牙叉縮回中";
-                    var arm_move_result = await ForkLifter.ForkShortenInAsync();
-                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
-                    {
-                        await Task.Delay(1);
-                        if (cts.IsCancellationRequested)
-                        {
-                            return (false, AlarmCodes.Fork_Arm_Pose_Error);
-                        }
-                    }
-
-                    if (!arm_move_result.confirm)
-                    {
-                        return (false, AlarmCodes.Action_Timeout);
-                    }
-                    if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
-                    {
-                        return (false, AlarmCodes.Fork_Arm_Pose_Error);
-                    }
-                    return (true, AlarmCodes.None);
-                });
-
-                if (!Agv.Parameters.ForkAGV.NoWaitForkArmFinishAndMoveOutInWorkStation)
-                {
-                    await FormArmShortenTask;
-                    await Task.Delay(1000);
-                }
-            }
-
             return (true, AlarmCodes.None);
         }
 
         private AlarmCodes CheckAGVStatus(bool check_park_position = true, bool check_cargo_exist_state = false)
         {
             logger.Info($"Check AGV Status--({Agv.BarcodeReader.CurrentTag}/{RunningTaskData.Destination})");
-
-            //檢查在席
-            if (check_cargo_exist_state)
-            {
-
-                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
-                if (!CstExistCheckResult.confirm)
-                {
-                    return CstExistCheckResult.alarmCode;
-                }
-            }
-
             string parkDirection = "";
             double parkError = 0;
             double parkTolerance = Agv.Parameters.TagParkingTolerance;
@@ -963,14 +938,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
         }
 
-        protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadBeforeAction()
-        {
-            if (!CSTTrigger)
-                return (true, AlarmCodes.None);
-            return await CSTBarcodeRead();
-        }
-
-        internal virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction()
+        internal virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
 
             Agv.CSTReader.ValidCSTID = "";
@@ -978,7 +946,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             return (true, AlarmCodes.None);
         }
 
-        protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead()
+        protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead(CancellationToken cancellationToken)
         {
             (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(CstInformation.CST_Type);
             if (!result.request_success || !result.action_done)
@@ -992,7 +960,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 cts.CancelAfter(3000);
                 while (Agv.CSTReader.Data.data == "")
                 {
-                    await Task.Delay(1);
+                    try
+                    {
+                        await Task.Delay(1, cancellationToken);
+                    }
+                    catch (Exception)
+                    {
+                        return (false, AlarmCodes.Read_Cst_ID_Interupted);
+                    }
+
                     if (cts.IsCancellationRequested)
                     {
                         return (false, AlarmCodes.Read_Cst_ID_Fail_Service_Done_But_Topic_No_CSTID);
@@ -1070,13 +1046,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             Agv.HandshakeStatusText = "檢查在席狀態.(車上應無物料)";
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
+            {
+                Agv.CSTReader.ValidCSTID = "";
                 return (true, AlarmCodes.None);
+            }
 
             if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
-
             Agv.CSTReader.ValidCSTID = "";
-
             return (true, AlarmCodes.None);
         }
 

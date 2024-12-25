@@ -1447,10 +1447,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return BarcodeReader.Data.tagID != 0 && lastVisitedMapPoint.IsCharge;
         }
 
-        /// <summary>
-        /// 確認當下是否可以進行Z軸回HOME動作
-        /// </summary>
-        /// <returns>true:可回HOME; false:禁止回HOME</returns>
         internal async Task SendNotifyierToFrontend(string message, string title = "AGV Message", AlarmCodes alarmCode = AlarmCodes.None)
         {
             await frontendHubContext.Clients.All.SendAsync("AGV-Notify-Message", new { title = title, message = message, alarmCode = alarmCode });
