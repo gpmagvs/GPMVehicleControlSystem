@@ -23,7 +23,6 @@ var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentCla
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-OTAHelper.TryStartOTAServiceAPP();
 Console.Title = $"車載系統-V{StaStored.APPVersion}";
 LinuxTools.SaveCurrentProcessPID();
 
