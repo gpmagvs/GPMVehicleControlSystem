@@ -33,6 +33,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         private bool IsLaserRecoveryHandled = false;
         internal bool WaitingForChargeStatusChangeFlag = false;
+        private Debouncer _vehicleDirectionChangedDebouncer = new Debouncer();
+
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
             get
@@ -938,36 +940,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
+
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             Laser.agvDirection = direction;
-            await Task.Run(async () =>
+            _vehicleDirectionChangedDebouncer.Debounce(() =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
-                {
                     Laser.LaserChangeByAGVDirection(sender, direction);
-                    //if (direction == AGV_DIRECTION.BYPASS)
-                    //{
-                    //    while (!IsAllLaserNoTrigger())
-                    //    {
-                    //        await Task.Delay(100);
-                    //    }
-                    //    if (Navigation.Direction == AGV_DIRECTION.LEFT || Navigation.Direction == AGV_DIRECTION.RIGHT)
-                    //    {
-                    //        logger.LogWarning($"車控要求雷射bypass後且已無障礙物 雷射切換為 {LASER_MODE.Turning}");
-                    //        await Laser.ModeSwitch(LASER_MODE.Turning);
-                    //    }
-                    //    else
-                    //    {
-                    //        await Laser.ModeSwitch(Laser.AgvsLsrSetting);
-                    //        logger.LogWarning($"車控要求雷射bypass後且已無障礙物 雷射切換為 {Laser.AgvsLsrSetting}");
-                    //    }
-                    //}
-                }
-            }).ContinueWith(t =>
-            {
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            }).ConfigureAwait(false);
+            }, 300);
         }
 
         private async Task _CheckLaserStateAfter(int _oriLaser)

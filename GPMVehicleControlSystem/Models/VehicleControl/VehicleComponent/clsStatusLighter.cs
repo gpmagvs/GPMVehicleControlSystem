@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -6,7 +7,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsStatusLighter : Lighter
     {
-        private SemaphoreSlim seSlim = new SemaphoreSlim(1, 1);
+        private Debouncer _Debouncer = new Debouncer();
         public clsStatusLighter(clsDOModule DOModule) : base(DOModule)
         {
 
@@ -14,139 +15,76 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task CloseAll(int delay_ms = 10)
         {
-            try
-            {
-                await seSlim.WaitAsync();
-                AbortFlash();
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+            AbortFlash();
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
         }
 
         public override async Task OpenAll()
         {
-            try
-            {
-                await seSlim.WaitAsync();
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
-            }
-            catch
-            {
-
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
         }
         public async void RUN()
         {
-            try
+            _Debouncer.Debounce(async () =>
             {
-                await seSlim.WaitAsync();
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false).ContinueWith(async t =>
+                try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false).ContinueWith(async t =>
-                    {
-                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
-                    });
-                });
-            }
-            catch
-            {
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+                }
+                catch (Exception ex)
+                {
 
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+                }
+            }, 300);
         }
         public async void DOWN()
         {
-            try
+            _Debouncer.Debounce(async () =>
             {
-                await seSlim.WaitAsync();
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false).ContinueWith(async t =>
+                try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false).ContinueWith(async t =>
-                    {
-                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+                }
+                catch (Exception ex)
+                {
 
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+                }
+            }, 300);
         }
         public async void IDLE()
         {
-            try
+            _Debouncer.Debounce(async () =>
             {
-                await seSlim.WaitAsync();
-                await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false).ContinueWith(async t =>
+                try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false).ContinueWith(async t =>
-                    {
-                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }, 300);
         }
         public async Task ONLINE()
         {
-            try
-            {
-                await seSlim.WaitAsync();
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
-            }
-            catch (Exception ex)
-            {
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+            DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
         }
         public async Task OFFLINE()
         {
-            try
-            {
-                await seSlim.WaitAsync();
-                DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
-            }
-            catch (Exception ex)
-            {
-            }
-            finally
-            {
-                seSlim.Release();
-            }
+
+            DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
         }
 
         internal void InActiveGreen()
