@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -37,8 +38,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
-        public ForkAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(logger, agvsLogger, frontendHubContext)
+        public ForkAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
         {
+
+        }
+        internal override async Task CreateAsync()
+        {
+            await base.CreateAsync();
             ForkLifter = new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
@@ -49,7 +55,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogInformation($"FORK AGV 搭載Pin模組?{PinHardware != null}");
             ForkMovingProtectedProcess();
         }
-
         protected internal override async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             await base.InitAGVControl(RosBridge_IP, RosBridge_Port);

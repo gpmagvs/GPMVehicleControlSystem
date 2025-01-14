@@ -15,11 +15,11 @@
 		<UpdateAssemblyVersion>True</UpdateAssemblyVersion>
 		<UpdateAssemblyFileVersion>True</UpdateAssemblyFileVersion>
 		<UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
-		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementOnDemand</AssemblyVersionSettings>
+		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementOnDemand.IncrementOnDemandWithResetOnIncrease</AssemblyVersionSettings>
 		<UpdatePackageVersion>False</UpdatePackageVersion>
 		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
 		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
-		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementOnDemand</AssemblyFileVersionSettings>
+		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementOnDemand.IncrementOnDemandWithResetOnIncrease</AssemblyFileVersionSettings>
 		<IsPublishable>True</IsPublishable>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -33,14 +33,14 @@
 		<UpdatePackageVersion>False</UpdatePackageVersion>
 		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
 		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
-		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.DayOfYearStamp.IncrementOnDemand</AssemblyFileVersionSettings>
+		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementOnDemand.IncrementOnDemandWithResetOnIncrease</AssemblyFileVersionSettings>
 		<IsPublishable>True</IsPublishable>
-		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemandWithResetOnIncrease.DayOfYearStamp.IncrementOnDemand</AssemblyVersionSettings>
+		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemandWithResetOnIncrease.IncrementOnDemand.IncrementOnDemandWithResetOnIncrease</AssemblyVersionSettings>
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.2.13.20</AssemblyVersion>
-		<FileVersion>3.2.13.20</FileVersion>
+		<AssemblyVersion>3.2.15.1</AssemblyVersion>
+		<FileVersion>3.2.15.1</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />

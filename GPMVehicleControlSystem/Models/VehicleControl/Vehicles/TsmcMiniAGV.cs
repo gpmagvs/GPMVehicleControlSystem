@@ -7,6 +7,7 @@ using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
@@ -42,7 +43,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public event EventHandler<clsMeasureResult> OnMeasureComplete;
 
-        public TsmcMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(logger, agvsLogger, frontendHubContext)
+        public TsmcMiniAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
+        {
+
+        }
+        internal override async Task CreateAsync()
         {
             WheelDrivers = new clsDriver[] {
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_FORWARD},
@@ -50,6 +55,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.RIGHT_BACKWARD},
              new clsDriver{ location = clsDriver.DRIVER_LOCATION.LEFT_BACKWARD},
              };
+            await base.CreateAsync();
+
         }
 
         protected InspectorAGVCarController? MiniAgvAGVC = new InspectorAGVCarController();

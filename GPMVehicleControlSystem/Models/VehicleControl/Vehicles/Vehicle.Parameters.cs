@@ -1,9 +1,11 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch;
+using GPMVehicleControlSystem.Models.Exceptions;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using NLog;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
@@ -64,26 +66,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
         public static Action<clsVehicelParam> OnParamEdited;
-        public static clsVehicelParam LoadParameters(string filepath = null)
+        public static async Task<clsVehicelParam> LoadParameters(string filepath = null)
         {
             Logger logger = LogManager.GetLogger(typeof(Vehicle).Name);
+            clsVehicelParam? Parameters = new clsVehicelParam();
+            string param_file = filepath != null ? filepath : ParametersFilePath.ToString();
             try
             {
-                clsVehicelParam? Parameters = new clsVehicelParam();
-                string param_file = filepath != null ? filepath : ParametersFilePath.ToString();
                 if (File.Exists(param_file))
                 {
                     string param_json = File.ReadAllText(param_file);
                     Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
+                    if (Parameters != null)
+                        await SaveParameters(Parameters);
+                    else
+                        throw new VehicleInstanceInitializeFailException($"Load Param Fail! Null refrence( Parameters equal Null when 'JsonConvert.DeserializeObject<clsVehicelParam>(param_json);' code line invoked)");
                 }
-                SaveParameters(Parameters);
+                else
+                    throw new VehicleInstanceInitializeFailException($"Load Param Fail! File not found({param_file})");
+
                 logger.Trace("Parameters Load done");
                 return Parameters;
+            }
+            catch (JsonReaderException ex)
+            {
+                throw new VehicleInstanceInitializeFailException($"車載系統參數異常!請確認{param_file}內容({ex.Message})");
+            }
+            catch (VehicleInstanceInitializeFailException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {
                 logger.Error(ex);
-                return null;
+                throw new VehicleInstanceInitializeFailException($"讀取系統參數異常!({ex.Message})");
             }
         }
 

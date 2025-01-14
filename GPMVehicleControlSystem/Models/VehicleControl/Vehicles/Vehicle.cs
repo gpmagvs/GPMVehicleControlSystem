@@ -262,72 +262,77 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal ILogger<Vehicle> logger;
         internal ILogger<clsAGVSConnection> agvsLogger;
         internal IHubContext<FrontendHub> frontendHubContext;
-        public Vehicle(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext)
+        public Vehicle(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext)
         {
             try
             {
                 this.logger = logger;
                 this.agvsLogger = agvsLogger;
                 this.frontendHubContext = frontendHubContext;
-                HandShakeLogger = LogManager.GetCurrentClassLogger();
-                Parameters = LoadParameters();
-                Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
-                IMU.Options = Parameters.ImpactDetection;
-                CIMConnectionInitialize();
-                LoadWorkStationConfigs();
-                logger.LogTrace($"{GetType().Name} Start create instance...");
-                ReadTaskNameFromFile();
-                IsSystemInitialized = false;
-                Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
-                Params.clsConnectionParam rosbridge_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.RosBridge];
-                string Wago_IP = wago_connection_params.IP;
-                int Wago_Port = wago_connection_params.Port;
-                int Wago_Protocol_Interval_ms = wago_connection_params.Protocol_Interval_ms;
-                int LastVisitedTag = Parameters.LastVisitedTag;
-                string RosBridge_IP = rosbridge_connection_params.IP;
-                int RosBridge_Port = rosbridge_connection_params.Port;
-                WagoDO = new clsDOModule(Wago_IP, Wago_Port)
-                {
-                    AgvType = Parameters.AgvType,
-                    Version = Parameters.Version,
-                };
-                WagoDI = new clsDIModule(Wago_IP, Wago_Port, Wago_Protocol_Interval_ms)
-                {
-                    AgvType = Parameters.AgvType,
-                    Version = Parameters.Version
-                };
-                DirectionLighter.DOModule = WagoDO;
-                CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext);
-                StatusLighter = new clsStatusLighter(WagoDO);
-                CreateLaserInstance();
-
-
-                List<Task> WagoAndRosInitTasks = new List<Task>
-                {
-                    WagoDIInit(),
-                    RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag)
-                };
-
-                Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
-                {
-
-                    while (!ModuleInformationUpdatedInitState && Parameters.AgvType != AGV_TYPE.SUBMERGED_SHIELD_Parts)
-                    {
-                        await Task.Delay(1000);
-                    }
-                    await Startup();
-                    HandshakeLog("Hello!World!");
-                    BuzzerPlayer.Alarm();
-                });
+                _Parameters = param;
             }
             catch (Exception ex)
             {
                 IsSystemInitialized = false;
                 string msg = $"車輛實例化時於建構函式發生錯誤 : {ex.Message}:{ex.StackTrace}";
-                throw ex;
+                throw new Exceptions.VehicleInstanceInitializeFailException(msg);
             }
 
         }
+
+        internal virtual async Task CreateAsync()
+        {
+            HandShakeLogger = LogManager.GetCurrentClassLogger();
+            Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
+            IMU.Options = Parameters.ImpactDetection;
+            CIMConnectionInitialize();
+            LoadWorkStationConfigs();
+            logger.LogTrace($"{GetType().Name} Start create instance...");
+            ReadTaskNameFromFile();
+            IsSystemInitialized = false;
+            Params.clsConnectionParam wago_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.Wago];
+            Params.clsConnectionParam rosbridge_connection_params = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.RosBridge];
+            string Wago_IP = wago_connection_params.IP;
+            int Wago_Port = wago_connection_params.Port;
+            int Wago_Protocol_Interval_ms = wago_connection_params.Protocol_Interval_ms;
+            int LastVisitedTag = Parameters.LastVisitedTag;
+            string RosBridge_IP = rosbridge_connection_params.IP;
+            int RosBridge_Port = rosbridge_connection_params.Port;
+            WagoDO = new clsDOModule(Wago_IP, Wago_Port)
+            {
+                AgvType = Parameters.AgvType,
+                Version = Parameters.Version,
+            };
+            WagoDI = new clsDIModule(Wago_IP, Wago_Port, Wago_Protocol_Interval_ms)
+            {
+                AgvType = Parameters.AgvType,
+                Version = Parameters.Version
+            };
+            DirectionLighter.DOModule = WagoDO;
+            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext);
+            StatusLighter = new clsStatusLighter(WagoDO);
+            CreateLaserInstance();
+
+
+            List<Task> WagoAndRosInitTasks = new List<Task>
+                {
+                    WagoDIInit(),
+                    RosConnAsync(RosBridge_IP, RosBridge_Port, LastVisitedTag)
+                };
+
+            Task.WhenAll(WagoAndRosInitTasks).ContinueWith(async t =>
+            {
+
+                while (!ModuleInformationUpdatedInitState && Parameters.AgvType != AGV_TYPE.SUBMERGED_SHIELD_Parts)
+                {
+                    await Task.Delay(1000);
+                }
+                await Startup();
+                HandshakeLog("Hello!World!");
+                BuzzerPlayer.Alarm();
+            });
+        }
+
         public virtual async void StartPublishIOListsMsg()
         {
             await Task.Delay(10);
@@ -677,7 +682,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 AlarmManager.ClearAlarm();
                 _RunTaskData = new clsTaskDownloadData();
-                SaveParameters(Parameters);
                 //嘗試定位
                 //_ = Task.Run(async () =>
                 //{

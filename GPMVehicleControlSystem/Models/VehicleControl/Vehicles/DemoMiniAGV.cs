@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
 using Microsoft.AspNetCore.SignalR;
 using System.Net.Sockets;
@@ -37,9 +38,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public DemoMiniAGV(ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(logger, agvsLogger, frontendHubContext)
+        public DemoMiniAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
         {
-            logger.LogInformation("Demo Mini AGV Created.");
         }
         protected override async Task DOSignalDefaultSetting()
         {

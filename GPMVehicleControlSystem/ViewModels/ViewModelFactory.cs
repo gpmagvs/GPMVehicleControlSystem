@@ -17,12 +17,15 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.Exceptions;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
     public class ViewModelFactory
     {
         internal static Vehicle AGV => StaStored.CurrentVechicle;
+
+        public static VehicleInstanceInitializeFailException VehicleInstanceCreateFailException { get; internal set; }
 
         internal static AGVCStatusVM GetVMSStatesVM()
         {

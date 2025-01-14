@@ -3,6 +3,7 @@ using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.CPUUsage;
 using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.Tools.NetworkStatus;
+using Microsoft.AspNetCore.SignalR;
 using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Service
@@ -10,10 +11,12 @@ namespace GPMVehicleControlSystem.Service
     public class SystemLoadingMonitorBackgroundServeice : BackgroundService
     {
         ILogger<SystemLoadingMonitorBackgroundServeice> logger;
-        public SystemLoadingMonitorBackgroundServeice(ILogger<SystemLoadingMonitorBackgroundServeice> logger)
+        IHubContext<FrontendHub> _hubContext;
+        public SystemLoadingMonitorBackgroundServeice(ILogger<SystemLoadingMonitorBackgroundServeice> logger, IHubContext<FrontendHub> hubContext)
         {
 
             this.logger = logger;
+            _hubContext = hubContext;
         }
 
         public static double CurrentCPU = 0;
@@ -68,7 +71,15 @@ namespace GPMVehicleControlSystem.Service
                 while (true)
                 {
                     List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
+
                     logger.LogInformation(disksStates.ToJson(Newtonsoft.Json.Formatting.None));
+                    string[] homeDiskNames = new[] { "c:", "home" };
+                    DiskUsageState homeDiskUsage = disksStates.FirstOrDefault(s => homeDiskNames.Any(n => s.Name.ToLower().Contains(n)));
+                    if (homeDiskUsage != null && homeDiskUsage.TotalAvailableSpace < 10)
+                    {
+                        _hubContext.Clients.All.SendAsync("DiskUsageError", $"{homeDiskUsage.Name} 磁碟容量即將不足!剩餘:{homeDiskUsage.TotalAvailableSpace} G");
+                    }
+
                     //Console.WriteLine(disksStates.ToJson());
                     await Task.Delay(5000);
                 }

@@ -46,6 +46,11 @@ namespace GPMVehicleControlSystem.Service
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(180, stoppingToken);
+                if (ViewModelFactory.VehicleInstanceCreateFailException != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("VehicleError", ViewModelFactory.VehicleInstanceCreateFailException.Message);
+                    continue;
+                }
                 try
                 {
                     Dictionary<string, object> _ws_data_store = new Dictionary<string, object>();

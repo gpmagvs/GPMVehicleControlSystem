@@ -151,6 +151,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return result;
         }
 
-
     }
 }

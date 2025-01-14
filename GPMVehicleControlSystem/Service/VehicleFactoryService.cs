@@ -3,8 +3,10 @@ using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.Exceptions;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Tools.DiskUsage;
+using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using static AGVSystemCommonNet6.clsEnums;
 
@@ -29,7 +31,7 @@ namespace GPMVehicleControlSystem.Service
         {
             try
             {
-                var param = Vehicle.LoadParameters();
+                Models.VehicleControl.Vehicles.Params.clsVehicelParam param = await Vehicle.LoadParameters();
 
                 AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
                 bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
@@ -61,22 +63,28 @@ namespace GPMVehicleControlSystem.Service
                 logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
                 if (param.AgvType == AGV_TYPE.FORK)
                 {
-                    StaStored.CurrentVechicle = new ForkAGV(vehicleLogger, agvsLogger, hubContext);
+                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleLogger, agvsLogger, hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
                 {
-                    StaStored.CurrentVechicle = new SubmarinAGV(vehicleLogger, agvsLogger, hubContext);
+                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleLogger, agvsLogger, hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
                 {
                     if (param.Version == 1)
-                        StaStored.CurrentVechicle = new TsmcMiniAGV(vehicleLogger, agvsLogger, hubContext);
+                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleLogger, agvsLogger, hubContext);
                     else
-                        StaStored.CurrentVechicle = new DemoMiniAGV(vehicleLogger, agvsLogger, hubContext);
+                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleLogger, agvsLogger, hubContext);
                 }
-
+                await StaStored.CurrentVechicle.CreateAsync();
                 logger.LogInformation($"Vehicle-{param.AgvType} Created！！");
                 //LinuxTools.SysLoadingLogProcess();
+            }
+            catch (VehicleInstanceInitializeFailException ex)
+            {
+                logger.LogCritical(ex, $"建立車輛時發生錯誤:{ex.Message}");
+                ViewModelFactory.VehicleInstanceCreateFailException = ex;
+                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, true);
             }
             catch (Exception ex)
             {
