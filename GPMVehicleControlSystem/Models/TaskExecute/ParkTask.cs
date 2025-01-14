@@ -6,7 +6,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class ParkTask : ChargeTask
     {

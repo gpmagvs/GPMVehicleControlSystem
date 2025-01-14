@@ -14,7 +14,7 @@ using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class NormalMoveTask : TaskBase
     {
@@ -138,77 +138,72 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     var _currentTag = Agv.BarcodeReader.CurrentTag;
                     if (_currentTag == null)
                         continue;
-                    if (NextSecondartPointTag == _currentTag)
+                    if (NextSecondartPointTag != _currentTag)
+                        continue;
+                    if (Agv.AGVC.CycleStopActionExecuting)
                     {
-                        if (Agv.AGVC.CycleStopActionExecuting)
+                        break;
+                    }
+                    var isunLoad = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
+                    var ischarge = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
+
+                    logger.Warn($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
+                    try
+                    {
+                        double _position_aim = 0;
+                        if (!Agv.WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
                         {
+                            AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
+                            Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
                             break;
                         }
-                        var isunLoad = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
-                        var ischarge = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
-
-                        logger.Warn($"抵達二次定位點 TAG{_currentTag} 牙叉準備上升({Agv._RunTaskData.OrderInfo.ActionName})");
-                        try
+                        var orderInfo = Agv._RunTaskData.OrderInfo;
+                        bool isCarryOrder = orderInfo.ActionName == ACTION_TYPE.Carry;
+                        var height = 0;
+                        if (isCarryOrder)
                         {
-                            double _position_aim = 0;
-                            if (Agv.WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
-                            {
-                                var orderInfo = Agv._RunTaskData.OrderInfo;
-                                bool isCarryOrder = orderInfo.ActionName == ACTION_TYPE.Carry;
-                                var height = 0;
-                                if (isCarryOrder)
-                                {
-                                    bool isNextGoalEqualSource = orderInfo.NextAction == ACTION_TYPE.Unload;
-                                    if (isNextGoalEqualSource)
-                                        height = orderInfo.SourceSlot;
-                                    else
-                                        height = orderInfo.DestineSlot;
-                                }
-                                else
-                                {
-                                    height = orderInfo.NextAction == ACTION_TYPE.Charge ? 0 : orderInfo.DestineSlot;
-                                }
-
-                                if (_stationData.LayerDatas.TryGetValue(height, out WorkStation.clsStationLayerData? _settings))
-                                {
-                                    _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
-                                    var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
-                                    logger.Warn($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
-
-                                    Task.Run(async () =>
-                                    {
-                                        Agv.ForkLifter.IsHeightPreSettingActionRunning = true;
-                                        var result = await Agv.ForkLifter.ForkPose(_Height_PreAction, 1);
-                                        Agv.ForkLifter.IsHeightPreSettingActionRunning = false;
-                                        if (!result.confirm)
-                                        {
-                                            Abort(AlarmCodes.Fork_Action_Aborted);
-                                        }
-                                    });
-                                    break;
-                                }
-                                else
-                                {
-                                    AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
-                                    Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
-                                    break;
-                                }
-                            }
+                            bool isNextGoalEqualSource = orderInfo.NextAction == ACTION_TYPE.Unload;
+                            if (isNextGoalEqualSource)
+                                height = orderInfo.SourceSlot;
                             else
-                            {
-                                AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
-                                Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
-                                break;
-                            }
+                                height = orderInfo.DestineSlot;
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            logger.Error(ex, ex.Message);
+                            height = orderInfo.NextAction == ACTION_TYPE.Charge ? 0 : orderInfo.DestineSlot;
+                        }
+
+                        if (_stationData.LayerDatas.TryGetValue(height, out WorkStation.clsStationLayerData? _settings))
+                        {
+                            _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
+                            var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
+                            logger.Warn($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
+
+                            Task.Run(async () =>
+                            {
+                                Agv.ForkLifter.IsHeightPreSettingActionRunning = true;
+                                var result = await Agv.ForkLifter.ForkPose(_Height_PreAction, 1);
+                                Agv.ForkLifter.IsHeightPreSettingActionRunning = false;
+                                if (!result.confirm)
+                                {
+                                    Abort(AlarmCodes.Fork_Action_Aborted);
+                                }
+                            });
+                            break;
+                        }
+                        else
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
                             Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
                             break;
                         }
                     }
-
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, ex.Message);
+                        Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                        break;
+                    }
                 }
                 logger.Trace($"牙叉提前上升至安全位置程序結束..");
             });
@@ -219,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
-            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL)
+            if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) == CARGO_STATUS.HAS_CARGO_NORMAL)
             {
                 if (!Agv.IsCargoBiasDetecting)
                 {
@@ -258,7 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 logger.Info($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
                 CancellationTokenSource cts = new CancellationTokenSource();
                 cts.CancelAfter(10000);
-                while (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                while (Agv.AGVC.ActionStatus != ActionStatus.ACTIVE)
                 {
                     await Task.Delay(1);
                     if (cts.IsCancellationRequested)
@@ -269,18 +264,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                 }
                 logger.Info($"Start Cargo Bias Detection.");
-                while (_GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
+                while (_GetCargoStatus() == CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
                 {
                     await Task.Delay(1);
-                    if (Agv.AGVC.ActionStatus != RosSharp.RosBridgeClient.Actionlib.ActionStatus.ACTIVE)
+                    if (Agv.AGVC.ActionStatus != ActionStatus.ACTIVE)
                     {
                         break;
                     }
-                    if (_GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_BUT_BIAS || _GetCargoStatus() == Vehicles.CargoStates.CARGO_STATUS.NO_CARGO)
+                    if (_GetCargoStatus() == CARGO_STATUS.HAS_CARGO_BUT_BIAS || _GetCargoStatus() == CARGO_STATUS.NO_CARGO)
                     {
                         logger.Warn($"貨物傾倒偵測觸發-Check1");
                         await Task.Delay(500); //避免訊號瞬閃導致誤偵測
-                        if (_GetCargoStatus() != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL)
+                        if (_GetCargoStatus() != CARGO_STATUS.HAS_CARGO_NORMAL)
                         {
                             logger.Error($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
                             Agv.IsCargoBiasTrigger = true;
@@ -303,7 +298,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             var _agvcActionStatus = Agv.AGVC.ActionStatus;
             if (_agvcActionStatus == ActionStatus.ACTIVE || _agvcActionStatus == ActionStatus.PENDING)
                 return true;
-            return await Agv.Laser.ModeSwitch(this.RunningTaskData.ExecutingTrajecory.First().Laser, true);
+            return await Agv.Laser.ModeSwitch(RunningTaskData.ExecutingTrajecory.First().Laser, true);
         }
 
     }

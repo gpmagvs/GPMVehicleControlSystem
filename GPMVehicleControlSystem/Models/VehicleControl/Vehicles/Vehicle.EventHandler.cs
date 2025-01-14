@@ -17,7 +17,6 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
 using MathNet.Numerics;
 using AGVSystemCommonNet6.Alarm;
 using GPMVehicleControlSystem.Tools;
@@ -26,6 +25,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsL
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsNavigation;
 using Microsoft.AspNetCore.SignalR;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Models.TaskExecute;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {

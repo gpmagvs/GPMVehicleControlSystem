@@ -1,11 +1,13 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class UnloadTask : LoadTask
     {
@@ -66,12 +68,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             }
 
 
-            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
                 return (false, AlarmCodes.Has_Job_Without_Cst);
             Agv.CSTReader.ValidCSTID = "TrayUnknow";
             try
             {
-                CST_TYPE orderCstTypeRequest = this.RunningTaskData.CST.FirstOrDefault().CST_Type;
+                CST_TYPE orderCstTypeRequest = RunningTaskData.CST.FirstOrDefault().CST_Type;
                 CST_TYPE currentCargoType = Agv.CargoStateStorer.GetCargoType();
                 if (currentCargoType != orderCstTypeRequest)
                 {
@@ -114,7 +116,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         protected override async Task ManualCheckCargoStatusPrcessAfterAction()
         {
-            Vehicles.Params.clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
+            clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
             if (!manualCheckSettings.Enabled)
                 return;
 

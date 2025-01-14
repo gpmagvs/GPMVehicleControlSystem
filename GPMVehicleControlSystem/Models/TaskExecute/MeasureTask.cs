@@ -9,7 +9,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     /// <summary>
     /// 量測任務
@@ -72,7 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            clsAMCLaser laser = (Agv.Laser as clsAMCLaser);
+            clsAMCLaser laser = Agv.Laser as clsAMCLaser;
             await laser.ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bay4);
             await laser.SideLaserModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bay4);
             return true;

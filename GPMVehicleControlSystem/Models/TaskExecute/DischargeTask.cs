@@ -10,12 +10,12 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsL
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class DischargeTask : ChargeTask
     {
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.Discharge;
-        protected override int ExitPointTag => this.RunningTaskData.Homing_Trajectory.Last().Point_ID;
+        protected override int ExitPointTag => RunningTaskData.Homing_Trajectory.Last().Point_ID;
         public DischargeTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }

@@ -1,6 +1,6 @@
 ﻿using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
-using GPMVehicleControlSystem.Models.VehicleControl.TaskExecute;
+using GPMVehicleControlSystem.Models.TaskExecute;
 using GPMVehicleControlSystem.ViewModels.BatteryQuery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

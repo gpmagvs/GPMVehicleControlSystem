@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using static AGVSystemCommonNet6.clsEnums;
-using static GPMVehicleControlSystem.Models.VehicleControl.TaskExecute.LoadTask;
+using static GPMVehicleControlSystem.Models.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 

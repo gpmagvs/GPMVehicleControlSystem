@@ -2,7 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using Newtonsoft.Json;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public static class TaskExtension
     {
@@ -12,7 +12,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         /// <param name="task_download"></param>
         /// <param name="point_int"></param>
         /// <returns></returns>
-        public static clsTaskDownloadData Splice(this clsTaskDownloadData task_download, int start_index, int length,bool chaged_destination)
+        public static clsTaskDownloadData Splice(this clsTaskDownloadData task_download, int start_index, int length, bool chaged_destination)
         {
             clsMapPoint[] to_splice_Ori_traj = task_download.ExecutingTrajecory;
 

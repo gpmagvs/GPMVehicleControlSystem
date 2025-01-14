@@ -17,7 +17,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using static SQLite.SQLite3;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class ExchangeBatteryTask : TaskBase
     {
@@ -67,7 +67,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
             Agv.Laser.AllLaserDisable();
-            return await Agv.Laser.ModeSwitch(VehicleComponent.clsLaser.LASER_MODE.Bypass);
+            return await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Bypass);
         }
         internal class clsBatInfo
         {
@@ -117,7 +117,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
                 if (Inspefic_Bat_loc != BATTERY_LOCATION.NAN)
                 {
-                    ushort _id = (ushort)(((int)Inspefic_Bat_loc) + 1);
+                    ushort _id = (ushort)((int)Inspefic_Bat_loc + 1);
                     batInfos = new clsBatInfo[]
                     {
                          new clsBatInfo(TsmcMiniAGV, (int)Inspefic_Bat_loc)
@@ -237,7 +237,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
             if (Debugging)
             {
-                StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE);
+                StaStored.CurrentVechicle.SetSub_Status(SUB_STATUS.IDLE);
                 await Task.Delay(3000);
                 BuzzerPlayer.Stop();
                 return (true, AlarmCodes.None);
@@ -253,7 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 clsTaskDownloadData gotoEntryPointTask = RunningTaskData.Clone();
                 gotoEntryPointTask.Homing_Trajectory = gotoEntryPointTask.Homing_Trajectory.Reverse().ToArray();
                 gotoEntryPointTask.Homing_Trajectory[0] = gotoEntryPointTask.Homing_Trajectory[1].Clone();
-                AGVControl.CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
+                CarController.SendActionCheckResult result = Agv.AGVC.ExecuteTaskDownloaded(gotoEntryPointTask, Agv.Parameters.ActionTimeout).Result;
                 if (!result.Accept)
                     return (false, AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
 
@@ -272,7 +272,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 await Task.Delay(1);
 
-                if ((_eq_valid_off = !TsmcMiniAGV.WagoDI.GetState(DI_ITEM.EQ_VALID)))
+                if (_eq_valid_off = !TsmcMiniAGV.WagoDI.GetState(DI_ITEM.EQ_VALID))
                 {
                     cancellationTokenSource.Cancel();
                     break;
@@ -600,7 +600,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
     {
         public HandshakeException(AlarmCodes alarm)
         {
-            this.alarm_code = alarm;
+            alarm_code = alarm;
         }
 
         public AlarmCodes alarm_code { get; }
@@ -611,7 +611,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         public HSTimeoutException(AlarmCodes alarm)
         {
-            this.alarm_code = alarm;
+            alarm_code = alarm;
         }
     }
 }

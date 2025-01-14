@@ -28,7 +28,7 @@ using WebSocketSharp;
 using NLog;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public abstract class TaskBase : IDisposable
     {
@@ -56,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         }
 
         public STATION_TYPE DestineStationType => DestineMapPoint == null ? STATION_TYPE.Unknown : DestineMapPoint.StationType;
-        public bool IsDestineStationBuffer => DestineStationType == STATION_TYPE.Buffer || DestineStationType == STATION_TYPE.Charge_Buffer || (DestineStationType == STATION_TYPE.Buffer_EQ && height > 0);
+        public bool IsDestineStationBuffer => DestineStationType == STATION_TYPE.Buffer || DestineStationType == STATION_TYPE.Charge_Buffer || DestineStationType == STATION_TYPE.Buffer_EQ && height > 0;
 
         public bool IsJustAGVPickAndPlaceAtWIPPort
         {
@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     DestineStationType != STATION_TYPE.Charge_Buffer)
                     return false;
 
-                return DestineStationType == STATION_TYPE.Buffer || (DestineStationType != STATION_TYPE.Buffer && height > 0);
+                return DestineStationType == STATION_TYPE.Buffer || DestineStationType != STATION_TYPE.Buffer && height > 0;
             }
         }
         public Action<ActionStatus> AGVCActionStatusChaged
@@ -236,7 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 task_abort_alarmcode = AlarmCodes.None;
                 await Task.Delay(10);
-                if (this.action != ACTION_TYPE.None)
+                if (action != ACTION_TYPE.None)
                 {
                     Agv.SetSub_Status(SUB_STATUS.RUN);
                     BuzzerPlayMusic(action);
@@ -289,7 +289,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
                     if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD || Agv.Parameters.AgvType == AGV_TYPE.FORK)
                     {
-                        SubmarinAGV? _agv = (Agv as SubmarinAGV);
+                        SubmarinAGV? _agv = Agv as SubmarinAGV;
                         CARGO_STATUS _cargo_status_simulation = action == ACTION_TYPE.Load ? CARGO_STATUS.NO_CARGO : CARGO_STATUS.HAS_CARGO_NORMAL;
                         string _cst_id = action == ACTION_TYPE.Load ? "" : RunningTaskData.CST.FirstOrDefault() == null ? "" : RunningTaskData.CST.First().CST_ID;//取貨[Unload]需模擬拍照=>從派車任務中拿CSTID
                         logger.Trace($"空取空放-貨物在席狀態模擬-{_cargo_status_simulation},CST ID= {_cst_id}");
@@ -371,7 +371,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             List<Task> tasks = new List<Task>();
             List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
-            if (ForkLifter.CurrentForkARMLocation != clsForkLifter.FORK_ARM_LOCATIONS.HOME)
+            if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
             {
                 tasks.Add(Task.Run(async () =>
                 {
@@ -487,7 +487,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             await Task.Delay(1);
             logger.Warn($"Start Monitor Fork Position before AGV Reach in WorkStation(Fork Position should be : {ExpectedForkPostionWhenEntryWorkStation})");
-            while (Agv.BarcodeReader.CurrentTag != this.RunningTaskData.Homing_Trajectory.Last().Point_ID)
+            while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Homing_Trajectory.Last().Point_ID)
             {
                 await Task.Delay(1);
                 if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
@@ -591,7 +591,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 X = Agv.BarcodeReader.CurrentX,
                 Y = Agv.BarcodeReader.CurrentY,
                 Time = DateTime.Now,
-                TaskName = this.RunningTaskData.Task_Name,
+                TaskName = RunningTaskData.Task_Name,
                 IsGoodParkingLoaction = true
             };
             DBhelper.InsertParkingAccuracy(parkingAccqData);
@@ -881,7 +881,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                         return false;
 
-                    if (Agv.Parameters.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS)
+                    if (Agv.Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS)
                     {
                         accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
                         Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";

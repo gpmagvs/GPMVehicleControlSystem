@@ -1,7 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     public class UnParkTask : DischargeTask
     {

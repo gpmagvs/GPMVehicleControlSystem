@@ -8,6 +8,8 @@ using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -21,7 +23,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsMa
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
+namespace GPMVehicleControlSystem.Models.TaskExecute
 {
     /// <summary>
     /// 放貨任務
@@ -71,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         private void HandleCSTType()
         {
-            clsCST[] cst_info = this.RunningTaskData.CST;
+            clsCST[] cst_info = RunningTaskData.CST;
             if (cst_info == null || cst_info.Length == 0)
             {
                 CstInformation.CST_Type = CST_TYPE.None;
@@ -195,7 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
 
         protected virtual async Task ManualCheckCargoStatusPrcessBeforeAction()
         {
-            Vehicles.Params.clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
+            clsManualCheckCargoStatusParams manualCheckSettings = Agv.Parameters.ManualCheckCargoStatus;
             if (!manualCheckSettings.Enabled)
                 return;
 
@@ -226,7 +228,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         protected void InvokeCargoManualCheckNotify(CheckPointModel checkPointModel)
         {
             bool? _checked = OnManualCheckCargoStatusTrigger?.Invoke(checkPointModel); //if _checked is false=> Timeout. Nobody check the cargo status.
-            this.logger.Trace($"Manual Check Cargo Status Triggered by CheckPoint Tag {checkPointModel.CheckPointTag} => Result:{_checked}");
+            logger.Trace($"Manual Check Cargo Status Triggered by CheckPoint Tag {checkPointModel.CheckPointTag} => Result:{_checked}");
         }
 
         private async Task<(bool confirm, AlarmCodes alarm_code)> TryDetectObstacleInEQPort()
@@ -278,7 +280,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         private void RecordLDULDStateToDB()
         {
             lduld_record.StartTime = DateTime.Now;
-            lduld_record.Action = this.action;
+            lduld_record.Action = action;
             lduld_record.WorkStationTag = destineTag;
             DBhelper.AddUDULDRecord(lduld_record);
         }
@@ -293,7 +295,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
         {
             bool existHandshakeModeSetting = Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data);
 
-            if (IsJustAGVPickAndPlaceAtWIPPort || (existHandshakeModeSetting && data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0))
+            if (IsJustAGVPickAndPlaceAtWIPPort || existHandshakeModeSetting && data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0)
             {
                 IsNeedHandshake = false;
                 eqHandshakeMode = WORKSTATION_HS_METHOD.NO_HS;
@@ -352,7 +354,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                     }
                     logger.Info($"EQ DO Status Check [Load] => OK");
                 }
-                else if ((action == ACTION_TYPE.Unload))
+                else if (action == ACTION_TYPE.Unload)
                 {
                     if (!dio_status.PortExist)
                     {
@@ -813,7 +815,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             //在RACK取放貨且是空取空放模式
             if (IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
             {
-                Agv.CargoStateStorer.simulation_cargo_status = action == ACTION_TYPE.Load ? Vehicles.CargoStates.CARGO_STATUS.NO_CARGO : Vehicles.CargoStates.CARGO_STATUS.HAS_CARGO_NORMAL;//模擬在席
+                Agv.CargoStateStorer.simulation_cargo_status = action == ACTION_TYPE.Load ? CARGO_STATUS.NO_CARGO : CARGO_STATUS.HAS_CARGO_NORMAL;//模擬在席
                 return (true, AlarmCodes.None);
             }
 
@@ -854,13 +856,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
             {
                 direction = "unknown";
                 error = 0;
-                if ((currentTheta >= -45 && currentTheta <= 45) || (currentTheta >= 135 || currentTheta <= -135))
+                if (currentTheta >= -45 && currentTheta <= 45 || currentTheta >= 135 || currentTheta <= -135)
                 {
                     direction = "X";
                     error = Agv.BarcodeReader.CurrentX;
                     return Math.Abs(Agv.BarcodeReader.CurrentX) > tolerance;
                 }
-                else if ((currentTheta > 45 && currentTheta < 135) || (currentTheta > -135 && currentTheta < -45))
+                else if (currentTheta > 45 && currentTheta < 135 || currentTheta > -135 && currentTheta < -45)
                 {
                     direction = "Y";
                     error = Agv.BarcodeReader.CurrentY;
@@ -1051,7 +1053,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.TaskExecute
                 return (true, AlarmCodes.None);
             }
 
-            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != Vehicles.CargoStates.CARGO_STATUS.NO_CARGO) //不該有料卻有料
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
             Agv.CSTReader.ValidCSTID = "";
             return (true, AlarmCodes.None);
