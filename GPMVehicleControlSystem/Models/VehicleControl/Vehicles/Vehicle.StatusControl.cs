@@ -40,7 +40,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             HandshakeIOOff();
                         if (value != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
                             BuzzerPlayer.Alarm();
-                        DirectionLighter.CloseAll();
+                        if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                            DirectionLighter.CloseAll();
                         StatusLighter.DOWN();
                     }
                     else if (value == SUB_STATUS.IDLE)
