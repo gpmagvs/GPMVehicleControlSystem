@@ -176,7 +176,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         if (_stationData.LayerDatas.TryGetValue(height, out WorkStation.clsStationLayerData? _settings))
                         {
                             _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
-                            var _Height_PreAction = Agv.Parameters.ForkAGV.SaftyPositionHeight < _position_aim ? Agv.Parameters.ForkAGV.SaftyPositionHeight : _position_aim;
+                            double saftyHeight = Agv.Parameters.ForkAGV.SaftyPositionHeight;
+                            bool isDestineHeightLowerThanSafyPosition = _position_aim <= saftyHeight;
+
+                            double _Height_PreAction = saftyHeight;
+                            if (!Agv.CargoStateStorer.HasAnyCargoOnAGV(Agv.Parameters.LDULD_Task_No_Entry) || isDestineHeightLowerThanSafyPosition)
+                                _Height_PreAction = _position_aim;
+
                             logger.Warn($"抵達二次定位點 TAG{_currentTag}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
 
                             Task.Run(async () =>
