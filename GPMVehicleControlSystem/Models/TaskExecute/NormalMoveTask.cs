@@ -34,15 +34,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
 
         }
+
+        private static string ExecutingTaskNameRecord = "";
         protected override Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
         {
+            ExecutingTaskNameRecord = RunningTaskData.Task_Name;
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
                 if (ForkActionStartWhenReachSecondartPTFlag)
                 {
-                    StartTrackingSecondaryPointReach();
+                    StartTrackingSecondaryPointReach(ExecutingTaskNameRecord);
                 }
             }
             return base.TransferTaskToAGVC();
@@ -128,11 +131,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
-        internal void StartTrackingSecondaryPointReach()
+        internal void StartTrackingSecondaryPointReach(string executingTaskNameRecord)
         {
             Task.Run(async () =>
             {
-                while (Agv.GetSub_Status() == SUB_STATUS.RUN)
+                string _trackingTaskName = executingTaskNameRecord + "";
+                while (true)
                 {
                     await Task.Delay(1);
                     var _currentTag = Agv.BarcodeReader.CurrentTag;
@@ -140,10 +144,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         continue;
                     if (NextSecondartPointTag != _currentTag)
                         continue;
-                    if (Agv.AGVC.CycleStopActionExecuting)
+
+                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN || _trackingTaskName != executingTaskNameRecord)
                     {
+                        logger.Trace($"因 狀態Donw 或任務已變更而結束 StartTrackingSecondaryPointReach");
                         break;
                     }
+
+                    if (Agv.AGVC.CycleStopActionExecuting)
+                    {
+                        logger.Trace($"因 Cycle Stop 結束 StartTrackingSecondaryPointReach");
+                        break;
+                    }
+
                     var isunLoad = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
                     var ischarge = Agv._RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
 
