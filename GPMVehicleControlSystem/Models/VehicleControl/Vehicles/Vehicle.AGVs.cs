@@ -253,9 +253,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Handle_AGVS_OnlineModeQuery_T1Timeout(object? sender, EventArgs e)
         {
-            _onlineModeWhenOnlineQueryActionT1Timeout = Remote_Mode.Clone();
-            Remote_Mode = REMOTE_MODE.OFFLINE;
             AlarmManager.AddWarning(AlarmCodes.OnlineModeQuery_T1_Timeout);
+            _onlineModeWhenOnlineQueryActionT1Timeout = Remote_Mode.Clone();
+            if (GetSub_Status() != SUB_STATUS.RUN)
+                Remote_Mode = REMOTE_MODE.OFFLINE;
         }
 
         private void Handle_AGVS_OnOnlineModeQuery_Recovery(object? sender, EventArgs e)
@@ -263,7 +264,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogInformation("Online Mode Query Request Restored!");
             AlarmManager.ClearAlarm(AlarmCodes.OnlineModeQuery_T1_Timeout);
 
-            if (_onlineModeWhenOnlineQueryActionT1Timeout == REMOTE_MODE.ONLINE)
+            if (_onlineModeWhenOnlineQueryActionT1Timeout == REMOTE_MODE.ONLINE && _Remote_Mode == REMOTE_MODE.OFFLINE)
             {
                 Task.Run(async () =>
                 {
