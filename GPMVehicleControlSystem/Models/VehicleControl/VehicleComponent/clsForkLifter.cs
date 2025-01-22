@@ -170,7 +170,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal ForkAGVController fork_ros_controller => forkAGV.AGVC as ForkAGVController;
 
-        public bool IsHeightPreSettingActionRunning { get; internal set; }
+        internal clsForkEarlyMoveUpState EarlyMoveUpState { get; set; } = new clsForkEarlyMoveUpState();
+
+        public class clsForkEarlyMoveUpState
+        {
+            public bool IsHeightPreSettingActionRunning { get; private set; }
+            public double GoalHeight { get; private set; } = 0;
+            public void Reset()
+            {
+                IsHeightPreSettingActionRunning = false;
+            }
+
+            public void SetHeightPreSettingActionRunning(double goalHeight)
+            {
+                IsHeightPreSettingActionRunning = true;
+                GoalHeight = goalHeight;
+            }
+
+
+        }
+
         public bool IsManualOperation { get; internal set; } = false;
 
         private ForkAGV forkAGV;
@@ -717,9 +736,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 int tryCnt = 0;
                 double positionError = 0;
 
-                await ForkStopAsync();
-                await Task.Delay(1000);
-                logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
+                bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target;
+
+                if (!_isForkAlreadyGoingToTarget)
+                {
+                    await ForkStopAsync();
+                    await Task.Delay(1000);
+                    logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
+                }
+                else
+                    logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
 
                 bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
                 double _errorTorlence = 0.5;
@@ -739,13 +765,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
                         return (target, false, AlarmCodes.Fork_Action_Aborted);
 
-                    logger.Warn($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
-                    forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
-                    logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
-                    if (!forkMoveResult.confirm)
+                    if (!_isForkAlreadyGoingToTarget)
                     {
-                        AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
-                        return (target, false, _alarm_code);
+                        logger.Warn($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
+                        forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
+                        logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
+                        if (!forkMoveResult.confirm)
+                        {
+                            AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
+                            return (target, false, _alarm_code);
+                        }
                     }
                 }
 

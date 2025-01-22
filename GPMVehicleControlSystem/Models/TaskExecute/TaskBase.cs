@@ -667,7 +667,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
                 bool isCurrentHightAboveSaftyH() => Agv.ForkLifter.CurrentHeightPosition > _safty_height;
-                bool _needWaitPoseReach = action != ACTION_TYPE.Load;
+                bool _needWaitPoseReach = action == ACTION_TYPE.Unload && Agv.Parameters.CST_READER_TRIGGER;
+                bool _isForkDownCmdSent = false;
                 if (isCurrentHightAboveSaftyH())
                 {
                     while (isCurrentHightAboveSaftyH())
@@ -678,23 +679,24 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             IsNeedWaitForkHome = false;
                             return;
                         }
-                        if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
+                        if (!_isForkDownCmdSent)
                         {
-                            (bool confirm, string message) _goStandyPoseResult = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, _needWaitPoseReach);
-                            ForkGoHomeActionResult.confirm = _goStandyPoseResult.confirm;
+                            if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
+                            {
+                                (bool confirm, string message) _goStandyPoseResult = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, _needWaitPoseReach);
+                                ForkGoHomeActionResult.confirm = _goStandyPoseResult.confirm;
+                            }
+                            else
+                                ForkGoHomeActionResult = await ForkLifter.ForkGoHome(wait_done: _needWaitPoseReach);
+                            logger.Trace($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
                         }
-                        else
-                            ForkGoHomeActionResult = await ForkLifter.ForkGoHome(wait_done: _needWaitPoseReach);
-                        logger.Trace($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
-
-                        if (ForkGoHomeActionResult.confirm && !_needWaitPoseReach)
+                        _isForkDownCmdSent = ForkGoHomeActionResult.confirm;
+                        if (_isForkDownCmdSent && !_needWaitPoseReach && action == ACTION_TYPE.Load)
                         {
-                            logger.Warn("放貨任務牙叉開始下降後就允許射後不理");
                             break; //放貨任務牙叉開始下降後就允許射後不理
                         }
                     }
                     logger.Trace($"[Fork Home Process At Secondary] Fork position now is Under safty height({_safty_height}cm)");
-
                 }
                 else
                 {
@@ -767,8 +769,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             });
 
             logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-            await ForkLifter.ForkStopAsync();
-            await Task.Delay(1000);
+
             (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, Agv.Parameters.LDULD_Task_No_Entry).Result;
             _wait_fork_reach_position_cst.Cancel();
             return result;

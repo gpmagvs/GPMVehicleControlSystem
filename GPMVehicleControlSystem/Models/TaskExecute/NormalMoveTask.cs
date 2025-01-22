@@ -41,6 +41,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             ExecutingTaskNameRecord = RunningTaskData.Task_Name;
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
+                Agv.ForkLifter.EarlyMoveUpState.Reset();
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
                 if (ForkActionStartWhenReachSecondartPTFlag)
@@ -200,9 +201,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                             Task.Run(async () =>
                             {
-                                Agv.ForkLifter.IsHeightPreSettingActionRunning = true;
+                                Agv.ForkLifter.EarlyMoveUpState.SetHeightPreSettingActionRunning(_Height_PreAction);
+                                await Agv.ForkLifter.ForkStopAsync();
+                                await Task.Delay(1000);
                                 var result = await Agv.ForkLifter.ForkPose(_Height_PreAction, 1);
-                                Agv.ForkLifter.IsHeightPreSettingActionRunning = false;
+                                Agv.ForkLifter.EarlyMoveUpState.Reset();
                                 if (!result.confirm)
                                 {
                                     Abort(AlarmCodes.Fork_Action_Aborted);
