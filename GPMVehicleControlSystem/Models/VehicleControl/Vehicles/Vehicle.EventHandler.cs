@@ -944,12 +944,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
             Laser.agvDirection = direction;
+            int _debunceDelay = direction == AGV_DIRECTION.BYPASS ? 10 : 100;
+
             _vehicleDirectionChangedDebouncer.Debounce(() =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
                     Laser.LaserChangeByAGVDirection(sender, direction);
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            }, 300);
+            }, _debunceDelay);
         }
 
         private async Task _CheckLaserStateAfter(int _oriLaser)

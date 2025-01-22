@@ -104,6 +104,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 TurnRight();
             else if (direction == clsNavigation.AGV_DIRECTION.LEFT)
                 TurnLeft();
+            else if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
+            {
+                CloseAll().ContinueWith(async t =>
+                {
+                    WaitPassLights(100);
+                });
+            }
             else if (direction == clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 CloseAll();
 
