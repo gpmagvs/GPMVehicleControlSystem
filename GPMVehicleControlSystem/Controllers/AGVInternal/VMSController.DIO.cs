@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Net;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -112,6 +113,22 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             agv.WagoDO.SetState(address, state);
             return Ok();
+        }
+
+        [HttpGet("DIO/DownloadInOutPutsOptions")]
+        public async Task<IActionResult> DownloadInOutPutsOptions()
+        {
+            var inputsOptions = Enum.GetValues(typeof(DI_ITEM)).Cast<DI_ITEM>()
+                                                                        .Select(item => new { value = item.ToString(), label = item.ToString() })
+                                                                        .ToList();
+            var outputsOptions = Enum.GetValues(typeof(DO_ITEM)).Cast<DO_ITEM>()
+                                                                        .Select(item => new { value = item.ToString(), label = item.ToString() })
+                                                                        .ToList();
+            return Ok(new
+            {
+                Inputs = inputsOptions,
+                Outputs = outputsOptions
+            });
         }
 
         [HttpPost("UpdateINPUTSettings")]

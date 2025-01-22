@@ -61,10 +61,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
+            if (IsCargoDetectedByInteruptSensor())
+                return true;
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
             return currentCargoStatus != CARGO_STATUS.NO_CARGO;
         }
-
+        private bool IsCargoDetectedByInteruptSensor()
+        {
+            bool _IsSensorMounted = digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
+            if (!_IsSensorMounted)
+                return false;
+            return !digitalInputState.First(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor).State;
+        }
         /// <summary>
         /// 取得載物的類型 0:tray, 1:rack , 200:tray
         /// </summary>
