@@ -68,7 +68,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Message = "AGV執行任務中不可切為手動模式"
                 });
             }
-
+            if (mode == OPERATOR_MODE.MANUAL && agv.Remote_Mode == REMOTE_MODE.ONLINE)
+            {
+                return Ok(new
+                {
+                    Success = false,
+                    Message = "AGV在Online模式下不可切換為手動模式(Please check 'Online Mode' to [Offline] before switch 'Auto Mode' to [Manual])"
+                });
+            }
             logger.LogTrace($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
             bool confirm = await agv.Auto_Mode_Siwtch(mode);
             return Ok(new
@@ -169,6 +176,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task<IActionResult> Initialize()
         {
             logger.LogTrace($"User raise Initialize request.");
+
+            try
+            {
+                if (agv.Operation_Mode != OPERATOR_MODE.MANUAL)
+                    return Ok(new { confirm = false, message = "請確認 'Auto Mode' 已切換為[Manual] 後再嘗試初始化(Please confirm that 'Auto Mode' has been switched to [Manual] before attempting initialization.)" });
+                if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
+                    return Ok(new { confirm = false, message = "請確認 'Online Mode'已切換為 [Offline] 後再嘗試初始化(Please confirm that 'Online Mode' has been switched to [Offline] before attempting initialization.)" });
+            }
+            finally
+            {
+                logger.LogTrace($"User raise Initialize");
+            }
             var result = await agv.Initialize();
             logger.LogTrace($"User raise Initialize request. Result:{result}");
             return Ok(new { confirm = result.confirm, message = result.message });
