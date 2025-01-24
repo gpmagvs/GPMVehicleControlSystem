@@ -395,23 +395,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var signal = (sender as clsIOSignal);
             if (signal.Input == DI_ITEM.Vertical_Motor_Alarm)
             {
-
-                if (GetSub_Status() == SUB_STATUS.RUN)
-                {
-                    AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
+                await Task.Delay(1000);
+                if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
                     return;
-                }
-                AlarmManager.AddWarning(AlarmCodes.Vertical_Motor_IO_Error);
-                //#region 嘗試Reset馬達
-                //_ = Task.Factory.StartNew(async () =>
-                //{
-                //    while (signal.State)
-                //    {
-                //        await Task.Delay(1000);
-                //        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, AlarmCodes.Vertical_Motor_IO_Error);
-                //    }
-                //});
-                //#endregion
+                AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
             }
         }
         protected override void DIOStatusChangedEventRegist()
