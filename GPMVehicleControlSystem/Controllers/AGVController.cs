@@ -117,5 +117,13 @@ namespace GPMVehicleControlSystem.Controllers
             return Ok(response);
         }
 
+
+        [HttpPost("SwitchCSTReader")]
+        public async Task<IActionResult> SwitchCSTReader(bool enable = false)
+        {
+            (bool confirm, string message) result = await agv.SwitchCSTReader(enable);
+            return Ok(result);
+        }
+
     }
 }

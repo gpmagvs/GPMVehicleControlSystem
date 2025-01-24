@@ -1455,5 +1455,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await frontendHubContext.Clients.All.SendAsync("AGV-Notify-Message", new { title = title, message = message, alarmCode = alarmCode });
         }
+        internal async Task<(bool, string)> SwitchCSTReader(bool enable)
+        {
+            Parameters.EditKey = DateTime.Now.ToString("yyyyMMddHHmmssffff");
+            Parameters.CST_READER_TRIGGER = enable;
+            return await SaveParameters(Parameters, this.frontendHubContext);
+        }
     }
 }
