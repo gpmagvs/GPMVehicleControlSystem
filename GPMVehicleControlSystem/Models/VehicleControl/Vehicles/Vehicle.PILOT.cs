@@ -9,6 +9,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using MathNet.Numerics;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -303,6 +304,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var currentStatus = GetSub_Status();
             if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
                 BuzzerPlayer.Stop();
+            DebugMessageBrocast("End Laser Obs Monitor");
         }
 
         private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
@@ -706,6 +708,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         private CancellationTokenSource LaserObsMonitorCancel = new CancellationTokenSource();
         private SemaphoreSlim _StartLaserMonitorSemaphore = new SemaphoreSlim(1, 1);
+        private Debouncer _LaserMonitorSwitchDebouncer = new Debouncer();
         public bool IsLaserMonitoring { get; private set; } = false;
 
         /// <summary>
@@ -713,134 +716,140 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public void EndLaserObstacleMonitor()
         {
-            IsLaserMonitoring = false;
+            _LaserMonitorSwitchDebouncer.Debounce(() => IsLaserMonitoring = false, 500);
         }
         /// <summary>
         /// 雷射障礙物監控
         /// </summary>
         public async void StartLaserObstacleMonitor()
         {
-            try
+            _LaserMonitorSwitchDebouncer.Debounce(async () =>
             {
-                await _StartLaserMonitorSemaphore.WaitAsync();
-
-                if (IsLaserMonitoring)
-                    return;
-
-                ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
-                AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
-                LaserObsMonitorCancel = new CancellationTokenSource();
-                SemaphoreSlim _SpeedRecoveryHandleSemaphoreSlim = new SemaphoreSlim(1, 1);
-                await Task.Run(async () =>
+                try
                 {
-                    IsLaserMonitoring = true;
-                    while (!CheckMonitorCancel() && !CheckAGVCActionDone())
-                    {
-                        try
-                        {
-                            if (CheckMonitorCancel() || CheckAGVCActionDone())
-                                return;
+                    await _StartLaserMonitorSemaphore.WaitAsync();
 
-                            var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
-                            if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
+                    if (IsLaserMonitoring)
+                        return;
+
+                    ROBOT_CONTROL_CMD _CurrentRobotControlCmd = ROBOT_CONTROL_CMD.SPEED_Reconvery;
+                    AlarmCodes[] _CurrentAlarmCodeCollection = new AlarmCodes[0];
+                    LaserObsMonitorCancel = new CancellationTokenSource();
+                    SemaphoreSlim _SpeedRecoveryHandleSemaphoreSlim = new SemaphoreSlim(1, 1);
+                    await Task.Run(async () =>
+                    {
+                        DebugMessageBrocast("Start Laser Obs Monitor");
+
+                        IsLaserMonitoring = true;
+                        while (!CheckMonitorCancel() && !CheckAGVCActionDone())
+                        {
+                            try
                             {
                                 if (CheckMonitorCancel() || CheckAGVCActionDone())
                                     return;
 
-                                await Task.Delay(10, LaserObsMonitorCancel.Token);
-                                if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
+                                var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+                                if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                                 {
-                                    SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
-                                    if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                                        BuzzerPlayer.Move();
-                                    else if (_RunTaskData.Action_Type == ACTION_TYPE.Charge)
-                                        BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
-                                    else
-                                        BuzzerPlayer.Action();
-                                }
-                                else
-                                {
-                                    SetSub_Status(SUB_STATUS.ALARM);
-                                    BuzzerPlayer.Alarm();
-                                }
+                                    if (CheckMonitorCancel() || CheckAGVCActionDone())
+                                        return;
 
-                                //已無異常清空所有雷射異常
-                                if (!alarmCodeCollection.Any())
-                                    AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
-                                else
-                                {
-                                    HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
-                                }
-                                if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                                {
-                                    DecreaseSpeedAndRecovery();
-                                }
-                                else
-                                    await AGVC.CarSpeedControl(cmdGet);
-
-
-                                _CurrentRobotControlCmd = cmdGet;
-                                _CurrentAlarmCodeCollection = alarmCodeCollection;
-                            }
-                            await Task.Delay(10, LaserObsMonitorCancel.Token);
-
-                            //減速後恢復
-                            async Task DecreaseSpeedAndRecovery()
-                            {
-                                try
-                                {
-                                    await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
-                                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
-                                    Stopwatch timer = Stopwatch.StartNew();
-                                    while (timer.Elapsed.Seconds < 1)
+                                    await Task.Delay(10, LaserObsMonitorCancel.Token);
+                                    if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
                                     {
-                                        await Task.Delay(1);
-                                        if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
-                                            return;
+                                        SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
+                                        if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                            BuzzerPlayer.Move();
+                                        else if (_RunTaskData.Action_Type == ACTION_TYPE.Charge)
+                                            BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                                        else
+                                            BuzzerPlayer.Action();
+                                    }
+                                    else
+                                    {
+                                        SetSub_Status(SUB_STATUS.ALARM);
+                                        BuzzerPlayer.Alarm();
                                     }
 
-                                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                                    //已無異常清空所有雷射異常
+                                    if (!alarmCodeCollection.Any())
+                                        AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
+                                    else
+                                    {
+                                        HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
+                                    }
+                                    if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                    {
+                                        DecreaseSpeedAndRecovery();
+                                    }
+                                    else
+                                        await AGVC.CarSpeedControl(cmdGet);
+
+
+                                    _CurrentRobotControlCmd = cmdGet;
+                                    _CurrentAlarmCodeCollection = alarmCodeCollection;
                                 }
-                                catch (Exception ex)
+                                await Task.Delay(10, LaserObsMonitorCancel.Token);
+
+                                //減速後恢復
+                                async Task DecreaseSpeedAndRecovery()
                                 {
-                                    logger.LogError(ex, ex.Message);
-                                }
-                                finally
-                                {
-                                    _SpeedRecoveryHandleSemaphoreSlim.Release();
+                                    try
+                                    {
+                                        await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
+                                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                                        Stopwatch timer = Stopwatch.StartNew();
+                                        while (timer.Elapsed.Seconds < 1)
+                                        {
+                                            await Task.Delay(1);
+                                            if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                                return;
+                                        }
+
+                                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.LogError(ex, ex.Message);
+                                    }
+                                    finally
+                                    {
+                                        _SpeedRecoveryHandleSemaphoreSlim.Release();
+                                    }
+
                                 }
 
                             }
-
+                            catch (TaskCanceledException ex)
+                            {
+                                logger.LogInformation("雷射偵測流程已取消");
+                                return;
+                            }
                         }
-                        catch (TaskCanceledException ex)
+
+                        bool CheckMonitorCancel()
                         {
-                            logger.LogInformation("雷射偵測流程已取消");
-                            return;
+                            return LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring;
                         }
-                    }
 
-                    bool CheckMonitorCancel()
-                    {
-                        return LaserObsMonitorCancel.IsCancellationRequested || !IsLaserMonitoring;
-                    }
+                        bool CheckAGVCActionDone()
+                        {
+                            return AGVC.ActionStatus == ActionStatus.SUCCEEDED;
+                        }
+                    });
 
-                    bool CheckAGVCActionDone()
-                    {
-                        return AGVC.ActionStatus == ActionStatus.SUCCEEDED;
-                    }
-                });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, ex.Message);
+                }
+                finally
+                {
+                    _StartLaserMonitorSemaphore.Release();
+                    LaserObsMonitorCancel.Cancel();
+                }
 
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, ex.Message);
-            }
-            finally
-            {
-                _StartLaserMonitorSemaphore.Release();
-                LaserObsMonitorCancel.Cancel();
-            }
+            }, 10);
         }
 
         private static void HandleLaserAlarmCodes(AlarmCodes[] _CurrentAlarmCodeCollection, AlarmCodes[] alarmCodeCollection)

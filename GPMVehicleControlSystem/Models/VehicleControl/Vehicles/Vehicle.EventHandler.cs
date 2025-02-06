@@ -26,6 +26,8 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsN
 using Microsoft.AspNetCore.SignalR;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.TaskExecute;
+using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
+using YamlDotNet.Core.Tokens;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -204,6 +206,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
         {
+            if (AGVC.CycleStopActionExecuting)
+            {
+                DebugMessageBrocast($"[Action Status Changed To SUCCEEDED by Cycle Stop Action Done Check. ] Action Status is SUCCESSED, reset actionClient.goal = new TaskCommandGoal()");
+                AGVC.actionClient.goal = new TaskCommandGoal();
+            }
+            if (_RunTaskData.Destination == Navigation.LastVisitedTag)
+            {
+                DebugMessageBrocast($"Action Status now is SUCCESSED and AGV Position is Destine of Executed Task({Navigation.LastVisitedTag})");
+                AGVC.actionClient.goal = new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal();
+            }
             _ = Task.Run(async () =>
             {
                 await EndLaserObsMonitorAsync();

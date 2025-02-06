@@ -17,6 +17,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NLog;
 using RosSharp.RosBridgeClient;
@@ -1460,6 +1461,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Parameters.EditKey = DateTime.Now.ToString("yyyyMMddHHmmssffff");
             Parameters.CST_READER_TRIGGER = enable;
             return await SaveParameters(Parameters, this.frontendHubContext);
+        }
+
+        internal async Task DebugMessageBrocast(string message)
+        {
+            await frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
+            logger.LogDebug($"[DebugMessageBrocast] {message}");
         }
     }
 }

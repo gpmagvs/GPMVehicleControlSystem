@@ -16,6 +16,7 @@ using static AGVSystemCommonNet6.MAP.MapPoint;
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Notify;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -28,6 +29,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 記憶OnlineMode Query發生T1 Timeout 當下的上線狀態。
         /// </summary>
         private REMOTE_MODE _onlineModeWhenOnlineQueryActionT1Timeout = REMOTE_MODE.OFFLINE;
+
+        private Debouncer _TaskDownloadHandleDebouncer = new Debouncer();
         private async Task AGVSInit()
         {
             string vms_ip = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
@@ -135,12 +138,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return returnCode;
         }
 
+        /// <summary>
+        /// 確認任務下載回覆給派車後 執行流程(任務下載至車控)
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="taskDownloadData"></param>
         internal async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
-            TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
-            await Task.Delay(100);
-            _ = Task.Run(async () =>
+            //bool _isAgvRunning = GetSub_Status() == SUB_STATUS.RUN || AGVC.ActionStatus == ActionStatus.ACTIVE || AGVC.ActionStatus == ActionStatus.PENDING;
+            await Task.Delay(1);
+            _TaskDownloadHandleDebouncer.OnActionCanceled += OnActionDisposed;
+            _TaskDownloadHandleDebouncer.Debounce(async () =>
             {
+                _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
+                await TaskDownloadAction(taskDownloadData);
+            }, 700, $"TaskDownload-{taskDownloadData.Task_Simplex}");
+
+            async Task TaskDownloadAction(clsTaskDownloadData taskDownloadData)
+            {
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 try
                 {
                     if (AGV_Reset_Flag)
@@ -181,7 +197,87 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     AGV_Reset_Flag = false;
                 }
-            });
+            }
+
+            void OnActionDisposed(object? sender, string newActionName)
+            {
+                //使用前一筆任務Action類型決定要上報?
+                TASK_RUN_STATUS _status = _RunTaskData.Action_Type == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_FINISH;
+                _RunTaskData = taskDownloadData.Clone();
+                FeedbackTaskStatus(_status);
+                _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
+                logger.LogWarning($"命令-{_RunTaskData.Task_Simplex} 已終止:因 {newActionName} 命令下達,FeedbackTaskStatus 上報 {_status}");
+            }
+        }
+
+        /// <summary>
+        /// 處理任務取消請求
+        /// </summary>
+        /// <param name="mode">取消模式</param>
+        /// <param name="normal_state"></param>
+        /// <returns></returns>
+        internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
+        {
+            _TaskDownloadHandleDebouncer.Debounce(() => { }, 1, "CycleStop");
+            TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
+            logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
+
+            if (mode == RESET_MODE.ABORT)
+            {
+                AGVC.EmergencyStop(true);
+                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task, false);
+                TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
+                if (!normal_state)
+                    AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task, false);
+                return true;
+            }
+
+            AGVSResetCmdFlag = true;
+            IsWaitForkNextSegmentTask = false;
+
+            bool isNoTaskRunning = TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE && (Main_Status == MAIN_STATUS.IDLE || Main_Status == MAIN_STATUS.DOWN);
+            try
+            {
+                if (isNoTaskRunning)
+                {
+                    AGV_Reset_Flag = false;
+                    logger.LogWarning($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
+                    await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
+                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
+                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
+                    AGV_Reset_Flag = true;
+                    AGVC.OnAGVCActionChanged = null;
+                    TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
+                    return true;
+                }
+                else
+                {
+                    if (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
+                        while (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
+                        {
+                            await Task.Delay(1);
+                        }
+                    TaskCycleStopStatus = TASK_CANCEL_STATUS.EXECUTING_CYCLE_STOP_REQUEST;
+                    bool result = await AGVC.ResetTask(mode);
+
+                    if (TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE)
+                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, ex.Message);
+                if (mode == RESET_MODE.CYCLE_STOP)
+                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
+                else
+                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
+                return false;
+            }
+            finally
+            {
+            }
 
         }
 
@@ -533,75 +629,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        /// <summary>
-        /// 處理任務取消請求
-        /// </summary>
-        /// <param name="mode">取消模式</param>
-        /// <param name="normal_state"></param>
-        /// <returns></returns>
-        internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
-        {
-            TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
-            logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
-
-            if (mode == RESET_MODE.ABORT)
-            {
-                AGVC.EmergencyStop(true);
-                AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task, false);
-                TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
-                if (!normal_state)
-                    AlarmManager.AddAlarm(AlarmCodes.AGVs_Abort_Task, false);
-                return true;
-            }
-
-            AGVSResetCmdFlag = true;
-            IsWaitForkNextSegmentTask = false;
-
-            bool isNoTaskRunning = TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE && (Main_Status == MAIN_STATUS.IDLE || Main_Status == MAIN_STATUS.DOWN);
-            try
-            {
-                if (isNoTaskRunning)
-                {
-                    AGV_Reset_Flag = false;
-                    logger.LogWarning($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
-                    await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
-                    AGVC._ActionStatus = ActionStatus.NO_GOAL;
-                    AGV_Reset_Flag = true;
-                    AGVC.OnAGVCActionChanged = null;
-                    TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
-                    return true;
-                }
-                else
-                {
-                    if (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
-                        while (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
-                        {
-                            await Task.Delay(1);
-                        }
-                    TaskCycleStopStatus = TASK_CANCEL_STATUS.EXECUTING_CYCLE_STOP_REQUEST;
-                    bool result = await AGVC.ResetTask(mode);
-
-                    if (TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE)
-                        FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
-
-                    return result;
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, ex.Message);
-                if (mode == RESET_MODE.CYCLE_STOP)
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_CycleStop, false);
-                else
-                    AlarmManager.AddAlarm(AlarmCodes.Exception_When_AGVC_AGVS_Task_Reset_Abort, false);
-                return false;
-            }
-            finally
-            {
-            }
-
-        }
 
         private static AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] GetAlarmCodesUserReportToAGVS()
         {

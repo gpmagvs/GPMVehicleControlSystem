@@ -164,6 +164,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     if (value == ActionStatus.SUCCEEDED)
                     {
                         OnAGVCActionSuccess?.Invoke(this, EventArgs.Empty);
+
                     }
                 }
             }
@@ -502,7 +503,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 _IsEmergencyStopFlag = false;
 
             CycleStopActionExecuting = false;
-            logger.Info("Action Goal Will Send To AGVC:\r\n" + rosGoal.ToJson(Formatting.None));
 
             if (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
             {
@@ -515,8 +515,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 return preCheckWhenActionGoalSendToAGVC;
             }
-
             actionClient.goal = goalModified;
+            logger.Info("Action Goal Will Send To AGVC:\r\n" + actionClient.goal.ToJson(Formatting.Indented));
             actionClient?.SendGoal();
             if (isEmptyPathPlan)
             {
@@ -541,7 +541,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             if (!checkTaskConfirmed)
             {
                 logger.Trace($"Wait AGVC ActionStatus Success");
-                while (_ActionStatus != ActionStatus.SUCCEEDED)
+
+                while (_ActionStatus != ActionStatus.SUCCEEDED && _ActionStatus != ActionStatus.NO_GOAL)
                 {
                     await Task.Delay(1);
                 }
@@ -584,6 +585,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
                     if (IsPathStartPtNotMatched || IsFinalGoalNotMatched)
                     {
+                        string _previousGoalTags = string.Join(",", _previousGoal.pathInfo.Select(p => p.tagid));
+                        string _newGoalTags = string.Join(",", newGoal.pathInfo.Select(p => p.tagid));
+
+                        logger.Warn($"Previous Goal Tags = {_previousGoalTags}");
+                        logger.Warn($"New      Goal Tags = {_newGoalTags}");
+
                         logger.Warn($"[CheckTaskCommandGoal] The first point of the new goal is not the same as the last point of the previous goal.");
                         logger.Warn($"[CheckTaskCommandGoal] Cycle Stop Action is not executing, start cycle stop action first.");
 
