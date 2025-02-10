@@ -1019,15 +1019,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 previousSoftEmoTime = DateTime.Now;
 
                 //AGVSTaskFeedBackReportAndOffline(alarmCode);
-                if (Remote_Mode == REMOTE_MODE.ONLINE)
+                _ = Task.Run(async () =>
                 {
-                    _ = Task.Run(async () =>
+                    if (Remote_Mode == REMOTE_MODE.ONLINE)
                     {
                         logger.LogInformation($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
                         await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
-                    });
-                }
+                    }
+                    await Task.Delay(100).ContinueWith(async (t) => Auto_Mode_Siwtch(OPERATOR_MODE.MANUAL));
+                });
                 HandshakeStatusText = IsHandshakeFailAlarmCode(alarmCode) ? $"{alarmCode}" : HandshakeStatusText;
+
             }
             catch (Exception ex)
             {
