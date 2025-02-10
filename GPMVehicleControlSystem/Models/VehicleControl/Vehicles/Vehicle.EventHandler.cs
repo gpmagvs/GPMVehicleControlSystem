@@ -139,7 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.WaitingCargoStatusCheck();
             bool checkDone = WaitOperatorCheckCargoStatusDone.WaitOne(TimeSpan.FromSeconds(checkPointData.Timeout));
             logger.LogInformation($"Operator Check Cargo Status Timeout:{!checkDone}");
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop("LoadTask_OnManualCheckCargoStatusTrigger");
             return checkDone;
         }
         internal void ManualCheckCargoStatusDone(string userName = "")
@@ -339,10 +339,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleResetButtonPush(object? sender, EventArgs e)
         {
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop("HandleResetButtonPush");
             await TryResetMotors();
             AlarmManager.ClearAlarm();
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop("HandleResetButtonPush");
+
         }
 
         protected virtual async Task TryResetMotors()
@@ -861,7 +862,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
             _Sub_Status = SUB_STATUS.ALARM;
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop("AGVStatusChangeToAlarmWhenLaserTrigger");
             BuzzerPlayer.Alarm();
             StatusLighter.DOWN();
         }

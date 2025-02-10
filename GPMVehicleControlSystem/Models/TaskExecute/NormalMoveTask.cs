@@ -44,9 +44,15 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.ForkLifter.EarlyMoveUpState.Reset();
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
-                if (ForkActionStartWhenReachSecondartPTFlag)
+                bool _isCurrentTagIsNextSecondaryPoint = Agv.Navigation.LastVisitedTag == NextSecondartPointTag;
+
+                if (ForkActionStartWhenReachSecondartPTFlag && !_isCurrentTagIsNextSecondaryPoint)
                 {
                     StartTrackingSecondaryPointReach(ExecutingTaskNameRecord);
+                }
+                else if (ForkActionStartWhenReachSecondartPTFlag && _isCurrentTagIsNextSecondaryPoint)
+                {
+                    logger.Info($"當前位置已在工作站進入點,不需監視是否已到達工作站進入點");
                 }
             }
             return base.TransferTaskToAGVC();

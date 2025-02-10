@@ -128,8 +128,9 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             PlayInBackground(SOUNDS.Stop).GetAwaiter().GetResult();
             PlayInBackground(SOUNDS.RotatingVoice);
         }
-        internal static void Stop()
+        internal static void Stop(string description = "")
         {
+            logger.Debug($"Stop BuzzerPlayer Invoke: {description}");
             Play(SOUNDS.Stop);
             BackgroundStop();
         }

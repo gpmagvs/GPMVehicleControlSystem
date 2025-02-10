@@ -39,8 +39,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.2.16.13</AssemblyVersion>
-		<FileVersion>3.2.16.13</FileVersion>
+		<AssemblyVersion>3.2.16.14</AssemblyVersion>
+		<FileVersion>3.2.16.14</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />

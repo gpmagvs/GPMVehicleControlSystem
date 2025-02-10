@@ -303,7 +303,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EndLaserObstacleMonitor();
             var currentStatus = GetSub_Status();
             if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.Stop("EndLaserObsMonitorAsync");
             DebugMessageBrocast("End Laser Obs Monitor");
         }
 

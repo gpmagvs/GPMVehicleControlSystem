@@ -132,7 +132,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogTrace("Fork Stop");
             _ForkSaftyProtectFlag = false;
             if (GetSub_Status() == SUB_STATUS.IDLE)
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.Stop($"_fork_car_controller_OnForkStopMove");
         }
 
         private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
@@ -203,7 +203,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             if (ForkLifter.IsInitialing || ForkLifter.IsManualOperation || ForkLifter.CurrentHeightPosition <= Parameters.ForkAGV.SaftyPositionHeight)
             {
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.Stop($"ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning");
                 if (ForkLifter.IsInitialing)
                 {
                     //_Sub_Status = SUB_STATUS.Initializing;

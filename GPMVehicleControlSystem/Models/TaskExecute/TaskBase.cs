@@ -306,6 +306,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 else
                 {
                     startTime = DateTime.Now;
+                    BuzzerPlayMusic(action);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {
@@ -611,6 +612,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <returns></returns>
         public virtual async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            BuzzerPlayMusic(action);
             return (true, AlarmCodes.None);
         }
 

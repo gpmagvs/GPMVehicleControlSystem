@@ -675,7 +675,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
 
                 EndLaserObstacleMonitor();
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.Stop("Initialize");
                 DirectionLighter.CloseAll();
                 orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
                 IsWaitForkNextSegmentTask = false;
@@ -1148,7 +1148,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
 
                 IsResetAlarmWorking = true;
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.Stop("ResetAlarmsAsync");
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
                 AGVS?.ResetErrors();

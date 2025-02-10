@@ -76,7 +76,7 @@ namespace GPMVehicleControlSystem.Service
                                 BuzzerPlayer.PlayInBackground(SOUNDS.RotatingVoice);
                             else
                             {
-                                BuzzerPlayer.Stop();//把本來撥放中的音效停止
+                                BuzzerPlayer.Stop($"WatchRotateState (ROTATION_STATUS.ROTATATE_START)");
                                 BuzzerPlayer.PlayInBackground(SOUNDS.RotatingMusic);
                             }
                             RotateStatus = ROTATION_STATUS.ROTATING;
@@ -161,7 +161,7 @@ namespace GPMVehicleControlSystem.Service
                                 BuzzerPlayer.PlayInBackground(SOUNDS.SlowDownVoice);
                             else
                             {
-                                BuzzerPlayer.Stop();//把本來撥放中的音效停止
+                                BuzzerPlayer.Stop($"WatchRotateState (ROTATION_STATUS.SLOW_DOWN_START)");
                                 BuzzerPlayer.PlayInBackground(SOUNDS.SlowDownMusic);
                             }
                             SlowDownStatus = SLOW_DOWN_STATUS.SLOW_DOWNING;

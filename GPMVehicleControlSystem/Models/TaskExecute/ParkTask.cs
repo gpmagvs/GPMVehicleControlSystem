@@ -32,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop($"HandleAGVCActionSucceess ({GetType().Name})");
             return (true, AlarmCodes.None);
         }
     }

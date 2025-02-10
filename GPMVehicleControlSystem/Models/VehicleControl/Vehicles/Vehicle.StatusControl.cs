@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else if (value == SUB_STATUS.IDLE)
                     {
                         if (auto_stop_buzzer)
-                            BuzzerPlayer.Stop();
+                            BuzzerPlayer.Stop("SetSub_Status Change to IDLE & auto_stop_buzzer");
                         StatusLighter.IDLE();
                         DirectionLighter.CloseAll();
                     }

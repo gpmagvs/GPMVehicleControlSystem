@@ -56,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             DelayChargeStatusJudgeWork();
             Agv._IsCharging = true;
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.Stop($"HandleAGVCActionSucceess {GetType().Name}");
             return (true, AlarmCodes.None);
         }
 
