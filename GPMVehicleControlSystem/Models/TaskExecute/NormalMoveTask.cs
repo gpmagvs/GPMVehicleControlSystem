@@ -174,7 +174,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         if (!Agv.WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
                         {
                             AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
-                            Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                            logger.Warn($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag}): Fork_WorkStation_Teach_Data_Not_Found_Tag");
+                            //Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
                             break;
                         }
                         var orderInfo = Agv._RunTaskData.OrderInfo;
@@ -222,14 +223,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         else
                         {
                             AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
-                            Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                            logger.Warn($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag},Height={height}): Fork_WorkStation_Teach_Data_Not_Found_Tag");
                             break;
                         }
                     }
                     catch (Exception ex)
                     {
+                        logger.Warn($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag},Height={height}): {ex.Message + ex.StackTrace}");
                         logger.Error(ex, ex.Message);
-                        Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
                         break;
                     }
                 }
