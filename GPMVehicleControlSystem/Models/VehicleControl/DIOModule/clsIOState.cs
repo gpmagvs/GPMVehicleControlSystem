@@ -114,5 +114,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         private bool _State;
         internal ushort index;
+
+        public void RemoveEvent()
+        {
+            OnStateChanged = null;
+        }
+
+        internal void AddEvent(EventHandler<bool> handler)
+        {
+            void _HandleInputStateChanged(object? sender, bool e)
+            {
+                Task.Run(() =>
+                {
+                    handler.Invoke(sender, e);
+                });
+            }
+            OnStateChanged += _HandleInputStateChanged;
+            logger.Trace($"{Name} event registed.!");
+        }
     }
 }

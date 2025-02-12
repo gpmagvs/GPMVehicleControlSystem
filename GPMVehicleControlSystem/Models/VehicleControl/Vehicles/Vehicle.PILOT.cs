@@ -304,7 +304,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var currentStatus = GetSub_Status();
             if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
                 BuzzerPlayer.Stop("EndLaserObsMonitorAsync");
-            DebugMessageBrocast("End Laser Obs Monitor");
         }
 
         private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
@@ -709,7 +708,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private CancellationTokenSource LaserObsMonitorCancel = new CancellationTokenSource();
         private SemaphoreSlim _StartLaserMonitorSemaphore = new SemaphoreSlim(1, 1);
         private Debouncer _LaserMonitorSwitchDebouncer = new Debouncer();
-        public bool IsLaserMonitoring { get; private set; } = false;
+        private bool _IsLaserMonitoring = false;
+        public bool IsLaserMonitoring
+        {
+            get => _IsLaserMonitoring;
+            private set
+            {
+                if (_IsLaserMonitoring != value)
+                {
+                    if (!value)
+                        DebugMessageBrocast("End Laser Obs Monitor");
+                    else
+                        DebugMessageBrocast("Start Laser Obs Monitor");
+                    _IsLaserMonitoring = value;
+                }
+            }
+        }
 
         /// <summary>
         /// 結束雷射障礙物監控
@@ -738,8 +752,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     SemaphoreSlim _SpeedRecoveryHandleSemaphoreSlim = new SemaphoreSlim(1, 1);
                     await Task.Run(async () =>
                     {
-                        DebugMessageBrocast("Start Laser Obs Monitor");
-
                         IsLaserMonitoring = true;
                         while (!CheckMonitorCancel() && !CheckAGVCActionDone())
                         {

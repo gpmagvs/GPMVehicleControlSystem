@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
+using Microsoft.AspNetCore.SignalR;
 using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
@@ -568,21 +569,23 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
-                        logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) sec");
-                        Stopwatch _stopWatch = Stopwatch.StartNew();
-                        bool inTime = _WaitBackToHomeDonePause.WaitOne(MoveActionTimeout);
-                        _stopWatch.Stop();
+
+                        logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) ms");
+
+                        (bool _inTime, long _timeSpend) = await WaitVehicleArriveEntryPoint(MoveActionTimeout);
+
                         AGVCActionStatusChaged -= BackToHomeActionDoneCallback;
-                        if (!inTime)
+
+                        if (!_inTime)
                             task_abort_alarmcode = AlarmCodes.Action_Timeout;
 
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
-                            logger.Info($"AGV [{action}] -退出至二次定位點任務逾時!(Time Spend: {_stopWatch.Elapsed})");
+                            logger.Info($"AGV [{action}] -退出至二次定位點任務逾時!(Time Spend: {_timeSpend} ms)");
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
-                        logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_stopWatch.Elapsed})");
+                        logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
                         //logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
@@ -602,6 +605,74 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 _WaitBackToHomeDonePause.Set();
             }
         }
+
+        private async Task<(bool _inTime, long _timeSpend)> WaitVehicleArriveEntryPoint(int moveActionTimeout)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            bool _cancelWaitFlag = false;
+            GPMVehicleControlSystem.VehicleControl.DIOModule.clsIOSignal? backLaserArea3 = Agv.WagoDI.VCSInputs.FirstOrDefault(o => o.Input == DI_ITEM.BackProtection_Area_Sensor_3);
+
+            try
+            {
+                if (backLaserArea3 != null)
+                {
+                    backLaserArea3.OnSignalOFF += HandleBackLaserArea3SignalOFF;
+                    backLaserArea3.OnSignalON += HandleBackLaserArea3SignalON;
+                }
+
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    _WaitBackToHomeDonePause.WaitOne();
+                    _cancelWaitFlag = true;
+                });
+                while (stopwatch.ElapsedMilliseconds < moveActionTimeout)
+                {
+                    await Task.Delay(100);
+                    if (_cancelWaitFlag)
+                    {
+                        stopwatch.Stop();
+                        return (true, stopwatch.ElapsedMilliseconds);
+                    }
+                }
+                stopwatch.Stop();
+                return (false, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                if (backLaserArea3 != null)
+                {
+                    backLaserArea3.OnSignalOFF -= HandleBackLaserArea3SignalOFF;
+                    backLaserArea3.OnSignalON -= HandleBackLaserArea3SignalON;
+                }
+            }
+            void HandleBackLaserArea3SignalOFF(object obj, EventArgs e)
+            {
+                _PauseTimer($"後方雷射觸發，退出工作站Timeout暫停監視");
+            }
+            void HandleBackLaserArea3SignalON(object obj, EventArgs e)
+            {
+                _RestartTimer("後方雷射解除觸發，退出工作站Timeout監視重新計時");
+            }
+            void _PauseTimer(string message)
+            {
+                stopwatch.Stop();
+                logger.Warn(message);
+                Agv.DebugMessageBrocast(message);
+            }
+            void _RestartTimer(string message)
+            {
+                stopwatch.Restart();
+                Agv.DebugMessageBrocast(message);
+                logger.Warn(message);
+            }
+
+        }
+
+
 
         private void BackToHomeActionDoneCallback(ActionStatus status)
         {
