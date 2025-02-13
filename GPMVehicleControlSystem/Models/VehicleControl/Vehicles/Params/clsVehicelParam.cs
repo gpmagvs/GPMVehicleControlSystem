@@ -174,5 +174,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsSoundsParams SoundsParams { get; set; } = new clsSoundsParams();
 
         public clsLogParams Log { get; set; } = new clsLogParams();
+
+        public clsUIDisplay UI { get; set; } = new clsUIDisplay();
     }
 }
