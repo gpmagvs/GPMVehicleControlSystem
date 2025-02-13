@@ -147,12 +147,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //bool _isAgvRunning = GetSub_Status() == SUB_STATUS.RUN || AGVC.ActionStatus == ActionStatus.ACTIVE || AGVC.ActionStatus == ActionStatus.PENDING;
             await Task.Delay(1);
-            _TaskDownloadHandleDebouncer.OnActionCanceled += OnActionDisposed;
-            _TaskDownloadHandleDebouncer.Debounce(async () =>
-            {
-                _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
-                await TaskDownloadAction(taskDownloadData);
-            }, 700, $"TaskDownload-{taskDownloadData.Task_Simplex}");
+            //_TaskDownloadHandleDebouncer.OnActionCanceled += OnActionDisposed;
+            //_TaskDownloadHandleDebouncer.Debounce(async () =>
+            //{
+            //    _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
+            //    await TaskDownloadAction(taskDownloadData);
+            //}, 700, $"TaskDownload-{taskDownloadData.Task_Simplex}");
+
+            _ = Task.Run(() =>
+             {
+                 TaskDownloadAction(taskDownloadData);
+             });
 
             async Task TaskDownloadAction(clsTaskDownloadData taskDownloadData)
             {
@@ -218,7 +223,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
         {
-            _TaskDownloadHandleDebouncer.Debounce(() => { }, 1, "CycleStop");
+            //_TaskDownloadHandleDebouncer.Debounce(() => { }, 1, "CycleStop");
             TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
             logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
 
