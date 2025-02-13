@@ -168,7 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
                     bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
 
-                    bool IsAutoInitWhenExecuteMoveAction = IsAGVNowIsDown && action == ACTION_TYPE.None && GetAutoInitAcceptStateWithCargoStatus();
+                    bool IsAutoInitWhenExecuteMoveAction = false;
 
                     bool IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy = alarmCodes.Contains(AlarmCodes.Precheck_IO_EQ_PIO_State_Not_Reset) ||
                                                                           alarmCodes.Contains(AlarmCodes.Precheck_IO_Fail_EQ_L_REQ) ||
@@ -184,6 +184,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         AGVC.EmergencyStop();
                         _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+
+                        IsAutoInitWhenExecuteMoveAction = IsAGVNowIsDown && action == ACTION_TYPE.None && GetAutoInitAcceptStateWithCargoStatus(alarmCodes);
                         if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
                         {
                             alarmCodes.RemoveAll(al => al == AlarmCodes.AGV_State_Cant_do_this_Action);
@@ -259,12 +261,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        private bool GetAutoInitAcceptStateWithCargoStatus()
+        private bool GetAutoInitAcceptStateWithCargoStatus(List<AlarmCodes> currentAlarmCodes)
         {
             bool hasCargoOnAGV = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry);
-            return hasCargoOnAGV ?
-                Parameters.Advance.AutoInitAndOnlineWhenMoveWithCargo :
-                Parameters.Advance.AutoInitAndOnlineWhenMoveWithoutCargo;
+            bool AutoInitAcceptState = false;
+            if (hasCargoOnAGV)
+                AutoInitAcceptState = Parameters.Advance.AutoInitAndOnlineWhenMoveWithCargo;
+            else
+                AutoInitAcceptState = Parameters.Advance.AutoInitAndOnlineWhenMoveWithoutCargo;
+            if (!AutoInitAcceptState)
+                return false; //不允許自動初始化
+
+            //檢查因為何種異常導致AGV當機
+            logger.LogWarning($"AGV當機原因:{string.Join(",", currentAlarmCodes)}");
+            logger.LogWarning($"不允許自動初始化的異常:{string.Join(",", Parameters.Advance.ForbidAutoInitialzeAlarmCodes)}");
+
+            IEnumerable<AlarmCodes> intersectAlarmCodes = Parameters.Advance.ForbidAutoInitialzeAlarmCodes.Intersect(currentAlarmCodes);
+            if (intersectAlarmCodes.Any())
+            {
+                logger.LogWarning($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
+                DebugMessageBrocast($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
+                return false;
+            }
+            else
+                return true;
         }
 
         /// <summary>

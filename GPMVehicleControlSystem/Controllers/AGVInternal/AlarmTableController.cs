@@ -39,5 +39,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             AlarmManager.RemoveOldAlarmFromDB(timeEarlyTo);
         }
+
+        [HttpGet("GetAlarmCodesTable")]
+        public async Task<List<clsAlarmCode>> GetAlarmCodesTable()
+        {
+            return AlarmManager.AlarmList.OrderBy(al => al.Code).ToList();
+        }
     }
 }
