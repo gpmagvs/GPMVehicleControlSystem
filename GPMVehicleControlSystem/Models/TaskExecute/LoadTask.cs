@@ -696,8 +696,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 bool isForkReachStandyHeight = false;
                 bool AsyncCSTReadSuccess = action == ACTION_TYPE.Load ? true : false;
                 CancellationTokenSource asyncCSTReadCancellationTokenSource = new CancellationTokenSource();
-                if (action == ACTION_TYPE.Unload)
+                if (Agv.Parameters.AgvType == AGV_TYPE.FORK && action == ACTION_TYPE.Unload && Agv.Parameters.ForkAGV.TriggerCstReaderWhenUnloadBackToEntryPointAndReachTag)
                 {
+                    logger.Trace($"[Async Action] 邊降牙叉邊拍照 AGV Park Finish In Secondary, Trigger CST Reader When Unload Back To Entry Point And Reach Tag");
                     //邊降邊拍
                     AsyncCSTReadSuccess = false;
                     _ = Task.Run(async () =>
@@ -712,11 +713,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                                 AsyncCSTReadSuccess = AsyncCstReaderTriggerResult.success;
                                 if (AsyncCSTReadSuccess)
                                 {
+                                    logger.Trace($"[Async Action] 邊降牙叉邊拍照 拍照成功!");
+
                                     break;
                                 }
                             }
                             catch (Exception ex)
                             {
+                                logger.Trace($"[Async Action] 邊降牙叉邊拍照任務已被取消. ({ex.Message})");
                                 AsyncCSTReadSuccess = false;
                                 return;
                             }

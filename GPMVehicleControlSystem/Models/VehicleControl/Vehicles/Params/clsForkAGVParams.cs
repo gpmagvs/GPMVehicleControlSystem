@@ -31,6 +31,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 開始從充電樁退出時就下降牙叉
         /// </summary>
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = false;
+
+        public bool TriggerCstReaderWhenUnloadBackToEntryPointAndReachTag { get; set; } = false;
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
         public clsForkInit InitParams = new clsForkInit();

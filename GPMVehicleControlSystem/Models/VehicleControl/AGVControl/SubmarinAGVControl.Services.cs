@@ -42,8 +42,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public override async Task<(bool request_success, bool action_done)> AbortCSTReader()
         {
             WaitCSTStopActionDone.Reset();
-            rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", StopCmdAckHandler,
-              new CSTReaderCommandRequest() { command = "stop", model = "FORK" });
+            var request = new CSTReaderCommandRequest() { command = "stop", model = "FORK" };
+            logger.Info($"AbortCSTReader start. Request Message={request.ToJson(Newtonsoft.Json.Formatting.None)}");
+            rosSocket.CallService<CSTReaderCommandRequest, CSTReaderCommandResponse>("/CSTReader_action", StopCmdAckHandler, request);
 
             bool inTime = WaitCSTStopActionDone.WaitOne(TimeSpan.FromSeconds(3));
             if (!inTime)

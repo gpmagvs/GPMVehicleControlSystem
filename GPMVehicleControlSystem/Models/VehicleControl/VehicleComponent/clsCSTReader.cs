@@ -7,6 +7,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public partial class clsCSTReader : CarComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.CST_READER;
+        public event EventHandler<int> onCSTReaderStateChanged;
 
         private string _realTimeCSTIDRecievedFromModuleInfo = "";
         public string realTimeCSTIDRecievedFromModuleInfo
@@ -32,8 +33,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_State != value)
                 {
-                    logger.Info($"CST Reader State Change to {value}()");
                     _State = value;
+                    onCSTReaderStateChanged?.Invoke(this, _State);
+                    logger.Info($"CST Reader State Change to {_State}()");
                 }
             }
         }

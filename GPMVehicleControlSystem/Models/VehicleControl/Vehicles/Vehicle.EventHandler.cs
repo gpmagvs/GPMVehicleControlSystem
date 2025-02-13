@@ -129,6 +129,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             LoadTask.OnManualCheckCargoStatusTrigger += LoadTask_OnManualCheckCargoStatusTrigger;
 
+            if (CSTReader != null)
+                CSTReader.onCSTReaderStateChanged += HandleCSTReaderStateChanged;
+
+        }
+
+        private void HandleCSTReaderStateChanged(object? sender, int state)
+        {
+            DebugMessageBrocast($"CST Reader State Changed to [{state}]");
         }
 
         private ManualResetEvent WaitOperatorCheckCargoStatusDone = new ManualResetEvent(false);
@@ -1039,7 +1047,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 stopwatch.Stop();
                 ModuleInformationUpdatedInitState = true;
-
             }
             catch (Exception ex)
             {
