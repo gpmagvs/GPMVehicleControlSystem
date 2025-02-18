@@ -1,7 +1,7 @@
 @echo off
-REM 获取当前日期和时间，格式化为 YYYYMMDD_HHMMSS
 setlocal enabledelayedexpansion
-for /f "tokens=2 delims==" %%i in ('"wmic os get localdatetime /value"') do set datetime=%%i
+REM 使用 PowerShell 獲取格式化的日期時間
+for /f "delims=" %%a in ('powershell -Command "Get-Date -Format 'yyyyMMddHHmmss'"') do set datetime=%%a
 set datetime=!datetime:~0,4!!datetime:~4,2!!datetime:~6,2!!datetime:~8,2!!datetime:~10,2!!datetime:~12,2!
 
 REM 获取 .bat 文件所在目录
