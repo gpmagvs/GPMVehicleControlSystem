@@ -21,8 +21,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public override ACTION_TYPE action { get; set; } = ACTION_TYPE.None;
         private bool ForkActionStartWhenReachSecondartPTFlag = false;
-        private static int NextSecondartPointTag = 0;
-        private static int NextWorkStationPointTag = 0;
+        internal static int NextSecondartPointTag = 0;
+        internal static int NextWorkStationPointTag = 0;
         public NormalMoveTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
             var destine = taskDownloadData.Destination;
@@ -41,6 +41,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             ExecutingTaskNameRecord = RunningTaskData.Task_Name;
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
+                Agv.Navigation.OnLastVisitedTagUpdate -= Agv.WatchReachNextWorkStationSecondaryPtHandler;
+
                 Agv.ForkLifter.EarlyMoveUpState.Reset();
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
@@ -48,7 +50,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 if (ForkActionStartWhenReachSecondartPTFlag && !_isCurrentTagIsNextSecondaryPoint)
                 {
-                    StartTrackingSecondaryPointReach(ExecutingTaskNameRecord);
+                    Agv.Navigation.OnLastVisitedTagUpdate += Agv.WatchReachNextWorkStationSecondaryPtHandler;
+                    //StartTrackingSecondaryPointReach(ExecutingTaskNameRecord);
                 }
                 else if (ForkActionStartWhenReachSecondartPTFlag && _isCurrentTagIsNextSecondaryPoint)
                 {
@@ -57,6 +60,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             return base.TransferTaskToAGVC();
         }
+
         protected override async Task WaitTaskDoneAsync()
         {
             logger.Trace($"等待 AGV完成 [移動] 任務");

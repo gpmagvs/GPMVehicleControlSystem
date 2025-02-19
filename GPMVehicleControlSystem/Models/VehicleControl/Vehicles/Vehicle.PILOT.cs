@@ -963,5 +963,95 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+
+        internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)
+        {
+            Task.Run(async () =>
+            {
+                int NextSecondartPointTag = NormalMoveTask.NextSecondartPointTag;
+                int NextWorkStationPointTag = NormalMoveTask.NextWorkStationPointTag;
+
+                if (NextSecondartPointTag == currentTagNumber)
+                {
+                    Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+
+                    if (AGVC.CycleStopActionExecuting)
+                    {
+                        logger.LogTrace($"因 Cycle Stop, 抵達進入點後不提前上升牙叉動作");
+                        return;
+                    }
+
+
+                    var isunLoad = _RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Unload;
+                    var ischarge = _RunTaskData.OrderInfo.NextAction == ACTION_TYPE.Charge;
+
+                    logger.LogWarning($"抵達二次定位點 TAG{currentTagNumber} 牙叉準備上升({_RunTaskData.OrderInfo.ActionName})");
+                    try
+                    {
+                        double _position_aim = 0;
+                        if (!WorkStations.Stations.TryGetValue(NextWorkStationPointTag, out WorkStation.clsWorkStationData? _stationData))
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
+                            logger.LogWarning($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag}): Fork_WorkStation_Teach_Data_Not_Found_Tag");
+                            //Abort(AlarmCodes.Fork_Pose_Change_Fail_When_Reach_Secondary);
+                            return;
+                        }
+                        var orderInfo = _RunTaskData.OrderInfo;
+                        bool isCarryOrder = orderInfo.ActionName == ACTION_TYPE.Carry;
+                        var height = 0;
+                        if (isCarryOrder)
+                        {
+                            bool isNextGoalEqualSource = orderInfo.NextAction == ACTION_TYPE.Unload;
+                            if (isNextGoalEqualSource)
+                                height = orderInfo.SourceSlot;
+                            else
+                                height = orderInfo.DestineSlot;
+                        }
+                        else
+                        {
+                            height = orderInfo.NextAction == ACTION_TYPE.Charge ? 0 : orderInfo.DestineSlot;
+                        }
+
+                        if (_stationData.LayerDatas.TryGetValue(height, out WorkStation.clsStationLayerData? _settings))
+                        {
+                            _position_aim = isunLoad || ischarge ? _settings.Down_Pose : _settings.Up_Pose;
+                            double saftyHeight = Parameters.ForkAGV.SaftyPositionHeight;
+                            bool isDestineHeightLowerThanSafyPosition = _position_aim <= saftyHeight;
+
+                            double _Height_PreAction = saftyHeight;
+                            if (!CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) || isDestineHeightLowerThanSafyPosition)
+                                _Height_PreAction = _position_aim;
+
+                            logger.LogWarning($"抵達二次定位點 TAG{currentTagNumber}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
+
+                            ForkLifter.EarlyMoveUpState.SetHeightPreSettingActionRunning(_Height_PreAction);
+                            await ForkLifter.ForkStopAsync();
+                            await Task.Delay(1000);
+                            (bool confirm, string message) = await ForkLifter.ForkPose(_Height_PreAction, 1);
+                            ForkLifter.EarlyMoveUpState.Reset();
+                            if (!confirm)
+                            {
+                                logger.LogWarning($"[牙叉提前上升]  ForkLifter.ForkPose 失敗:{message}");
+                            }
+
+                        }
+                        else
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_layer);
+                            logger.LogWarning($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag},Height={height}): Fork_WorkStation_Teach_Data_Not_Found_Tag");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning($"[牙叉提前上升] 失敗 (Tag={NextWorkStationPointTag}: {ex.Message + ex.StackTrace}");
+                        logger.LogError(ex, ex.Message);
+                    }
+
+                }
+
+            });
+        }
+
+
     }
 }
