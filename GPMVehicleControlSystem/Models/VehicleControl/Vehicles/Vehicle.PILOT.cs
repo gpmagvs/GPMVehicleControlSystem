@@ -95,6 +95,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ACTION_TYPE action = taskDownloadData.Action_Type;
             try
             {
+                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 logger.LogTrace($"Start Execute Task-{taskDownloadData.Task_Simplex}");
@@ -128,6 +129,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
+                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 TaskDispatchFlowControlSemaphoreSlim.Release();
             }
             await Task.Run(async () =>

@@ -673,7 +673,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
                 if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                     throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
-
+                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 EndLaserObstacleMonitor();
                 BuzzerPlayer.Stop("Initialize");
                 DirectionLighter.CloseAll();
