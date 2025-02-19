@@ -2,7 +2,6 @@ using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages.SickMsg;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
@@ -466,28 +465,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             logger.LogTrace($"Before Action Goal Send to AGVC Check Result = {_confirmResult.ToJson()}");
             return _confirmResult;
-        }
-
-        private void CopyDataBaseToLogFolder(string database_file_name)
-        {
-            Task.Factory.StartNew(() =>
-            {
-                try
-                {
-
-                    string subFolder = Path.Combine(LOG.LogFolder, DateTime.Now.ToString("yyyy-MM-dd"));
-                    string fileName = Path.Combine(subFolder, Path.GetFileName(database_file_name));
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    File.Copy(database_file_name, fileName, true);
-                    stopwatch.Stop();
-                    logger.LogTrace($"DB File Copy spend:{stopwatch.ElapsedMilliseconds} ms", Debugger.IsAttached);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, ex.Message);
-                }
-            });
-
         }
 
         private void BarcodeReader_OnAGVLeavingTag(object? sender, uint previousTag)

@@ -4,13 +4,13 @@ using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using GPMVehicleControlSystem.Models.VehicleControl;
-using AGVSystemCommonNet6.Log;
 using AGVSystemCommonNet6;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using GPMVehicleControlSystem.Models.NaviMap;
 using static AGVSystemCommonNet6.MAP.MapPoint;
+using NLog;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -19,7 +19,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
     public class LocalNavController : ControllerBase
     {
         private Vehicle agv => StaStored.CurrentVechicle;
-
+        Logger logger = LogManager.GetCurrentClassLogger();
 
         [HttpGet("TaskContinueTest")]
         public async Task TaskContinueTest()
@@ -163,9 +163,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                           if (agv.GetSub_Status() == clsEnums.SUB_STATUS.DOWN)
                               return;
                           _taskDataDto.OrderInfo = _OrderInfo;
-                          LOG.WARN($"[Local Task Dispather] Wait Task-{_taskDataDto.Action_Type} Done...");
+                          logger.Warn($"[Local Task Dispather] Wait Task-{_taskDataDto.Action_Type} Done...");
                           await agv.ExecuteAGVSTask(_taskDataDto);
-                          LOG.WARN($"[Local Task Dispather] Task -{_taskDataDto.Action_Type} Done.!");
+                          logger.Warn($"[Local Task Dispather] Task -{_taskDataDto.Action_Type} Done.!");
                       }
                   });
                 return Ok(new TaskActionResult

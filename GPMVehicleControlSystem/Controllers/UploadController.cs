@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers
 {
-    using AGVSystemCommonNet6.Log;
     using GPMVehicleControlSystem.Service;
     using Microsoft.AspNetCore.Mvc;
+    using NLog;
     using System.IO;
     using System.Threading.Tasks;
 
@@ -18,6 +18,7 @@ namespace GPMVehicleControlSystem.Controllers
             private readonly string _uploadFolderPath;
             private readonly string _frontendUploadFolderPath;
             private SystemUpdateService _updateService;
+            Logger logger = LogManager.GetCurrentClassLogger();
             public UploadController(SystemUpdateService updateService)
             {
                 _updateService = updateService;
@@ -44,7 +45,7 @@ namespace GPMVehicleControlSystem.Controllers
                     {
                         await file.CopyToAsync(stream);
                     }
-                    LOG.INFO($"接收到{Request.Form.Files.Count}筆更新檔案");
+                    logger.Info($"接收到{Request.Form.Files.Count}筆更新檔案");
                     return Ok("檔案上傳成功。");
                 }
 
@@ -70,7 +71,7 @@ namespace GPMVehicleControlSystem.Controllers
                     {
                         await file.CopyToAsync(stream);
                     }
-                    LOG.INFO($"接收到{Request.Form.Files.Count}筆前端更新檔案");
+                    logger.Info($"接收到{Request.Form.Files.Count}筆前端更新檔案");
                     return Ok("檔案上傳成功。");
                 }
 

@@ -1,12 +1,13 @@
-﻿using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.MAP;
+﻿using AGVSystemCommonNet6.MAP;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Newtonsoft.Json;
+using NLog;
 
 namespace GPMVehicleControlSystem.Models.NaviMap
 {
     public static class MapStore
     {
+        static Logger logger = LogManager.GetCurrentClassLogger();
         public static string GetMapUrl
         {
             get
@@ -25,12 +26,12 @@ namespace GPMVehicleControlSystem.Models.NaviMap
                 Directory.CreateDirectory(folder);
                 path = Path.Combine(folder, $"{map.Name}.json");
                 File.WriteAllText(path, json);
-                LOG.INFO($"Save Map  from server to {path} success!");
+                logger.Info($"Save Map  from server to {path} success!");
                 return true;
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"Save Current Map Fail..{ex.Message}", ex);
+                logger.Error($"Save Current Map Fail..{ex.Message}", ex);
                 return false;
             }
         }
@@ -95,7 +96,7 @@ namespace GPMVehicleControlSystem.Models.NaviMap
             }
             catch (Exception ex)
             {
-                LOG.ERROR($"GetMapFromFile Fail...{ex.Message}", ex);
+                logger.Error($"GetMapFromFile Fail...{ex.Message}", ex);
                 return emptyMap;
             }
         }

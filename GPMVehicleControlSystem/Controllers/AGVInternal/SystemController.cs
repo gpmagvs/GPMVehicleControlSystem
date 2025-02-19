@@ -1,5 +1,4 @@
 ﻿using AGVSystemCommonNet6;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;

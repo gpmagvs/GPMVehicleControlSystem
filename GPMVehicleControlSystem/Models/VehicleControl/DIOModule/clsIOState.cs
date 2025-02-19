@@ -1,7 +1,4 @@
-﻿using AGVSystemCommonNet6.Log;
-using Microsoft.Data.SqlClient;
-using NLog;
-using System.Diagnostics;
+﻿using NLog;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 

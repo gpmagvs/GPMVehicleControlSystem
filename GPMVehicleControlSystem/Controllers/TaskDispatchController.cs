@@ -1,7 +1,6 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
@@ -59,12 +58,12 @@ namespace GPMVehicleControlSystem.Controllers
             };
             try
             {
-                LOG.INFO($"[任務取消] 從派車系統接收到任務取消請求(API)", color: ConsoleColor.Red);
+                Agv.AGVS.logger.LogTrace($"[任務取消] 從派車系統接收到任務取消請求(API)");
                 Agv.HandleAGVSTaskCancelRequest(cancelCmd.ResetMode);
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                Agv.AGVS.logger.LogError(ex,ex.Message);
             }
             LogResponseAsync("Cancel", reply);
             return Ok(reply);
@@ -83,7 +82,7 @@ namespace GPMVehicleControlSystem.Controllers
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                Agv.AGVS.logger.LogError(ex, ex.Message);
             }
             LogResponseAsync("OrderInfo", true);
             return Ok(true);

@@ -1,5 +1,5 @@
-﻿using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using NLog;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace AGVSystemCommonNet6.Abstracts
@@ -7,6 +7,7 @@ namespace AGVSystemCommonNet6.Abstracts
     public abstract class Lighter
     {
         public clsDOModule DOModule { get; set; }
+        public Logger logger = LogManager.GetCurrentClassLogger();
         public Lighter()
         {
         }
@@ -46,11 +47,11 @@ namespace AGVSystemCommonNet6.Abstracts
             }
             catch (OperationCanceledException)
             {
-                LOG.TRACE("Flash Task Canceled", false);
+                logger.Trace("Flash Task Canceled", false);
             }
             catch (Exception ex)
             {
-                LOG.TRACE("Flash Task Canceled", false);
+                logger.Trace("Flash Task Canceled", false);
             }
         }
 
@@ -88,7 +89,7 @@ namespace AGVSystemCommonNet6.Abstracts
                 }
                 catch (Exception ex)
                 {
-                    LOG.TRACE("Flash Task Canceled", false);
+                    logger.Trace("Flash Task Canceled", false);
                 }
             }, flash_cts.Token);
         }

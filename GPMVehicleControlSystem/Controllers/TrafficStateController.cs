@@ -1,9 +1,9 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Model;
-using AGVSystemCommonNet6.Log;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NLog;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 
 namespace GPMVehicleControlSystem.Controllers
@@ -14,7 +14,7 @@ namespace GPMVehicleControlSystem.Controllers
     {
 
         private Vehicle _Vehicle => StaStored.CurrentVechicle;
-
+        Logger logger= LogManager.GetCurrentClassLogger();
         /// <summary>
         /// 接收派車系統上報之多車動態
         /// </summary>
@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Controllers
             }
             catch (Exception ex)
             {
-                LOG.ERROR(ex);
+                logger.Error(ex);
             }
             return Ok();
         }

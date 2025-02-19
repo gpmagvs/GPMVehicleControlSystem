@@ -1,5 +1,4 @@
-﻿using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models;
+﻿using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;

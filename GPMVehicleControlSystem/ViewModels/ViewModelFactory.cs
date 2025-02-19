@@ -1,28 +1,24 @@
-﻿using static GPMVehicleControlSystem.ViewModels.ForkTestVM;
-using GPMVehicleControlSystem.Models.VehicleControl;
-using GPMVehicleControlSystem.Models;
+﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using AGVSystemCommonNet6;
-
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using AGVSystemCommonNet6.MAP;
-using GPMVehicleControlSystem.Models.RDTEST;
-using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Tools;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
-using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
-using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
-using GPMVehicleControlSystem.Service;
+using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.Exceptions;
+using GPMVehicleControlSystem.Models.RDTEST;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Service;
+using NLog;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.ViewModels
 {
     public class ViewModelFactory
     {
+        static Logger logger = LogManager.GetCurrentClassLogger();
+
         internal static Vehicle AGV => StaStored.CurrentVechicle;
 
         public static VehicleInstanceInitializeFailException VehicleInstanceCreateFailException { get; internal set; }
@@ -118,7 +114,7 @@ namespace GPMVehicleControlSystem.ViewModels
             }
             catch (Exception ex)
             {
-                LOG.Critical(ex.Message, ex);
+                logger.Error(ex.Message, ex);
                 return new AGVCStatusVM()
                 {
                     AlarmCodes = new clsAlarmCode[]

@@ -1,5 +1,4 @@
-﻿using AGVSystemCommonNet6.Log;
-using GPMVehicleControlSystem.Models.Buzzer;
+﻿using GPMVehicleControlSystem.Models.Buzzer;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -62,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 finally
                 {
                     _Sub_Status = value;
-                    LOG.TRACE($"Sub_Status change to {value}");
+                    logger.LogTrace($"Sub_Status change to {value}");
                     StoreStatusToDataBase();
                     subStatusSemaphore.Release();
                 }

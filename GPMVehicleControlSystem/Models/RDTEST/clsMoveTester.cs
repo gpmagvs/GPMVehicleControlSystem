@@ -1,7 +1,7 @@
-﻿using AGVSystemCommonNet6.Log;
-using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.ViewModels.RDTEST;
+using NLog;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.RDTEST
@@ -9,7 +9,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
     public class clsMoveTester : RDTesterAbstract
     {
         public clsMoveTestModel options;
-
+        Logger logger = LogManager.GetCurrentClassLogger();
         public clsMoveTester()
         {
 
@@ -31,7 +31,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
         private async void MoveTestWorker()
         {
             Stopwatch sw = Stopwatch.StartNew();
-            LOG.INFO($"旋轉測試開始!");
+            logger.Info($"旋轉測試開始!");
             int count = 0;
             testing_data.duration = 0;
             while (sw.ElapsedMilliseconds < options.duration * 1000)
@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                 //radian 1度=  Math.PI/ 180  
                 double radian_delta = options.theta_move * Math.PI / 180.0;
                 double time_ = radian_delta / options.rotation_speed; //秒
-                LOG.INFO($"預估旋轉時間:{time_}秒");
+                logger.Info($"預估旋轉時間:{time_}秒");
                 Stopwatch timer = Stopwatch.StartNew();
 
 
@@ -67,14 +67,14 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                     AGV.ManualController.TurnLeft(options.rotation_speed, false);
                 }
                 expect_Theta = expect_Theta > 180 ? expect_Theta - 360 : expect_Theta;
-                LOG.INFO($"預期角度 {expect_Theta}");
+                logger.Info($"預期角度 {expect_Theta}");
                 while (isTurnRight ? (AGV.BarcodeReader.Data.theta > expect_Theta) : (AGV.BarcodeReader.Data.theta < expect_Theta))
                 {
                     testing_data.duration = (int)(sw.ElapsedMilliseconds / 1000.0);
                     Thread.Sleep(TimeSpan.FromMilliseconds(0.05));
                     if (AGV.BarcodeReader.Data.tagID == 0)
                     {
-                        LOG.INFO($"測試過程中脫離Tag", false);
+                        logger.Info($"測試過程中脫離Tag", false);
                         BuzzerPlayer.Alarm();
                         AlarmManager.RecordAlarm(AlarmCodes.Motion_control_Missing_Tag_On_End_Point);
                         TestEnd();
@@ -102,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
 
         private void TestEnd()
         {
-            LOG.INFO($"測試結束");
+            logger.Info($"測試結束");
             AGV._Sub_Status = AGVSystemCommonNet6.clsEnums.SUB_STATUS.IDLE;
             AGV.ManualController.Stop();
             testing_data.state = TEST_STATE.IDLE;
