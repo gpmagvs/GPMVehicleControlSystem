@@ -102,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.WorkStation
 
     public class clsStationLayerData
     {
-        public double Up_Pose { get; set; }
         public double Down_Pose { get; set; }
+        public double Up_Pose { get; set; }
     }
 }
