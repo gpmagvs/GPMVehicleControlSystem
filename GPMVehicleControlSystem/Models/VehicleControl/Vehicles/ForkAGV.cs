@@ -137,6 +137,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
         {
+            bool isForkMoveInWorkStationByLduld = GetSub_Status() == SUB_STATUS.RUN && lastVisitedMapPoint.StationType != STATION_TYPE.Normal;
+            if (isForkMoveInWorkStationByLduld)
+            {
+                _ForkSaftyProtectFlag = false;
+                DebugMessageBrocast("注意! 目前在設備或儲格中移動牙叉，牙叉將不會因側邊雷射觸發而停止");
+                return;
+            }
+
             ForkAGVController agvc = sender as ForkAGVController;
             bool isInitializing = agvc.IsInitializing;
             //throw new NotImplementedException();
