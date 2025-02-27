@@ -380,6 +380,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             task_abort_alarmcode = alarm_code;
             Agv.AGVC.EmergencyStop(true);
             base.Abort(alarm_code);
+            _waitMoveToPortDonePause.Set();
             _WaitBackToHomeDonePause.Set();
             logger.Warn($"[Abort Task] {action} Task Abort, Alarm Code = {alarm_code}");
         }
