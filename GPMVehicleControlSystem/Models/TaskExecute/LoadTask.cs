@@ -399,6 +399,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             logger.Info($"等待AGV完成 [{action}] -移動至設備 (Timeout : {MoveActionTimeout})");
             bool inTime = _waitMoveToPortDonePause.WaitOne(MoveActionTimeout);
             _stopWatch.Stop();
+            if (task_abort_alarmcode!= AlarmCodes.None)
+            {
+                logger.Info($"AGV [{action}] 動作中止-task_abort_alarmcode={task_abort_alarmcode}");
+                return;
+            }
             if (inTime)
             {
                 task_abort_alarmcode = AlarmCodes.None;
@@ -582,7 +587,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
-                            logger.Info($"AGV [{action}] -退出至二次定位點任務逾時!(Time Spend: {_timeSpend} ms)");
+                            logger.Info($"AGV [{action}] -退出至二次定位點任務已終止!(task_abort_alarmcode:{task_abort_alarmcode},Time Spend: {_timeSpend} ms)");
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
