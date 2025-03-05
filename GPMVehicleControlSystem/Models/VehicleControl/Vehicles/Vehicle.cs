@@ -314,6 +314,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StatusLighter = new clsStatusLighter(WagoDO);
             CreateLaserInstance();
 
+            AGVSInit();
 
             List<Task> WagoAndRosInitTasks = new List<Task>
                 {
@@ -399,7 +400,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task Startup()
         {
             CommonEventsRegist();
-            AGVSInit();
             try
             {
                 SyncHandshakeSignalStates();
