@@ -910,21 +910,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool rightSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
             bool leftSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Left_LsrBypass);
 
-            bool rightSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
-            bool leftSideOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);
+
+            bool rightSideDescreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_1);
+            bool leftSideDescreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_1);
+
+            bool rightSideStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
+            bool leftSideStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);
 
             bool frontDecreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_1);
             bool frontStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_3);
             bool backDecreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_1);
             bool backStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.BackProtection_Area_Sensor_3);
 
-            bool rightNearObs = (rightSideOn && !rightSideBypass);
-            bool leftNearObs = (leftSideOn && !leftSideBypass);
+            bool rightNearObs = (rightSideStopOn && !rightSideBypass);
+            bool leftNearObs = (leftSideStopOn && !leftSideBypass);
             bool frontNearObs = (frontStopOn && !frontBypass);
             bool backNearObs = (backStopOn && !backBypass);
 
             bool frontFarObs = (frontDecreaseOn && !frontBypass);
             bool backFarObs = (backDecreaseOn && !backBypass);
+
+            bool rightFarObj = (rightSideDescreaseOn && !rightSideBypass);
+            bool leftFarObj = (leftSideDescreaseOn && !leftSideBypass);
 
             if (rightNearObs || leftNearObs || frontNearObs || backNearObs)
             {
@@ -941,12 +948,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 alarmCodes = alarmcodesList.ToArray();
                 return ROBOT_CONTROL_CMD.STOP;
             }
-            else if (frontFarObs || backFarObs)
+            else if (frontFarObs || backFarObs || rightFarObj || leftFarObj)
             {
                 if (frontFarObs)
                     alarmcodesList.Add(AlarmCodes.FrontProtection_Area2);
                 if (backFarObs)
                     alarmcodesList.Add(AlarmCodes.BackProtection_Area2);
+                if (rightFarObj)
+                    alarmcodesList.Add(AlarmCodes.RightProtection_Area2);
+                if (leftFarObj)
+                    alarmcodesList.Add(AlarmCodes.LeftProtection_Area2);
                 alarmCodes = alarmcodesList.ToArray();
                 return ROBOT_CONTROL_CMD.DECELERATE;
             }
