@@ -26,6 +26,7 @@ using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Drawing;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
@@ -313,8 +314,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext);
             StatusLighter = new clsStatusLighter(WagoDO);
             CreateLaserInstance();
-
-
             List<Task> WagoAndRosInitTasks = new List<Task>
                 {
                     WagoDIInit(),
@@ -394,6 +393,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 Spin_Laser_Mode = Parameters.Spin_Laser_Mode
             };
+            Laser.IsFrontBackLaserIOShare = WagoDO.VCSOutputs.Any(sig => sig.Output== DO_ITEM.FrontBack_Protection_Sensor_IN_1);
+            Laser.IsSideLaserModeChangable = WagoDO.VCSOutputs.Any(sig => sig.Output== DO_ITEM.Side_Protection_Sensor_IN_1);
+            logger.LogTrace($"前後雷射共用IO ? => {(Laser.IsFrontBackLaserIOShare ? "YES" :"NO")}");
+            logger.LogTrace($"側邊雷射段數可切換 ? => {(Laser.IsSideLaserModeChangable ? "YES" :"NO")}");
         }
 
         private async Task Startup()

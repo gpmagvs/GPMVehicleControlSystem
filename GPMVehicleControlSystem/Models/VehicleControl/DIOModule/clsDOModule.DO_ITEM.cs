@@ -75,6 +75,23 @@
             Back_Protection_Sensor_CIN_3,
             Back_Protection_Sensor_IN_4,
             Back_Protection_Sensor_CIN_4,
+            #region YM 5F 新車,前後雷射共用IO , 側邊
+
+            FrontBack_Protection_Sensor_IN_1,
+            FrontBack_Protection_Sensor_CIN_1,
+            FrontBack_Protection_Sensor_IN_2,
+            FrontBack_Protection_Sensor_CIN_2,
+            FrontBack_Protection_Sensor_IN_3,
+            FrontBack_Protection_Sensor_CIN_3,
+            FrontBack_Protection_Sensor_IN_4,
+            FrontBack_Protection_Sensor_CIN_4,
+
+            Side_Protection_Sensor_IN_1,
+            Side_Protection_Sensor_IN_2,
+            Side_Protection_Sensor_IN_3,
+            Side_Protection_Sensor_IN_4,
+            #endregion
+
             Left_Protection_Sensor_IN_1,
             Left_Protection_Sensor_IN_2,
             Left_Protection_Sensor_IN_3,

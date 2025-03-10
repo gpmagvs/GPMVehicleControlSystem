@@ -87,7 +87,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             this.DOModule = DOModule;
             this.DIModule = DIModule;
         }
-
+        /// <summary>
+        /// 側邊雷射是否可切段數
+        /// </summary>
+        internal bool IsSideLaserModeChangable = false;
+        /// <summary>
+        /// 前後雷射是否共用IO
+        /// </summary>
+        internal bool IsFrontBackLaserIOShare = false;
 
         public virtual LASER_MODE Mode
         {
@@ -254,6 +261,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 int retry_times_limit = 300;
                 int try_count = 0;
                 bool[] writeBools = mode_int.ToLaserDOSettingBits();
+                bool[] writeBools_SideLaser =IsSideLaserModeChangable? mode_int.ToSideLaserDOSettingBits():new bool[0];
                 while (true)
                 {
                     await Task.Delay(10);
@@ -265,9 +273,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     logger.Warn($"Try Laser Output Setting  as {mode_int} --({try_count})");
                     if (try_count > retry_times_limit)
                         return false;
-                    bool writeSuccess = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
-
-                    if (isSickOutputPathDataNotUpdate && writeSuccess)
+                    bool writeSuccess = false;
+                    
+                    if(!IsFrontBackLaserIOShare)
+                       writeSuccess= await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+                    else
+                        writeSuccess=await DOModule.SetState(DO_ITEM.FrontBack_Protection_Sensor_IN_1, writeBools.Take(8).ToArray());
+                    bool sideLaserWriteSuccess= !writeBools_SideLaser.Any()?true:false;
+                    if (writeBools_SideLaser.Any())
+                        sideLaserWriteSuccess = await DOModule.SetState(DO_ITEM.Side_Protection_Sensor_IN_1, writeBools_SideLaser);
+                    if (isSickOutputPathDataNotUpdate && writeSuccess && sideLaserWriteSuccess)
                     {
                         _CurrentLaserModeOfSick = mode_int;
                         break;

@@ -100,9 +100,11 @@
             LeftProtection_Area_Sensor_1,
             LeftProtection_Area_Sensor_2,
             LeftProtection_Area_Sensor_3,
+            LeftProtection_Area_Sensor_4,
             RightProtection_Area_Sensor_1,
             RightProtection_Area_Sensor_2,
             RightProtection_Area_Sensor_3,
+            RightProtection_Area_Sensor_4,
             Battery_2_Exist_1,
             Battery_2_Exist_2,
             /// <summary>
