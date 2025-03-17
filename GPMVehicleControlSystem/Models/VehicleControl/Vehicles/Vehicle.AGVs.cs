@@ -58,15 +58,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(1000);
             await DownloadMapFromServer();
 
-            if (Parameters.SyncEQInfoFromAGVS)
-            {
-                var eqinfomations = await GetWorkStationEQInformation(this.NavingMap.Points.Values.Where(st => st.StationType != STATION_TYPE.Normal).Select(st => st.TagNumber).ToList());
-                if (eqinfomations != null)
-                {
-                    WorkStations.SyncInfo(eqinfomations);
-                    SaveTeachDAtaSettings();
-                }
-            }
+            //if (Parameters.SyncEQInfoFromAGVS)
+            //{
+            //    var eqinfomations = await GetWorkStationEQInformation(this.NavingMap.Points.Values.Where(st => st.StationType != STATION_TYPE.Normal).Select(st => st.TagNumber).ToList());
+            //    if (eqinfomations != null)
+            //    {
+            //        WorkStations.SyncInfo(eqinfomations);
+            //        SaveTeachDAtaSettings();
+            //    }
+            //}
 
             AGVS.Start();
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);

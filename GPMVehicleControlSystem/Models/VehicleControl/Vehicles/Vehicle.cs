@@ -167,7 +167,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
-        public virtual bool IsFrontendSideHasObstacle => WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
+        public virtual bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
         public MapPoint DestinationMapPoint
         {
             get
@@ -285,7 +285,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal virtual async Task CreateAsync()
         {
             HandShakeLogger = LogManager.GetCurrentClassLogger();
-            Parameters._EQHandshakeMethodStore = Parameters.EQHandshakeMethod;
             IMU.Options = Parameters.ImpactDetection;
             CIMConnectionInitialize();
             LoadWorkStationConfigs();
@@ -393,10 +392,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 Spin_Laser_Mode = Parameters.Spin_Laser_Mode
             };
-            Laser.IsFrontBackLaserIOShare = WagoDO.VCSOutputs.Any(sig => sig.Output== DO_ITEM.FrontBack_Protection_Sensor_IN_1);
-            Laser.IsSideLaserModeChangable = WagoDO.VCSOutputs.Any(sig => sig.Output== DO_ITEM.Side_Protection_Sensor_IN_1);
-            logger.LogTrace($"前後雷射共用IO ? => {(Laser.IsFrontBackLaserIOShare ? "YES" :"NO")}");
-            logger.LogTrace($"側邊雷射段數可切換 ? => {(Laser.IsSideLaserModeChangable ? "YES" :"NO")}");
+            Laser.IsFrontBackLaserIOShare = WagoDO.VCSOutputs.Any(sig => sig.Output == DO_ITEM.FrontBack_Protection_Sensor_IN_1);
+            Laser.IsSideLaserModeChangable = WagoDO.VCSOutputs.Any(sig => sig.Output == DO_ITEM.Side_Protection_Sensor_IN_1);
+            logger.LogTrace($"前後雷射共用IO ? => {(Laser.IsFrontBackLaserIOShare ? "YES" : "NO")}");
+            logger.LogTrace($"側邊雷射段數可切換 ? => {(Laser.IsSideLaserModeChangable ? "YES" : "NO")}");
         }
 
         private async Task Startup()
@@ -788,7 +787,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!eq_io_status_check_reuslt.confirm)
                 return (false, $"端點設備({lastVisitedMapPoint.Name})尚未進行復歸，AGV禁止復歸");
 
-            ResetHandshakeSignals();
+            await ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
             (bool confirm, string message) hardware_status_check_reuslt = CheckHardwareStatus();
             if (!hardware_status_check_reuslt.confirm)
@@ -837,20 +836,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// Reset交握訊號
         /// </summary>
-        internal virtual async void ResetHandshakeSignals()
+        internal virtual async Task ResetHandshakeSignals()
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, false);
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, false);
             await WagoDO.SetState(DO_ITEM.AGV_BUSY, false);
             await WagoDO.SetState(DO_ITEM.AGV_READY, false);
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION)
             {
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_BUSY, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
+                await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
             }
+            DebugMessageBrocast("Handshake IO Reset done.");
             HandshakeLog($"Handshake IO Reset done.");
         }
 

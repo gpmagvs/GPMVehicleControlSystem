@@ -138,6 +138,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal AlarmCodes AlarmCodeWhenHandshaking = AlarmCodes.None;
 
+        public EQ_HS_METHOD currentHandshakeProtocol = EQ_HS_METHOD.PIO;
+
+
         public Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState> EQHsSignalStates = new Dictionary<EQ_HSSIGNAL, clsHandshakeSignalState>()
         {
             { EQ_HSSIGNAL.EQ_L_REQ, new clsHandshakeSignalState(EQ_HSSIGNAL.EQ_L_REQ)},
@@ -185,18 +188,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal bool IsEQGOOn()
         {
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.MODBUS)
                 return true;
-
-            bool _simulate_eq_go_on = Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun;
-            if (_simulate_eq_go_on)
-            {
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(20);
-                    await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, true);
-                });
-            }
             return EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State;
         }
         private bool IsEQBusyOn()
@@ -213,7 +206,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             HandshakeStatusText = value ? "AGV動作中" : "AGV動作完成";
             if (value)
                 EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].OnSignalON += HandleEQBusyONAfterAGVBUSY;
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && !value) //AGV_BUSY OFF
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && !value) //AGV_BUSY OFF
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
@@ -237,7 +230,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await WagoDO.SetState(DO_ITEM.AGV_READY, value);
 
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
@@ -250,7 +243,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task SetAGVVALID(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_VALID, value);
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
@@ -264,7 +257,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task SetAGV_TR_REQ(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, value);
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
@@ -278,7 +271,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task SetAGV_COMPT(bool value)
         {
             await WagoDO.SetState(DO_ITEM.AGV_COMPT, value);
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
+            if (currentHandshakeProtocol == EQ_HS_METHOD.EMULATION && Parameters.EQHandshakeSimulationAutoRun && value)
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
@@ -413,13 +406,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleEQReadOFF(object? sender, EventArgs e)
         {
+            DebugMessageBrocast($"EQ READY OFF!");
             EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF -= HandleEQReadOFF;
             if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT])
             {
                 //normal
                 HandShakeLogger.Trace($"EQ READY Normal OFF When AGV_COMPT ON");
             }
-            else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State || Parameters.EQHandshakeMethod == EQ_HS_METHOD.MODBUS) //EQ GO ON著/若沒有光IO則不管
+            else if (EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State || currentHandshakeProtocol == EQ_HS_METHOD.MODBUS) //EQ GO ON著/若沒有光IO則不管
             {
                 HandShakeLogger.Warn($"EQ READY OFF When Handshaking running");
                 IsEQAbnormal_when_handshaking = true;

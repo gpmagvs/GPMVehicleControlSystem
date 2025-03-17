@@ -93,8 +93,8 @@ namespace GPMVehicleControlSystem.ViewModels
                     {
                         IsHandshaking = AGV.IsHandshaking,
                         HandshakingInfoText = AGV.HandshakeStatusText,
-                        ConnectionType = AGV.Parameters.EQHandshakeMethod,
-                        Connected = AGV.Parameters.EQHandshakeMethod != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
+                        ConnectionType = AGV.currentHandshakeProtocol,
+                        Connected = AGV.currentHandshakeProtocol != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
                     },
                     OrderInfo = AGV.orderInfoViewModel,
                     IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
@@ -292,7 +292,7 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 Inputs = AGV.WagoDI.VCSInputs.ToList(),
                 Outputs = AGV.WagoDO.VCSOutputs.ToList(),
-                IsE84HsUseEmulator = AGV.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.EMULATION,
+                IsE84HsUseEmulator = AGV.currentHandshakeProtocol == Vehicle.EQ_HS_METHOD.EMULATION,
             };
         }
         internal static object GetRDTestData()

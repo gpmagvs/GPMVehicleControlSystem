@@ -127,9 +127,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public List<int> StationNeedQueryVirtualID { get; set; } = new List<int>();
 
         public clsMapParam MapParam { get; set; } = new clsMapParam();
-        public EQ_HS_METHOD EQHandshakeMethod { get; set; } = EQ_HS_METHOD.PIO;
-
-        internal EQ_HS_METHOD _EQHandshakeMethodStore = EQ_HS_METHOD.PIO;
 
         public int HandshakeIOFlickDelayTime { get; set; } = 300;
         public clsObstacleDetection LOAD_OBS_DETECTION { get; set; } = new clsObstacleDetection();

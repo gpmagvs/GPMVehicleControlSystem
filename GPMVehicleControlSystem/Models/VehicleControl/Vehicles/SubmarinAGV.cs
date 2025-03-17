@@ -98,15 +98,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_READY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_READY] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_BUSY, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_BUSY] = state; });
             WagoDO.SubsSignalStateChange(DO_ITEM.AGV_COMPT, (sender, state) => { AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] = state; });
-            if (Parameters.EQHandshakeMethod == EQ_HS_METHOD.EMULATION)
-            {
+
+            if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_L_REQ))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_L_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_L_REQ].State = state; });
+            if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_U_REQ))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_U_REQ, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_U_REQ].State = state; });
+            if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_READY))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_READY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].State = state; });
+            if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_BUSY))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_BUSY, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_BUSY].State = state; });
+            if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_GO))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State = state; });
-                logger.LogInformation($"Handshake emulation mode, regist DO 0-6 ad PIO EQ Inputs ");
-            }
         }
         protected virtual async void AutoResetHorizonMotor(object? sender, bool alarm)
         {

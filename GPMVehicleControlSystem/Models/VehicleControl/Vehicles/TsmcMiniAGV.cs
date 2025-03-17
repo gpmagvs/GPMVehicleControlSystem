@@ -330,9 +330,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.SoftwareEMO();
         }
-        internal override async void ResetHandshakeSignals()
+        internal override async Task ResetHandshakeSignals()
         {
-            base.ResetHandshakeSignals();
+            await base.ResetHandshakeSignals();
             await WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
             await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);

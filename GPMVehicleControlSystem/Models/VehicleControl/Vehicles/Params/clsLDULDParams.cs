@@ -11,12 +11,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// <summary>
         /// 從設備站點退出至二次定位點時須詢問派車系統
         /// </summary>
-        public bool LeaveWorkStationNeedSendRequestToAGVS { get; set; } = false;
+        public bool LeaveWorkStationNeedSendRequestToAGVS { get; set; } = true;
         public int LeaveWorkStationRequestTimeout { get; set; } = 300;
 
         public bool BypassFrontLaserWhenEntryEQ { get; set; } = true;
 
         public int MoveActionTimeoutInSec { get; set; } = 60;
-
     }
 }

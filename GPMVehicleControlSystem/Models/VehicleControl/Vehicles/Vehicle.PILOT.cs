@@ -910,12 +910,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool rightSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Right_LsrBypass);
             bool leftSideBypass = WagoDO.GetState(clsDOModule.DO_ITEM.Left_LsrBypass);
 
+            bool rightSideDescreaseOn = Laser.IsSideLaserModeChangable ? !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_1) : false;
+            bool leftSideDescreaseOn = Laser.IsSideLaserModeChangable ? !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_1) : false;
 
-            bool rightSideDescreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_1);
-            bool leftSideDescreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_1);
-
-            bool rightSideStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
-            bool leftSideStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);
+            bool rightSideStopOn = (Laser.IsSideLaserModeChangable && !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_2)) || !WagoDI.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_3);
+            bool leftSideStopOn = (Laser.IsSideLaserModeChangable && !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_2)) || !WagoDI.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_3);
 
             bool frontDecreaseOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_1);
             bool frontStopOn = !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(clsDIModule.DI_ITEM.FrontProtection_Area_Sensor_3);

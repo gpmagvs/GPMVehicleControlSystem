@@ -21,6 +21,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarControl
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -122,9 +123,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             if (IsNeedHandshake)
             {
-                bool _is_modbus_hs = Agv.Parameters.EQHandshakeMethod == Vehicle.EQ_HS_METHOD.MODBUS || HandshakeProtocol == Vehicle.EQ_HS_METHOD.MODBUS;
+                bool _is_modbus_hs = HandshakeProtocol == Vehicle.EQ_HS_METHOD.MODBUS;
+                bool isEmulationHs = HandshakeProtocol == EQ_HS_METHOD.EMULATION;
                 Agv.HandshakeStatusText = "AGV交握訊號重置...";
-                Agv.ResetHandshakeSignals();
+                await Agv.ResetHandshakeSignals();
                 Agv.ResetHSTimersAndEvents();
                 await Task.Delay(400);
                 Agv.HandshakeStatusText = _is_modbus_hs ? "建立Modbus連線..." : "確認光IO EQ GO訊號...";
@@ -136,6 +138,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
                 if (!Agv.Parameters.LDULD_Task_No_Entry)
                 {
+                    if (isEmulationHs)
+                    {
+                        await Agv.WagoDO.SetState(DO_ITEM.EMU_EQ_GO, true);
+                        await Task.Delay(400);
+                    }
                     if (!_is_modbus_hs && !Agv.IsEQGOOn())
                     {
                         await Task.Delay(200);
@@ -296,6 +303,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             bool existHandshakeModeSetting = Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data);
 
+            HandshakeProtocol = existHandshakeModeSetting && data != null ? data.HandShakeConnectionMode : EQ_HS_METHOD.PIO;
+
             if (IsJustAGVPickAndPlaceAtWIPPort || existHandshakeModeSetting && data.CargoTransferMode == CARGO_TRANSFER_MODE.ONLY_FIRST_SLOT_EQ_Pick_and_Place && height > 0)
             {
                 IsNeedHandshake = false;
@@ -399,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             logger.Info($"等待AGV完成 [{action}] -移動至設備 (Timeout : {MoveActionTimeout})");
             bool inTime = _waitMoveToPortDonePause.WaitOne(MoveActionTimeout);
             _stopWatch.Stop();
-            if (task_abort_alarmcode!= AlarmCodes.None)
+            if (task_abort_alarmcode != AlarmCodes.None)
             {
                 logger.Info($"AGV [{action}] 動作中止-task_abort_alarmcode={task_abort_alarmcode}");
                 return;
@@ -765,7 +774,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     logger.Warn($"設備外交握失敗(Alarm Code={HSResult.alarmCode})，新增異常但流程可繼續");
                     AlarmManager.AddAlarm(HSResult.alarmCode, true);
-                    Agv.ResetHandshakeSignals();
+                    await Agv.ResetHandshakeSignals();
                 }
 
                 (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = AsyncCSTReadSuccess ? (true, AlarmCodes.None) : CSTBarcodeReadAfterAction(new CancellationToken()).Result;

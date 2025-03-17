@@ -184,19 +184,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
             }
         }
-
+        private EQ_HS_METHOD _HandshakeProtocol = EQ_HS_METHOD.PIO;
         public EQ_HS_METHOD HandshakeProtocol
         {
-            get
+            get => _HandshakeProtocol;
+            set
             {
-                if (Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data))
-                {
-                    return data.HandShakeConnectionMode;
-                }
-                else
-                {
-                    return EQ_HS_METHOD.PIO;
-                }
+                _HandshakeProtocol = value;
+                Agv.currentHandshakeProtocol = value;
             }
         }
 

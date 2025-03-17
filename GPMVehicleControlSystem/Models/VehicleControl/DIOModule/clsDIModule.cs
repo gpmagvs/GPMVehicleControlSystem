@@ -278,7 +278,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {
-                VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalON += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
             }
             else if (AgvType == AGV_TYPE.FORK)
             {
