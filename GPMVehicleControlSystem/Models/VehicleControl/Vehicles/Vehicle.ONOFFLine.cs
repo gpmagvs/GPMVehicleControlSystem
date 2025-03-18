@@ -34,12 +34,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-
-
-        private bool OnlineModeChangingFlag = false;
-
-
-
         internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
             if (mode != Remote_Mode)

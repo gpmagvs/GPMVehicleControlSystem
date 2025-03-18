@@ -39,7 +39,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public override clsCSTReader CSTReader { get; set; } = new clsCSTReader();
         public override clsDirectionLighter DirectionLighter { get; set; } = new clsDirectionLighter();
         public override Dictionary<ushort, clsBattery> Batteries { get; set; } = new Dictionary<ushort, clsBattery>();
-        public ILogger Logger { get; }
 
         private SemaphoreSlim _AutoResetHorizonMotorSemaphosre = new SemaphoreSlim(1, 1);
 

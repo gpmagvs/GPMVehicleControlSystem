@@ -49,21 +49,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         }
 
-        public async Task Orig()
-        {
-            pin_command.command = "orig";
-            await _CallPinCommandActionService(pin_command);
-        }
-        public async Task Up()
-        {
-            pin_command.command = "up";
-            await _CallPinCommandActionService(pin_command);
-        }
-        public async Task Down()
-        {
-            pin_command.command = "down";
-            await _CallPinCommandActionService(pin_command);
-        }
         public async Task Lock()
         {
             pin_command.command = "lock";

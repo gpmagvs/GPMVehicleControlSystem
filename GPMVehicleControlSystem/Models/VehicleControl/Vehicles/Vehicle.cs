@@ -93,7 +93,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Points = new Dictionary<int, MapPoint>()
         };
         public CargoStateStore CargoStateStorer;
-        public bool IsHasCSTReader => CSTReader != null;
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
         private string _HandshakeStatusText = "";
@@ -556,11 +555,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 throw ex;
             }
-        }
-
-
-        private void AGVS_OnOnlineStateQueryFail(object? sender, EventArgs e)
-        {
         }
 
         private async Task WagoDIInit()
@@ -1112,7 +1106,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Theta = Navigation.Angle
             });
         }
-        private bool IsCurrentTaskIsHandshaking => _RunTaskData.IsEQHandshake;
 
         /// <summary>
         /// 是否為交握異常碼

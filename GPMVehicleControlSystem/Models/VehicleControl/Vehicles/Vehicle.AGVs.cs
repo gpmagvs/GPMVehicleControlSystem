@@ -486,37 +486,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-
-        public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation(List<int> eqTags)
-        {
-            try
-            {
-                List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(eqTags.ToArray());
-                logger.LogInformation($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
-                return eqOptions;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
-                return null;
-            }
-        }
-
-        public async Task<List<clsAGVSConnection.clsEQOptions>> GetWorkStationEQInformation()
-        {
-            try
-            {
-                List<clsAGVSConnection.clsEQOptions> eqOptions = await AGVS.GetEQsInfos(WorkStations.Stations.Keys.ToArray());
-                logger.LogInformation($"WorkStation EQ Infos : \r\n{JsonConvert.SerializeObject(eqOptions, Formatting.Indented)}");
-                return eqOptions;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError($"WorkStation EQ Infos fetch from AGVs Fail {ex.Message}");
-                return null;
-            }
-        }
-
         private void AGVS_OnDisconnected(object? sender, EventArgs e)
         {
             AlarmManager.AddWarning(AlarmCodes.AGVs_Disconnected);

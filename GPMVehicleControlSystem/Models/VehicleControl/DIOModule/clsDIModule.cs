@@ -83,11 +83,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-
-        public Action OnResetButtonPressing { get; set; }
-
-        public Action OnHS_EQ_READY { get; internal set; }
-
         internal Dictionary<Enum, int> Indexs = new Dictionary<Enum, int>();
 
         public List<clsIOSignal> VCSInputs = new List<clsIOSignal>();
@@ -221,28 +216,6 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 clsIOSignal inputSignal = VCSInputs[Indexs[signal]];
                 inputSignal.AddEvent(handler);
 
-            }
-            catch (Exception ex)
-            {
-                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
-            }
-        }
-        public virtual void RemoveAllSignalStateChangeEvents(Enum signal)
-        {
-            try
-            {
-                VCSInputs[Indexs[signal]].RemoveEvent();
-            }
-            catch (Exception ex)
-            {
-                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
-            }
-        }
-        public virtual void UnRegistSignalStateChange(Enum signal, EventHandler<bool> handler)
-        {
-            try
-            {
-                VCSInputs[Indexs[signal]].OnStateChanged -= handler;
             }
             catch (Exception ex)
             {

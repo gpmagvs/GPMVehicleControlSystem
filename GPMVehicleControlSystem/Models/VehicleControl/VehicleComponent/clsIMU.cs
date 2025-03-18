@@ -70,7 +70,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _AccData = value;
             }
         }
-        public Vector3 GyroData => StateData == null ? new Vector3(0, 0, 0) : ((GpmImuMsg)StateData).imuData.angular_velocity;
         public bool IsAccSensorError => AccData == null ? false : (AccData.x == 0 && AccData.y == 0 && AccData.z == 0);
 
         private PITCH_STATES _PitchState = PITCH_STATES.NORMAL;

@@ -95,7 +95,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 是否啟用牙叉功能
         /// </summary>
         internal bool Enable => forkAGV.Parameters.ForkAGV.ForkLifer_Enable;
-        internal double HSafe => forkAGV.Parameters.ForkAGV.SaftyPositionHeight;
         public Dictionary<int, clsWorkStationData> StationDatas
         {
             get
@@ -258,14 +257,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
         }
 
-        public async Task<(bool confirm, string message)> ForkUpAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisUp(speed);
-        }
-        public async Task<(bool confirm, string message)> ForkDownAsync(double speed = 0.1)
-        {
-            return await fork_ros_controller.ZAxisDown(speed);
-        }
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
         {
             return await fork_ros_controller.ZAxisUpSearch(speed);
@@ -539,168 +530,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                     return SEARCH_DIRECTION.UP;
             }
-
-            //fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
-            //try
-            //{
-            //    bool hasCargo = !DIModule.GetState(DI_ITEM.Fork_RACK_Right_Exist_Sensor) || !DIModule.GetState(DI_ITEM.Fork_RACK_Left_Exist_Sensor);
-            //    int _delay_time_before_next_action() => hasCargo ? 2000 : 1000;
-            //    bool IsHomeSensorOn() => CurrentForkLocation == FORK_LOCATIONS.HOME;
-            //    this.InitForkSpeed = InitForkSpeed;
-            //    IsInitialized = false;
-            //    IsInitialing = true;
-            //    bool IsDownSearch = CurrentForkLocation != FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
-
-            //    if (IsDownSearch)
-            //        await ForkDownSearchAsync(hasCargo ? InitForkSpeed : 1.0);
-            //    else
-            //    {
-            //        await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-            //        var rsponse = await ForkUpSearchAsync(InitForkSpeed);
-            //    }
-            //    forkAGV.InitializingStatusText = $"Fork {(IsDownSearch ? "Down " : "Up")} Search Start";
-
-
-            //    bool _reachHome = IsHomeSensorOn();
-            //    bool _leaveHome = false;
-            //    while (true)
-            //    {
-            //        if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-            //        {
-            //            return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
-            //        }
-            //        await Task.Delay(1);
-            //        if (IsDownSearch && CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
-            //        {
-            //            _reachHome = false;
-            //            IsDownSearch = false;
-            //            await ForkPositionInit();
-            //            await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-            //            await ForkUpSearchAsync();
-
-            //        }
-            //        if (!_reachHome)
-            //        {
-            //            _reachHome = IsHomeSensorOn();
-            //            if (_reachHome)
-            //            {
-            //                forkAGV.InitializingStatusText = $"Fork reach home first";
-            //            }
-            //        }
-            //        if (_reachHome && !IsHomeSensorOn())
-            //        {
-            //            forkAGV.InitializingStatusText = $"Fork leave home";
-            //            if (!IsDownSearch)
-            //                await Task.Delay(hasCargo ? 500 : 10);
-            //            var rsponse = await ForkStopAsync();
-            //            break;
-            //        }
-
-            //    }
-            //    await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-            //    await Task.Delay(_delay_time_before_next_action());
-
-            //    if (IsDownSearch)
-            //    {
-            //        double _shift_up_distance = 2.3;
-            //        Thread.Sleep(10);
-            //        await GoUpToAboveHome(_shift_up_distance, true);
-            //        Thread.Sleep(300);
-            //        while (CurrentForkLocation == FORK_LOCATIONS.HOME)
-            //        {
-            //            logger.Warn($"Not leave home, up 0.5 continue...");
-            //            Thread.Sleep(300);
-            //            await GoUpToAboveHome(CurrentHeightPosition + 0.5, false);
-            //        }
-
-            //        async Task GoUpToAboveHome(double pose, bool initPose)
-            //        {
-            //            (bool confirm, string message) response = (false, "");
-            //            while (!response.confirm)
-            //            {
-            //                Thread.Sleep(10);
-            //                if (initPose)
-            //                {
-            //                    response = await ForkPositionInit();
-            //                    logger.Info($" Fork init and Go To {pose} ForkPositionInit {response.confirm},{response.message}");
-            //                    if (!response.confirm)
-            //                        continue;
-            //                }
-            //                Thread.Sleep(1000);
-            //                response = await ForkPose(pose, 1);
-            //                logger.Info($" Fork init and Go To {pose} ForkPose {response.confirm},{response.message}");
-            //                if (!response.confirm)
-            //                    continue;
-            //            }
-            //        }
-
-            //        //_shift_up_distance = 0.1;
-
-            //    }
-            //    forkAGV.InitializingStatusText = $"Fork尋原點動作中...";
-            //    Thread.Sleep(_delay_time_before_next_action());
-            //    while (!IsHomeSensorOn())
-            //    {
-            //        Thread.Sleep(1000);
-            //        if (CurrentForkLocation == FORK_LOCATIONS.HOME)
-            //            break;
-            //        if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-            //        {
-            //            return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
-            //        }
-            //        var pose = Driver.CurrentPosition - 0.05;
-            //        logger.Info($"Fork Shorten move to find Home Point, pose commadn position is {pose}");
-            //        var response = await ForkPose(pose, 0.1);
-            //        logger.Info($"{response.confirm},{response.message}");
-            //    }
-
-            //    if (IsHomeSensorOn())
-            //    {
-            //        (bool confirm, string message) fork_init_response = (false, "");
-            //        CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
-            //        bool IsForkInitFinish((bool confirm, string message) response)
-            //        {
-            //            return response.confirm && Math.Abs(Driver.CurrentPosition - 0) < 0.1;
-            //        }
-
-            //        while (!IsForkInitFinish(fork_init_response))
-            //        {
-            //            Thread.Sleep(200);
-            //            if (cancellation.IsCancellationRequested)
-            //                return (false, AlarmCodes.Action_Timeout);
-            //            fork_init_response = await ForkPositionInit();
-            //            logger.Info($"Fork cmd : init response: {fork_init_response.confirm}<{fork_init_response.message}>");
-            //        }
-            //        var home_position_error_ = Math.Abs(Driver.CurrentPosition - 0);
-            //        IsInitialized = IsHomeSensorOn() && home_position_error_ < 0.01;
-
-            //        if (!IsInitialized)
-            //        {
-            //            logger.Fatal(!IsHomeSensorOn() ? $"Fork Initialize Done but Home DI Not ON" : $"Fork Initialize Done But Driver Position Error to much ({home_position_error_} cm)");
-            //            return (false, !IsHomeSensorOn() ? AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON : AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
-            //        }
-            //        IsInitialing = false;
-            //        logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
-            //        return (true, AlarmCodes.None);
-            //    }
-            //    else
-            //    {
-            //        IsInitialing = false;
-            //        return (false, AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON);
-            //    }
-            //}
-            //catch (TimeoutException ex)
-            //{
-            //    IsInitialing = false;
-            //    return (false, AlarmCodes.Action_Timeout);
-            //}
-            //catch (Exception ex)
-            //{
-            //    IsInitialing = false;
-            //    return (false, AlarmCodes.Fork_Initialize_Process_Error_Occur);
-            //}
-
         }
 
         /// <summary>

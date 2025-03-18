@@ -208,13 +208,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await DOModule.SetState(DO_ITEM.Left_LsrBypass, true);
         }
 
-        internal async void ApplyAGVSLaserSetting()
-        {
-            logger.Info($"雷射組數切換為AGVS Setting={AgvsLsrSetting}");
-
-            await ModeSwitch(AgvsLsrSetting);
-        }
-
         public clsNavigation.AGV_DIRECTION agvDirection { get; internal set; } = clsNavigation.AGV_DIRECTION.FORWARD;
         internal virtual async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
@@ -261,7 +254,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 int retry_times_limit = 300;
                 int try_count = 0;
                 bool[] writeBools = mode_int.ToLaserDOSettingBits();
-                bool[] writeBools_SideLaser =IsSideLaserModeChangable? mode_int.ToSideLaserDOSettingBits():new bool[0];
+                bool[] writeBools_SideLaser = IsSideLaserModeChangable ? mode_int.ToSideLaserDOSettingBits() : new bool[0];
                 while (true)
                 {
                     await Task.Delay(10);
@@ -274,12 +267,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     if (try_count > retry_times_limit)
                         return false;
                     bool writeSuccess = false;
-                    
-                    if(!IsFrontBackLaserIOShare)
-                       writeSuccess= await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
+
+                    if (!IsFrontBackLaserIOShare)
+                        writeSuccess = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
                     else
-                        writeSuccess=await DOModule.SetState(DO_ITEM.FrontBack_Protection_Sensor_IN_1, writeBools.Take(8).ToArray());
-                    bool sideLaserWriteSuccess= !writeBools_SideLaser.Any()?true:false;
+                        writeSuccess = await DOModule.SetState(DO_ITEM.FrontBack_Protection_Sensor_IN_1, writeBools.Take(8).ToArray());
+                    bool sideLaserWriteSuccess = !writeBools_SideLaser.Any() ? true : false;
                     if (writeBools_SideLaser.Any())
                         sideLaserWriteSuccess = await DOModule.SetState(DO_ITEM.Side_Protection_Sensor_IN_1, writeBools_SideLaser);
                     if (isSickOutputPathDataNotUpdate && writeSuccess && sideLaserWriteSuccess)

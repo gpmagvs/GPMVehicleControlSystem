@@ -86,12 +86,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
         }
-
-        internal void InActiveGreen()
-        {
-            DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-        }
-
         internal void ActiveGreen()
         {
             DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
