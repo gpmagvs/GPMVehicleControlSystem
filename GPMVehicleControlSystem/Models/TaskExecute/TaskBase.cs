@@ -302,6 +302,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     startTime = DateTime.Now;
                     BuzzerPlayMusic(action);
+                    if (IsNeedHandshake)
+                        await Agv.Handshake_AGV_BUSY_ON(isBackToHome: false);
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {

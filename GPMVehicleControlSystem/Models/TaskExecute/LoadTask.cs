@@ -160,10 +160,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     return (false, HSResult.alarmCode);
                 }
-                if (IsNeedHandshake)
-                {
-                    _ = Agv.Handshake_AGV_BUSY_ON(isBackToHome: false);
-                }
                 #region 前方障礙物預檢
 
                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
