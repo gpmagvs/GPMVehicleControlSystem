@@ -63,7 +63,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        Dictionary<string, List<int>> TaskTrackingTags = new Dictionary<string, List<int>>();
 
         internal clsTaskDownloadData _RunTaskData = new clsTaskDownloadData()
         {
@@ -372,58 +371,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return _ExecutingTaskEntity;
         }
-
-        private async void TryGetTransferInformationFromCIM(string task_Name)
-        {
-            if (!Parameters.CIMConn)
-                return;
-
-            await Task.Factory.StartNew(async () =>
-            {
-                try
-                {
-                    TransferData transferData = new TransferData();
-                    CancellationTokenSource cancTs = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    while (transferData.ActionType == null)
-                    {
-                        await Task.Delay(1000);
-                        if (cancTs.IsCancellationRequested)
-                        {
-                            logger.LogWarning($"Cannot Download Transfer Infomation From CIM");
-                            return;
-                        }
-                        transferData = await QueryTaskInfoFromCIM(task_Name);
-                    }
-
-                    if (transferData != null)
-                    {
-                        var SourcePointIndex = transferData.FromStationId;
-                        var DestinePointIndex = transferData.ToStationId;
-                        string Action = transferData.ActionType;
-                        string SourceEQName = string.Empty;
-                        string DestinEQName = string.Empty;
-
-                        if (NavingMap.Points.TryGetValue(DestinePointIndex, out var SourcePoint))
-                        {
-                            SourceEQName = SourcePoint.Graph.Display;
-                        }
-                        if (NavingMap.Points.TryGetValue(DestinePointIndex, out var DestinePoint))
-                        {
-                            DestinEQName = DestinePoint.Graph.Display;
-                        }
-                        orderInfoViewModel.SourceName = SourceEQName;
-                        orderInfoViewModel.DestineName = DestinEQName;
-                        logger.LogInformation($"Download TransferTask= {orderInfoViewModel.ToJson()}");
-
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, ex.Message);
-                }
-            });
-        }
-
         private void WriteTaskNameToFile(string task_Name)
         {
             TaskName = task_Name;
@@ -530,10 +477,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        protected virtual bool GetAutoDoorOpenControl()
-        {
-            return WagoDO.GetState(DO_ITEM.Infrared_Door_1);
-        }
 
         protected virtual async Task OpenAutoDoor()
         {

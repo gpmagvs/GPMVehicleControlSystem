@@ -160,10 +160,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AlarmManager.AddWarning(AlarmCodes.Map_Recognition_Rate_Too_Low);
         }
 
-        private void ClsSick_OnLocalizationStationError(object? sender, EventArgs e)
-        {
-            AlarmManager.AddWarning(AlarmCodes.Localization_Fail);
-        }
 
         private void CarComponent_OnCommunicationError(object? sender, CarComponent e)
         {
@@ -239,10 +235,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
             });
-        }
-        private void HandleBatteryOverTemperature(object? sender, clsBattery e)
-        {
-            AlarmManager.AddAlarm(AlarmCodes.Over_Temperature, false);
         }
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
         {
@@ -536,220 +528,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.IO_MODULE_DISCONNECTED);
         }
 
-        /// <summary>
-        /// 處理側邊雷射
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="di_state"></param>
-        private async void HandleSideLaserSignal(object? sender, bool di_state)
-        {
-            if (!IsSaftyProtectActived)
-                return;
-
-            clsIOSignal diState = (clsIOSignal)sender;
-            bool IsRightLaser = diState.Input == DI_ITEM.RightProtection_Area_Sensor_3;
-            bool IsLeftLaser = diState.Input == DI_ITEM.LeftProtection_Area_Sensor_3;
-            bool IsRightLsrBypass = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
-            bool IsLeftLsrBypass = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
-            AlarmCodes alarm_code = IsRightLaser ? AlarmCodes.RightProtection_Area3 : AlarmCodes.LeftProtection_Area3;
-            if (IsRightLaser && IsRightLsrBypass)
-                return;
-            if (IsLeftLaser && IsLeftLsrBypass)
-                return;
-
-            if (!di_state)
-            {
-                await Task.Delay(300);
-                if (WagoDI.GetState(diState.Input))
-                {
-                    var x = Navigation.Data.robotPose.pose.position.x;
-                    var y = Navigation.Data.robotPose.pose.position.y;
-                    var theta = Navigation.Angle;
-                    logger.LogWarning($"{(IsRightLaser ? "Right" : "Left")} Side Laser Flick! ({x},{y},{theta})");
-                    if (IsNoObstacleAroundAGV)
-                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
-                    return;
-                }
-
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
-
-                LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.RecordAlarm(alarm_code);
-                AGVStatusChangeToAlarmWhenLaserTrigger();
-
-            }
-            else
-            {
-                if (IsLaserRecoveryHandled)
-                    return;
-                AlarmManager.ClearAlarm(alarm_code);
-                if (IsNoObstacleAroundAGV)
-                {
-                    logger.LogInformation($"[{alarm_code}] 側邊雷射雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, IsRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 處理雷射第一段觸發
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected async void HandleLaserArea1SinalChange(object? sender, bool e)
-        {
-            if (!IsSaftyProtectActived)
-                return;
-
-            clsIOSignal diState = (clsIOSignal)sender;
-            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_1;
-            bool isLsrBypass = isFrontLaser ? WagoDO.GetState(DO_ITEM.Front_LsrBypass) : WagoDO.GetState(DO_ITEM.Back_LsrBypass);
-
-            if (isLsrBypass)
-                return;
-            var alarm_code = isFrontLaser ? AlarmCodes.FrontProtection_Area2 : AlarmCodes.BackProtection_Area2;
-            if (!diState.State)
-            {
-                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
-                LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.AddWarning(alarm_code);
-                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_TRIGGER);
-            }
-            else
-            {
-                if (IsLaserRecoveryHandled)
-                    return;
-                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                _ = Task.Run(async () =>
-                {
-                    IsLaserRecoveryHandled = false;
-                    AlarmManager.ClearAlarm(alarm_code);
-
-                    while (!IsAllLaserNoTrigger())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_1_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_1_RECOVERY);
-                });
-            }
-        }
-
-        protected async void HandleSideLaserArea1SinalChange(object? sender, bool e)
-        {
-            if (!IsSaftyProtectActived)
-                return;
-
-            clsIOSignal diState = (clsIOSignal)sender;
-            bool isRightLaser = diState.Input == DI_ITEM.RightProtection_Area_Sensor_1;
-            bool isLsrBypass = isRightLaser ? WagoDO.GetState(DO_ITEM.Right_LsrBypass) : WagoDO.GetState(DO_ITEM.Left_LsrBypass);
-
-            if (isLsrBypass)
-                return;
-            var alarm_code = isRightLaser ? AlarmCodes.RightProtection_Area2 : AlarmCodes.LeftProtection_Area2;
-            if (!diState.State)
-            {
-                logger.LogInformation($"{(isRightLaser ? "右方" : "左方")} 第一段雷射Trigger.ROBOT_CONTROL_CMD.DECELERATE");
-                LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.AddWarning(alarm_code);
-                AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.DECELERATE, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_TRIGGER : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_TRIGGER);
-            }
-            else
-            {
-                if (IsLaserRecoveryHandled)
-                    return;
-                _ = Task.Run(async () =>
-                {
-                    AlarmManager.ClearAlarm(alarm_code);
-                    while (!IsAllLaserNoTrigger())
-                    {
-                        await Task.Delay(1000);
-                    }
-                    logger.LogInformation($"{(isRightLaser ? "右方" : "左方")} 第一段雷射恢復.ROBOT_CONTROL_CMD.SPEED_Reconvery");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.SPEED_Reconvery, isRightLaser ? SPEED_CONTROL_REQ_MOMENT.RIGHT_LASER_RECOVERY : SPEED_CONTROL_REQ_MOMENT.LEFT_LASER_RECOVERY);
-                });
-            }
-        }
-
-
-
-        /// <summary>
-        /// 處理雷射第二段觸發
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void HandleLaserArea2SinalChange(object? sender, bool e)
-        {
-
-            if (!IsSaftyProtectActived)
-                return;
-
-            clsIOSignal diState = (clsIOSignal)sender;
-            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2;
-            bool isLsrBypass = isFrontLaser ? WagoDO.GetState(DO_ITEM.Front_LsrBypass) : WagoDO.GetState(DO_ITEM.Back_LsrBypass);
-            if (isLsrBypass)
-                return;
-            var alarm_code = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_2 ? AlarmCodes.FrontProtection_Area3 : AlarmCodes.BackProtection_Area3;
-
-            if (!diState.State)
-            {
-                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_TRIGGER);
-                LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.RecordAlarm(alarm_code);
-                AGVStatusChangeToAlarmWhenLaserTrigger();
-            }
-            else
-            {
-                if (IsLaserRecoveryHandled)
-                    return;
-                AlarmManager.ClearAlarm(alarm_code);
-                if (IsNoObstacleAroundAGV)
-                {
-                    logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第二段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_2_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_2_RECOVERY);
-                }
-            }
-        }
-
-        /// <summary>
-        ///  處理雷射第三段觸發
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="di_state"></param>
-        protected virtual void HandleLaserArea3SinalChange(object? sender, bool di_state)
-        {
-            if (!IsSaftyProtectActived)
-                return;
-
-            clsIOSignal diState = (clsIOSignal)sender;
-
-            bool isFrontLaser = diState.Input == DI_ITEM.FrontProtection_Area_Sensor_3;
-            bool isLsrBypass = isFrontLaser ? WagoDO.GetState(DO_ITEM.Front_LsrBypass) : WagoDO.GetState(DO_ITEM.Back_LsrBypass);
-            if (isLsrBypass)
-                return;
-
-            AlarmCodes alarm_code = isFrontLaser ? AlarmCodes.FrontProtection_Area3 : AlarmCodes.BackProtection_Area3;
-            if (!di_state)
-            {
-                logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射Trigger.ROBOT_CONTROL_CMD.STOP");
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_TRIGGER : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_TRIGGER);
-                LogStatausWhenLaserTrigger(alarm_code);
-                AlarmManager.RecordAlarm(alarm_code);
-                AGVStatusChangeToAlarmWhenLaserTrigger();
-            }
-            else
-            {
-                if (IsLaserRecoveryHandled)
-                    return;
-                AlarmManager.ClearAlarm(alarm_code);
-                if (IsNoObstacleAroundAGV)
-                {
-                    logger.LogInformation($"{(isFrontLaser ? "前方" : "後方")} 第三段雷射恢復.ROBOT_CONTROL_CMD.DECELERATE");
-                    AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD.DECELERATE, isFrontLaser ? SPEED_CONTROL_REQ_MOMENT.FRONT_LASER_3_RECOVERY : SPEED_CONTROL_REQ_MOMENT.BACK_LASER_3_RECOVERY);
-                }
-            }
-        }
-
         private void LogStatausWhenLaserTrigger(AlarmCodes alarm_code)
         {
             string LsrInputState = $"Right={WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3)}";
@@ -898,35 +676,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             //#endregion
         }
-        protected private async Task<bool> ResetMotorWithWait(TimeSpan timeout, clsIOSignal? signal, AlarmCodes alarmCode)
-        {
-            CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
-            while (IsMotorReseting)
-            {
-                await Task.Delay(100);
-                if (!signal.State)
-                {
-                    AlarmManager.ClearAlarm(alarmCode);
-                    return true;
-                }
 
-                if (cancellation.IsCancellationRequested)
-                {
-                    logger.LogWarning($"Reset Motor Fail:Waiting other motor reset process end TIMEOUT");
-                    return false;
-                }
-
-            }
-            if (!signal.State)
-            {
-                AlarmManager.ClearAlarm(alarmCode);
-                logger.LogInformation($"{signal.Name} state {signal.State}, Alarm is reset");
-                return true;
-            }
-
-            AlarmManager.ClearAlarm(alarmCode);
-            return await ResetMotor(false);
-        }
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
         protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
@@ -952,23 +702,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }, _debunceDelay);
         }
 
-        private async Task _CheckLaserStateAfter(int _oriLaser)
-        {
-            _ = Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(1000);
-                bool _isAGVStillForward = Navigation.Direction == clsNavigation.AGV_DIRECTION.FORWARD;
-                if (!_isAGVStillForward)
-                    return;
-
-                bool _isLaserSettingError = Laser.AgvsLsrSetting != _oriLaser;
-                if (_isLaserSettingError)
-                {
-                    logger.LogWarning($"偵測到AGV向前但雷射組數為{Laser.AgvsLsrSetting}(應為{_oriLaser})");
-                    await Laser.ModeSwitch(_oriLaser, true);
-                }
-            });
-        }
 
         protected virtual void EMOTriggerHandler(object? sender, EventArgs e)
         {
@@ -1053,17 +786,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Batteries = Batteries.ToList().FindAll(b => b.Value != null).ToDictionary(b => b.Key, b => b.Value);
         }
 
-
-        private MapPoint GetLastVisitedMapPoint()
-        {
-            if (NavingMap == null)
-                return new MapPoint
-                {
-                    Name = Navigation.LastVisitedTag.ToString(),
-                    TagNumber = Navigation.LastVisitedTag
-                };
-            return NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == Navigation.LastVisitedTag);//虛擬點
-        }
 
         private void HandleSickLocalizationStateChanged(object? sender, LocalizationControllerResultMessage0502 sick_loc_data)
         {

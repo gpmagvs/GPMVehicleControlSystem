@@ -26,35 +26,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void TryChangeAGVSOptions(clsVehicelParam value)
-        {
-            if (AGVS == null)
-                return;
-            AGVS.UseWebAPI = value.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS;
-            AGVS.LocalIP = value.VMSParam.LocalIP;
-            AGVS.IP = value.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
-            AGVS.VMSPort = value.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].Port;
-        }
-
-        private static void ModifyAGVSMessageEncoder(string encoding)
-        {
-            Logger logger = LogManager.GetLogger(typeof(Vehicle).Name);
-            try
-            {
-                var newEncoder = Encoding.GetEncoding(encoding);
-                if (AGVSMessageFactory.Encoder != newEncoder)
-                {
-                    AGVSMessageFactory.Encoder = newEncoder;
-                    logger.Info($"AGVS Message Encoder Changed to {AGVSMessageFactory.Encoder.EncodingName}");
-
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Modify AGVS Message Encoder Fail..({ex.Message})");
-            }
-        }
-
         public const string ParamFileName = "VCS_Params.json";
         public static string ParametersFilePath
         {
