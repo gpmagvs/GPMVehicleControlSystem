@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EquipmentManagment", "..\Eq
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KGSWebAGVSystemAPI", "..\KGSWebAGVSystemAPI\KGSWebAGVSystemAPI.csproj", "{12A645DA-0D31-4666-88EF-A2EAE63269DB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GPMVehicleControlSystemTests", "GPMVehicleControlSystemTests\GPMVehicleControlSystemTests.csproj", "{09926B87-F168-4B34-B31C-EE2F6230AB6D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
