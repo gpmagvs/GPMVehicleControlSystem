@@ -1041,7 +1041,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead(CancellationToken cancellationToken)
         {
-            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(CstInformation.CST_Type);
+
+            var cstType = Agv.CargoStateStorer.GetCargoType();
+            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(cstType);
             if (!result.request_success || !result.action_done)
             {
                 return (false, AlarmCodes.Read_Cst_ID_Fail);
