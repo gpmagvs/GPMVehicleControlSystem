@@ -44,6 +44,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             REPORT_READER_RESULT,
             QUERY_VIRTUAL_ID
         }
+        public enum CST_ID_READ_FAIL_ACTION
+        {
+            REPORT_READER_RESULT,
+            QUERY_VIRTUAL_ID
+        }
         public enum EQ_INTERACTION_FAIL_ACTION
         {
             SET_AGV_NORMAL_STATUS,
@@ -786,7 +791,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     switch (query_cause)
                     {
                         case clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL:
-                            if (Agv.Parameters.Cst_ID_Not_Match_Action == CST_ID_NO_MATCH_ACTION.QUERY_VIRTUAL_ID)
+                            if (Agv.Parameters.Cst_ID_Read_Fail_Action == CST_ID_READ_FAIL_ACTION.QUERY_VIRTUAL_ID)
                             {
                                 logger.Trace($"Get Cargo From Station {destineTag} CST ID READ FAIL, query virtual id from AGVS ");
                                 await Agv.QueryVirtualID(query_cause, cst_type);
