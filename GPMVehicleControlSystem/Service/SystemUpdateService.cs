@@ -50,8 +50,10 @@ namespace GPMVehicleControlSystem.Service
                     //BackupCurrentProgram(out string errMsg);
 
                     string scriptFile = Path.Combine(currentDirectory, "update.sh");
-                    File.WriteAllText(scriptFile, $"sleep 5 && killall -9 GPM_VCS 2>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
-                        $"&& cd {currentDirectory} && ./GPM_VCS");
+
+                    if (!File.Exists(scriptFile))
+                        File.WriteAllText(scriptFile, $"sleep 5 && killall -9 GPM_VCS>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
+                            $"&& cd {currentDirectory} && ./GPM_VCS");
 
                     Process.Start("chmod", $"777 {scriptFile}").WaitForExit();
                     ProcessStartInfo startInfo = new ProcessStartInfo

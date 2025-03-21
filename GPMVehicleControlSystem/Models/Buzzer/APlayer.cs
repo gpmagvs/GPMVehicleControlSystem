@@ -11,7 +11,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
         bool stopFlag = false;
         bool BGStopFlag = false;
-
+        NLog.Logger logger;
         clsSoundsParams.AudioPathes AudioPathes
         {
             get
@@ -22,9 +22,9 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             }
         }
 
-        public APlayer()
+        public APlayer(NLog.Logger logger)
         {
-
+            this.logger = logger;
         }
         public async Task Stop()
         {
@@ -38,11 +38,10 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                         try
                         {
                             process.Kill();
-                            Console.WriteLine($"aplay process-{process.Id} killed.");
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"exception happen when kill aplay process-{process.Id}(${ex.Message})");
+                            logger?.Error($"exception happen when kill aplay process-{process.Id}(${ex.Message})");
                         }
                 }
                 stopFlag = true;
@@ -141,20 +140,19 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                                 playingProcesses.Add(playingProcess);
                                 playingProcess.WaitForExit();
                                 playingProcesses.Remove(playingProcess);
-                                Console.WriteLine(playingProcess.StandardOutput);
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
+                                logger?.Error($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
                             }
                             if (stopFlag)
                                 break;
                         }
-                        Console.WriteLine($"playing while loop out(stopFlag:${stopFlag}).{playingProcess?.Id}");
 
                     }
                     catch (Exception ex)
                     {
+                        logger?.Error($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
                     }
                     finally
                     {
@@ -185,8 +183,9 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     {
                         process?.Kill();
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        logger?.Error($"ss${ex.Message}.{playingProcess?.Id}");
                     }
                 }
                 return;
@@ -214,7 +213,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
+                        logger?.Error($"exception occur when playing while loop :${ex.Message}.{playingProcess?.Id}");
                     }
                     if (BGStopFlag)
                         break;

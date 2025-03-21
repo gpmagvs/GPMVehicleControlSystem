@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             process.WaitForExit();
             if (!string.IsNullOrEmpty(result))
             {
-                APLAYER = new APlayer();
+                APLAYER = new APlayer(logger);
                 Console.WriteLine("which aplay result: " + result);
                 Console.WriteLine("Will use aplay to play audios!!");
             }

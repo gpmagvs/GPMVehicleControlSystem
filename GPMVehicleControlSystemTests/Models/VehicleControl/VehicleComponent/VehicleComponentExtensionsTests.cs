@@ -14,8 +14,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Tests
         [TestMethod()]
         public void ToSideLaserDOSettingBitsTest()
         {
-            int laserMode = 5;
+            int laserMode = 16;
             bool[] bits = laserMode.ToSideLaserDOSettingBits();
+            Assert.IsTrue(bits.All(b => b == true));
+            laserMode = 1;
+            bits = laserMode.ToSideLaserDOSettingBits();
+            Assert.IsTrue(bits.All(b => b == false));
         }
     }
 }
