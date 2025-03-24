@@ -32,13 +32,18 @@ namespace GPMVehicleControlSystem.Service
                     Console.WriteLine($"Create temp folder : {zipFileTempFolder}");
                     Directory.CreateDirectory(zipFileTempFolder);
                     Directory.CreateDirectory(Path.Combine(zipFileTempFolder, "wwwroot"));
+
+                    Console.WriteLine($"Create temp folder : {zipFileTempFolder} done");
                     //store zip file and unzip to current folder
                     // 1. store zip file
+
                     string zipFilePath = Path.Combine(Directory.GetCurrentDirectory(), file.FileName);
+                    Console.WriteLine($"store zip file to : {zipFilePath} ");
                     using (FileStream stream = new FileStream(zipFilePath, FileMode.Create))
                     {
                         await file.CopyToAsync(stream);
                     }
+                    Console.WriteLine($"store zip file to : {zipFilePath} done");
                     //要先提高權限 _temp資料夾
                     Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
                     //2 unzip to current folder
