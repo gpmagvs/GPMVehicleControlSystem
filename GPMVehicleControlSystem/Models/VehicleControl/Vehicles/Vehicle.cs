@@ -875,6 +875,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})";
                 alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
             }
+
+            if (CheckSideLaserAbn(out string msg))
+            {
+                error_message = msg;
+                alarmo_code = AlarmCodes.Side_Laser_Abnormal;
+            }
+
             if (alarmo_code == AlarmCodes.None)
                 return (true, "");
             else
@@ -893,6 +900,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual bool CheckMotorIOError()
         {
             return WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_1) || WagoDI.GetState(DI_ITEM.Horizon_Motor_Alarm_2);
+        }
+
+        protected virtual bool CheckSideLaserAbn(out string msg)
+        {
+            msg = string.Empty;
+            if (!Laser.IsSideLaserModeChangable)
+                return false;
+            (bool right_abn, string righ_msg, bool left_abn, string left_msg) = Laser.IsSideLaserAbnormal;
+            right_abn = right_abn && !Parameters.SensorBypass.RightSideLaserBypass;
+            left_abn = left_abn && !Parameters.SensorBypass.LeftSideLaserBypass;
+
+            msg += right_abn ? righ_msg : "";
+            msg += left_abn ? left_msg : "";
+
+            return right_abn || left_abn;
         }
 
         protected virtual async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)

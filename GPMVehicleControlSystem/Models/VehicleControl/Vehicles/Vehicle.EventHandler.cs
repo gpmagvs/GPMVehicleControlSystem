@@ -205,6 +205,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 WagoDI.SubsSignalStateChange(sensor, (sender, state) => { CargoStateStorer.HandleCargoExistSensorStateChanged(sender, EventArgs.Empty); });
             });
+
+            WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_4, (sender, signalState) =>
+            {
+                if (!signalState && !Parameters.SensorBypass.RightSideLaserBypass)
+                    SoftwareEMO(AlarmCodes.Side_Laser_Abnormal);
+            });
+            WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_4, (sender, signalState) =>
+            {
+                if (!signalState && !Parameters.SensorBypass.LeftSideLaserBypass)
+                    SoftwareEMO(AlarmCodes.Side_Laser_Abnormal);
+            });
+
+
         }
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)

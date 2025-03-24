@@ -96,6 +96,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// </summary>
         internal bool IsFrontBackLaserIOShare = false;
 
+        internal (bool, string, bool, string) IsSideLaserAbnormal
+        {
+            get
+            {
+                if (!IsSideLaserModeChangable)
+                    return (false, "", false, "");
+                bool rightSideAbn = !DIModule.GetState(clsDIModule.DI_ITEM.RightProtection_Area_Sensor_4);
+                string right_msg = rightSideAbn ? "Right Side Laser Abnormal" : "";
+                bool leftSideAbn = !DIModule.GetState(clsDIModule.DI_ITEM.LeftProtection_Area_Sensor_4);
+                string left_msg = leftSideAbn ? "Left Side Laser Abnormal" : "";
+                return (rightSideAbn, right_msg, leftSideAbn, left_msg);
+            }
+        }
+
         public virtual LASER_MODE Mode
         {
             get
