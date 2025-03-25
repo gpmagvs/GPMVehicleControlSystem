@@ -529,7 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 double[] batteryTemperatures = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.maxCellTemperature).ToArray();
                 var status = new clsRunningStatus
                 {
-                    Cargo_Status = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? 1 : 0,
+                    Cargo_Status = SimulationCargoExist() || CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? 1 : 0,
                     CargoType = (int)CargoStateStorer.GetCargoType(),
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
@@ -552,6 +552,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        private bool SimulationCargoExist()
+        {
+            if (!Parameters.CargoExistSensorParams.ExistSensorSimulation)
+                return false;
+            return !string.IsNullOrEmpty(CSTReader.ValidCSTID);
+        }
         private AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode[] GetAlarmCodesUserReportToAGVS_WebAPI()
         {
             return AlarmManager.CurrentAlarms.ToList().FindAll(alarm => alarm.Value.EAlarmCode != AlarmCodes.None).Select(alarm => new AGVSystemCommonNet6.AGVDispatch.Model.clsAlarmCode

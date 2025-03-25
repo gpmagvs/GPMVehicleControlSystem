@@ -12,5 +12,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         [JsonConverter(typeof(StringEnumConverter))]
         public IO_CONEECTION_POINT_TYPE SensorPointType { get; set; } = IO_CONEECTION_POINT_TYPE.B;
+
+        /// <summary>
+        /// 模擬在席
+        /// </summary>
+        public bool ExistSensorSimulation { get; set; } = false;
     }
 }
