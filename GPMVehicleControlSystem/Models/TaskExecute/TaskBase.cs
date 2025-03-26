@@ -846,9 +846,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected async virtual Task<(bool success, AlarmCodes alarmCode)> ExitPortRequest()
         {
+            if (!Agv.Parameters.LDULDParams.LeaveWorkStationNeedSendRequestToAGVS)
+            {
+                logger.Info($"注意! 車載已設置當退出工作站時不需詢問派車系統!");
+                return (true, AlarmCodes.None);
+            }
             if (RunningTaskData.IsLocalTask)
             {
-                logger.Info($"注意! Local派工不需詢問派車系統是否可退出設備");
+                logger.Info($"注意! Local派工退出工作站時不需詢問派車系統!");
                 return (true, AlarmCodes.None);
             }
 
