@@ -687,7 +687,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public void EndLaserObstacleMonitor()
         {
-            _LaserMonitorSwitchDebouncer.Debounce(() => IsLaserMonitoring = false, 500);
+            try
+            {
+                _LaserMonitorSwitchDebouncer?.Debounce(() => IsLaserMonitoring = false, 500);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.Message, ex);
+            }
         }
         /// <summary>
         /// 雷射障礙物監控

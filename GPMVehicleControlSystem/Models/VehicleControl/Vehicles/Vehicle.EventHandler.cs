@@ -68,6 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ChargeTask.OnChargeCircuitOpening += HandleChargeTaskTryOpenChargeCircuit;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
+            Navigation.OnRoboPoseUpdateTimeout += Navigation_OnRoboPoseUpdateTimeout;
             BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
             BarcodeReader.OnAGVLeavingTag += BarcodeReader_OnAGVLeavingTag;
             IMU.OnImuStatesError += HandleIMUStatesError;
@@ -131,6 +132,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (CSTReader != null)
                 CSTReader.onCSTReaderStateChanged += HandleCSTReaderStateChanged;
 
+        }
+
+        private void Navigation_OnRoboPoseUpdateTimeout(object? sender, EventArgs e)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                SoftwareEMO(AlarmCodes.Motion_control_Disconnected);
+            });
         }
 
         private void HandleCSTReaderStateChanged(object? sender, int state)

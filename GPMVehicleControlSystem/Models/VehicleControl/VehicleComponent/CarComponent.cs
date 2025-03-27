@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         protected Message _StateData;
-        public DateTime lastUpdateTime { get; set; } = DateTime.MinValue;
+        public DateTime lastUpdateTime { get; set; } = DateTime.MaxValue;
         public abstract COMPOENT_NAME component_name { get; }
 
         public delegate Task<bool> AlarmHappendDelegate(AlarmCodes alarm);
@@ -121,7 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 while (true)
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(100);
                     _CommunicationErrorJudge();
                 }
             });

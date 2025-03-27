@@ -876,6 +876,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
             }
 
+            if (Navigation.IsCommunicationError)
+            {
+                error_message = $"車控異常，AGV位置數據上報逾時，請確認車控系統";
+                alarmo_code = AlarmCodes.Motion_control_Disconnected;
+            }
+
             if (CheckSideLaserAbn(out string msg))
             {
                 error_message = msg;

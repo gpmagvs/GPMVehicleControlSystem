@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
@@ -79,10 +80,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public override COMPOENT_NAME component_name => COMPOENT_NAME.NAVIGATION;
 
+        private uint _lastRoboPoseHeaderSec = uint.MaxValue;
+
+        public uint lastRoboPoseHeaderSec
+        {
+            get => _lastRoboPoseHeaderSec;
+            set
+            {
+                if (_lastRoboPoseHeaderSec != value)
+                {
+                    _lastRoboPoseHeaderSec = value;
+                    lastUpdateTime = DateTime.Now;
+                }
+            }
+        }
+
         public new NavigationState Data => StateData == null ? new NavigationState() : (NavigationState)StateData;
 
         public event EventHandler<AGV_DIRECTION> OnDirectionChanged;
         public event EventHandler<int> OnLastVisitedTagUpdate;
+        public event EventHandler OnRoboPoseUpdateTimeout;
 
         public double LinearSpeed { get; private set; } = 0;
         public double AngularSpeed { get; private set; } = 0;
@@ -92,6 +109,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private double last_theta { get; set; } = 0;
 
         private AGV_DIRECTION _previousDirection = AGV_DIRECTION.REACH_GOAL;
+        public override Message StateData
+        {
+            get => _StateData;
+            set
+            {
+                _StateData = value;
+                CheckStateDataContent();
+            }
+        }
+
         public AGV_DIRECTION Direction
         {
             get => _previousDirection;
@@ -123,6 +150,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
+        protected override void HandleCommunicationError()
+        {
+            base.HandleCommunicationError();
+            OnRoboPoseUpdateTimeout?.Invoke(this, EventArgs.Empty);
+        }
+
         public clsCoordination CurrentCoordination
         {
             get
@@ -137,6 +170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override bool CheckStateDataContent()
         {
+            lastRoboPoseHeaderSec = Data.robotPose.header.stamp.secs;
 
             if (!base.CheckStateDataContent())
                 return false;
@@ -153,7 +187,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     Current_Warning_Code = _Alarm_Code;
                 else
                     Current_Alarm_Code = _Alarm_Code;
-
             }
             else
                 Current_Alarm_Code = AlarmCodes.None;
@@ -174,6 +207,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             var displacement = Math.Sqrt(Math.Pow((currentPosition.x - last_position.x), 2) + Math.Pow((currentPosition.y - last_position.y), 2)); //m
             return Math.Round(displacement / time_period, 1);
         }
+        protected override void _CommunicationErrorJudge()
+        {
+            double timeDiff = (DateTime.Now - lastUpdateTime).TotalSeconds;
+            IsCommunicationError = timeDiff > 2;
+        }
+        public override bool IsCommunicationError { get => base.IsCommunicationError; set => base.IsCommunicationError = value; }
     }
 
 
