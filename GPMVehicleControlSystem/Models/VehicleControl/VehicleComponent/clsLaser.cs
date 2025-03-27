@@ -51,7 +51,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
-                    logger.Info($"Laser Mode Chaged To : {value}({Mode})", true);
+                    logger.Info($"[From Sick Topic] Laser Mode Chaged To : {value}({Mode})", true);
                 }
             }
         }
@@ -299,7 +299,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 if (isSickOutputPathDataNotUpdate)
                     AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_But_SICK_OUPUT_NOT_UPDATE);
-                logger.Info($"Laser Output Setting as {mode_int} Success({try_count})");
+                logger.Info($"[雷射組數設定結果] Laser Output Setting as {mode_int} Success({try_count})");
 
                 return true;
             }
