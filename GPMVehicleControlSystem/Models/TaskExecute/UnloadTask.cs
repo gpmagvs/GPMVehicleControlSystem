@@ -17,6 +17,23 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
         }
 
+        protected override async Task ExistSensorStatusDetectionWhenBackToEntryPointAsync()
+        {
+            //取貨 檢查是否無貨
+            await Task.Factory.StartNew(async () =>
+            {
+                while (Agv.AGVC.IsRunning)
+                {
+                    if (Agv.CargoStateStorer.GetCargoStatus(false) != CARGO_STATUS.HAS_CARGO_NORMAL)
+                    {
+                        Agv.SoftwareEMO(AlarmCodes.Cst_Slope_Error);
+                        return;
+                    }
+                    await Task.Delay(1000);
+                }
+            });
+        }
+
         internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
             if (!CSTTrigger)
@@ -67,10 +84,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (true, AlarmCodes.None);
             }
 
-
-            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.HAS_CARGO_NORMAL) //應有料卻無料
-                return (false, AlarmCodes.Has_Job_Without_Cst);
             Agv.CSTReader.ValidCSTID = "TrayUnknow";
+
+            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.HAS_CARGO_NORMAL)
+            {
+                Agv.CSTReader.ValidCSTID = "";
+                return (false, AlarmCodes.Has_Job_Without_Cst);
+            }
+
             try
             {
                 CST_TYPE orderCstTypeRequest = RunningTaskData.CST.FirstOrDefault().CST_Type;

@@ -1,5 +1,6 @@
 ﻿
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
@@ -37,12 +38,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         private Tools.Debouncer existSensorDebouncer = new Tools.Debouncer();
         private readonly List<clsIOSignal> digitalInputState = new List<clsIOSignal>();
         private readonly IHubContext<FrontendHub> hubContext;
+        private readonly bool simulationExistByHaseCstID;
+        private readonly clsCSTReader reader;
 
-
-        public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null)
+        public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, bool simulationExistByHaseCstID = false, clsCSTReader reader = null)
         {
             digitalInputState = DigitalInputState;
             this.hubContext = hubContext;
+            this.simulationExistByHaseCstID = simulationExistByHaseCstID;
+            this.reader = reader;
         }
 
         public bool IsTraySensorMounted()
@@ -61,6 +65,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
+            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
+                return true;
             if (IsCargoDetectedByInteruptSensor())
                 return true;
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
@@ -89,6 +95,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         internal virtual CARGO_STATUS GetCargoStatus(bool isLDULDNoEntryNow, out CST_TYPE cargoType)
         {
             cargoType = CST_TYPE.None;
+
+            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
+            {
+                cargoType = CST_TYPE.Tray;
+                return CARGO_STATUS.HAS_CARGO_NORMAL;
+            }
+
             if (isLDULDNoEntryNow)
             {
                 return simulation_cargo_status;

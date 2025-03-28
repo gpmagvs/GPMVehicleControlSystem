@@ -309,7 +309,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Version = Parameters.Version
             };
             DirectionLighter.DOModule = WagoDO;
-            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext);
+            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext, Parameters.CargoExistSensorParams.ExistSensorSimulation, CSTReader);
             StatusLighter = new clsStatusLighter(WagoDO);
             CreateLaserInstance();
             List<Task> WagoAndRosInitTasks = new List<Task>

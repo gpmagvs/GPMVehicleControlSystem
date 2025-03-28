@@ -584,6 +584,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         _WaitBackToHomeDonePause.Reset();
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
+
+                        ExistSensorStatusDetectionWhenBackToEntryPointAsync();
+
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
 
                         logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) ms");
@@ -620,6 +623,23 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 _WaitBackToHomeDonePause.Set();
             }
+        }
+
+        protected virtual async Task ExistSensorStatusDetectionWhenBackToEntryPointAsync()
+        {
+            //放貨 檢查是否還有貨
+            await Task.Factory.StartNew(async () =>
+            {
+                while (Agv.AGVC.IsRunning)
+                {
+                    if (Agv.CargoStateStorer.GetCargoStatus(false) != CARGO_STATUS.NO_CARGO)
+                    {
+                        Agv.SoftwareEMO(AlarmCodes.Has_Cst_Without_Job);
+                        return;
+                    }
+                    await Task.Delay(1000);
+                }
+            });
         }
 
         private async Task<(bool _inTime, long _timeSpend)> WaitVehicleArriveEntryPoint(int moveActionTimeout)
