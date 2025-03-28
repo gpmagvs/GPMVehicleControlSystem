@@ -8,6 +8,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Tools;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -471,9 +472,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             ComplexRobotControlCmdResponse? res = await rosSocket?.CallServiceAndWait<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", req);
             if (res == null)
             {
+                logger.Warn($"[ROBOT_CONTROL_CMD] 車控無回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
                 return false;
             }
-            logger.Info($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})", false);
+            logger.Info($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
             if (cmd == ROBOT_CONTROL_CMD.STOP)
             {
                 OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);

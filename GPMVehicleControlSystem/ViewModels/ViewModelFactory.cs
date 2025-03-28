@@ -265,7 +265,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     return new ConnectionStateVM();
                 ConnectionStateVM data_view_model = new ConnectionStateVM()
                 {
-                    RosbridgeServer = AGV.AGVC == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVC.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
+                    RosbridgeServer = IsCarControlAbnormal() ? ConnectionStateVM.CONNECTION.DISCONNECT : ConnectionStateVM.CONNECTION.CONNECTED,
                     VMS = AGV.AGVS == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.AGVS.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                     WAGO = AGV.WagoDI == null ? ConnectionStateVM.CONNECTION.DISCONNECT : AGV.WagoDI.IsConnected() ? ConnectionStateVM.CONNECTION.CONNECTED : ConnectionStateVM.CONNECTION.DISCONNECT,
                 };
@@ -280,6 +280,11 @@ namespace GPMVehicleControlSystem.ViewModels
                     VMS = ConnectionStateVM.CONNECTION.DISCONNECT,
                     WAGO = ConnectionStateVM.CONNECTION.DISCONNECT,
                 };
+            }
+
+            bool IsCarControlAbnormal()
+            {
+                return AGV.AGVC == null || !AGV.AGVC.IsConnected() || AGV.Navigation.IsCommunicationError;
             }
         }
 

@@ -501,6 +501,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void AGVC_OnRosSocketDisconnected(object? sender, EventArgs e)
         {
             ModuleInformationUpdatedInitState = false;
+            DebugMessageBrocast($"與RosBride Server 斷線!");
             AlarmManager.AddAlarm(AlarmCodes.Motion_control_Disconnected, false);
         }
 
