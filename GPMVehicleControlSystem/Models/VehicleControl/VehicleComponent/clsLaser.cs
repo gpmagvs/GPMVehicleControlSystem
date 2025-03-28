@@ -1,4 +1,6 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using NLog;
@@ -43,6 +45,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         protected SemaphoreSlim modeSwitchSemaphoresSlim = new SemaphoreSlim(1, 1);
         private int _CurrentLaserModeOfSick = -1;
+
+        private DateTime lastDiagnosicsMsgReceiveTime = DateTime.MinValue;
+        private DiagnosticArray diagnosticArray = new DiagnosticArray();
+
+        public event EventHandler OnSickApplicationError;
+
+        private bool _IsSickApplicationError = false;
+        public bool IsSickApplicationError
+        {
+            get => _IsSickApplicationError;
+            private set
+            {
+                if (_IsSickApplicationError != value)
+                {
+                    _IsSickApplicationError = value;
+                    if (value)
+                    {
+                        OnSickApplicationError?.Invoke(this, EventArgs.Empty);
+                    }
+                }
+            }
+        }
+
         internal int CurrentLaserModeOfSick
         {
             get => _CurrentLaserModeOfSick;
@@ -145,8 +170,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
                 _rosSocket = value;
                 _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
+                logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
+                string diagnosticsTopicID = _rosSocket.Subscribe<DiagnosticArray>("/diagnostics", DiagnosticsMsgCallBack);
+                logger.Trace($"Subscribe /diagnostics ({diagnosticsTopicID})");
 
-                logger.Trace($"Subscribe /sick_safetyscanners/output_paths({_output_paths_subscribe_id})");
+            }
+        }
+
+        private void DiagnosticsMsgCallBack(DiagnosticArray value)
+        {
+            if ((DateTime.Now - lastDiagnosicsMsgReceiveTime).TotalSeconds > 1)
+            {
+                Console.WriteLine("DiagnosticArray:\r\n" + value.ToJson());
+                lastDiagnosicsMsgReceiveTime = DateTime.Now;
+                diagnosticArray = value;
+
+                if (diagnosticArray.status.Any())
+                {
+                    TrGetApplicationStatus(diagnosticArray.status, out bool _IsSickApplicationError);
+                    IsSickApplicationError = _IsSickApplicationError;
+                }
+            }
+        }
+
+        private void TrGetApplicationStatus(DiagnosticStatus[] status, out bool isError)
+        {
+            isError = false;
+            var allvalues = status.SelectMany(s => s.values).ToList();
+            KeyValue? applicationErrorKeyValue = allvalues.FirstOrDefault(keypair => keypair.key == "Application error");
+
+            if (applicationErrorKeyValue == null)
+                isError = false;
+            else
+            {
+                Console.WriteLine("DiagnosticStatus.application error status:" + applicationErrorKeyValue.ToJson(Newtonsoft.Json.Formatting.None));
+                isError = applicationErrorKeyValue.value.ToLower().StartsWith("true");
             }
         }
 

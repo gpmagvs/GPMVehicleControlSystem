@@ -889,6 +889,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 alarmo_code = AlarmCodes.Side_Laser_Abnormal;
             }
 
+
+            if (Laser.IsSickApplicationError)
+            {
+                error_message = "雷射錯誤，請確認前後雷射是否有N3 Fatal異常";
+                alarmo_code = AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail;
+            }
             if (alarmo_code == AlarmCodes.None)
                 return (true, "");
             else

@@ -79,6 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 bool _rightBypass = Parameters.SensorBypass.RightSideLaserBypass;
                 return (_leftBypass, _rightBypass);
             };
+            Laser.OnSickApplicationError += Laser_OnSickApplicationError;
             clsOrderInfo.OnGetPortExistStatus += () => { return CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry); };
             OnParamEdited += (param) => { this.Parameters = param; };
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>
@@ -132,6 +133,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (CSTReader != null)
                 CSTReader.onCSTReaderStateChanged += HandleCSTReaderStateChanged;
 
+        }
+
+        private void Laser_OnSickApplicationError(object? sender, EventArgs e)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                logger.LogError($"Sick Laser Application Error, maybe N3 Fatal now");
+                SoftwareEMO(AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail);
+            });
         }
 
         private void Navigation_OnRoboPoseUpdateTimeout(object? sender, EventArgs e)
