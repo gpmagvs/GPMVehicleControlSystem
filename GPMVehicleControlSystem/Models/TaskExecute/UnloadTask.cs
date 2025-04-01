@@ -77,6 +77,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <returns></returns>
         protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
         {
+            clsCST cstInfoFromAGVS = this.RunningTaskData.CST.Any() ? this.RunningTaskData.CST.First() : new clsCST() { CST_ID = "", CST_Type = CST_TYPE.Unknown };
+            bool isUnknowCstIDFromAGVS = string.IsNullOrEmpty(cstInfoFromAGVS.CST_ID) || cstInfoFromAGVS.CST_ID.ToLower().Contains("un");
             Agv.HandshakeStatusText = "檢查在席狀態.(車上應有物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
             {
@@ -94,9 +96,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             try
             {
-                CST_TYPE orderCstTypeRequest = RunningTaskData.CST.FirstOrDefault().CST_Type;
+                CST_TYPE orderCstTypeRequest = cstInfoFromAGVS.CST_Type;
                 CST_TYPE currentCargoType = Agv.CargoStateStorer.GetCargoType();
-                if (currentCargoType != orderCstTypeRequest)
+                if (!isUnknowCstIDFromAGVS && currentCargoType != orderCstTypeRequest)
                 {
                     if (currentCargoType == CST_TYPE.Tray)
                         return (false, AlarmCodes.Cst_Type_Not_Match_Rack_But_Get_Tray);
