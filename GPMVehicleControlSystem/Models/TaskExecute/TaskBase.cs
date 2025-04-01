@@ -366,6 +366,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         private async Task StartCargoStatusWatchProcessAsync()
         {
+            if (!Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                return;
+
             if (action == ACTION_TYPE.Load || (action == ACTION_TYPE.None && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO))
             {
                 await Task.Delay(200);
@@ -378,6 +381,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected async Task WaitCargoExistMonitorProcessNotRun()
         {
+            if (!Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                return;
             CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             while (isCargoExistWatchingRunning && !cancel.IsCancellationRequested)
             {

@@ -536,7 +536,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         private async Task<(bool success, AlarmCodes alarmCode)> StartBackToHome()
         {
-
             try
             {
                 IsBackToSecondaryPt = true;
@@ -588,15 +587,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
-
-                        if (action == ACTION_TYPE.Load)
-                            WatchCargoShouldNotExistProcess();
-                        else if (action == ACTION_TYPE.Unload)
-                        {
-                            await Task.Delay(100);
-                            Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                            WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
-                        }
+                        StartWatchCargoState();
 
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
 
@@ -636,6 +627,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
+        private async Task StartWatchCargoState()
+        {
+            if (!Agv.Parameters.CargoBiasDetectionWhenNormalMoving)
+                return;
+            if (action == ACTION_TYPE.Load)
+                WatchCargoShouldNotExistProcess();
+            else if (action == ACTION_TYPE.Unload)
+            {
+                await Task.Delay(100);
+                Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
+            }
+        }
 
         private async Task<(bool _inTime, long _timeSpend)> WaitVehicleArriveEntryPoint(int moveActionTimeout)
         {
