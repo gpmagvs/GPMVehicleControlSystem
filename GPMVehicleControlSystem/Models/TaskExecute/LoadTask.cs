@@ -491,8 +491,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 Agv.DirectionLighter.CloseAll();
                 back_to_secondary_flag = false;
-                await Task.Delay(1000);
-
+                await Task.Delay(500);
+                await WaitCargoExistMonitorProcessNotRun();
                 (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
                 if (!forkActionResult.success)
                     return forkActionResult;
@@ -514,6 +514,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
 
         }
+
 
         private async Task<(bool success, AlarmCodes alarmCode)> TryCheckAGVStatus()
         {

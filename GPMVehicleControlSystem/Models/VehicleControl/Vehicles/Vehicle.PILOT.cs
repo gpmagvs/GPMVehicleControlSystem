@@ -594,7 +594,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
                             logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
-                            bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
+                            HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
 
                         });

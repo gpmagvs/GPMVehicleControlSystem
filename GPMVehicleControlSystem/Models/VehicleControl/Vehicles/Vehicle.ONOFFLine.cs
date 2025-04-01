@@ -34,12 +34,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal bool HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
+        internal (bool succuss, int resultCode) HandleRemoteModeChangeReq(REMOTE_MODE mode, bool IsAGVSRequest = false)
         {
             if (mode != Remote_Mode)
             {
                 if (RemoteModeRequestingflag)
-                    return false;
+                    return (false, 100);
                 RemoteModeRequestingflag = true;
                 string request_user_name = IsAGVSRequest ? "AGVS" : "車載用戶";
                 logger.LogWarning($"{request_user_name} 請求變更Online模式為:{mode}");
@@ -58,18 +58,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             while (GetSub_Status() != SUB_STATUS.IDLE)
                                 await Task.Delay(1000);
                             logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
-                            bool OnlineSuccess = HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
+                            HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
                             AutoOnlineRaising = false;
                         });
                     }
                 }
                 else
                     logger.LogError($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
-                return result.success;
+                return (result.success, (int)result.return_code);
             }
             else
             {
-                return true;
+                return (true, 0);
             }
         }
         private bool RemoteModeRequestingflag = false;

@@ -343,15 +343,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                                 #endregion
                             }
                             AGVCActionStatusChaged += HandleAGVActionChanged;
-
-                            if (action == ACTION_TYPE.Load || (action == ACTION_TYPE.None && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO))
-                            {
-                                await Task.Delay(200);
-                                Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource();
-                                WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
-                            }
-                            else if (action == ACTION_TYPE.Unload)
-                                WatchCargoShouldNotExistProcess();
+                            StartCargoStatusWatchProcessAsync();
 
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
@@ -370,6 +362,28 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
+        }
+
+        private async Task StartCargoStatusWatchProcessAsync()
+        {
+            if (action == ACTION_TYPE.Load || (action == ACTION_TYPE.None && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO))
+            {
+                await Task.Delay(200);
+                Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource();
+                WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
+            }
+            else if (action == ACTION_TYPE.Unload)
+                WatchCargoShouldNotExistProcess();
+        }
+
+        protected async Task WaitCargoExistMonitorProcessNotRun()
+        {
+            CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (isCargoExistWatchingRunning && !cancel.IsCancellationRequested)
+            {
+                Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
+                await Task.Delay(100);
+            }
         }
         protected virtual async Task WaitTaskDoneAsync()
         {
@@ -869,7 +883,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
         protected virtual int ExitPointTag => 0;
-
+        protected bool isCargoExistWatchingRunning = false;
         private async Task<bool> WaitAGVSAcceptLeaveWorkStationAsync(int timeout = 300)
         {
             try
@@ -919,6 +933,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 try
                 {
+                    isCargoExistWatchingRunning = true;
                     Debouncer debouncer = new Debouncer();
                     CARGO_STATUS lastCargoStatus = CARGO_STATUS.HAS_CARGO_NORMAL;
                     bool endWatch = false;
@@ -957,6 +972,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 finally
                 {
                     logger.Trace($"WatchCargoShouldExistProcess 已結束");
+                    isCargoExistWatchingRunning = false;
                 }
             });
         }
