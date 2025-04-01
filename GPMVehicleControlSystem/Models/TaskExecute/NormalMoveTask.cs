@@ -252,7 +252,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 if (!Agv.IsCargoBiasDetecting)
                 {
                     Agv.IsCargoBiasDetecting = true;
-                    StartMonitorCargoBias();
                 }
                 else
                 {
@@ -269,62 +268,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             await Agv.Laser.AllLaserDisable();
             return await base.HandleAGVCActionSucceess();
         }
-        /// <summary>
-        /// 偵測貨物傾倒
-        /// </summary>
-        /// <returns></returns>
-        private async Task StartMonitorCargoBias()
-        {
-            await Task.Delay(1).ContinueWith(async (Task) =>
-            {
-                Agv.IsCargoBiasTrigger = false;
-                if (Agv.Parameters.LDULD_Task_No_Entry)
-                {
-                    return;
-                }
-
-                logger.Info($"Wait AGV Move(Active), Will Start Cargo Bias Detection.");
-                CancellationTokenSource cts = new CancellationTokenSource();
-                cts.CancelAfter(10000);
-                while (Agv.AGVC.ActionStatus != ActionStatus.ACTIVE)
-                {
-                    await Task.Delay(1);
-                    if (cts.IsCancellationRequested)
-                    {
-                        Agv.IsCargoBiasDetecting = false;
-                        logger.Error($"Wait AGV Move(Active) Timeout, cargo Bias Detection not start.");
-                        return;
-                    }
-                }
-                logger.Info($"Start Cargo Bias Detection.");
-                while (_GetCargoStatus() == CARGO_STATUS.HAS_CARGO_NORMAL && Agv.ExecutingTaskEntity.action == ACTION_TYPE.None)
-                {
-                    await Task.Delay(1);
-                    if (Agv.AGVC.ActionStatus != ActionStatus.ACTIVE)
-                    {
-                        break;
-                    }
-                    if (_GetCargoStatus() == CARGO_STATUS.HAS_CARGO_BUT_BIAS || _GetCargoStatus() == CARGO_STATUS.NO_CARGO)
-                    {
-                        logger.Warn($"貨物傾倒偵測觸發-Check1");
-                        await Task.Delay(500); //避免訊號瞬閃導致誤偵測
-                        if (_GetCargoStatus() != CARGO_STATUS.HAS_CARGO_NORMAL)
-                        {
-                            logger.Error($"貨物傾倒偵測觸發-Check2_Actual Trigger. AGV Will Cycle Stop");
-                            Agv.IsCargoBiasTrigger = true;
-                            Agv.AGVC.ResetTask(RESET_MODE.CYCLE_STOP);
-                            break;
-                        }
-                    }
-                }
-                CARGO_STATUS _GetCargoStatus()
-                {
-                    return Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry);
-                }
-                Agv.IsCargoBiasDetecting = false;
-            });
-        }
-
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
             await Agv.Laser.AllLaserActive();

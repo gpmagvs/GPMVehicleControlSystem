@@ -211,18 +211,8 @@ namespace GPMVehicleControlSystem.Service
         {
             _ = Task.Run(async () =>
             {
-                int countDown = duration;
-                while (true)
-                {
-                    hubContext?.Clients.All.SendAsync($"AGV-Notify-Message", new { title = $"系統重啟中{(string.IsNullOrEmpty(reason) ? "" : $"({reason})")}", message = $"System will restart after {countDown} second.", alarmCode = 3384 });
-                    await Task.Delay(1000);
-                    countDown--;
-                    if (countDown == 0)
-                    {
-                        break;
-                    }
-
-                }
+                hubContext?.Clients.All.SendAsync($"AGV-Notify-Message", new { title = $"系統重啟中{(string.IsNullOrEmpty(reason) ? "" : $"({reason})")}", message = $"System will restart after {duration} second.", alarmCode = 3384 });
+                await Task.Delay(1000);
             });
         }
     }

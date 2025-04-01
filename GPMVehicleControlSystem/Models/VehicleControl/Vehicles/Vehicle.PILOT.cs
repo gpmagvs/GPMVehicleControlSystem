@@ -38,8 +38,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-        internal bool IsCargoBiasTrigger = false;
-
         public enum EQ_HS_METHOD
         {
             PIO,

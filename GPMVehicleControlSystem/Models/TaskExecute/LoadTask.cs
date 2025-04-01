@@ -11,6 +11,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Tools;
 using Microsoft.AspNetCore.SignalR;
 using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -435,6 +436,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             try
             {
+                Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 _waitMoveToPortDonePause.Set();
                 logger.Trace($"Load/Unload Action after AGVC Move done in port.");
 #if !YM_4FAOI
@@ -584,8 +586,16 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         _WaitBackToHomeDonePause.Reset();
 
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
+                        Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
 
-                        ExistSensorStatusDetectionWhenBackToEntryPointAsync();
+                        if (action == ACTION_TYPE.Load)
+                            WatchCargoShouldNotExistProcess();
+                        else if (action == ACTION_TYPE.Unload)
+                        {
+                            await Task.Delay(100);
+                            Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                            WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
+                        }
 
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
 
@@ -625,22 +635,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
-        protected virtual async Task ExistSensorStatusDetectionWhenBackToEntryPointAsync()
-        {
-            //放貨 檢查是否還有貨
-            await Task.Factory.StartNew(async () =>
-            {
-                while (Agv.AGVC.IsRunning)
-                {
-                    if (Agv.CargoStateStorer.GetCargoStatus(false) != CARGO_STATUS.NO_CARGO)
-                    {
-                        Agv.SoftwareEMO(AlarmCodes.Has_Cst_Without_Job);
-                        return;
-                    }
-                    await Task.Delay(1000);
-                }
-            });
-        }
 
         private async Task<(bool _inTime, long _timeSpend)> WaitVehicleArriveEntryPoint(int moveActionTimeout)
         {

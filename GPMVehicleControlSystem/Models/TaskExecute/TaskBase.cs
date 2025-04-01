@@ -27,6 +27,7 @@ using static AGVSystemCommonNet6.MAP.MapPoint;
 using WebSocketSharp;
 using NLog;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {
@@ -222,6 +223,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public bool IsBackToSecondaryPt { get; internal set; } = false;
         private DateTime startTime = DateTime.MinValue;
+
         /// <summary>
         /// 執行任務
         /// </summary>
@@ -229,6 +231,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             try
             {
+                Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 task_abort_alarmcode = AlarmCodes.None;
                 await Task.Delay(10);
                 if (action != ACTION_TYPE.None)
@@ -340,6 +343,16 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                                 #endregion
                             }
                             AGVCActionStatusChaged += HandleAGVActionChanged;
+
+                            if (action == ACTION_TYPE.Load || (action == ACTION_TYPE.None && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO))
+                            {
+                                await Task.Delay(200);
+                                Agv.CargoStateStorer.watchCargoExistStateCts = new CancellationTokenSource();
+                                WatchCargoShouldExistProcess(Agv.CargoStateStorer.watchCargoExistStateCts.Token);
+                            }
+                            else if (action == ACTION_TYPE.Unload)
+                                WatchCargoShouldNotExistProcess();
+
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
                         }
                         await WaitTaskDoneAsync();
@@ -526,16 +539,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     }
                     AGVCActionStatusChaged = null;
                     task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
-                    _wait_agvc_action_done_pause.Set();
-                    return;
-                }
-                if (Agv.IsCargoBiasTrigger && Agv.Parameters.CargoBiasDetectionWhenNormalMoving && !Agv.Parameters.LDULD_Task_No_Entry)
-                {
-                    AGVCActionStatusChaged = null;
-                    logger.Warn($"存在貨物傾倒異常");
-                    Agv.IsCargoBiasTrigger = Agv.IsCargoBiasDetecting = false;
-                    Agv.SetSub_Status(SUB_STATUS.DOWN);
-                    task_abort_alarmcode = AlarmCodes.Cst_Slope_Error;
                     _wait_agvc_action_done_pause.Set();
                     return;
                 }
@@ -907,6 +910,72 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.DirectionLighter.AbortFlash();
             }
 
+        }
+        public async Task WatchCargoShouldExistProcess(CancellationToken canceltoken)
+        {
+            //取貨 檢查是否無貨
+
+            await Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    Debouncer debouncer = new Debouncer();
+                    CARGO_STATUS lastCargoStatus = CARGO_STATUS.HAS_CARGO_NORMAL;
+                    bool endWatch = false;
+                    while (Agv.AGVC.IsRunning || !endWatch)
+                    {
+                        if (canceltoken.IsCancellationRequested)
+                            return;
+                        var _CargoStatus = Agv.CargoStateStorer.GetCargoStatus(false);
+                        if (lastCargoStatus != _CargoStatus)
+                        {
+                            if (_CargoStatus != CARGO_STATUS.HAS_CARGO_NORMAL)
+                            {
+                                debouncer.Debounce(() =>
+                                {
+                                    Agv.SoftwareEMO(AlarmCodes.Cst_Slope_Error);
+                                    endWatch = true;
+                                }, 500);
+                            }
+                            else
+                            {
+                                debouncer.Debounce(() =>
+                                {
+                                    logger.Trace($"貨物狀態抖動:Last:{lastCargoStatus}-> {_CargoStatus}");
+                                }, 10);
+                            }
+
+                            lastCargoStatus = _CargoStatus;
+                        }
+                        await Task.Delay(10, canceltoken);
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    logger.Trace("已取消 WatchCargoShouldExistProcess");
+                }
+                finally
+                {
+                    logger.Trace($"WatchCargoShouldExistProcess 已結束");
+                }
+            });
+        }
+
+        public virtual async Task WatchCargoShouldNotExistProcess()
+        {
+            //放貨 檢查是否還有貨
+            await Task.Factory.StartNew(async () =>
+            {
+                while (Agv.AGVC.IsRunning)
+                {
+                    if (Agv.CargoStateStorer.GetCargoStatus(false) != CARGO_STATUS.NO_CARGO)
+                    {
+                        Agv.SoftwareEMO(AlarmCodes.Has_Cst_Without_Job);
+                        return;
+                    }
+                    await Task.Delay(1000);
+                }
+            });
         }
 
         protected virtual void Dispose(bool disposing)

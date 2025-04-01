@@ -41,6 +41,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         private readonly bool simulationExistByHaseCstID;
         private readonly clsCSTReader reader;
 
+        internal CancellationTokenSource watchCargoExistStateCts = new CancellationTokenSource();
+
         public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, bool simulationExistByHaseCstID = false, clsCSTReader reader = null)
         {
             digitalInputState = DigitalInputState;

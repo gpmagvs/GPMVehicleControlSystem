@@ -4,6 +4,8 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Tools;
+using RosSharp.RosBridgeClient.MessageTypes.Std;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
@@ -17,40 +19,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
         }
 
-        protected override async Task ExistSensorStatusDetectionWhenBackToEntryPointAsync()
-        {
-            //取貨 檢查是否無貨
-            await Task.Factory.StartNew(async () =>
-            {
-                while (Agv.AGVC.IsRunning)
-                {
-                    if (Agv.CargoStateStorer.GetCargoStatus(false) != CARGO_STATUS.HAS_CARGO_NORMAL)
-                    {
-                        Agv.SoftwareEMO(AlarmCodes.Cst_Slope_Error);
-                        return;
-                    }
-                    await Task.Delay(1000);
-                }
-            });
-        }
-
         internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
-            if (!CSTTrigger)
+            string cstIDFromAGVS = RunningTaskData.CST == null || !RunningTaskData.CST.Any() ? "" : RunningTaskData.CST.First().CST_ID;
+            bool isCstIDFromAGVSUnknown = string.IsNullOrEmpty(cstIDFromAGVS) || cstIDFromAGVS.ToLower().Contains("un");
+            if (!CSTTrigger || isCstIDFromAGVSUnknown)
             {
-                clsCST? cstInfo = RunningTaskData.CST.FirstOrDefault();
-                if (cstInfo == null)
-                {
-                    Agv.CSTReader.ValidCSTID = "";
-                    return (true, AlarmCodes.None);
-                }
-                string cst_id_expect = cstInfo.CST_ID;
-                if (cst_id_expect == null || cst_id_expect == "")
-                {
-                    Agv.CSTReader.ValidCSTID = "";
-                    return (true, AlarmCodes.None);
-                }
-                Agv.CSTReader.ValidCSTID = cst_id_expect;
+                Agv.CSTReader.ValidCSTID = cstIDFromAGVS;
                 return (true, AlarmCodes.None);
             }
             return CSTBarcodeRead(cancellationToken).Result;
