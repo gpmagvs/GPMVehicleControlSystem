@@ -80,6 +80,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (_leftBypass, _rightBypass);
             };
             Laser.OnSickApplicationError += Laser_OnSickApplicationError;
+            Laser.SubscribeDiagnosticsTopic();
+
             clsOrderInfo.OnGetPortExistStatus += () => { return CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry); };
             OnParamEdited += (param) => { this.Parameters = param; };
             BuzzerPlayer.BeforeBuzzerMovePlay += () =>
@@ -140,7 +142,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Factory.StartNew(() =>
             {
                 logger.LogError($"Sick Laser Application Error, maybe N3 Fatal now");
-                SoftwareEMO(AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail);
+                SoftwareEMO(AlarmCodes.Sick_Lidar_Application_Error);
             });
         }
 

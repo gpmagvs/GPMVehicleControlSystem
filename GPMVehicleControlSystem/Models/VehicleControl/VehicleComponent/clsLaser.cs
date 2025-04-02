@@ -171,24 +171,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _rosSocket = value;
                 _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
                 logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
-                string diagnosticsTopicID = _rosSocket.Subscribe<DiagnosticArray>("/diagnostics", DiagnosticsMsgCallBack);
-                logger.Trace($"Subscribe /diagnostics ({diagnosticsTopicID})");
 
             }
         }
+        internal void SubscribeDiagnosticsTopic()
+        {
+            string diagnosticsTopicID = _rosSocket.Subscribe<DiagnosticArray>("/diagnostics", DiagnosticsMsgCallBack);
+            logger.Trace($"Subscribe /diagnostics ({diagnosticsTopicID})");
+        }
 
+        internal void ResetSickApplicationError()
+        {
+            this.IsSickApplicationError = false;
+        }
         private void DiagnosticsMsgCallBack(DiagnosticArray value)
         {
+            List<DiagnosticStatus> sickStates = value.status.Where(status => status.name == "sick_safetyscanners/sick_safetyscanners: State").ToList();
+
+
             if ((DateTime.Now - lastDiagnosicsMsgReceiveTime).TotalSeconds > 1)
             {
-                //Console.WriteLine("DiagnosticArray:\r\n" + value.ToJson());
+                //logger.Trace($"Sick Diagnostic:\r\n{value.ToJson()}");
                 lastDiagnosicsMsgReceiveTime = DateTime.Now;
                 diagnosticArray = value;
 
                 if (diagnosticArray.status.Any())
                 {
                     TrGetApplicationStatus(diagnosticArray.status, out bool _IsSickApplicationError);
-                    IsSickApplicationError = _IsSickApplicationError;
+                    if (_IsSickApplicationError && !IsSickApplicationError)
+                        IsSickApplicationError = _IsSickApplicationError;
                 }
             }
         }
@@ -197,15 +208,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             isError = false;
             var allvalues = status.SelectMany(s => s.values).ToList();
-            KeyValue? applicationErrorKeyValue = allvalues.FirstOrDefault(keypair => keypair.key == "Application error");
+            List<KeyValue> laserApplicationErrors = allvalues.Where(keypair => keypair.key == "Application error").ToList();
 
-            if (applicationErrorKeyValue == null)
-                isError = false;
-            else
-            {
-                Console.WriteLine("DiagnosticStatus.application error status:" + applicationErrorKeyValue.ToJson(Newtonsoft.Json.Formatting.None));
-                isError = applicationErrorKeyValue.value.ToLower().StartsWith("true");
-            }
+            if (!laserApplicationErrors.Any())
+                return;
+            isError = laserApplicationErrors.Any(kp => kp.value.ToLower().StartsWith("true"));
         }
 
         private DateTime lastSickOutputPathDataUpdateTime = DateTime.MinValue;

@@ -1185,6 +1185,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AlarmManager.ClearAlarm();
                 AGVAlarmReportable.ResetAlarmCodes();
                 AGVS?.ResetErrors();
+                Laser.ResetSickApplicationError();
                 IsMotorReseting = false;
                 await ResetMotor(IsTriggerByButton);
                 _ = Task.Factory.StartNew(async () =>
