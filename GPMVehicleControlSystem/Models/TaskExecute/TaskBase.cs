@@ -947,6 +947,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         if (canceltoken.IsCancellationRequested)
                             return;
                         var _CargoStatus = Agv.CargoStateStorer.GetCargoStatus(false);
+                        if (!Agv.AGVC.IsRunning)
+                            endWatch = true;
+
                         if (lastCargoStatus != _CargoStatus)
                         {
                             if (_CargoStatus != CARGO_STATUS.HAS_CARGO_NORMAL)

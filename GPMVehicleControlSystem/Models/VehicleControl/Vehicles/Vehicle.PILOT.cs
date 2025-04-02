@@ -126,6 +126,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
+                CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 TaskDispatchFlowControlSemaphoreSlim.Release();
             }

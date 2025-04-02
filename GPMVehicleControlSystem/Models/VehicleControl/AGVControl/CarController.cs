@@ -9,6 +9,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Tools;
+using MathNet.Numerics.Distributions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -660,6 +661,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     angle = theta
                 }
                 );
+
+            return (response == null ? false : response.confirm, response == null ? "Call Service Error" : "");
+        }
+
+        public async Task<(bool confirm, string message)> ResetSickLaser()
+        {
+            logger.Trace($"Reset Sick Laser Method Invoke");
+            SetcurrentTagIDResponse response = await rosSocket.CallServiceAndWait<SetcurrentTagIDRequest, SetcurrentTagIDResponse>(SetCurrentTagServiceName,
+
+             new SetcurrentTagIDRequest
+             {
+                 tagID = 1000,
+                 map = "map_name",
+                 X = 0,
+                 Y = 0,
+                 angle = 0
+             }
+             );
 
             return (response == null ? false : response.confirm, response == null ? "Call Service Error" : "");
         }

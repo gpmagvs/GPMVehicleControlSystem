@@ -181,7 +181,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if ((DateTime.Now - lastDiagnosicsMsgReceiveTime).TotalSeconds > 1)
             {
-                Console.WriteLine("DiagnosticArray:\r\n" + value.ToJson());
+                //Console.WriteLine("DiagnosticArray:\r\n" + value.ToJson());
                 lastDiagnosicsMsgReceiveTime = DateTime.Now;
                 diagnosticArray = value;
 
