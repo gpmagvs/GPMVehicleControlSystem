@@ -19,8 +19,8 @@ namespace GPMVehicleControlSystem.Tools.DiskUsage
                 {
                     DiskUsageState diskUsageState = new DiskUsageState();
                     diskUsageState.Name = drive.Name;
-                    diskUsageState.TotalSizeOfDriver = Math.Round(drive.TotalSize / (1024.0 * 1024.0 * 1024.0), 2);
-                    diskUsageState.TotalAvailableSpace = Math.Round(drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0), 2);
+                    diskUsageState.TotalSizeOfDriver = Math.Round(drive.TotalSize / (1024.0 * 1024.0), 2);
+                    diskUsageState.TotalAvailableSpace = Math.Round(drive.AvailableFreeSpace / (1024.0 * 1024.0), 2);
                     diskUsageState.DriverType = drive.DriveType.ToString();
                     diskUsageStates.Add(diskUsageState);
                 }

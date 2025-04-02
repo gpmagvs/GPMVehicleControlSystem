@@ -1,21 +1,24 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.CPUUsage;
 using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.Tools.NetworkStatus;
 using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json;
+using NLog;
 using System.Runtime.InteropServices;
 
 namespace GPMVehicleControlSystem.Service
 {
     public class SystemLoadingMonitorBackgroundServeice : BackgroundService
     {
-        ILogger<SystemLoadingMonitorBackgroundServeice> logger;
+        Logger logger;
         IHubContext<FrontendHub> _hubContext;
-        public SystemLoadingMonitorBackgroundServeice(ILogger<SystemLoadingMonitorBackgroundServeice> logger, IHubContext<FrontendHub> hubContext)
+        public SystemLoadingMonitorBackgroundServeice(IHubContext<FrontendHub> hubContext)
         {
 
-            this.logger = logger;
+            logger = LogManager.GetLogger("SystemLoadingMonitor");
             _hubContext = hubContext;
         }
 
@@ -25,8 +28,8 @@ namespace GPMVehicleControlSystem.Service
         {
 
             CPUUaageBase cpuUsage = _GetCPUUsageInstance();
-            StartNetworkStatusMonitor();
-            StartDiskStatusMonitor();
+            //StartNetworkStatusMonitor();
+            StartDiskStatusMonitorAsync();
 
 
             while (!stoppingToken.IsCancellationRequested)
@@ -35,8 +38,8 @@ namespace GPMVehicleControlSystem.Service
                 double cpu = await cpuUsage.GetCPU();
                 string top10Output = await cpuUsage.GetTop10CupUseProcess();
                 double ram = LinuxTools.GetMemUsedMB();
-                logger.LogInformation($"CPU:{cpu} % / RAM:{ram} MB");
-                logger.LogInformation(top10Output);
+                logger.Info($"CPU:{cpu} % / RAM:{ram} MB");
+                logger.Info(top10Output);
                 //if (ram > 500)
                 //{
                 //    GC.Collect();
@@ -56,34 +59,64 @@ namespace GPMVehicleControlSystem.Service
                 {
                     await Task.Delay(5000);
                     (double net_trasmited, double net_recieved) = await networkStatus.GetNetworkStatus();
-                    logger.LogInformation($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
+                    logger.Info($"Network-Tranmit:{net_trasmited} MB/s / Network-Recieve:{net_recieved} MB/s");
 
                 }
             });
         }
 
-        private async Task StartDiskStatusMonitor()
+        private async Task StartDiskStatusMonitorAsync()
         {
+            DiskMonitorParams? param = LoadDiskMonitorParam() ?? new DiskMonitorParams();
             IDiskUsageMonitor diskMonitor = _GetDiskUsageMonitorInstance();
+            await Task.Delay(TimeSpan.FromSeconds(10));
             _ = Task.Run(async () =>
             {
-
                 while (true)
                 {
                     List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
-
-                    logger.LogInformation(disksStates.ToJson(Newtonsoft.Json.Formatting.None));
                     string[] homeDiskNames = new[] { "c:", "home" };
                     DiskUsageState homeDiskUsage = disksStates.FirstOrDefault(s => homeDiskNames.Any(n => s.Name.ToLower().Contains(n)));
-                    if (homeDiskUsage != null && homeDiskUsage.TotalAvailableSpace < 10)
+                    logger.Info("Check Disk Status : " + homeDiskUsage?.ToJson(Newtonsoft.Json.Formatting.None));
+                    if (homeDiskUsage != null && homeDiskUsage.TotalAvailableSpace < param.HardDiskSpaceWarningSize)
                     {
-                        _hubContext.Clients.All.SendAsync("DiskUsageError", $"{homeDiskUsage.Name} 磁碟容量即將不足!剩餘:{homeDiskUsage.TotalAvailableSpace} G");
+                        _hubContext.Clients.All.SendAsync("DiskUsageError", $"{homeDiskUsage.Name} 磁碟容量即將不足!剩餘:{homeDiskUsage.TotalAvailableSpace} Mb");
+                        AlarmManager.AddWarning(AlarmCodes.Hard_Disk_Space_Is_Full);
                     }
-
-                    //Console.WriteLine(disksStates.ToJson());
-                    await Task.Delay(5000);
+                    await Task.Delay(TimeSpan.FromMinutes(param.HardDiskSpaceCheckTimer));
                 }
             });
+        }
+
+        private DiskMonitorParams? LoadDiskMonitorParam()
+        {
+            string jsonFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/DiskMonitorParam.json");
+            if (File.Exists(jsonFilePath))
+            {
+                try
+                {
+                    var existparams = JsonConvert.DeserializeObject<DiskMonitorParams>(File.ReadAllText(jsonFilePath));
+                    _RollbackJsonFile(existparams);
+                    return existparams;
+                }
+                catch (Exception)
+                {
+                    return new DiskMonitorParams();
+                }
+            }
+            else
+            {
+                var defaultParams = new DiskMonitorParams();
+                _RollbackJsonFile(defaultParams);
+                return defaultParams;
+            }
+
+            void _RollbackJsonFile(DiskMonitorParams _defaultParam)
+            {
+                if (_defaultParam == null)
+                    return;
+                File.WriteAllText(jsonFilePath, JsonConvert.SerializeObject(_defaultParam, Formatting.Indented));
+            }
         }
 
         private CPUUaageBase _GetCPUUsageInstance()
@@ -107,4 +140,10 @@ namespace GPMVehicleControlSystem.Service
             return new LinuxDiskUsageMonitor();
         }
     }
+}
+
+public class DiskMonitorParams
+{
+    public double HardDiskSpaceWarningSize { get; set; } = 10240;
+    public double HardDiskSpaceCheckTimer { get; set; } = 60;
 }
