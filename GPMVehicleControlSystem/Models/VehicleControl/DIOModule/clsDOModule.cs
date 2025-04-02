@@ -222,29 +222,14 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         }
 
-        public async Task<bool> SetState(string address, bool state)
-        {
-            clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
-            if (DO.Output == null)
-            {
-                logger.Warn($"Output-{address} not defined, no write to IO module");
-                return false;
-            }
-            return await SetState(DO.Output, new bool[] { state });
-        }
-
-        public async Task<bool> SetState(DO_ITEM signal, bool state)
-        {
-            return await SetState(signal, new bool[] { state });
-        }
-        internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
+        public async Task<bool> SetState(string address, bool[] writeStates)
         {
             try
             {
                 await semaphore.WaitAsync();
                 if (Current_Alarm_Code != AlarmCodes.None)
                     return false;
-                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == start_signal.ToString());
+                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
                 if (DO != null)
                 {
                     bool writeDone = false;
@@ -276,13 +261,53 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
             catch (Exception ex)
             {
-                logger.Error($"DO Start From {start_signal} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
+                logger.Error($"DO Start From {address} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
                 Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
                 return false;
             }
             finally
             {
                 semaphore.Release();
+            }
+        }
+        public async Task<bool> SetState(string address, bool state)
+        {
+            return await SetState(address, new bool[] { state });
+
+            //clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Address == address);
+            //if (DO.Output == null)
+            //{
+            //    logger.Warn($"Output-{address} not defined, no write to IO module");
+            //    return false;
+            //}
+            //return await SetState(DO.Output, new bool[] { state });
+        }
+
+        public async Task<bool> SetState(DO_ITEM signal, bool state)
+        {
+            return await SetState(signal, new bool[] { state });
+        }
+        internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
+        {
+            try
+            {
+                if (Current_Alarm_Code != AlarmCodes.None)
+                    return false;
+                clsIOSignal? DO = VCSOutputs.FirstOrDefault(k => k.Name == start_signal.ToString());
+                if (DO != null)
+                {
+                    return await SetState(DO.Address, writeStates);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"DO Start From {start_signal} Write {(string.Join(",", writeStates))} Fail Error.{ex.Message + ex.StackTrace}");
+                Current_Alarm_Code = AlarmCodes.Wago_IO_Write_Fail;
+                return false;
             }
         }
         internal override (bool confirm, string message) UpdateSignalMap(Dictionary<int, string> newOutputMap)
