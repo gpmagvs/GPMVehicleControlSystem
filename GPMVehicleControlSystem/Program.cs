@@ -112,9 +112,24 @@ try
     {
         OnPrepareResponse = ctx =>
         {
-            const int duractionInSeconds = 24 * 60 * 60 * 120;
-            ctx.Context.Response.Headers[HeaderNames.CacheControl] =
-                   "public,max-age=" + duractionInSeconds;
+            // 只對 js、css、images 等靜態資源使用長期緩存
+            if (ctx.File.Name.Contains(".js") ||
+                ctx.File.Name.Contains(".css") ||
+                ctx.File.Name.Contains(".jpg") ||
+                ctx.File.Name.Contains(".png"))
+            {
+                const int durationInSeconds = 24 * 60 * 60 * 365; // 1年
+                ctx.Context.Response.Headers[HeaderNames.CacheControl] =
+                    "public,max-age=" + durationInSeconds;
+            }
+            else
+            {
+                // HTML 檔案使用較短的緩存時間或不緩存
+                ctx.Context.Response.Headers[HeaderNames.CacheControl] =
+                    "no-cache, must-revalidate";
+                ctx.Context.Response.Headers[HeaderNames.Pragma] =
+                    "no-cache";
+            }
         }
     });
 
