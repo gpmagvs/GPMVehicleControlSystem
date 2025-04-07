@@ -65,6 +65,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
             existSensorDebouncer.Debounce(() => { DetermineCargoState(); }, 300);
         }
 
+        internal bool IsCargoMountedNormal(bool isLDULDNoEntryNow)
+        {
+            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
+                return true;
+            var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
+            return currentCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL && IsCargoDetectedByInteruptSensor();
+        }
+
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
             if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))

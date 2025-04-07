@@ -527,10 +527,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 double[] batteryLevels = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 double[] batteryTemperatures = Batteries.ToList().FindAll(bt => bt.Value != null).Select(battery => (double)battery.Value.Data.maxCellTemperature).ToArray();
+
+                int cargoExist = CargoStateStorer.IsCargoMountedNormal(Parameters.LDULD_Task_No_Entry) ? 1 : 0;
+                int cargoType = cargoExist == 1 ? (int)CargoStateStorer.GetCargoType() : 0;
+
                 var status = new clsRunningStatus
                 {
-                    Cargo_Status = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? 1 : 0,
-                    CargoType = (int)CargoStateStorer.GetCargoType(),
+                    Cargo_Status = cargoExist,
+                    CargoType = cargoType,
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
                     Electric_Temperatures = batteryTemperatures,
@@ -585,11 +589,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVSystemCommonNet6.AGVDispatch.Messages.clsAlarmCode[] alarm_codes = GetAlarmCodesUserReportToAGVS();
             try
             {
+                int cargoExist = CargoStateStorer.IsCargoMountedNormal(Parameters.LDULD_Task_No_Entry) ? 1 : 0;
+                int cargoType = cargoExist == 1 ? (int)CargoStateStorer.GetCargoType() : 0;
+
                 double[] batteryLevels = Batteries.ToList().FindAll(bky => bky.Value != null).Select(battery => (double)battery.Value.Data.batteryLevel).ToArray();
                 var status = new RunningStatus
                 {
-                    Cargo_Status = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? 1 : 0,
-                    CargoType = (int)CargoStateStorer.GetCargoType(),
+                    Cargo_Status = cargoExist,
+                    CargoType = cargoType,
                     AGV_Status = _Main_Status,
                     Electric_Volume = batteryLevels,
                     Last_Visited_Node = lastVisitedMapPoint.IsVirtualPoint ? lastVisitedMapPoint.TagNumber : Navigation.Data.lastVisitedNode.data,
