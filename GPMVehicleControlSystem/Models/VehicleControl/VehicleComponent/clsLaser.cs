@@ -152,6 +152,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private RosSocket _rosSocket = null;
         private string _output_paths_subscribe_id;
+        private string _diagnostic_topic_id;
 
         public RosSocket rosSocket
         {
@@ -160,24 +161,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-
-                    if (_output_paths_subscribe_id != null)
-                        _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
+                    UnSubscribeSickSaftySacnnerOutputPathsTopic();
                 }
                 catch (Exception ex)
                 {
                     logger.Error(ex, ex.Message);
                 }
                 _rosSocket = value;
-                _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
-                logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
-
+                SubscribeSickSaftyScannerOuputPathsTopic();
             }
         }
-        internal void SubscribeDiagnosticsTopic()
+        internal string SubscribeSickSaftyScannerOuputPathsTopic()
         {
-            string diagnosticsTopicID = _rosSocket.Subscribe<DiagnosticArray>("/diagnostics", DiagnosticsMsgCallBack);
-            logger.Trace($"Subscribe /diagnostics ({diagnosticsTopicID})");
+            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
+            logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
+            this._output_paths_subscribe_id = _output_paths_subscribe_id;
+            return this._output_paths_subscribe_id;
+        }
+        internal string SubscribeDiagnosticsTopic()
+        {
+            var _diagnostic_topic_id = _rosSocket.Subscribe<DiagnosticArray>("/diagnostics", DiagnosticsMsgCallBack);
+            logger.Trace($"Subscribe /diagnostics ({_diagnostic_topic_id})");
+            this._diagnostic_topic_id = _diagnostic_topic_id;
+            return this._diagnostic_topic_id;
+        }
+
+        internal void UnSubscribeSickSaftySacnnerOutputPathsTopic()
+        {
+            if (_output_paths_subscribe_id != null)
+                _rosSocket?.Unsubscribe(_output_paths_subscribe_id);
+        }
+        internal void UnSubscribeDiagnosticsTopic()
+        {
+            if (_diagnostic_topic_id != null)
+                _rosSocket?.Unsubscribe(_diagnostic_topic_id);
         }
 
         internal void ResetSickApplicationError()

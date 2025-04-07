@@ -39,8 +39,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.2.24</AssemblyVersion>
-		<FileVersion>3.2.24</FileVersion>
+		<AssemblyVersion>3.2.25</AssemblyVersion>
+		<FileVersion>3.2.25</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
@@ -115,6 +115,9 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="create_update_file_zip_with_wwwroot.bat">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="restart_agvc.sh">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="src\IO_Wago_Fork_AGV.ini">

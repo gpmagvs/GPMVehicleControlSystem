@@ -36,5 +36,26 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
         }
+
+        [HttpPost("ScribeSickSaftyScannerOutputPathsTopic")]
+        public async Task<string> SubScribeSickSaftyScannerOutputPathsTopic()
+        {
+            return agvInstance.Laser.SubscribeSickSaftyScannerOuputPathsTopic();
+        }
+        [HttpPost("SubscribeDiagnosticsTopic")]
+        public async Task<string> SubscribeDiagnosticsTopic()
+        {
+            return agvInstance.Laser.SubscribeDiagnosticsTopic();
+        }
+        [HttpPost("UnsubScribeSickSaftyScannerOutputPathsTopic")]
+        public async Task UnsubScribeSickSaftyScannerOutputPathsTopic()
+        {
+            agvInstance.Laser.UnSubscribeSickSaftySacnnerOutputPathsTopic();
+        }
+        [HttpPost("UnSubscribeDiagnosticsTopic")]
+        public async Task UnSubscribeDiagnosticsTopic()
+        {
+            agvInstance.Laser.UnSubscribeDiagnosticsTopic();
+        }
     }
 }

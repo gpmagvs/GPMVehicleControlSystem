@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using GPMVehicleControlSystem.Tools;
+using NLog;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models
@@ -40,5 +41,14 @@ namespace GPMVehicleControlSystem.Models
             });
         }
 
+        public static void RestartAGVC()
+        {
+            _ = Task.Factory.StartNew(async () =>
+            {
+                _logger.Warn($"AGVC will restart after 1 sec...");
+                await Task.Delay(1000);
+                LinuxTools.RunShellCommand("cd /home/gpm/gpm_vms && ./restart_agvc.sh", out string output, out string error);
+            });
+        }
     }
 }
