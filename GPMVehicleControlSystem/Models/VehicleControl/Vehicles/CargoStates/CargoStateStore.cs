@@ -43,6 +43,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal CancellationTokenSource watchCargoExistStateCts = new CancellationTokenSource();
 
+        private bool _IsCarrier_Exist_Interupt_SensorMounted => digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
+
         public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, bool simulationExistByHaseCstID = false, clsCSTReader reader = null)
         {
             digitalInputState = DigitalInputState;
@@ -70,23 +72,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
             if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
                 return true;
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
-            return currentCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL && IsCargoDetectedByInteruptSensor();
+            if (_IsCarrier_Exist_Interupt_SensorMounted)
+                return currentCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL && IsCargoDetectedByInteruptSensor();
+            else
+                return currentCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL;
+
         }
 
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
             if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
                 return true;
-            if (IsCargoDetectedByInteruptSensor())
+            if (_IsCarrier_Exist_Interupt_SensorMounted && IsCargoDetectedByInteruptSensor())
                 return true;
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
             return currentCargoStatus != CARGO_STATUS.NO_CARGO;
         }
         private bool IsCargoDetectedByInteruptSensor()
         {
-            bool _IsSensorMounted = digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
-            if (!_IsSensorMounted)
-                return false;
             return !digitalInputState.First(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor).State;
         }
         /// <summary>
