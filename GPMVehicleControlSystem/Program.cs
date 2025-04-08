@@ -28,7 +28,7 @@ try
 {
 
     var builder = WebApplication.CreateBuilder(args);
-
+    builder.Services.AddMemoryCache();
     //將NLog註冊到此專案內
     builder.Logging.ClearProviders();
     //設定log紀錄的最小等級

@@ -1,6 +1,8 @@
 ﻿
+using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using System.Net.WebSockets;
 
 namespace GPMVehicleControlSystem.Service
@@ -9,9 +11,11 @@ namespace GPMVehicleControlSystem.Service
     {
         //use hub to broadcast
         private readonly IHubContext<FrontendHub> _hubContext;
-        public WebsocketBrocastBackgroundService(IHubContext<FrontendHub> hubContext)
+        IMemoryCache _memoryCache;
+        public WebsocketBrocastBackgroundService(IHubContext<FrontendHub> hubContext, IMemoryCache memoryCache)
         {
             _hubContext = hubContext;
+            _memoryCache = memoryCache;
         }
 
         private List<byte[]> CreateChunkData(byte[] datPublishOut)
@@ -42,6 +46,22 @@ namespace GPMVehicleControlSystem.Service
 
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            List<Task> _taskList = new List<Task>();
+            _taskList.Add(Task.Run(async () =>
+            {
+                await SendOutVehicleData(stoppingToken);
+            }));
+
+            _taskList.Add(Task.Run(async () =>
+            {
+                await SendOutVDiskStatus(stoppingToken);
+            }));
+
+            await Task.WhenAll(_taskList);
+        }
+
+        private async Task SendOutVehicleData(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -79,5 +99,24 @@ namespace GPMVehicleControlSystem.Service
             }
         }
 
+
+
+        private async Task SendOutVDiskStatus(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                try
+                {
+                    //_memoryCache.Set<DiskUsageState>("DiskStatus", homeDiskUsage);
+                    DiskUsageState _diskStatus = _memoryCache.Get<DiskUsageState>("DiskStatus");
+                    await _hubContext.Clients.All.SendAsync("DiskStatus", _diskStatus);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("CollectViewModelData Error" + ex.ToString());
+                }
+            }
+        }
     }
 }

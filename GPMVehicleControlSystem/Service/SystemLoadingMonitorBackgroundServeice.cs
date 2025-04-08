@@ -5,6 +5,7 @@ using GPMVehicleControlSystem.Tools.CPUUsage;
 using GPMVehicleControlSystem.Tools.DiskUsage;
 using GPMVehicleControlSystem.Tools.NetworkStatus;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using NLog;
 using System.Runtime.InteropServices;
@@ -15,10 +16,12 @@ namespace GPMVehicleControlSystem.Service
     {
         Logger logger;
         IHubContext<FrontendHub> _hubContext;
-        public SystemLoadingMonitorBackgroundServeice(IHubContext<FrontendHub> hubContext)
+        IMemoryCache _memoryCache;
+        public SystemLoadingMonitorBackgroundServeice(IHubContext<FrontendHub> hubContext, IMemoryCache memoryCache)
         {
 
             logger = LogManager.GetLogger("SystemLoadingMonitor");
+            _memoryCache = memoryCache;
             _hubContext = hubContext;
         }
 
@@ -75,13 +78,18 @@ namespace GPMVehicleControlSystem.Service
                 while (true)
                 {
                     List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
-                    string[] homeDiskNames = new[] { "c:", "home" };
-                    DiskUsageState homeDiskUsage = disksStates.FirstOrDefault(s => homeDiskNames.Any(n => s.Name.ToLower().Contains(n)));
-                    logger.Info("Check Disk Status : " + homeDiskUsage?.ToJson(Newtonsoft.Json.Formatting.None));
-                    if (homeDiskUsage != null && homeDiskUsage.TotalAvailableSpace < param.HardDiskSpaceWarningSize)
+                    logger.Debug(disksStates.ToJson());
+                    string[] homeDiskNames = new[] { "c:", "home", "/", "" };
+                    DiskUsageState? homeDiskUsage = disksStates.FirstOrDefault(s => homeDiskNames.Any(n => s.Name.ToLower().Contains(n)));
+                    if (homeDiskUsage != null)
                     {
-                        _hubContext.Clients.All.SendAsync("DiskUsageError", $"{homeDiskUsage.Name} 磁碟容量即將不足!剩餘:{homeDiskUsage.TotalAvailableSpace} Mb");
-                        AlarmManager.AddWarning(AlarmCodes.Hard_Disk_Space_Is_Full);
+                        _memoryCache.Set<DiskUsageState>("DiskStatus", homeDiskUsage);
+                        logger.Info("Check Disk Status : " + homeDiskUsage?.ToJson(Newtonsoft.Json.Formatting.None));
+                        if (homeDiskUsage != null && homeDiskUsage.TotalAvailableSpace < param.HardDiskSpaceWarningSize)
+                        {
+                            _hubContext.Clients.All.SendAsync("DiskUsageError", $"{homeDiskUsage.Name} 磁碟容量即將不足!剩餘:{homeDiskUsage.TotalAvailableSpace} Mb");
+                            AlarmManager.AddWarning(AlarmCodes.Hard_Disk_Space_Is_Full);
+                        }
                     }
                     await Task.Delay(TimeSpan.FromMinutes(param.HardDiskSpaceCheckTimer));
                 }

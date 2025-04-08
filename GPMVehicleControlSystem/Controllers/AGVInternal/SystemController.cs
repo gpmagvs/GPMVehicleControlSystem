@@ -9,6 +9,7 @@ using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -22,14 +23,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         private readonly IHubContext<FrontendHub> hubContext;
         private readonly ParameterRestore parameterRestore;
         private readonly SystemUpdateService systemUpdateService;
+        IMemoryCache _memoryCache;
         public SystemController(SystemUpdateService sysUpdateService, ParameterRestore parameterRestore
-                                , LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext, SystemUpdateService systemUpdateService)
+                                , LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext, SystemUpdateService systemUpdateService, IMemoryCache memoryCache)
         {
             _sysUpdateService = sysUpdateService;
             _diskUsageMonitor = diskUsageMonitor;
             this.hubContext = hubContext;
             this.parameterRestore = parameterRestore;
             this.systemUpdateService = systemUpdateService;
+            _memoryCache = memoryCache;
         }
 
         [HttpGet("Settings")]
@@ -168,6 +171,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
 
             return Ok(result);
+        }
+
+
+        [HttpGet("DiskStatus")]
+        public async Task<IActionResult> GetDiskStatus()
+        {
+            return Ok(_memoryCache.Get<DiskUsageState>("DiskStatus"));
         }
     }
 }
