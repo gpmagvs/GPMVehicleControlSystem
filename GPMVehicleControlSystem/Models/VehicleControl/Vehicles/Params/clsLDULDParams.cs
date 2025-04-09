@@ -17,5 +17,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool BypassFrontLaserWhenEntryEQ { get; set; } = true;
 
         public int MoveActionTimeoutInSec { get; set; } = 60;
+
+        /// <summary>
+        /// 當取料時但騎框，是否可以讓人員介入確認，確認後恢富任務動作
+        /// </summary>
+        public bool MaunalCheckAndResumableWhenUnloadButCargoBias { get; set; } = false;
     }
 }

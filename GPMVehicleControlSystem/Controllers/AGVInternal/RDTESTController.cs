@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.RDTEST;
+using GPMVehicleControlSystem.Models.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels.RDTEST;
 using Microsoft.AspNetCore.Http;
@@ -40,6 +41,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task AlarmTriggerTest(AlarmCodes alarmCode)
         {
             agv.SoftwareEMO(alarmCode);
+        }
+        [HttpPost("CheckCargoTest")]
+        public async Task CheckCargoTest(int tag)
+        {
+            await UnloadTask.WaitOperatorCheckCargoStatusProcess(tag);
         }
     }
 }

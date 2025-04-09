@@ -1072,6 +1072,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             finally
             {
                 _softwareEmoSemaphoreSlim.Release();
+
+                Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(1000);
+                    CargoStateStorer.SetWaitOperatorConfirmCargoStatus();
+                });
             }
 
         }

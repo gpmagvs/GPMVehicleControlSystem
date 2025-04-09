@@ -436,5 +436,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             agv.ManualCheckCargoStatusDone(userName);
         }
 
+        [HttpPost("CargoStatusManualCheckDoneWhenUnloadFailure")]
+        public async Task CargoStatusManualCheckDoneWhenUnloadFailure(string userName = "")
+        {
+            agv.CargoStatusManualCheckDoneWhenUnloadFailure(userName);
+        }
     }
 }

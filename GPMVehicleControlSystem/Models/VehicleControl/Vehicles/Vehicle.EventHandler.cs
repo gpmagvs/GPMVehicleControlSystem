@@ -176,6 +176,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             WaitOperatorCheckCargoStatusDone.Set();
         }
 
+        internal void CargoStatusManualCheckDoneWhenUnloadFailure(string userName = "")
+        {
+            logger.LogInformation($"Operator {userName} Check Cargo Status Done when unload but cargo placement state error");
+            CargoStateStorer.SetWaitOperatorConfirmCargoStatus();
+        }
+
         private void ClsSick_OnMapMatchStatusToLow(object? sender, EventArgs e)
         {
             AlarmManager.AddWarning(AlarmCodes.Map_Recognition_Rate_Too_Low);

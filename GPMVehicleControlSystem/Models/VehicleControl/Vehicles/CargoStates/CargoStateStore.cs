@@ -41,6 +41,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         private readonly bool simulationExistByHaseCstID;
         private readonly clsCSTReader reader;
 
+        internal ManualResetEvent waitOperatorConfirmCargoStatus = new ManualResetEvent(false);
+
         internal CancellationTokenSource watchCargoExistStateCts = new CancellationTokenSource();
 
         private bool _IsCarrier_Exist_Interupt_SensorMounted => digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
@@ -193,6 +195,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
                 isCargoExist = existStatus != CARGO_STATUS.NO_CARGO,
                 cargoType = cargoType
             });
+        }
+
+        internal void SetWaitOperatorConfirmCargoStatus()
+        {
+            waitOperatorConfirmCargoStatus.Set();
         }
     }
 }

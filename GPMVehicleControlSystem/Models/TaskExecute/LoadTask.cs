@@ -498,7 +498,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     return forkActionResult;
 
                 //檢查在席
-                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckAfterEQActionFinishInEQ();
+                (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = await CstExistCheckAfterEQActionFinishInEQAsync();
                 if (!CstExistCheckResult.confirm)
                     return (false, CstExistCheckResult.alarmCode);
 
@@ -1156,7 +1156,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckAfterEQActionFinishInEQ()
+        protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CstExistCheckAfterEQActionFinishInEQAsync()
         {
             Agv.HandshakeStatusText = "檢查在席狀態.(車上應無物料)";
             if (!StaStored.CurrentVechicle.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
