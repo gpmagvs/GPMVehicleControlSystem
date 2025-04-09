@@ -79,8 +79,12 @@ namespace GPMVehicleControlSystem.Service
                 {
                     List<DiskUsageState> disksStates = diskMonitor.GetDiskUsageStates();
                     logger.Debug(disksStates.ToJson());
-                    string[] homeDiskNames = new[] { "c:", "home", "/", "" };
-                    DiskUsageState? homeDiskUsage = disksStates.FirstOrDefault(s => homeDiskNames.Any(n => s.Name.ToLower().Contains(n)));
+                    string[] homeDiskNames = new[] { "c:\\", "/home", "/" };
+
+                    var diskStatesCandidates = homeDiskNames.Select(diskName => disksStates.FirstOrDefault(disk => disk.Name.ToLower() == diskName))
+                                                            .Where(d => d != null)
+                                                            .ToList();
+                    DiskUsageState? homeDiskUsage = diskStatesCandidates.FirstOrDefault();
                     if (homeDiskUsage != null)
                     {
                         _memoryCache.Set<DiskUsageState>("DiskStatus", homeDiskUsage);
