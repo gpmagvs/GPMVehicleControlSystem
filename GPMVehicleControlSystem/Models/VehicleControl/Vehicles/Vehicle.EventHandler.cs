@@ -768,7 +768,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-
+                frontendHubContext.Clients.All.SendAsync("ModuleInformation", _ModuleInformation);
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 Odometry = _ModuleInformation.Mileage;
                 Navigation.StateData = _ModuleInformation.nav_state;
