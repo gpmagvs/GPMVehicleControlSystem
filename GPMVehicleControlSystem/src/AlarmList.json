@@ -1072,7 +1072,7 @@
   {
     "Code": 3203,
     "Description": "Handshake Fail(EQ_READY)",
-    "CN": "交握失敗-EQ_READY 訊號逾時)"
+    "CN": "交握失敗-EQ_READY 訊號關閉"
   },
   {
     "Code": 3204,

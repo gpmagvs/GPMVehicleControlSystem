@@ -979,8 +979,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             StartPublishIOListsMsg();
 
         }
-
-
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
             Task.Factory.StartNew(() =>
@@ -1010,6 +1008,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+
+            if (StaSysControl.isAGVCRestarting)
+            {
+                return;
+            }
 
             if (alarmCode == AlarmCodes.Fork_Slot_Teach_Data_ERROR)
             {

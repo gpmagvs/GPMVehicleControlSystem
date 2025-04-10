@@ -102,6 +102,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     if (alarm_code != AlarmCodes.None)
                     {
+                        if (StaSysControl.isAGVCRestarting)
+                            return false;
                         Task<bool> state = await Task.Factory.StartNew(async () =>
                         {
                             await Task.Delay(10);
@@ -134,6 +136,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (CSTReader != null)
                 CSTReader.onCSTReaderStateChanged += HandleCSTReaderStateChanged;
+
+            StaSysControl.OnAGVCRestartFinish += async (sender, e) =>
+            {
+                SendNotifyierToFrontend("車控系統重啟完成!");
+            };
 
         }
 
@@ -673,9 +680,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
 
-
-            if (!status)
+            if (!status || StaSysControl.isAGVCRestarting)
                 return;
+
             if (IsMotorAutoRecoverable())
             {
                 RemoteModeWhenHorizonMotorAlarm = Remote_Mode.Clone();
@@ -797,6 +804,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 stopwatch.Stop();
                 ModuleInformationUpdatedInitState = true;
+                StaSysControl.isAGVCRestarting = false;
             }
             catch (Exception ex)
             {

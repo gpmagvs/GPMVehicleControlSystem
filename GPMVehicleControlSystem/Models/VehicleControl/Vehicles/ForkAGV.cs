@@ -107,6 +107,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (alarm_code != AlarmCodes.None)
                 {
+                    if (StaSysControl.isAGVCRestarting)
+                        return false;
                     Task<bool> state = await Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(1000);

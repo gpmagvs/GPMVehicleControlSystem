@@ -139,7 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private Action<ActionStatus> _OnAGVCActionChanged;
         public event EventHandler OnAGVCActionActive;
         public event EventHandler OnAGVCActionSuccess;
-
+        private ManualResetEvent pauseModuleInfoCallbackHandle = new ManualResetEvent(true);
         protected Logger logger;
 
         public Action<ActionStatus> OnAGVCActionChanged
@@ -180,11 +180,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             private set
             {
                 if (value != null)
+                {
+                    pauseModuleInfoCallbackHandle.WaitOne();
                     OnModuleInformationUpdated?.Invoke(this, value);
+                }
                 _module_info = value;
 
             }
         }
+
         public int lastVisitedNode => module_info.nav_state.lastVisitedNode.data;
 
         public List<AlarmCodes> alarm_codes { get; private set; }
@@ -308,6 +312,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             return true;
         }
 
+        public void PauseModuleInfoCallBackInvoke()
+        {
+            pauseModuleInfoCallbackHandle.Reset();
+        }
+
+        public void ResumeModuleInfoCallBackkInvoe()
+        {
+            pauseModuleInfoCallbackHandle.Set();
+        }
 
         /// <summary>
         /// 訂閱ROS主題
@@ -685,6 +698,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task<bool> HandleAlarm(AlarmCodes alarm)
         {
+            if (StaSysControl.isAGVCRestarting)
+                return false;
             logger.Error($"");
             return true;
         }

@@ -7,6 +7,27 @@ namespace GPMVehicleControlSystem.Models
     public static class StaSysControl
     {
         private static Logger _logger = LogManager.GetCurrentClassLogger();
+
+        public static event EventHandler OnAGVCRestartFinish;
+
+        private static bool _isAGVCRestarting;
+        internal static bool isAGVCRestarting
+        {
+            get => _isAGVCRestarting;
+            set
+            {
+                if (_isAGVCRestarting != value)
+                {
+                    _isAGVCRestarting = value;
+
+                    //changeToNo
+                    if (!_isAGVCRestarting)
+                    {
+                        OnAGVCRestartFinish?.Invoke("", EventArgs.Empty);
+                    }
+                }
+            }
+        }
         public static void KillRunningVCSProcesses()
         {
             var currentProcessId = Process.GetCurrentProcess().Id;
@@ -41,13 +62,21 @@ namespace GPMVehicleControlSystem.Models
             });
         }
 
-        public static void RestartAGVC()
+        public static async Task RestartAGVCAsync()
         {
+            var agv = StaStored.CurrentVechicle;
+
+            await agv.Online_Mode_Switch(AGVSystemCommonNet6.AGVDispatch.Messages.REMOTE_MODE.OFFLINE);
+
+            isAGVCRestarting = true;
+            agv.AGVC.PauseModuleInfoCallBackInvoke();
             _ = Task.Factory.StartNew(async () =>
             {
                 _logger.Warn($"AGVC will restart after 1 sec...");
                 await Task.Delay(1000);
                 LinuxTools.RunShellCommand("cd /home/gpm/gpm_vms && ./restart_agvc.sh", out string output, out string error);
+                await Task.Delay(8000);
+                agv.AGVC.ResumeModuleInfoCallBackkInvoe();
             });
         }
     }
