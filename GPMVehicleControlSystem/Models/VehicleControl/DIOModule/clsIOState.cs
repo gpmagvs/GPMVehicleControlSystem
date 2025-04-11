@@ -110,6 +110,10 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
 
         private bool _State;
+
+        public bool manualToggleEnable { get; set; } = false;
+        public bool manualToggleNeedConfirmed { get; set; } = false;
+
         internal ushort index;
         internal void AddEvent(EventHandler<bool> handler)
         {

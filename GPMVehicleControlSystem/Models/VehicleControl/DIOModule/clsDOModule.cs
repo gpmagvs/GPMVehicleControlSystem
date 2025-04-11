@@ -21,6 +21,52 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
         public override bool Connected { get => _Connected; set => _Connected = value; }
         public override string alarm_locate_in_name => "DO Module";
+
+
+        public List<DO_ITEM> laserModeDoBag { get; private set; } = new List<DO_ITEM>() {
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_1,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_2,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_3,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_4,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_1,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_2,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_3,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_4,
+                DO_ITEM.Side_Protection_Sensor_IN_1,
+                DO_ITEM.Side_Protection_Sensor_IN_2,
+                DO_ITEM.Side_Protection_Sensor_IN_3,
+                DO_ITEM.Side_Protection_Sensor_IN_4,
+                DO_ITEM.Left_Protection_Sensor_IN_1,
+                DO_ITEM.Left_Protection_Sensor_IN_2,
+                DO_ITEM.Left_Protection_Sensor_IN_3,
+                DO_ITEM.Left_Protection_Sensor_IN_4,
+            };
+
+
+        public List<DO_ITEM> needConfirmWhenSwitchStateManual { get; private set; } = new List<DO_ITEM>() {
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_1,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_2,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_3,
+                DO_ITEM.FrontBack_Protection_Sensor_CIN_4,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_1,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_2,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_3,
+                DO_ITEM.FrontBack_Protection_Sensor_IN_4,
+                DO_ITEM.Side_Protection_Sensor_IN_1,
+                DO_ITEM.Side_Protection_Sensor_IN_2,
+                DO_ITEM.Side_Protection_Sensor_IN_3,
+                DO_ITEM.Side_Protection_Sensor_IN_4,
+                DO_ITEM.Left_Protection_Sensor_IN_1,
+                DO_ITEM.Left_Protection_Sensor_IN_2,
+                DO_ITEM.Left_Protection_Sensor_IN_3,
+                DO_ITEM.Left_Protection_Sensor_IN_4,
+                DO_ITEM.Vertical_Motor_Free,
+                DO_ITEM.Front_Protection_Sensor_Reset,
+                DO_ITEM.Back_Protection_Sensor_Reset,
+            };
+
+
+
         internal override void RegistSignalEvents()
         {
         }
@@ -44,6 +90,8 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     var reg = new clsIOSignal(RigisterName, Address);
                     reg.index = i;
                     reg.State = false;
+                    reg.manualToggleEnable = !IsLaserModeSwitchIO(reg);
+                    reg.manualToggleNeedConfirmed = IsNeedConfirmWhenSwitchStateManual(reg);
                     if (RigisterName != "")
                     {
                         if (do_names.Contains(RigisterName))
@@ -401,6 +449,28 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 }
                 logger.Info($"Wago DO All OFF Done.");
             }
+        }
+
+        internal bool IsLaserModeSwitchIO(string address)
+        {
+            return IsLaserModeSwitchIO(VCSOutputs.FirstOrDefault(v => v.Address == address));
+        }
+        internal bool IsLaserModeSwitchIO(clsIOSignal outputSignalWrapper)
+        {
+            if (outputSignalWrapper == null)
+                return false;
+            return laserModeDoBag.Contains(outputSignalWrapper.Output);
+        }
+
+        internal bool IsNeedConfirmWhenSwitchStateManual(string address)
+        {
+            return IsNeedConfirmWhenSwitchStateManual(VCSOutputs.FirstOrDefault(v => v.Address == address));
+        }
+        internal bool IsNeedConfirmWhenSwitchStateManual(clsIOSignal outputSignalWrapper)
+        {
+            if (outputSignalWrapper == null)
+                return false;
+            return needConfirmWhenSwitchStateManual.Contains(outputSignalWrapper.Output);
         }
 
         public async Task<bool> ResetSaftyRelay()

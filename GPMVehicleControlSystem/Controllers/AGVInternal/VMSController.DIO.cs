@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -15,9 +16,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
         [HttpGet("DIO/DO_State")]
         [ApiExplorerSettings(IgnoreApi = false)]
-        public async Task<IActionResult> DO_State(string address, bool state)
+        public async Task<IActionResult> DO_State(string address, bool state, bool force = false)
         {
             await Task.Delay(1);
+            if (!force && agv.WagoDO.IsLaserModeSwitchIO(address))
+                return Ok(false);
             agv.WagoDO.SetState(address, state);
             return Ok(true);
         }
