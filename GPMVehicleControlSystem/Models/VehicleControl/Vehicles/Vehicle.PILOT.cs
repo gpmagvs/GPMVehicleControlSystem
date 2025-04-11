@@ -176,7 +176,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                                                           alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On) ||
                                                                           alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
                                                                           alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
-                    if (IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown)
+
+                    bool _IsTaskFinishWithAbnormal = IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown;
+
+                    if (!_IsTaskFinishWithAbnormal)
+                    {
+                        AlarmManager.ClearAlarm();
+                        try
+                        {
+                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                        }
+                        catch (TaskCanceledException ex)
+                        {
+                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
+                        }
+                        finally
+                        {
+                            SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
+                        }
+                    }
+                    else
                     {
                         AGVC.EmergencyStop();
                         _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
@@ -213,29 +232,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                         TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                     }
-                    else
-                    {
-                        AlarmManager.ClearAlarm();
-                        try
-                        {
-                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
-                        }
-                        catch (TaskCanceledException ex)
-                        {
-                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
-                        }
-                        finally
-                        {
-                            SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
-                        }
-                    }
 
                     AGVC.OnAGVCActionChanged = null;
 
                     DebugMessageBrocast("Action Finish Report To AGVS Process Start!");
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
 
-                    if (LoadUnloadTask != null)
+                    if (LoadUnloadTask != null && !_IsTaskFinishWithAbnormal)
                     {
                         await Task.Delay(200);
                         DebugMessageBrocast("AGV_COMPT Handshake Process Start!");
