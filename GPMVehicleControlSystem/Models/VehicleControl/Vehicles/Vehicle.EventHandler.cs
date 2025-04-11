@@ -250,8 +250,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (!signalState && !Parameters.SensorBypass.LeftSideLaserBypass)
                     SoftwareEMO(AlarmCodes.Side_Laser_Abnormal);
             });
+            WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Switch, HandleHorizon_Motor_SwitchStateChanged);
 
 
+        }
+
+        protected virtual void HandleHorizon_Motor_SwitchStateChanged(object? sender, bool state)
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                bool isMoving = AGVC.IsRunning;
+                bool switchON = !state;
+                if (switchON)
+                {
+                    bool isResetButtonPressing = WagoDI.GetState(DI_ITEM.Panel_Reset_PB);
+                    if (isResetButtonPressing)
+                    {
+                        if (isMoving)
+                            await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                        await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
+                        DirectionLighter.Backward();
+                    }
+                }
+                else
+                {
+                    if (isMoving)
+                        await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, false);
+                    await DirectionLighter.CloseAll();
+
+                    if (isMoving)
+                    {
+                        Debouncer debouncer = new Debouncer();
+                        debouncer.Debounce(async () =>
+                        {
+                            await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                        }, 1000);
+                    }
+                }
+            });
         }
 
         private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
@@ -371,7 +408,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
-                    await Task.Delay(2000, _ResetButtonOnPressingCts.Token);
+                    await Task.Delay(3000, _ResetButtonOnPressingCts.Token);
                     await Laser.ModeSwitch(LASER_MODE.Bypass16, isSettingByResetButtonLongPressed: true);
                     logger.LogTrace("Panel Reset Button Pressed 2s,Laser set Bypass. ^_^ ");
 
