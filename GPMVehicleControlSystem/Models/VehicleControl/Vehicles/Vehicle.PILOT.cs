@@ -90,6 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
             ACTION_TYPE action = taskDownloadData.Action_Type;
+            LoadTask LoadUnloadTask = null;
             try
             {
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
@@ -116,6 +117,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 ExecutingTaskEntity.ForkLifter = ForkLifter;
                 orderInfoViewModel = taskDownloadData.OrderInfo;
                 Console.WriteLine(orderInfoViewModel.ToJson());
+
+                if (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload)
+                    LoadUnloadTask = ExecutingTaskEntity as LoadTask;
             }
             catch (Exception ex)
             {
@@ -225,9 +229,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
                         }
                     }
+
                     AGVC.OnAGVCActionChanged = null;
 
+                    DebugMessageBrocast("Action Finish Report To AGVS Process Start!");
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
+
+                    if (LoadUnloadTask != null)
+                    {
+                        await Task.Delay(200);
+                        DebugMessageBrocast("AGV_COMPT Handshake Process Start!");
+                        await LoadUnloadTask.AGVCOMPTHandshake(false);
+                    }
+
                     if ((IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
                         //自動復歸並上線
