@@ -250,7 +250,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         //自動復歸並上線
                         _ = Task.Run(async () =>
                         {
-                            await Task.Delay(2000);
+                            SendNotifyierToFrontend("當前異常可自動初始化,8秒後將嘗試初始化並上線...", 30678);
+                            await Task.Delay(8000);
+                            SendCloseSpeficDialogToFrontend(30678);
                             await AutoInitializeAndOnline();
                         });
                     }
@@ -699,7 +701,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             DebugMessageBrocast("End Laser Obs Monitor");
                         else
                             DebugMessageBrocast("Start Laser Obs Monitor");
-                    },500);
+                    }, 500);
 
                     _IsLaserMonitoring = value;
                 }
