@@ -139,9 +139,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         private Action<ActionStatus> _OnAGVCActionChanged;
         public event EventHandler OnAGVCActionActive;
         public event EventHandler OnAGVCActionSuccess;
+        public event EventHandler<ROBOT_CONTROL_CMD> OnSpeedControlChanged;
         private ManualResetEvent pauseModuleInfoCallbackHandle = new ManualResetEvent(true);
         protected Logger logger;
-
+        Debouncer speedControlDebuncer = new Debouncer();
         public Action<ActionStatus> OnAGVCActionChanged
         {
             get => _OnAGVCActionChanged;
@@ -464,39 +465,85 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         public static ROBOT_CONTROL_CMD AGVS_SPEED_CONTROL_REQUEST = ROBOT_CONTROL_CMD.NONE;
 
-        public ROBOT_CONTROL_CMD CurrentSpeedControlCmd { get; set; } = ROBOT_CONTROL_CMD.SPEED_Reconvery;
-        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
+        private ROBOT_CONTROL_CMD _CurrentSpeedControlCmd = ROBOT_CONTROL_CMD.NONE;
+        public ROBOT_CONTROL_CMD CurrentSpeedControlCmd
         {
-            if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery & OnSpeedRecoveryRequesting != null)
+            get => _CurrentSpeedControlCmd;
+            set
             {
-
-                (bool confirmed, string message) = OnSpeedRecoveryRequesting();
-                if (!confirmed && CheckLaserStatus)
+                if (_CurrentSpeedControlCmd != value)
                 {
-                    logger.Info($"[ROBOT_CONTROL_CMD] {message}");
-                    return false;
+                    OnSpeedControlChanged?.Invoke(this, value);
+                    _CurrentSpeedControlCmd = value;
                 }
             }
-
-            ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
-            {
-                taskID = task_id == null ? "" : task_id,
-                reqsrv = (byte)cmd
-            };
-            ComplexRobotControlCmdResponse? res = await rosSocket?.CallServiceAndWait<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", req);
-            if (res == null)
-            {
-                logger.Warn($"[ROBOT_CONTROL_CMD] 車控無回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
-                return false;
-            }
-            logger.Info($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
-            if (cmd == ROBOT_CONTROL_CMD.STOP)
-            {
-                OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);
-            }
-            CurrentSpeedControlCmd = cmd;
-            return res.confirm;
         }
+        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
+        {
+            bool _confirmed = false;
+            ManualResetEvent mre = new ManualResetEvent(false);
+            speedControlDebuncer.OnActionCanceled += SpeedControlDebuncer_OnActionCanceled;
+            speedControlDebuncer.Debounce(async () =>
+            {
+                try
+                {
+                    if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
+                    {
+
+                        (bool confirmed, string message) = OnSpeedRecoveryRequesting();
+                        if (!confirmed && CheckLaserStatus)
+                        {
+                            logger.Info($"[ROBOT_CONTROL_CMD] {message}");
+                            _confirmed = false;
+                            return;
+                        }
+                    }
+
+                    ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
+                    {
+                        taskID = task_id == null ? "" : task_id,
+                        reqsrv = (byte)cmd
+                    };
+                    ComplexRobotControlCmdResponse? res = await rosSocket?.CallServiceAndWait<ComplexRobotControlCmdRequest, ComplexRobotControlCmdResponse>("/complex_robot_control_cmd", req);
+
+                    if (res == null)
+                    {
+                        logger.Warn($"[ROBOT_CONTROL_CMD] 車控無回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
+                        _confirmed = false;
+                        return;
+                    }
+                    logger.Info($"[ROBOT_CONTROL_CMD] 車控回復 {cmd}({moment}) 請求: {(res.confirm ? "OK" : "NG")} (Task ID={task_id})");
+                    if (cmd == ROBOT_CONTROL_CMD.STOP)
+                    {
+                        OnSTOPCmdRequesting?.Invoke(this, EventArgs.Empty);
+                    }
+                    CurrentSpeedControlCmd = res.confirm ? cmd : CurrentSpeedControlCmd;
+                    _confirmed = res.confirm;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    mre.Set();
+
+                }
+            }, cmd == ROBOT_CONTROL_CMD.DECELERATE || cmd == ROBOT_CONTROL_CMD.STOP ? 10 : 300);
+
+            bool timeout = !mre.WaitOne(TimeSpan.FromSeconds(3));
+            speedControlDebuncer.OnActionCanceled -= SpeedControlDebuncer_OnActionCanceled;
+            if (timeout)
+                return false;
+            return _confirmed;
+
+            void SpeedControlDebuncer_OnActionCanceled(object? sender, string e)
+            {
+                _confirmed = false;
+                mre.Set();
+            }
+        }
+
 
         internal virtual async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {

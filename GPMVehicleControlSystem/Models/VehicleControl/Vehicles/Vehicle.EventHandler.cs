@@ -65,6 +65,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnActionSendToAGVCRaising += HandleSendActionGoalToAGVCRaised;
             AGVC.OnAGVCActionActive += HandleAGVCActionActive;
             AGVC.OnAGVCActionSuccess += HandleAGVCActionSuccess;
+            AGVC.OnSpeedControlChanged += AGVC_OnSpeedControlChanged;
             ChargeTask.OnChargeCircuitOpening += HandleChargeTaskTryOpenChargeCircuit;
             Navigation.OnDirectionChanged += Navigation_OnDirectionChanged;
             Navigation.OnLastVisitedTagUpdate += HandleLastVisitedTagChanged;
@@ -142,6 +143,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SendNotifyierToFrontend("車控系統重啟完成!");
             };
 
+        }
+
+        private void AGVC_OnSpeedControlChanged(object? sender, ROBOT_CONTROL_CMD e)
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                DebugMessageBrocast($"當前速度控制->{e}");
+            });
         }
 
         private void Laser_OnSickApplicationError(object? sender, EventArgs e)
@@ -777,7 +786,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             Laser.agvDirection = direction;
             int _debunceDelay = direction == AGV_DIRECTION.BYPASS ? 10 : 100;
-
+            if (direction == AGV_DIRECTION.FORWARD)
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
             _vehicleDirectionChangedDebouncer.Debounce(() =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)

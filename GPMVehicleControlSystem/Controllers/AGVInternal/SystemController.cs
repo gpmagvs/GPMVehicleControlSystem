@@ -179,5 +179,24 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             return Ok(_memoryCache.Get<DiskUsageState>("DiskStatus"));
         }
+
+        [HttpGet("GetDiskMonitorConfiguration")]
+        public async Task<IActionResult> GetDiskMonitorConfiguration()
+        {
+
+            DiskStatusMonitorConfigruationService service = new DiskStatusMonitorConfigruationService();
+            DiskMonitorParams? configruation = service.LoadDiskMonitorParam();
+            return Ok(configruation);
+        }
+
+        [HttpPost("SaveDiskMonitorConfiguration")]
+        public async Task<IActionResult> SaveDiskMonitorConfiguration([FromBody] DiskMonitorParams configruation)
+        {
+
+            DiskStatusMonitorConfigruationService service = new DiskStatusMonitorConfigruationService();
+            service.SaveConfiguration(configruation);
+
+            return Ok();
+        }
     }
 }

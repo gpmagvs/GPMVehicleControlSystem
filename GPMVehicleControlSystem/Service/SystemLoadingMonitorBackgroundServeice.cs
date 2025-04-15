@@ -70,7 +70,16 @@ namespace GPMVehicleControlSystem.Service
 
         private async Task StartDiskStatusMonitorAsync()
         {
-            DiskMonitorParams? param = LoadDiskMonitorParam() ?? new DiskMonitorParams();
+            DiskStatusMonitorConfigruationService configurationService = new DiskStatusMonitorConfigruationService();
+            DiskMonitorParams? param = configurationService.LoadDiskMonitorParam() ?? new DiskMonitorParams();
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            DiskStatusMonitorConfigruationService.OnConfigurationChanged += (sender, newDiskMonitorParams) =>
+            {
+                param = newDiskMonitorParams;
+                cts.Cancel();
+            };
+
             IDiskUsageMonitor diskMonitor = _GetDiskUsageMonitorInstance();
             await Task.Delay(TimeSpan.FromSeconds(10));
             _ = Task.Run(async () =>
@@ -95,40 +104,19 @@ namespace GPMVehicleControlSystem.Service
                             AlarmManager.AddWarning(AlarmCodes.Hard_Disk_Space_Is_Full);
                         }
                     }
-                    await Task.Delay(TimeSpan.FromMinutes(param.HardDiskSpaceCheckTimer));
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMinutes(param.HardDiskSpaceCheckTimer), cts.Token);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        cts.Dispose();
+                        cts = new CancellationTokenSource();
+                        logger.Debug("StartDiskStatusMonitorAsync_TaskCanceledException, because configuration changed.");
+                        continue;
+                    }
                 }
             });
-        }
-
-        private DiskMonitorParams? LoadDiskMonitorParam()
-        {
-            string jsonFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/DiskMonitorParam.json");
-            if (File.Exists(jsonFilePath))
-            {
-                try
-                {
-                    var existparams = JsonConvert.DeserializeObject<DiskMonitorParams>(File.ReadAllText(jsonFilePath));
-                    _RollbackJsonFile(existparams);
-                    return existparams;
-                }
-                catch (Exception)
-                {
-                    return new DiskMonitorParams();
-                }
-            }
-            else
-            {
-                var defaultParams = new DiskMonitorParams();
-                _RollbackJsonFile(defaultParams);
-                return defaultParams;
-            }
-
-            void _RollbackJsonFile(DiskMonitorParams _defaultParam)
-            {
-                if (_defaultParam == null)
-                    return;
-                File.WriteAllText(jsonFilePath, JsonConvert.SerializeObject(_defaultParam, Formatting.Indented));
-            }
         }
 
         private CPUUaageBase _GetCPUUsageInstance()
