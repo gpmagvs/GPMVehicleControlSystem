@@ -51,6 +51,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnOnlineModeQuery_T1Timeout += Handle_AGVS_OnlineModeQuery_T1Timeout;
             AGVS.OnOnlineModeQuery_Recovery += Handle_AGVS_OnOnlineModeQuery_Recovery;
             AGVS.OnRunningStatusReport_T1Timeout += Handle_AGVS_RunningStatusReport_T1Timeout;
+            AGVS.OnStartWaitMainStatusIDLEReported += HandleOnStartWaitMainStatusIDLEReported;
+            AGVS.OnEndWaitMainStatusIDLEReported += HandleOnEndWaitMainStatusIDLEReported;
             AGVS.OnPingFail += AGVSPingFailHandler;
             AGVS.OnPingSuccess += AGVSPingSuccessHandler;
 
@@ -72,6 +74,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
 
+        private void HandleOnEndWaitMainStatusIDLEReported(object? sender, EventArgs e)
+        {
+            SendCloseSpeficDialogToFrontend(33333);
+        }
+
+        private void HandleOnStartWaitMainStatusIDLEReported(object? sender, EventArgs e)
+        {
+            SendNotifyierToFrontend($"Action Finish上報前等待主狀態-IDLE上報完成...",code:33333);
+        }
 
         private async void AGVSPingSuccessHandler()
         {

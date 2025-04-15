@@ -682,6 +682,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _StartLaserMonitorSemaphore = new SemaphoreSlim(1, 1);
         private Debouncer _LaserMonitorSwitchDebouncer = new Debouncer();
         private bool _IsLaserMonitoring = false;
+
+        Debouncer laserSwitchStateDebugDebuncer = new Debouncer();
+
         public bool IsLaserMonitoring
         {
             get => _IsLaserMonitoring;
@@ -689,10 +692,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (_IsLaserMonitoring != value)
                 {
-                    if (!value)
-                        DebugMessageBrocast("End Laser Obs Monitor");
-                    else
-                        DebugMessageBrocast("Start Laser Obs Monitor");
+                    bool val = value;
+                    laserSwitchStateDebugDebuncer.Debounce(() =>
+                    {
+                        if (!val)
+                            DebugMessageBrocast("End Laser Obs Monitor");
+                        else
+                            DebugMessageBrocast("Start Laser Obs Monitor");
+                    },500);
+
                     _IsLaserMonitoring = value;
                 }
             }
