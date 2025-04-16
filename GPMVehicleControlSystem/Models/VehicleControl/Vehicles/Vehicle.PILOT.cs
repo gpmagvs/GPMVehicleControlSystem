@@ -238,12 +238,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     DebugMessageBrocast("Action Finish Report To AGVS Process Start!");
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
 
-                    if (LoadUnloadTask != null && !_IsTaskFinishWithAbnormal)
-                    {
-                        await Task.Delay(200);
-                        DebugMessageBrocast("AGV_COMPT Handshake Process Start!");
-                        await LoadUnloadTask.AGVCOMPTHandshake(false);
-                    }
+                    //if (LoadUnloadTask != null && !_IsTaskFinishWithAbnormal)
+                    //{
+                    //    await Task.Delay(200);
+                    //    DebugMessageBrocast("AGV_COMPT Handshake Process Start!");
+                    //    await LoadUnloadTask.AGVCOMPTHandshake(false);
+                    //}
 
                     if ((IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {

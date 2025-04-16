@@ -789,13 +789,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 asyncCSTReadCancellationTokenSource.Cancel();
                 isForkReachStandyHeight = true;
 
-                //var HSResult = await AGVCOMPTHandshake(statusDownWhenErr: false);
-                //if (!HSResult.confirm)
-                //{
-                //    logger.Warn($"設備外交握失敗(Alarm Code={HSResult.alarmCode})，新增異常但流程可繼續");
-                //    AlarmManager.AddAlarm(HSResult.alarmCode, true);
-                //    await Agv.ResetHandshakeSignals();
-                //}
+                var HSResult = await AGVCOMPTHandshake(statusDownWhenErr: false);
+                if (!HSResult.confirm)
+                {
+                    logger.Warn($"設備外交握失敗(Alarm Code={HSResult.alarmCode})，新增異常但流程可繼續");
+                    AlarmManager.AddAlarm(HSResult.alarmCode, true);
+                    await Agv.ResetHandshakeSignals();
+                }
 
                 (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = AsyncCSTReadSuccess ? (true, AlarmCodes.None) : CSTBarcodeReadAfterAction(new CancellationToken()).Result;
                 if (!CstBarcodeCheckResult.success)
