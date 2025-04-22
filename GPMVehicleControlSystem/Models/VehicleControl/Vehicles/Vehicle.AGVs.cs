@@ -17,6 +17,8 @@ using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Notify;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Tools;
+using GPMVehicleControlSystem.Tools.DiskUsage;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -81,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleOnStartWaitMainStatusIDLEReported(object? sender, EventArgs e)
         {
-            SendNotifyierToFrontend($"Action Finish上報前等待主狀態-IDLE上報完成...",code:33333);
+            SendNotifyierToFrontend($"Action Finish上報前等待主狀態-IDLE上報完成...", code: 33333);
         }
 
         private async void AGVSPingSuccessHandler()
@@ -523,6 +525,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <returns></returns>
         public virtual clsRunningStatus HandleWebAPIProtocolGetRunningStatus()
         {
+            //_memoryCache.Set<DiskUsageState>("DiskStatus", homeDiskUsage);
+            DiskUsageState homeDiskUsage = memoryCache.Get<DiskUsageState>("DiskStatus");
+            homeDiskUsage = homeDiskUsage ?? new DiskUsageState();
+
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
@@ -557,6 +563,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = GetIsCharging(),
                     AppVersion = StaStored.APPVersion,
+                    AvailableDiskSpace = homeDiskUsage.TotalAvailableSpace
                 };
                 return status;
             }

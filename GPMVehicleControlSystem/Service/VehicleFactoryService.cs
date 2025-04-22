@@ -14,17 +14,10 @@ namespace GPMVehicleControlSystem.Service
 {
     public class VehicleFactoryService : IHostedService
     {
-
-        ILogger<VehicleFactoryService> logger;
-        ILogger<Vehicle> vehicleLogger;
-        ILogger<clsAGVSConnection> agvsLogger;
-        IHubContext<FrontendHub> hubContext;
-        public VehicleFactoryService(ILogger<VehicleFactoryService> _logger, ILogger<Vehicle> _vehicleLogger, ILogger<clsAGVSConnection> _agvsLogger, IHubContext<FrontendHub> _hubContext)
+        VehicleCreateFactoryServiceAggregator vehicleCreateFactoryServiceAggregator;
+        public VehicleFactoryService(VehicleCreateFactoryServiceAggregator vehicleCreateFactoryServiceAggregator)
         {
-            logger = _logger;
-            vehicleLogger = _vehicleLogger;
-            agvsLogger = _agvsLogger;
-            hubContext = _hubContext;
+            this.vehicleCreateFactoryServiceAggregator = vehicleCreateFactoryServiceAggregator;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -40,7 +33,7 @@ namespace GPMVehicleControlSystem.Service
 
                 await _DeleteOldLogAndAlarm(param.Log.LogKeepDays);
 
-                logger.LogTrace("Database Initialize done");
+                vehicleCreateFactoryServiceAggregator.logger.LogTrace("Database Initialize done");
                 var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
                 if (!File.Exists(iniFilePath))
                 {
@@ -57,38 +50,41 @@ namespace GPMVehicleControlSystem.Service
                     }
                     File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
 
-                    logger.LogTrace("New IO_Wago.ini file sync done.");
+                    vehicleCreateFactoryServiceAggregator.logger.LogTrace("New IO_Wago.ini file sync done.");
                 }
 
-                logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
+                vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
                 if (param.AgvType == AGV_TYPE.FORK)
                 {
-                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleLogger, agvsLogger, hubContext);
+                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
                 {
-                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleLogger, agvsLogger, hubContext);
+                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
                 }
                 else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
                 {
                     if (param.Version == 1)
-                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleLogger, agvsLogger, hubContext);
+                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
                     else
-                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleLogger, agvsLogger, hubContext);
+                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
                 }
+
+                StaStored.CurrentVechicle.memoryCache = vehicleCreateFactoryServiceAggregator.memoryCache;
+
                 await StaStored.CurrentVechicle.CreateAsync();
-                logger.LogInformation($"Vehicle-{param.AgvType} Created！！");
+                vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle-{param.AgvType} Created！！");
                 //LinuxTools.SysLoadingLogProcess();
             }
             catch (VehicleInstanceInitializeFailException ex)
             {
-                logger.LogCritical(ex, $"建立車輛時發生錯誤:{ex.Message}");
+                vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤:{ex.Message}");
                 ViewModelFactory.VehicleInstanceCreateFailException = ex;
                 AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, true);
             }
             catch (Exception ex)
             {
-                logger.LogCritical(ex, $"建立車輛時發生錯誤");
+                vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤");
                 Environment.Exit(4);
             }
             finally

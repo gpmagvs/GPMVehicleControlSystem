@@ -34,6 +34,7 @@ using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -54,6 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             FROM_TASK_DOWNLOAD_CONTENT,
             FROM_CIM_POST_IN
         }
+        internal IMemoryCache memoryCache;
         public abstract clsDirectionLighter DirectionLighter { get; set; }
         public clsStatusLighter StatusLighter { get; set; }
         public clsAGVSConnection AGVS;
@@ -1501,7 +1503,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await frontendHubContext.Clients.All.SendAsync("AGV-Notify-Message", new { title = title, message = message, alarmCode = alarmCode });
         }
-        internal async Task SendNotifyierToFrontend(string message, int code , string title = "AGV Message")
+        internal async Task SendNotifyierToFrontend(string message, int code, string title = "AGV Message")
         {
             await frontendHubContext.Clients.All.SendAsync("AGV-Notify-Message", new { title = title, message = message, alarmCode = code });
         }
