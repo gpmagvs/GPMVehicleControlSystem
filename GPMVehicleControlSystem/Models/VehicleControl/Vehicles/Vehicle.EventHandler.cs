@@ -832,7 +832,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
                 if (ForkLifter != null)
                 {
-                    ForkLifter.fork_ros_controller.CurrentPosition = VerticalDriverState.CurrentPosition;
+                    ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition = VerticalDriverState.CurrentPosition;
                 }
                 for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                     WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];

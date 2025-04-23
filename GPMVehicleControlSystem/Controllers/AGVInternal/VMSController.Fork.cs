@@ -166,7 +166,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (forkAgv.ForkLifter.IsInitialing)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
 
-            string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkActionRequesting.command;
+            string current_cmd = (forkAgv.AGVC as ForkAGVController).verticalActionService.CurrentForkActionRequesting.command;
 
             if (forkAgv.IsForkWorking && action != "stop")
                 return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
@@ -303,7 +303,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Command_Action")]
         public async Task<IActionResult> Command_Action(string command, double target, double speed)
         {
-            (forkAgv.AGVC as ForkAGVController).CallVerticalCommandService(new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest
+            (forkAgv.AGVC as ForkAGVController).verticalActionService.CallVerticalCommandService(new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest
             {
                 command = command,
                 model = "FORK",

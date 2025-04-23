@@ -63,6 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         break;
                     }
                     currentSearchDirection = DetermineSearchDirection();
+                    UpdateInitMessge($"{currentSearchDirection} Search...");
 
                     ForkStartSearch(currentSearchDirection, hasCargoMounted);
 
@@ -78,17 +79,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         }
                         if (isReachLimitSensor)
                         {
+                            UpdateInitMessge($"Reach limit Sensor. Bypass Sensor.");
                             logger.Info("觸發極限位置，BypassLimitSensor");
                             await BypassLimitSensor();
                             await Task.Delay(200);
                         }
-
+                        if (reachHome)
+                            UpdateInitMessge($"Reach Home!");
                         await Task.Delay(1000);
+                        UpdateInitMessge($"Up Search Untill Leave Home");
                         logger.Info("向上搜尋直到離開原點 UpSearchAndWaitLeaveHome");
                         WaitLeaveLimitSensorAndNoBypassLimitSensor();
                         await UpSearchAndWaitLeaveHome(hasCargoMounted);
                         await Task.Delay(1000);
                         logger.Info("向下吋動搜尋直到抵達原點 ShortMoveToFindHome");
+                        UpdateInitMessge($"Finding Home Pose..{CurrentActualPosition} cm");
                         await ShortMoveToFindHome();
                         await Task.Delay(200);
                         _isInitializeDone = CurrentLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentActualPosition - 0) < 0.01;
@@ -113,6 +118,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
         }
 
+        private void UpdateInitMessge(string msg)
+        {
+            vehicle.InitializingStatusText = $"原點復歸中...{msg}";
+        }
         private async Task WaitLeaveLimitSensorAndNoBypassLimitSensor()
         {
             while (CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT || CurrentLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
@@ -229,8 +238,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 }
                 double _pose = CurrentActualPosition - 0.1;
                 await SendChangePoseCmd(_pose, 1);
+                UpdateInitMessge($"Finding Home Pose..{CurrentActualPosition} cm");
                 await Task.Delay(1000);
             }
+            UpdateInitMessge($"Reach Home Pose!");
             await PositionInit();
         }
         protected virtual async Task NoBypassLimitSensor()

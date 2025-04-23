@@ -45,27 +45,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected override async Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1)
         {
             logger.Info($"開始向上搜尋-速度 {speed} ");
-            return await AGVC.ZAxisUpSearch(speed);
+            return await AGVC.verticalActionService.UpSearch(speed);
         }
         protected override async Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
         {
             logger.Info($"開始向下搜尋-速度 {speed} ");
-            return await AGVC.ZAxisDownSearch(speed);
+            return await AGVC.verticalActionService.DownSearch(speed);
         }
 
         protected override async Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1)
         {
-            return await AGVC.ZAxisGoTo(pose, speed, true);
+            return await AGVC.verticalActionService.Pose(pose, speed, true);
         }
 
         protected override async Task<(bool confirm, string message)> StopAsync()
         {
-            return await AGVC.ZAxisStop();
+            return await AGVC.verticalActionService.Stop();
         }
 
         protected override async Task<(bool confirm, string message)> PositionInit()
         {
-            return await AGVC.ZAxisInit();
+            return await AGVC.verticalActionService.Init();
 
         }
     }

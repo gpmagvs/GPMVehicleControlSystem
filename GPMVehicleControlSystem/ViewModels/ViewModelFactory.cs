@@ -97,7 +97,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         Connected = AGV.currentHandshakeProtocol != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
                     },
                     OrderInfo = AGV.orderInfoViewModel,
-                    IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
+                    IsForkHeightAboveSafty = IsForkHeightAboveSaftyHeightSetting(),
                     InitializingStatusText = AGV.InitializingStatusText,
                     AMCAGVSensorState = GetSensorsActiveState(),
                     IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord,
@@ -164,6 +164,13 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.Mode.ToString();
                 return $"{laserModeText}({(int)AGV.Laser.CurrentLaserModeOfSick})";
+            }
+
+            static bool IsForkHeightAboveSaftyHeightSetting()
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || AGV.ForkLifter.fork_ros_controller.verticalActionService == null)
+                    return false;
+                return AGV.ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight;
             }
         }
 

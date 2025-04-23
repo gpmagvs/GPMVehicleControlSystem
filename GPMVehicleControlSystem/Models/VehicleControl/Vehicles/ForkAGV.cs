@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -33,7 +34,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             UNDER_SAFTY_POSITION
         }
         public bool IsForkInitialized => ForkLifter.IsInitialized;
-        public bool IsForkWorking => (AGVC as ForkAGVController).WaitActionDoneFlag;
+        public bool IsForkWorking => (AGVC as ForkAGVController).verticalActionService.WaitActionDoneFlag;
 
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
         public override clsForkLifter ForkLifter { get; set; }
@@ -62,6 +63,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
             if (PinHardware != null)
                 PinHardware.rosSocket = AGVC.rosSocket;
+
+            ForkAGVController forkAGVC = (AGVC as ForkAGVController);
+            forkAGVC.verticalActionService = new VerticalForkActionService(AGVC.rosSocket);
+            forkAGVC.HorizonActionService = new HorizonForkActionService(AGVC.rosSocket);
+            forkAGVC.verticalActionService.AdertiseRequiredService();
+            forkAGVC.HorizonActionService.AdertiseRequiredService();
+
         }
 
         public async Task<bool> ResetVerticalDriver()
@@ -102,9 +110,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.CommonEventsRegist();
             var _fork_car_controller = (AGVC as ForkAGVController);
-            _fork_car_controller.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
-            _fork_car_controller.OnForkStartMove += _fork_car_controller_OnForkStartMove;
-            _fork_car_controller.OnForkStopMove += _fork_car_controller_OnForkStopMove;
+            _fork_car_controller.verticalActionService.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
+            _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
+            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -291,7 +299,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await Task.Delay(700);
                 InitializingStatusText = "牙叉初始化動作中";
-                ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                ForkLifter.fork_ros_controller.verticalActionService.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
                 if (ForkLifter.Enable)
                 {
                     ForkLifter.ForkShortenInAsync();
@@ -318,6 +326,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         //self test Home action 
                         if (Parameters.ForkAGV.HomePoseUseStandyPose)
                         {
+                            InitializingStatusText = $"Fork Height Go To Standby Pose..";
                             (bool confirm, string message) = await ForkLifter.ForkPose(Parameters.ForkAGV.StandbyPose, 1, true);
                             home_action_response.confirm = confirm;
                             home_action_response.alarm_code = confirm ? AlarmCodes.None : AlarmCodes.Fork_Action_Aborted;

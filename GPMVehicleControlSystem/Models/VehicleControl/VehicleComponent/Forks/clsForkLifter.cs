@@ -133,7 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     {
                         if (!IsInitialing)
                         {
-                            fork_ros_controller?.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
                         }
                     }
@@ -141,7 +141,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     {
                         if (!IsInitialing)
                         {
-                            fork_ros_controller?.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
                         }
                     }
@@ -149,7 +149,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     {
                         if (!DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
                         {
-                            fork_ros_controller.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Belt_Sensor_Error;
                         }
                     }
@@ -205,11 +205,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         {
             if (IsEMS)
             {
-                fork_ros_controller.BeforeForkStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
-                fork_ros_controller.wait_action_down_cts.Cancel();
+                fork_ros_controller.verticalActionService.BeforeStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                fork_ros_controller.verticalActionService.wait_action_down_cts.Cancel();
                 logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
-            return await fork_ros_controller.ZAxisStop();
+            return await fork_ros_controller.verticalActionService.Stop();
         }
 
         /// <summary>
@@ -218,13 +218,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <returns></returns>
         internal async Task<(bool confirm, string message)> ForkResumeAction()
         {
-            return await fork_ros_controller.ZAxisResume();
+            return await fork_ros_controller.verticalActionService.ZAxisResume();
         }
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
             await Task.Delay(300);
-            return await fork_ros_controller.ZAxisInit();
+            return await fork_ros_controller.verticalActionService.Init();
         }
 
         public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
@@ -235,7 +235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 AlarmManager.AddAlarm(AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point, false);
             }
 
-            (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
+            (bool confirm, string message) response = await fork_ros_controller.verticalActionService.Home(speed, wait_done);
             if (!response.confirm)
                 return (false, AlarmCodes.Action_Timeout);
             return (true, AlarmCodes.None);
@@ -252,17 +252,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
                     pose = forkAGV.Parameters.ForkAGV.UplimitPose;
             }
-            return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
+            return await fork_ros_controller.verticalActionService.Pose(pose, speed, wait_done);
         }
 
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
         {
-            return await fork_ros_controller.ZAxisUpSearch(speed);
+            return await fork_ros_controller.verticalActionService.UpSearch(speed);
         }
 
         public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
         {
-            return await fork_ros_controller.ZAxisDownSearch(speed);
+            return await fork_ros_controller.verticalActionService.DownSearch(speed);
         }
         /// <summary>
         /// 牙叉伸出
@@ -387,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             IsInitialing = true;
             bool _isInitializeDone = false;
             (this.forkAGV.AGVC as ForkAGVController).IsInitializing = true;
-            fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
+            fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
             try
             {
                 VertialForkHomeSearchHelper vertialForkHomeSearchHelper = new VertialForkHomeSearchHelper(forkAGV);
@@ -426,7 +426,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             double target = 0;
             try
             {
-                fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
+                fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (target, false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
@@ -462,7 +462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 double _errorTorlence = 0.5;
                 while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
                 {
-                    await Task.Delay(1, fork_ros_controller.wait_action_down_cts.Token);
+                    await Task.Delay(1, fork_ros_controller.verticalActionService.wait_action_down_cts.Token);
 
                     if (AGVBeltStatusError())
                         return (target, false, AlarmCodes.Belt_Sensor_Error);
@@ -473,7 +473,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         return (target, false, AlarmCodes.None);
                     }
                     tryCnt++;
-                    if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
+                    if (fork_ros_controller.verticalActionService.wait_action_down_cts.IsCancellationRequested)
                         return (target, false, AlarmCodes.Fork_Action_Aborted);
 
                     if (!_isForkAlreadyGoingToTarget)
@@ -483,7 +483,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
                         if (!forkMoveResult.confirm)
                         {
-                            AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
+                            AlarmCodes _alarm_code = fork_ros_controller.verticalActionService.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
                             return (target, false, _alarm_code);
                         }
                     }
