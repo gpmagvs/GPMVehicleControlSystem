@@ -7,6 +7,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using NLog;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
+using System.Threading.Tasks;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
@@ -22,6 +23,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected readonly clsDOModule DOModule;
         protected readonly clsDIModule DIModule;
         protected Logger logger = LogManager.GetCurrentClassLogger();
+        protected virtual double speedWhenSearchStartWithoutCargo { get; set; } = 0.5;
+
+
+
         public MotorBaseHomeSearchHelper(Vehicle vehicle)
         {
             this.vehicle = vehicle;
@@ -42,6 +47,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected abstract double CurrentActualPosition { get; }
 
+        private SEARCH_DIRECTION currentSearchDirection;
+
         public async Task<(bool done, AlarmCodes alarm_code)> StartSearchAsync()
         {
             bool _isInitializeDone = false;
@@ -50,39 +57,53 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             {
                 while (!_isInitializeDone)
                 {
-
-                    SEARCH_DIRECTION search_direction = DetermineSearchDirection();
-                    ForkStartSearch(search_direction, hasCargoMounted);
-
-                    (bool reachHome, bool isReachLimitSensor, bool isReachUpLimit) = await WaitForkReachHome(jumpOutIfReachLimitSensor: true);
-                    if (!isReachLimitSensor)
-                    {
-                        await WaitForkLeaveHome();
-                    }
-                    else
-                    {
-                        await BypassLimitSensor();
-                        await Task.Delay(1000);
-                        if (isReachUpLimit)
-                            continue;
-                    }
-
-                    await UpSearchAndWaitLeaveHome(hasCargoMounted);
-                    await Task.Delay(1000);
-                    await ShortMoveToFindHome();
-                    await Task.Delay(200);
-
                     if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         logger.Fatal($"Status Down Fork initialize action interupted.!");
                         break;
                     }
-                    _isInitializeDone = CurrentLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentActualPosition - 0) < 0.01;
-                    await Task.Delay(1000);
+                    currentSearchDirection = DetermineSearchDirection();
+
+                    ForkStartSearch(currentSearchDirection, hasCargoMounted);
+
+
+                    (bool reachHome, bool isReachLimitSensor, bool isReachUpLimit) = await WaitForkReachHome(jumpOutIfReachLimitSensor: true, stopWhenReachHome: true);
+
+                    if (reachHome || isReachLimitSensor)
+                    {
+                        if (isReachUpLimit)
+                        {
+                            logger.Info("觸發極限位置為上極限，continue search start.");
+                            continue;
+                        }
+                        if (isReachLimitSensor)
+                        {
+                            logger.Info("觸發極限位置，BypassLimitSensor");
+                            await BypassLimitSensor();
+                            await Task.Delay(200);
+                        }
+
+                        await Task.Delay(1000);
+                        logger.Info("向上搜尋直到離開原點 UpSearchAndWaitLeaveHome");
+                        WaitLeaveLimitSensorAndNoBypassLimitSensor();
+                        await UpSearchAndWaitLeaveHome(hasCargoMounted);
+                        await Task.Delay(1000);
+                        logger.Info("向下吋動搜尋直到抵達原點 ShortMoveToFindHome");
+                        await ShortMoveToFindHome();
+                        await Task.Delay(200);
+                        _isInitializeDone = CurrentLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentActualPosition - 0) < 0.01;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
+                return (_isInitializeDone, _isInitializeDone ? AlarmCodes.None : AlarmCodes.Fork_Arm_Action_Timeout);
+
             }
             catch (Exception ex)
             {
+                vehicle.SendNotifyierToFrontend($"牙叉尋原點失敗.{ex.Message}.{ex.StackTrace}");
                 logger.Fatal($"[ForkInitialize] FAIL. {ex.Message}");
                 return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
             }
@@ -90,25 +111,37 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             {
                 await NoBypassLimitSensor();
             }
-
-            return (false, AlarmCodes.Fork_Arm_Action_Error);
         }
 
+        private async Task WaitLeaveLimitSensorAndNoBypassLimitSensor()
+        {
+            while (CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT || CurrentLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
+            {
+                await Task.Delay(10);
+            }
+            NoBypassLimitSensor();
+        }
 
         private SEARCH_DIRECTION DetermineSearchDirection()
         {
-            if (CurrentLocation == FORK_LOCATIONS.HOME || CurrentLocation == FORK_LOCATIONS.UNKNOWN || CurrentLocation == FORK_LOCATIONS.UP_POSE)
-                return SEARCH_DIRECTION.DOWN;
-            else
+            if (CurrentLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
                 return SEARCH_DIRECTION.UP;
+            else
+                return SEARCH_DIRECTION.DOWN;
+            //if (CurrentLocation == FORK_LOCATIONS.HOME || CurrentLocation == FORK_LOCATIONS.UNKNOWN || CurrentLocation == FORK_LOCATIONS.UP_POSE)
+            //    return SEARCH_DIRECTION.DOWN;
+            //else
+            //    return SEARCH_DIRECTION.UP;
         }
 
         async Task ForkStartSearch(SEARCH_DIRECTION searchDriection, bool hasCargo)
         {
+
+            speedWhenSearchStartWithoutCargo = hasCargo ? 0.5 : speedWhenSearchStartWithoutCargo;
             if (searchDriection == SEARCH_DIRECTION.DOWN)
-                await DownSearchAsync(1.0);
+                await DownSearchAsync(speedWhenSearchStartWithoutCargo);
             else
-                await UpSearchAsync(1.0);
+                await UpSearchAsync(speedWhenSearchStartWithoutCargo);
         }
 
 
@@ -116,11 +149,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected abstract Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1);
         protected abstract Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1);
         protected abstract Task<(bool confirm, string message)> StopAsync();
-        async Task<(bool confirm, string message)> PositionInit()
-        {
-            await Task.Delay(300);
-            throw new NotImplementedException();
-        }
+        protected abstract Task<(bool confirm, string message)> PositionInit();
         protected abstract Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1);
         async Task WaitForkLeaveHome()
         {
@@ -136,31 +165,49 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             await StopAsync();
             await Task.Delay(500);
         }
-        async Task<(bool reachHome, bool isReachLimitSensor, bool isReachUpHardwareLimit)> WaitForkReachHome(bool jumpOutIfReachLimitSensor)
+        async Task<(bool reachHome, bool isReachLimitSensor, bool isReachUpHardwareLimit)> WaitForkReachHome(bool jumpOutIfReachLimitSensor, bool stopWhenReachHome)
         {
-            while (CurrentLocation != FORK_LOCATIONS.HOME)
+            try
             {
-                await Task.Delay(1);
-                if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
+
+                bool _isSlowDown = false;
+                while (CurrentLocation != FORK_LOCATIONS.HOME)
                 {
-                    throw new Exception("AGV Status Down");
+                    await Task.Delay(1);
+
+                    if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
+                    {
+                        throw new Exception("AGV Status Down");
+                    }
+                    if (jumpOutIfReachLimitSensor && (CurrentLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT || CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT))
+                    {
+                        await StopAsync();
+                        logger.Info("WaitForkReachHome->Reach Limit Sensor . Stopped");
+                        return (false, true, CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT);
+                    }
                 }
-                if (jumpOutIfReachLimitSensor && (CurrentLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT || CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT))
+                if (stopWhenReachHome)
                 {
-                    return (false, true, CurrentLocation == FORK_LOCATIONS.UP_HARDWARE_LIMIT);
+                    logger.Info("WaitForkReachHome->Reach Home . Stopped");
+                    await StopAsync();
                 }
+                logger.Info("WaitForkReachHome->Reach Home");
+                return (true, false, false);
             }
-            return (true, false, false);
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+            }
         }
         async Task UpSearchAndWaitLeaveHome(bool hasCargo)
         {
             await StopAsync();
-            await Task.Delay(100);
-            await PositionInit();
             await Task.Delay(500);
             ForkStartSearch(SEARCH_DIRECTION.UP, hasCargo);
-
-            await WaitForkReachHome(jumpOutIfReachLimitSensor: false);
+            await WaitForkReachHome(jumpOutIfReachLimitSensor: false, stopWhenReachHome: false);
             await WaitForkLeaveHome();
             _ = Task.Factory.StartNew(async () =>
             {
@@ -172,6 +219,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         }
         async Task ShortMoveToFindHome()
         {
+            await PositionInit();
+            await Task.Delay(1000);
             while (CurrentLocation != FORK_LOCATIONS.HOME)
             {
                 if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)

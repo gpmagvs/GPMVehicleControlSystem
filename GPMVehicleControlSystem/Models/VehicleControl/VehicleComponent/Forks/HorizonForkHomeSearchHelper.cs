@@ -35,6 +35,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             throw new NotImplementedException();
         }
 
+        protected override Task<(bool confirm, string message)> PositionInit()
+        {
+            throw new NotImplementedException();
+        }
+
         protected override Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1)
         {
             throw new NotImplementedException();
