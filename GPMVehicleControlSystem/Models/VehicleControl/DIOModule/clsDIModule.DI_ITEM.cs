@@ -146,10 +146,21 @@
             Front_Right_Ultrasound_Sensor,
             Back_Left_Ultrasound_Sensor,
             Limit_Switch_Sensor,
+
             /// <summary>
             /// 2025新裝的貨物存在檢知
             /// </summary>
-            Carrier_Exist_Interupt_Sensor
+            Carrier_Exist_Interupt_Sensor,
+
+            /// <summary>
+            /// 車輪Driver_鋁殼電阻過溫檢知
+            /// </summary>
+            Wheels_Driver_OVER_TEMPERATUR,
+
+            /// <summary>
+            /// Z軸Driver_鋁殼電阻過溫檢知
+            /// </summary>
+            ZAxis_Driver_OVER_TEMPERATUR,
         }
 
     }
