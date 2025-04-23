@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
+using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using NLog;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -23,10 +24,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await Task.Delay(delay_ms);
                 AbortFlash();
-                await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-                await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-                await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-                await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
+                DOWriteRequest writeRequest = new DOWriteRequest(new List<DOModifyWrapper>()
+                                                    {
+                                                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(), false),
+                                                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(), false),
+                                                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(), false),
+                                                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(), false),
+                                                    });
+                await DOModule.SetState(writeRequest);
+
 
             }
             catch (Exception ex)
@@ -37,10 +43,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task OpenAll()
         {
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, true);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, true);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, true);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, true);
+            DOWriteRequest writeRequest = new DOWriteRequest(new List<DOModifyWrapper>()
+            {
+                 new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(), true),
+                 new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(), true),
+                 new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(), true),
+                 new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(), true),
+            });
+            await DOModule.SetState(writeRequest);
         }
 
         public virtual async void TurnRight(bool opened = true)
@@ -69,18 +79,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async virtual void Forward(bool opened = true)
         {
             await Task.Delay(500);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, opened);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(),  opened),
+                    });
+            await DOModule.SetState(request);
         }
         public async virtual void Backward(bool opened = true, int delay = 500)
         {
             await Task.Delay(delay);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Front, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            await this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Back, opened);
+
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(),  opened),
+                    });
+            await DOModule.SetState(request);
         }
 
         internal void WaitPassLights(int interval = 1000)

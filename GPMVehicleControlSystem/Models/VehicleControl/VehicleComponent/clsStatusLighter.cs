@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
+using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -16,18 +17,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override async Task CloseAll(int delay_ms = 10)
         {
             AbortFlash();
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_R.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_G.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_B.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Y.GetIOSignalOfModule(),  false),
+                    });
+            await DOModule.SetState(request);
         }
 
         public override async Task OpenAll()
         {
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
-            await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_R.GetIOSignalOfModule(), true),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_G.GetIOSignalOfModule(),  true),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_B.GetIOSignalOfModule(),  true),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Y.GetIOSignalOfModule(),  true),
+                    });
+            await DOModule.SetState(request);
         }
         public async void RUN()
         {
@@ -35,9 +46,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+                    DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_R.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Y.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_G.GetIOSignalOfModule(), true),
+                    });
+                    await DOModule.SetState(request);
                 }
                 catch (Exception ex)
                 {
@@ -51,9 +66,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+                    DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_G.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Y.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_R.GetIOSignalOfModule(), true),
+                    });
+                    await DOModule.SetState(request);
                 }
                 catch (Exception ex)
                 {
@@ -67,9 +86,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 try
                 {
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
-                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+                    DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_R.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_G.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Y.GetIOSignalOfModule(), true),
+                    });
+                    await DOModule.SetState(request);
                 }
                 catch (Exception ex)
                 {

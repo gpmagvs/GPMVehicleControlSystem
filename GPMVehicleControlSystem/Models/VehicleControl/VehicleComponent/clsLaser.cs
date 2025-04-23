@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using NLog;
 using RosSharp.RosBridgeClient;
@@ -277,8 +278,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 _rightactive = rightforcingBypass ? false : active;
             }
 
-            await DOModule.SetState(DO_ITEM.Right_LsrBypass, !_rightactive);
-            await DOModule.SetState(DO_ITEM.Left_LsrBypass, !_leftactive);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.Right_LsrBypass.GetIOSignalOfModule(), !_rightactive),
+                        new DOModifyWrapper(DO_ITEM.Left_LsrBypass.GetIOSignalOfModule(),  !_leftactive),
+                    });
+            await DOModule.SetState(request);
         }
         /// <summary>
         /// 前後左右雷射Bypass全部關閉
@@ -286,8 +292,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task AllLaserActive()
         {
-            await DOModule.SetState(DO_ITEM.Front_LsrBypass, false);
-            await DOModule.SetState(DO_ITEM.Back_LsrBypass, false);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.Right_LsrBypass.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.Left_LsrBypass.GetIOSignalOfModule(),  false),
+                    });
+            await DOModule.SetState(request);
             await SideLasersEnable(true);
         }
 
@@ -298,10 +309,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task AllLaserDisable()
         {
-            await DOModule.SetState(DO_ITEM.Front_LsrBypass, true);
-            await DOModule.SetState(DO_ITEM.Back_LsrBypass, true);
-            await DOModule.SetState(DO_ITEM.Right_LsrBypass, true);
-            await DOModule.SetState(DO_ITEM.Left_LsrBypass, true);
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.Front_LsrBypass.GetIOSignalOfModule(), true),
+                        new DOModifyWrapper(DO_ITEM.Back_LsrBypass.GetIOSignalOfModule(),  true),
+                        new DOModifyWrapper(DO_ITEM.Right_LsrBypass.GetIOSignalOfModule(),  true),
+                        new DOModifyWrapper(DO_ITEM.Left_LsrBypass.GetIOSignalOfModule(),  true),
+                    });
+            await DOModule.SetState(request);
         }
 
         public clsNavigation.AGV_DIRECTION agvDirection { get; internal set; } = clsNavigation.AGV_DIRECTION.FORWARD;

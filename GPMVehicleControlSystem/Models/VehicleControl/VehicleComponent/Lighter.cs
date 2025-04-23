@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using NLog;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -58,10 +59,9 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public async Task Flash(DO_ITEM[] light_DOs, int flash_period = 400)
         {
-            foreach (var item in light_DOs)
-            {
-                await this.DOModule.SetState(item, true);
-            }
+
+            DOWriteRequest request = new DOWriteRequest(light_DOs.GetIOSignalOfModule().Select(i => new DOModifyWrapper(i, false)));
+            await DOModule.SetState(request);
 
             flash_cts = new CancellationTokenSource();
 
@@ -73,17 +73,11 @@ namespace AGVSystemCommonNet6.Abstracts
                 {
                     while (true)
                     {
-                        foreach (var item in light_DOs)
-                        {
-                            await DOModule.SetState(item, light_active);
-                        }
-
+                        request = new DOWriteRequest(light_DOs.GetIOSignalOfModule().Select(i => new DOModifyWrapper(i, light_active)));
+                        await DOModule.SetState(request);
                         await Task.Delay(flash_period, flash_cts.Token);
-
                         if (flash_cts.Token.IsCancellationRequested)
-                        {
                             break;
-                        }
                         light_active = !light_active;
                     }
                 }

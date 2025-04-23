@@ -1,4 +1,6 @@
-﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
 using Modbus.Device;
 using NLog;
 using System.Collections.Concurrent;
@@ -335,6 +337,33 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             return await SetState(signal, new bool[] { state });
         }
+
+        public async Task<bool> SetState(DOWriteRequest modifyRequest)
+        {
+            if (!modifyRequest.isMultiModify)
+            {
+                return await SetState(modifyRequest.firstModify.signal.Output, modifyRequest.firstModify.state);
+            }
+            else
+            {
+                int startIndex = modifyRequest.startIndex;
+                int endIndex = modifyRequest.endIndex;
+
+                int totalLen = endIndex - startIndex + 1;
+                //取出範圍
+                List<clsIOSignal> inRangeOuputs = VCSOutputs.Skip(startIndex).Take(totalLen).ToList().Clone();
+                foreach (var item in modifyRequest.toModifyItems)
+                {
+                    var toModify = inRangeOuputs.FirstOrDefault(i => i.Output == item.signal.Output);
+                    if (toModify == null)
+                        continue;
+                    toModify.State = item.state;
+                }
+                bool[] currentStsteInRange = inRangeOuputs.Select(v => v.State).ToArray();
+                return await SetState(inRangeOuputs.First().Output, currentStsteInRange);
+            }
+        }
+
         internal async Task<bool> SetState(DO_ITEM start_signal, bool[] writeStates)
         {
             try
