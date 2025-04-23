@@ -25,6 +25,37 @@ namespace AGVSystemCommonNet6.Abstracts
             flash_cts?.Cancel();
         }
 
+        /// <summary>
+        /// 交替閃滅
+        /// </summary>
+        /// <returns></returns>
+        public async Task TwoLightChangedOnFlashAsync(DO_ITEM light1, DO_ITEM light2, int flash_period = 500)
+        {
+
+            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
+            flash_cts = new CancellationTokenSource();
+            await Task.Delay(300);
+
+            await DOModule.SetState(light1, false);
+            await DOModule.SetState(light2, false);
+            bool _active = true;
+            while (true)
+            {
+                try
+                {
+                    await DOModule.SetState(light1, _active);
+                    await DOModule.SetState(light2, !_active);
+                    await Task.Delay(flash_period, flash_cts.Token);
+                    _active = !_active;
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+
+            }
+
+        }
 
         public async Task FlashAsync(DO_ITEM light_DO, int flash_period = 400)
         {
@@ -57,25 +88,25 @@ namespace AGVSystemCommonNet6.Abstracts
         }
 
 
-        public async Task Flash(DO_ITEM[] light_DOs, int flash_period = 400)
+        public async Task Flash(DO_ITEM[] light_DOs, int on_period = 400, int off_period = 500)
         {
 
             DOWriteRequest request = new DOWriteRequest(light_DOs.GetIOSignalOfModule().Select(i => new DOModifyWrapper(i, false)));
             await DOModule.SetState(request);
-
+            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
             flash_cts = new CancellationTokenSource();
 
             await Task.Run(async () =>
             {
-                await Task.Delay(100);  // 允许取消操作的触发
-                bool light_active = false;
+                await Task.Delay(100);
+                bool light_active = true;
                 try
                 {
                     while (true)
                     {
                         request = new DOWriteRequest(light_DOs.GetIOSignalOfModule().Select(i => new DOModifyWrapper(i, light_active)));
                         await DOModule.SetState(request);
-                        await Task.Delay(flash_period, flash_cts.Token);
+                        await Task.Delay(light_active ? on_period : off_period, flash_cts.Token);
                         if (flash_cts.Token.IsCancellationRequested)
                             break;
                         light_active = !light_active;

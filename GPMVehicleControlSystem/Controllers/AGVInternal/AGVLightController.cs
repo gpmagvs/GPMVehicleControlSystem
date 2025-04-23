@@ -71,6 +71,22 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             agv.StatusLighter.DOWN();
             return Ok();
         }
+
+
+        [HttpGet("WaitPassLights")]
+        public async Task<IActionResult> WaitPassLights()
+        {
+            agv.DirectionLighter.WaitPassLights();
+            return Ok();
+        }
+
+        [HttpGet("TrafficControllingLightsFlash")]
+        public async Task<IActionResult> TrafficControllingLightsFlash(int period=500)
+        {
+            agv.DirectionLighter.TrafficControllingLightsFlash(period);
+            return Ok();
+        }
+
         [HttpGet("DirectLightFlashTest")]
         public async Task<IActionResult> DirectLightFlashTest()
         {

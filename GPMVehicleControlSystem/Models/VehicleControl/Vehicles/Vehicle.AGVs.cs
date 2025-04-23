@@ -518,6 +518,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             });
         }
+        internal async Task HandleAGVSTrafficControllingNotify()
+        {
+            if (GetSub_Status() != SUB_STATUS.IDLE)
+                return;
+            DirectionLighter.TrafficControllingLightsFlash(300);
+        }
 
         /// <summary>
         /// 生成支援WebAPI的RunningStatus Model

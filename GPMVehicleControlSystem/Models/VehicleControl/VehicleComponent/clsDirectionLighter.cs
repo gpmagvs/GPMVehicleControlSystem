@@ -106,8 +106,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal void WaitPassLights(int interval = 1000)
         {
-            Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, interval);
+            Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, interval, interval);
         }
+
+
+        internal void TrafficControllingLightsFlash(int period=500)
+        {
+            TwoLightChangedOnFlashAsync(DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left, period);
+            //Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, 2000, 500);
+        }
+
 
         internal void LightSwitchByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
         {

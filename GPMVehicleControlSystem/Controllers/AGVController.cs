@@ -123,6 +123,10 @@ namespace GPMVehicleControlSystem.Controllers
             (bool confirm, string message) result = await agv.SwitchCSTReader(enable);
             return Ok(result);
         }
-
+        [HttpPost("AGVSTrafficControllingNotify")]
+        public async Task AGVSTrafficControllingNotify()
+        {
+            agv.HandleAGVSTrafficControllingNotify();
+        }
     }
 }
