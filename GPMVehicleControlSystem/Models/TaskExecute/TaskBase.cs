@@ -14,7 +14,6 @@ using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsObstacleDetection;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
@@ -28,6 +27,8 @@ using WebSocketSharp;
 using NLog;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Tools;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {

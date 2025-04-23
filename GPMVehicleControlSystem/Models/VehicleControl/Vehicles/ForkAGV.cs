@@ -5,6 +5,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
@@ -14,6 +15,7 @@ using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -34,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsForkWorking => (AGVC as ForkAGVController).WaitActionDoneFlag;
 
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
-        public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
+        public override clsForkLifter ForkLifter { get; set; }
 
         public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
@@ -296,7 +298,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     InitializingStatusText = "牙叉原點覆歸...";
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                    bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+                    bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME;
 
                     (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
                     if (isForkAllowNoDoInitializeAction)
@@ -308,7 +310,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                     {
                         double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                        forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
+                        forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init);
                     }
                     if (forkInitizeResult.done)
                     {

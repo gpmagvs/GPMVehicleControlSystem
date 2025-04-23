@@ -35,6 +35,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsL
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using Microsoft.Extensions.Caching.Memory;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {

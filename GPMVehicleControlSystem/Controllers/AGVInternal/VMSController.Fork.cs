@@ -4,6 +4,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Microsoft.AspNetCore.Mvc;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -175,7 +176,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 forkAgv.ForkLifter.IsManualOperation = true;
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                while (forkAgv.ForkLifter.CurrentForkLocation != Models.VehicleControl.VehicleComponent.clsForkLifter.FORK_LOCATIONS.HOME)
+                while (forkAgv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
                 {
                     await Task.Delay(1);
                     if (_wait.IsCancellationRequested)

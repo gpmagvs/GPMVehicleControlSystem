@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -7,7 +8,7 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
+namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
     public partial class clsForkLifter : CarComponent, IDIOUsagable
     {
@@ -29,10 +30,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             HOME,
             END,
             UNKNOWN
-        }
-
-        public clsForkLifter()
-        {
         }
 
         public clsForkLifter(ForkAGV forkAGV)
@@ -191,7 +188,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public bool IsManualOperation { get; internal set; } = false;
 
-        private ForkAGV forkAGV;
+        protected ForkAGV forkAGV;
 
         public override bool CheckStateDataContent()
         {
@@ -270,7 +267,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
+        public virtual async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
             bool _checked = await ForkARMStop();
             if (!_checked)
@@ -322,7 +319,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
+        public virtual async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
             ForkARMStop();
             await Task.Delay(400);
@@ -360,7 +357,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉伸縮停止動作
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> ForkARMStop()
+        public virtual async Task<bool> ForkARMStop()
         {
             if (DOModule.VCSOutputs.Any(it => it.Output == DO_ITEM.Fork_Extend))
             {
@@ -383,16 +380,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
-        public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
+        public async Task<(bool done, AlarmCodes alarm_code)> VerticalForkInitialize(double InitForkSpeed = 0.5)
         {
-            logger.Info($"Fork 初始化動作開始，速度={InitForkSpeed}");
+            logger.Info($"Fork Z軸初始化動作開始，速度={InitForkSpeed}");
             IsInitialing = true;
             bool _isInitializeDone = false;
             (this.forkAGV.AGVC as ForkAGVController).IsInitializing = true;
             fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
+
+
             //bool isStartAtDownLimit = !DIModule.GetState(DI_ITEM.Vertical_Down_Hardware_limit);
             try
             {
+                VertialForkHomeSearchHelper vertialForkHomeSearchHelper = new VertialForkHomeSearchHelper(forkAGV);
+                return await vertialForkHomeSearchHelper.StartSearchAsync();
+
                 //if (isStartAtDownLimit)
                 //await BypassLimitSensor();
 
@@ -531,7 +533,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return SEARCH_DIRECTION.UP;
             }
         }
-
+        public virtual async Task<(bool done, AlarmCodes alarm_code)> HorizonForkInitialize(double InitForkSpeed = 0.5)
+        {
+            throw new NotImplementedException();
+        }
         /// <summary>
         /// 
         /// </summary>

@@ -5,7 +5,6 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -54,7 +53,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 if (!Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
                 {
                     ForkHomeProcess(false);
-                };
+                }
+                ;
                 if (IsNeedWaitForkHome)
                 {
                     logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");

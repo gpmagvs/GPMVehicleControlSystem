@@ -21,6 +21,10 @@
             /// 牙叉電動缸_縮回到位檢
             /// </summary>
             Fork_Short_Exist_Sensor,
+            /// <summary>
+            /// 牙叉伸縮_原點
+            /// </summary>
+            Fork_Home_Pose,
             RACK_Exist_Sensor_1,
             RACK_Exist_Sensor_2,
             TRAY_Exist_Sensor_1,
