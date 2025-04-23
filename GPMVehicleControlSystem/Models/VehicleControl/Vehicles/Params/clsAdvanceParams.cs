@@ -9,5 +9,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool AutoInitAndOnlineWhenMoveWithoutCargo { get; set; } = false;
 
         public List<AlarmCodes> ForbidAutoInitialzeAlarmCodes { get; set; } = new();
+
+        public bool IsAprilTagLocateSupport { get; set; } = false;
     }
 }

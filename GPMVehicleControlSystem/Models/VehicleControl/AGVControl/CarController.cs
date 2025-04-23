@@ -115,6 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             NONE = 090
         }
         public RosSocket rosSocket;
+        public bool IsApprilTagLocateSupport { get; internal set; }
 
         public string IOListsTopicID = "";
         /// <summary>
@@ -548,7 +549,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         internal virtual async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
             RunningTaskData = taskDownloadData;
-            return await SendGoal(RunningTaskData.RosTaskCommandGoal, action_timeout);
+            var rosCommandGoal = clsTaskDownloadData.GetTaskDataToRosCommandGoal(taskDownloadData, IsApprilTagLocateSupport);
+            return await SendGoal(rosCommandGoal, action_timeout);
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;

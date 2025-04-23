@@ -139,7 +139,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         internal override async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
             RunningTaskData = taskDownloadData;
-            AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal rosgoal = RunningTaskData.RosTaskCommandGoal;
+            TaskCommandGoal rosgoal = clsTaskDownloadData.GetTaskDataToRosCommandGoal(RunningTaskData, IsApprilTagLocateSupport);
             rosgoal.pathInfo = JsonConvert.DeserializeObject<AMCPathInfo[]>(rosgoal.pathInfo.ToJson());
 
             return await SendGoal(rosgoal, action_timeout);

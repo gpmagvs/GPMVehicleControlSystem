@@ -968,6 +968,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual internal async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             CreateAGVCInstance(RosBridge_IP, RosBridge_Port);
+            AGVC.IsApprilTagLocateSupport = Parameters.Advance.IsAprilTagLocateSupport;
+            logger.LogInformation($"Appril Tag Support=>{AGVC.IsApprilTagLocateSupport}");
             AGVC.Throttle_rate_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevHandlePeriod;
             AGVC.QueueSize_of_Topic_ModuleInfo = Parameters.ModuleInfoTopicRevQueueSize;
             await AGVC.Connect();
