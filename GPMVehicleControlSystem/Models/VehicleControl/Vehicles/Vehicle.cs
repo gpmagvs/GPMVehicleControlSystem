@@ -262,16 +262,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public bool IsLimitSwitchSensorMounted { get; private set; } = false;
         public bool IsForkExtenable { get; private set; } = false;
-        internal ILogger<Vehicle> logger;
-        internal ILogger<clsAGVSConnection> agvsLogger;
-        internal IHubContext<FrontendHub> frontendHubContext;
-        public Vehicle(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext)
+        internal ILogger<Vehicle> logger => vehicleServiceAggregator.vehicleLogger;
+        internal ILogger<clsAGVSConnection> agvsLogger => vehicleServiceAggregator.agvsLogger;
+        internal IHubContext<FrontendHub> frontendHubContext => vehicleServiceAggregator.hubContext;
+        internal VehicleServiceAggregator vehicleServiceAggregator;
+        public Vehicle(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator)
         {
             try
             {
-                this.logger = logger;
-                this.agvsLogger = agvsLogger;
-                this.frontendHubContext = frontendHubContext;
+                this.vehicleServiceAggregator = vehicleServiceAggregator;
                 _Parameters = param;
             }
             catch (Exception ex)

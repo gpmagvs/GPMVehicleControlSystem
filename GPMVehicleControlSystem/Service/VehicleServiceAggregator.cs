@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Service
 {
-    public class VehicleCreateFactoryServiceAggregator
+    public class VehicleServiceAggregator
     {
 
 
@@ -16,7 +16,7 @@ namespace GPMVehicleControlSystem.Service
         public readonly IMemoryCache memoryCache;
 
 
-        public VehicleCreateFactoryServiceAggregator(ILogger<VehicleFactoryService> _logger,
+        public VehicleServiceAggregator(ILogger<VehicleFactoryService> _logger,
                                                      ILogger<Vehicle> _vehicleLogger,
                                                      ILogger<clsAGVSConnection> _agvsLogger,
                                                      IHubContext<FrontendHub> _hubContext,

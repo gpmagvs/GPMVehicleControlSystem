@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        public DemoMiniAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
+        public DemoMiniAGV(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator) : base(param, vehicleServiceAggregator)
         {
         }
         protected override async Task DOSignalDefaultSetting()

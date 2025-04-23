@@ -21,7 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class SubmarinAGV : Vehicle
     {
 
-        public SubmarinAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
+        public SubmarinAGV(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator) : base(param, vehicleServiceAggregator)
         {
 
         }

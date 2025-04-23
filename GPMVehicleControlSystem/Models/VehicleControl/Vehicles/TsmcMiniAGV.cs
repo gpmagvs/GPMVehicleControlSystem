@@ -43,7 +43,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public event EventHandler<clsMeasureResult> OnMeasureComplete;
 
-        public TsmcMiniAGV(clsVehicelParam param, ILogger<Vehicle> logger, ILogger<clsAGVSConnection> agvsLogger, IHubContext<FrontendHub> frontendHubContext) : base(param, logger, agvsLogger, frontendHubContext)
+        public TsmcMiniAGV(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator) : base(param, vehicleServiceAggregator)
         {
 
         }

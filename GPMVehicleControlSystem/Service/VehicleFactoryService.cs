@@ -14,8 +14,8 @@ namespace GPMVehicleControlSystem.Service
 {
     public class VehicleFactoryService : IHostedService
     {
-        VehicleCreateFactoryServiceAggregator vehicleCreateFactoryServiceAggregator;
-        public VehicleFactoryService(VehicleCreateFactoryServiceAggregator vehicleCreateFactoryServiceAggregator)
+        VehicleServiceAggregator vehicleCreateFactoryServiceAggregator;
+        public VehicleFactoryService(VehicleServiceAggregator vehicleCreateFactoryServiceAggregator)
         {
             this.vehicleCreateFactoryServiceAggregator = vehicleCreateFactoryServiceAggregator;
         }
@@ -56,18 +56,18 @@ namespace GPMVehicleControlSystem.Service
                 vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
                 if (param.AgvType == AGV_TYPE.FORK)
                 {
-                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
+                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleCreateFactoryServiceAggregator);
                 }
                 else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
                 {
-                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
+                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleCreateFactoryServiceAggregator);
                 }
                 else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
                 {
                     if (param.Version == 1)
-                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
+                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleCreateFactoryServiceAggregator);
                     else
-                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleCreateFactoryServiceAggregator.vehicleLogger, vehicleCreateFactoryServiceAggregator.agvsLogger, vehicleCreateFactoryServiceAggregator.hubContext);
+                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleCreateFactoryServiceAggregator);
                 }
 
                 StaStored.CurrentVechicle.memoryCache = vehicleCreateFactoryServiceAggregator.memoryCache;
