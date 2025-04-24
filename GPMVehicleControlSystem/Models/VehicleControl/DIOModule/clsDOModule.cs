@@ -124,12 +124,17 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             try
             {
+                if (!Indexs.TryGetValue(signal, out int index))
+                {
+                    logger.Warn($"{signal} 註冊事件失敗因為未定義該訊號的OUTPUT位置");
+                    return;
+                }
 
                 VCSOutputs[Indexs[signal]].OnStateChanged += handler;
             }
             catch (Exception ex)
             {
-                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
+                logger.Error("Digital Output - [" + signal + "] Sbuscribe Error.", ex);
             }
 
         }

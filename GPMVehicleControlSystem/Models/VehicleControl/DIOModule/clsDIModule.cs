@@ -213,13 +213,18 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             try
             {
+                if (!Indexs.TryGetValue(signal, out int index))
+                {
+                    logger.Warn($"{signal} 註冊事件失敗因為未定義該訊號的INPUT位置");
+                    return;
+                }
                 clsIOSignal inputSignal = VCSInputs[Indexs[signal]];
                 inputSignal.AddEvent(handler);
 
             }
             catch (Exception ex)
             {
-                logger.Error("DO-" + signal + "Sbuscribe Error.", ex);
+                logger.Error("Digital Input - [" + signal + "] Sbuscribe Error.", ex);
             }
         }
 
