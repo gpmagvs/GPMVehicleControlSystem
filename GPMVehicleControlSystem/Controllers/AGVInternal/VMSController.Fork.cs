@@ -161,7 +161,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
 
-            if (!forkAgv.IsForkInitialized)
+            if (!forkAgv.IsVerticalForkInitialized)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
             if (forkAgv.ForkLifter.IsInitialing)
                 return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });

@@ -1,4 +1,6 @@
-﻿using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
@@ -6,7 +8,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
     public class HorizonForkHomeSearchHelper : MotorBaseHomeSearchHelper
     {
-        public HorizonForkHomeSearchHelper(Vehicle vehicle) : base(vehicle)
+        ForkAGVController AGVC => vehicle.AGVC as ForkAGVController;
+
+        public HorizonForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
         {
         }
 
@@ -30,29 +34,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override double CurrentActualPosition => throw new NotImplementedException();
 
-        protected override Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
+        protected override async Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
         {
-            throw new NotImplementedException();
+            return await AGVC.HorizonActionService.DownSearch(speed);
         }
 
-        protected override Task<(bool confirm, string message)> PositionInit()
+        protected override async Task<(bool confirm, string message)> PositionInit()
         {
-            throw new NotImplementedException();
+            return await AGVC.HorizonActionService.Init();
         }
 
-        protected override Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1)
+        protected override async Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1)
         {
-            throw new NotImplementedException();
+            return await AGVC.HorizonActionService.Pose(pose, speed);
         }
 
-        protected override Task<(bool confirm, string message)> StopAsync()
+        protected override async Task<(bool confirm, string message)> StopAsync()
         {
-            throw new NotImplementedException();
+            return await AGVC.HorizonActionService.Stop();
         }
 
-        protected override Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1)
+        protected override async Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1)
         {
-            throw new NotImplementedException();
+            return await AGVC.HorizonActionService.UpSearch(speed);
         }
     }
 }

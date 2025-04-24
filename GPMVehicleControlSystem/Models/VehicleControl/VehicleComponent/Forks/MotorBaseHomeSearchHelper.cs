@@ -24,12 +24,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected readonly clsDIModule DIModule;
         protected Logger logger = LogManager.GetCurrentClassLogger();
         protected virtual double speedWhenSearchStartWithoutCargo { get; set; } = 0.5;
+        public readonly string name;
 
 
-
-        public MotorBaseHomeSearchHelper(Vehicle vehicle)
+        public MotorBaseHomeSearchHelper(Vehicle vehicle, string name)
         {
             this.vehicle = vehicle;
+            this.name = name;
             DOModule = vehicle.WagoDO;
             DIModule = vehicle.WagoDI;
             logger.Info($"Instance Created. AGV Type : {vehicle.Parameters.AgvType}");
@@ -120,7 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         private void UpdateInitMessge(string msg)
         {
-            vehicle.InitializingStatusText = $"原點復歸中...{msg}";
+            vehicle.InitializingStatusText = $"[{name}]原點復歸中...{msg}";
         }
         private async Task WaitLeaveLimitSensorAndNoBypassLimitSensor()
         {

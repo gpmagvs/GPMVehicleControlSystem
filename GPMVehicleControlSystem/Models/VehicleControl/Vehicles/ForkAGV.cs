@@ -33,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AT_HOME_POSITION,
             UNDER_SAFTY_POSITION
         }
-        public bool IsForkInitialized => ForkLifter.IsInitialized;
+        public bool IsVerticalForkInitialized => ForkLifter.IsVerticalForkInitialized;
         public bool IsForkWorking => (AGVC as ForkAGVController).verticalActionService.WaitActionDoneFlag;
 
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
@@ -41,6 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+        public bool IsForkHorizonDriverBase => WagoDI.Indexs.TryGetValue(DI_ITEM.Fork_Home_Pose, out _);
         public ForkAGV(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator) : base(param, vehicleServiceAggregator)
         {
 
@@ -48,7 +49,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal override async Task CreateAsync()
         {
             await base.CreateAsync();
-            ForkLifter = new clsForkLifter(this);
+            ForkLifter = IsForkHorizonDriverBase ? new clsForkLifterWithDriverBaseExtener(this) : new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
@@ -266,43 +267,84 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-            (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
+            (bool forklifer_init_done, string message) _forklift_vertical_init_result = (false, "");
+            (bool forklifer_init_done, string message) _forklift_horizon_init_result = (false, "");
             (bool pin_init_done, string message) _pin_init_result = (false, "");
 
             List<Task> _actions = new List<Task>();
-            if (PinHardware != null)
-            {
-                Task Pin_Init_Task = Task.Run(async () =>
-                {
-                    InitializingStatusText = "PIN-模組初始化";
-                    try
-                    {
-                        await PinHardware.Init();
-                        await PinHardware.Lock();
-                        _pin_init_result = (true, "");
-                    }
-                    catch (TimeoutException)
-                    {
-                        _pin_init_result = (false, "Pin Action Timeout");
-                    }
-                    catch (Exception ex)
-                    {
-                        _pin_init_result = (false, ex.Message);
-                    }
-                });
-                _actions.Add(Pin_Init_Task);
-            }
-            else
-                _pin_init_result = (true, "Pin is not mounted");
 
-            Task ForkLift_Init_Task = Task.Run(async () =>
+            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess();
+            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess();
+            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess();
+
+            _actions.Add(forkFloatHarwarePinInitTask);
+            _actions.Add(forkVerticalInitTask);
+            _actions.Add(forkHorizonInitTask);
+
+            Task.WaitAll(_actions.ToArray());
+
+            _pin_init_result = forkFloatHarwarePinInitTask.Result;
+            _forklift_vertical_init_result = forkVerticalInitTask.Result;
+            _forklift_horizon_init_result = forkHorizonInitTask.Result;
+
+
+            bool pin_init_success = _pin_init_result.pin_init_done;
+            bool fork_vertical_init_success = _forklift_vertical_init_result.forklifer_init_done;
+            bool fork_horizon_init_success = _forklift_horizon_init_result.forklifer_init_done;
+
+            if (pin_init_success && fork_vertical_init_success && fork_horizon_init_success)
             {
+                return await base.InitializeActions(cancellation);
+            }
+
+            string errmsg = "";
+            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
+            errmsg += fork_vertical_init_success ? "" : $"[Fork_Vertical:{_forklift_vertical_init_result.message}]";
+            errmsg += fork_horizon_init_success ? "" : $"[Fork_Horizon :{_forklift_horizon_init_result.message}]";
+            return (false, errmsg);
+
+        }
+
+
+        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess()
+        {
+            if (PinHardware == null)
+                return (true, "浮動牙叉定位PIN裝置未裝載");
+
+            return await Task.Run(async () =>
+            {
+                (bool pin_init_done, string message) _pin_init_result = (false, "");
+                InitializingStatusText = "PIN-模組初始化";
+                try
+                {
+                    await PinHardware.Init();
+                    await PinHardware.Lock();
+                    _pin_init_result = (true, "");
+                }
+                catch (TimeoutException)
+                {
+                    _pin_init_result = (false, "Pin Action Timeout");
+                }
+                catch (Exception ex)
+                {
+                    _pin_init_result = (false, ex.Message);
+                }
+                return _pin_init_result;
+            });
+        }
+
+        internal async Task<(bool, string)> VerticalForkInitProcess()
+        {
+            if (GetSub_Status() != SUB_STATUS.Initializing)
+                SetSub_Status(SUB_STATUS.Initializing);
+            return await Task.Run(async () =>
+            {
+                (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
                 await Task.Delay(700);
                 InitializingStatusText = "牙叉初始化動作中";
                 ForkLifter.fork_ros_controller.verticalActionService.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
                 if (ForkLifter.Enable)
                 {
-                    ForkLifter.ForkShortenInAsync();
                     InitializingStatusText = "牙叉原點覆歸...";
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
@@ -313,7 +355,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
                         forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
-                        ForkLifter.IsInitialized = true;
+                        ForkLifter.IsVerticalForkInitialized = true;
                     }
                     else
                     {
@@ -350,24 +392,46 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
                     _forklift_init_result = (true, "");
                 }
+                return _forklift_init_result;
             });
-            _actions.Add(ForkLift_Init_Task);
-            Task.WaitAll(_actions.ToArray());
+        }
 
-            bool pin_init_success = _pin_init_result.pin_init_done;
-            bool fork_init_success = _forklift_init_result.forklifer_init_done;
+        internal async Task<(bool, string)> HorizonForkInitProcess()
+        {
 
-            if (pin_init_success && fork_init_success)
+            if (GetSub_Status() != SUB_STATUS.Initializing)
+                SetSub_Status(SUB_STATUS.Initializing);
+
+            if (ForkLifter.GetType() == typeof(clsForkLifter))
             {
-                return await base.InitializeActions(cancellation);
+                return await Task.Run(async () =>
+                {
+                    try
+                    {
+
+                        return await ForkLifter.ForkShortenInAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        return (false, ex.Message);
+                    }
+                });
             }
-
-            string errmsg = "";
-
-            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
-            errmsg += fork_init_success ? "" : $"[Fork:{_forklift_init_result.message}]";
-            return (false, errmsg);
-
+            else
+            {
+                return await Task.Run(async () =>
+                {
+                    try
+                    {
+                        (bool confirm, AlarmCodes alarmCOde) = await (ForkLifter as clsForkLifterWithDriverBaseExtener).HorizonForkInitialize();
+                        return (confirm, alarmCOde.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        return (false, ex.Message);
+                    }
+                });
+            }
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)

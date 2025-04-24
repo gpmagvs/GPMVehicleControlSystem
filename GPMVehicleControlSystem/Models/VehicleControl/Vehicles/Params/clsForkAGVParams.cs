@@ -39,6 +39,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         public clsForkSpeedParams ManualModeOperationSpeed { get; set; } = new clsForkSpeedParams();
         public clsForkSpeedParams AutoModeOperationSpeed { get; set; } = new clsForkSpeedParams();
+
+        /// <summary>
+        /// 水平伸縮牙叉參數
+        /// </summary>
+        public clsForkHorizon HorizonArmConfigs { get; set; } = new clsForkHorizon();
+
         [JsonConverter(typeof(StringEnumConverter))]
         public IO_CONEECTION_POINT_TYPE ObsSensorPointType { get; set; } = IO_CONEECTION_POINT_TYPE.A;
     }
@@ -54,12 +60,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public double ForkInitActionSpeedWithoutCargo { get; set; } = 0.5;
 
     }
-
     public class clsForkSpeedParams
     {
         /// <summary>
         /// 0~1 速度比例
         /// </summary>
         public double MoveToPoseSpeed { get; set; } = 0.5;
+    }
+
+    public class clsForkHorizon
+    {
+        public double ExtendPose { get; set; } = 10;
+        public double ShortenPose { get; set; } = 1;
     }
 }

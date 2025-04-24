@@ -38,7 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override double CurrentActualPosition => Math.Round(vehicle.ForkLifter.Driver.CurrentPosition, 3);
         protected override double speedWhenSearchStartWithoutCargo { get; set; } = 1;
-        public VertialForkHomeSearchHelper(Vehicle vehicle) : base(vehicle)
+        public VertialForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
         {
         }
 

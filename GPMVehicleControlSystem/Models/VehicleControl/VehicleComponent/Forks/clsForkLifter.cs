@@ -75,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <summary>
         /// 是否以初始化
         /// </summary>
-        public bool IsInitialized { get; internal set; } = false;
+        public bool IsVerticalForkInitialized { get; internal set; } = false;
         public bool IsInitialing { get; private set; } = false;
         /// <summary>
         /// 可以走的上極限位置
@@ -390,15 +390,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
             try
             {
-                VertialForkHomeSearchHelper vertialForkHomeSearchHelper = new VertialForkHomeSearchHelper(forkAGV);
+                VertialForkHomeSearchHelper vertialForkHomeSearchHelper = new VertialForkHomeSearchHelper(forkAGV, "Vertical");
                 (bool success, AlarmCodes alarmCode) result = await vertialForkHomeSearchHelper.StartSearchAsync();
-                IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
+                IsVerticalForkInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
                 logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
                 return result;
             }
             catch (Exception ex)
             {
-                IsInitialing = IsInitialized = false;
+                IsInitialing = IsVerticalForkInitialized = false;
                 logger.Fatal($"[ForkInitialize] FAIL. {ex.Message}");
                 return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
             }
@@ -409,10 +409,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 IsInitialing = false;
             }
 
-        }
-        public virtual async Task<(bool done, AlarmCodes alarm_code)> HorizonForkInitialize(double InitForkSpeed = 0.5)
-        {
-            throw new NotImplementedException();
         }
         /// <summary>
         /// 
