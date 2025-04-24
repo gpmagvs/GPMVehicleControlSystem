@@ -261,7 +261,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
             WagoDI.SubsSignalStateChange(DI_ITEM.Horizon_Motor_Switch, HandleHorizon_Motor_SwitchStateChanged);
 
+            WagoDI.SubsSignalStateChange(DI_ITEM.Wheels_Driver_OVER_TEMPERATUR, HandleWheelsDriverOTSignalStateChanged);
 
+            WagoDI.SubsSignalStateChange(DI_ITEM.ZAxis_Driver_OVER_TEMPERATUR, HandleZAxisDriverOTSignalStateChanged);
+
+        }
+
+        private void HandleZAxisDriverOTSignalStateChanged(object? sender, bool state)
+        {
+            if (!state) //TODO confirm signal is A or B type
+                AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_Driver_Over_Temperature, false);
+            else
+                AlarmManager.ClearAlarm(AlarmCodes.Vertical_Motor_Driver_Over_Temperature);
+        }
+
+        private void HandleWheelsDriverOTSignalStateChanged(object? sender, bool state)
+        {
+            if (!state) //TODO confirm signal is A or B type
+                AlarmManager.AddAlarm(AlarmCodes.Wheel_Motor_Driver_Over_Temperature, false);
+            else
+                AlarmManager.ClearAlarm(AlarmCodes.Wheel_Motor_Driver_Over_Temperature);
         }
 
         protected virtual void HandleHorizon_Motor_SwitchStateChanged(object? sender, bool state)
