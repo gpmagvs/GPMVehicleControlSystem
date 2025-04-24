@@ -89,6 +89,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public bool IsLaserModeSettingError { get; set; } = false;
         public bool IsLDULD_No_Entry { get; set; } = false;
         public bool IsForkExtenable { get; set; } = false;
+        public bool IsForkExtenrDriverBase { get; set; } = false;
         public bool ForkHasLoading { get; set; }
         public bool CargoExist { get; set; }
         public object HandShakeSignals { get; set; } = new object();

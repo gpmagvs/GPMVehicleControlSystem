@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.Exceptions;
 using GPMVehicleControlSystem.Models.RDTEST;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Service;
 using NLog;
@@ -78,6 +79,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     ForkHasLoading = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     CargoExist = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     IsForkExtenable = AGV.IsForkExtenable,
+                    IsForkExtenrDriverBase = IsForkHorizonDriveBased(),
                     HandShakeSignals = new
                     {
                         EQ = AGV.EQHsSignalStates.ToDictionary(kp => kp.Key, kp => kp.Value.State),
@@ -171,6 +173,20 @@ namespace GPMVehicleControlSystem.ViewModels
                 if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || AGV.ForkLifter.fork_ros_controller.verticalActionService == null)
                     return false;
                 return AGV.ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight;
+            }
+        }
+
+        private static bool IsForkHorizonDriveBased()
+        {
+            try
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK)
+                    return false;
+                return (AGV as ForkAGV).ForkLifter.GetType() == typeof(clsForkLifterWithDriverBaseExtener);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
