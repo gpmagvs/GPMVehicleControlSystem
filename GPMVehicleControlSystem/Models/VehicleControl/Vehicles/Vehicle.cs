@@ -1012,7 +1012,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-
+            StartRecordViedo();
             if (StaSysControl.isAGVCRestarting)
             {
                 return;

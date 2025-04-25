@@ -45,6 +45,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else if (value == SUB_STATUS.IDLE)
                     {
+                        guardVideoService.StopRecord();
+
                         if (auto_stop_buzzer)
                             BuzzerPlayer.Stop("SetSub_Status Change to IDLE & auto_stop_buzzer");
                         StatusLighter.IDLE();

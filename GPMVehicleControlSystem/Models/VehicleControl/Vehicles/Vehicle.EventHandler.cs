@@ -27,6 +27,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.TaskExecute;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using YamlDotNet.Core.Tokens;
+using GPMVehicleControlSystem.Service;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -35,7 +36,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsLaserRecoveryHandled = false;
         internal bool WaitingForChargeStatusChangeFlag = false;
         private Debouncer _vehicleDirectionChangedDebouncer = new Debouncer();
-
+        private Debouncer _videoRecordDebuncer = new Debouncer();
+        GuardVideoService guardVideoService = new GuardVideoService();
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
             get
@@ -799,7 +801,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SoftwareEMO(alarm_code);
         }
 
+        internal async Task StartRecordViedo()
+        {
+            _ = Task.Factory.StartNew(async () =>
+            {
+                _videoRecordDebuncer.Debounce(async () =>
+                {
+                    logger.LogInformation("嚴重異常觸發錄影守衛");
 
+                    bool startSucess = await guardVideoService.StartRecord();
+                    logger.LogInformation($"錄影守衛啟動:{(startSucess ? "成功" : "失敗!!!!!")}");
+
+                }, 1000);
+            });
+        }
 
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
