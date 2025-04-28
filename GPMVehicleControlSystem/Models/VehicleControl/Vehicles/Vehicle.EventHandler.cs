@@ -864,10 +864,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 GuideSensor.StateData = _ModuleInformation.GuideSensor;
                 BarcodeReader.StateData = _ModuleInformation.reader;
                 VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
-                if (ForkLifter != null)
-                {
-                    ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition = VerticalDriverState.CurrentPosition;
-                }
+
                 for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                     WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 

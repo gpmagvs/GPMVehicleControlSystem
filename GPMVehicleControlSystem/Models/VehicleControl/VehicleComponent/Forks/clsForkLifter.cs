@@ -390,7 +390,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
             try
             {
-                VertialForkHomeSearchHelper vertialForkHomeSearchHelper = new VertialForkHomeSearchHelper(forkAGV, "Vertical");
+                VerticalForkHomeSearchHelper vertialForkHomeSearchHelper = new VerticalForkHomeSearchHelper(forkAGV, "Vertical");
                 (bool success, AlarmCodes alarmCode) result = await vertialForkHomeSearchHelper.StartSearchAsync();
                 IsVerticalForkInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
                 logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");

@@ -402,36 +402,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (GetSub_Status() != SUB_STATUS.Initializing)
                 SetSub_Status(SUB_STATUS.Initializing);
 
-            if (ForkLifter.GetType() == typeof(clsForkLifter))
+            if (!Parameters.ForkAGV.IsForkIsExtendable)
             {
-                return await Task.Run(async () =>
-                {
-                    try
-                    {
+                DebugMessageBrocast("Fork Is Not Extendable,Horizon Fork arm initialize is bypassed!");
+                return (true, "Fork Is Not Extendable");
+            }
 
-                        return await ForkLifter.ForkShortenInAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        return (false, ex.Message);
-                    }
-                });
-            }
-            else
+            return await Task.Run(async () =>
             {
-                return await Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        (bool confirm, AlarmCodes alarmCOde) = await (ForkLifter as clsForkLifterWithDriverBaseExtener).HorizonForkInitialize();
-                        return (confirm, alarmCOde.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-                        return (false, ex.Message);
-                    }
-                });
-            }
+                    return await ForkLifter.ForkShortenInAsync();
+                }
+                catch (Exception ex)
+                {
+                    return (false, ex.Message);
+                }
+            });
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)

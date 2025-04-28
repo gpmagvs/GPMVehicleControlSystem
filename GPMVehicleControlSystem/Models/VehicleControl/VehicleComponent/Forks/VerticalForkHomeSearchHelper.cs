@@ -7,7 +7,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
-    public class VertialForkHomeSearchHelper : MotorBaseHomeSearchHelper
+    public class VerticalForkHomeSearchHelper : MotorBaseHomeSearchHelper
     {
         ForkAGVController AGVC => vehicle.AGVC as ForkAGVController;
 
@@ -16,14 +16,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             get
             {
 
-                if (DIModule.GetState(DI_ITEM.Vertical_Home_Pos))
-                    return FORK_LOCATIONS.HOME;
 
-                else if (!DIModule.GetState(DI_ITEM.Vertical_Up_Hardware_limit))
+                if (!DIModule.GetState(DI_ITEM.Vertical_Up_Hardware_limit))
                     return FORK_LOCATIONS.UP_HARDWARE_LIMIT;
 
                 else if (!DIModule.GetState(DI_ITEM.Vertical_Down_Hardware_limit))
                     return FORK_LOCATIONS.DOWN_HARDWARE_LIMIT;
+
+                else if (DIModule.GetState(DI_ITEM.Vertical_Home_Pos))
+                    return FORK_LOCATIONS.HOME;
 
                 else if (DIModule.GetState(DI_ITEM.Vertical_Up_Pose))
                     return FORK_LOCATIONS.UP_POSE;
@@ -36,9 +37,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
         }
 
-        protected override double CurrentActualPosition => Math.Round(vehicle.ForkLifter.Driver.CurrentPosition, 3);
+        protected override double CurrentActualPosition => Math.Round(AGVC.verticalActionService.CurrentPosition, 3);
         protected override double speedWhenSearchStartWithoutCargo { get; set; } = 1;
-        public VertialForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
+
+        protected override bool IsHomePoseSensorOn => vehicle.WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
+
+        protected override bool IsDownLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Vertical_Down_Hardware_limit);
+
+        protected override bool IsUpLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Vertical_Up_Hardware_limit);
+
+        public VerticalForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
         {
         }
 

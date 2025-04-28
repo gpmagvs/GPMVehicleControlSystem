@@ -15,7 +15,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         protected virtual string modelName { get; set; } = "FORK";
 
         public bool _IsActionDone = false;
-        public bool WaitActionDoneFlag { get; private set; } = false;
+        public bool WaitActionDoneFlag { get; protected set; } = false;
         public VerticalCommandRequest BeforeStopActionRequesting { get; set; } = new VerticalCommandRequest();
         public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
 
@@ -29,9 +29,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         public double HSafeSetting { get; set; } = 0;
 
-        private double PoseTarget = 0;
-        private double Speed = 0;
-        public double CurrentPosition { get; set; } = 0;
+        protected double PoseTarget = 0;
+        protected double Speed { get; private set; } = 0;
+
+        public virtual double CurrentDriverSpeed { get; } = 0;
+        public virtual double CurrentPosition { get; } = 0;
 
         protected Logger logger;
         public bool IsActionDone
@@ -204,7 +206,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 speed = 0,
                 target = 0
             };
-            return await CallVerticalCommandService(request);
+            (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+            if (!callSerivceResult.confirm)
+                return callSerivceResult;
+            return await WaitStopActionDone();
         }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
@@ -215,7 +220,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             logger.Warn($"Fork {request.command} resume to action");
             return await CallVerticalCommandService(request);
         }
-        private bool IsStartRunRequesting(VerticalCommandRequest request)
+        protected virtual bool IsStartRunRequesting(VerticalCommandRequest request)
         {
             return request.command == "pose" || request.command == "orig" || request.command == "up" || request.command == "up_search"
                                                 || request.command == "down" || request.command == "down_search";
@@ -271,15 +276,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                     if (wait_action_down_cts.IsCancellationRequested)
                     {
                         sw.Stop();
-                        string reason = sw.ElapsedMilliseconds >= timeout * 1000 ? "Timeout" : "Abort By Cancel Process";
-                        string log_ = $"Fork Lifter Wait Action Done Fail- {reason}";
+                        string reason = sw.ElapsedMilliseconds >= timeout * 1000 ? $"[{modelName}] Timeout" : $"[{modelName}] Abort By Cancel Process";
+                        string log_ = $"[{modelName}] Fork Lifter Wait Action Done Fail- {reason}";
                         logger.Error(log_);
                         return (false, log_);
                     }
                     if (CurrentForkActionRequesting.command == "orig" && CurrentPosition < HSafeSetting)
                     {
                         WaitActionDoneFlag = false;
-                        return (true, "Position under safety height.");
+                        return (true, $"[{modelName}] Position under safety height.");
                     }
                 }
                 WaitActionDoneFlag = false;
@@ -287,5 +292,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             });
         }
 
+        protected virtual async Task<(bool confirm, string message)> WaitStopActionDone()
+        {
+            while (CurrentDriverSpeed != 0)
+            {
+                await Task.Delay(1);
+            }
+            return (true, "");
+        }
     }
 }

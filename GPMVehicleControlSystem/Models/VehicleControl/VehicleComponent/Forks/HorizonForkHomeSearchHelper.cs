@@ -34,6 +34,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override double CurrentActualPosition => throw new NotImplementedException();
 
+        protected override bool IsHomePoseSensorOn => vehicle.WagoDI.GetState(DI_ITEM.Fork_Home_Pose);
+
+        protected override bool IsDownLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Fork_Short_Exist_Sensor);
+
+        protected override bool IsUpLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Fork_Extend_Exist_Sensor);
+
         protected override async Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
         {
             return await AGVC.HorizonActionService.DownSearch(speed);
