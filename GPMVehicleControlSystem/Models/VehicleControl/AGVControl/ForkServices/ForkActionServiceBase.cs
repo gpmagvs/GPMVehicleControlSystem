@@ -1,5 +1,7 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using NLog;
 using RosSharp.RosBridgeClient;
 using System.Diagnostics;
@@ -8,6 +10,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 {
     public abstract class ForkActionServiceBase
     {
+        protected readonly Vehicle vehicle;
         protected readonly RosSocket rosSocket;
         protected virtual string DoneActionServiceName { get; set; } = "/done_action";
         protected virtual string CommandActionServiceName { get; set; } = "/command_action";
@@ -35,6 +38,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         public virtual double CurrentDriverSpeed { get; } = 0;
         public virtual double CurrentPosition { get; } = 0;
 
+        public DriverState driverState { get; set; } = new DriverState();
+
         protected Logger logger;
         public bool IsActionDone
         {
@@ -52,8 +57,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             }
         }
 
-        public ForkActionServiceBase(RosSocket rosSocket)
+        public ForkActionServiceBase(Vehicle vehicle, RosSocket rosSocket)
         {
+            this.vehicle = vehicle;
             this.rosSocket = rosSocket;
         }
 
@@ -196,8 +202,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         }
 
 
-        public async Task<(bool confirm, string message)> Stop()
+        public virtual async Task<(bool confirm, string message)> Stop()
         {
+            wait_action_down_cts?.Cancel();
             WaitActionDoneFlag = false;
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -207,9 +214,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 target = 0
             };
             (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
-            if (!callSerivceResult.confirm)
-                return callSerivceResult;
-            return await WaitStopActionDone();
+            return callSerivceResult;
+            //return await WaitStopActionDone();
         }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
@@ -265,13 +271,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         protected virtual async Task<(bool success, string message)> WaitActionDone(int timeout = 300)
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
                 wait_action_down_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 Stopwatch sw = Stopwatch.StartNew();
                 while (!IsActionDone)
                 {
-                    Thread.Sleep(1);
+                    await Task.Delay(1);
 
                     if (wait_action_down_cts.IsCancellationRequested)
                     {

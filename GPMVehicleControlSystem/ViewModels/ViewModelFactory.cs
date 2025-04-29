@@ -75,6 +75,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     Current_LASER_MODE = GetLaserModeDescription(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
+                    ForkHorizonDriverState = GetForkHorizonDriverState(),
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     CargoExist = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
@@ -173,6 +174,20 @@ namespace GPMVehicleControlSystem.ViewModels
                 if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || AGV.ForkLifter.fork_ros_controller.verticalActionService == null)
                     return false;
                 return AGV.ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight;
+            }
+        }
+
+        private static DriverState GetForkHorizonDriverState()
+        {
+            try
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || !(AGV as ForkAGV).IsForkHorizonDriverBase)
+                    return new DriverState();
+                return ((AGV as ForkAGV).AGVC as ForkAGVController).HorizonActionService.driverState;
+            }
+            catch (Exception)
+            {
+                return new DriverState();
             }
         }
 

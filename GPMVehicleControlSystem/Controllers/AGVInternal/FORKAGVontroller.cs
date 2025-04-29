@@ -23,5 +23,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             agv.HorizonForkInitProcess();
         }
+
     }
 }

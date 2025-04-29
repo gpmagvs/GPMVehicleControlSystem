@@ -1,4 +1,5 @@
 ﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
@@ -130,6 +131,37 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(confirm);
         }
 
+        [HttpGet("Fork/Horizon")]
+        public async Task<IActionResult> HorizonForkAction(string action, double pose = 0, double speed = 1)
+        {
+            (bool confirm, string message) result = (false, "");
+            forkAgv.logger.LogTrace($"[VMSController.Fork] Horizon Fork Action: {action} pose:{pose} speed:{speed}");
+            HorizonForkActionService service = (HorizonForkActionService)(forkAgv.AGVC as ForkAGVController).HorizonActionService;
+
+            if (action == "home" || action == "orig")
+            {
+                result = await service.Home();
+            }
+
+            if (action == "stop")
+                result = await service.Stop();
+
+            if (action == "init")
+            {
+                result = await service.Init();
+            }
+
+            if (action == "up_limit")
+                result = await service.Extend();
+            if (action == "down_limit")
+                result = await service.Retract();
+
+            return Ok(new
+            {
+                confirm = result.confirm,
+                message = result.message
+            });
+        }
 
         [HttpGet("Fork")]
         public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 1)
@@ -150,7 +182,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             if (_isVerticalMotorStopped)
                 return Ok(new { confirm = false, message = "垂直馬達 [STOP] 訊號ON，Z軸無法動作。" });
 
-            if (_isVerticalPreessSensorTrigered && _isForkUnderPressSensorBypassed)
+            if (_isVerticalPreessSensorTrigered && !_isForkUnderPressSensorBypassed)
             {
                 clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
                 return Ok(new
@@ -175,16 +207,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 forkAgv.ForkLifter.IsManualOperation = true;
                 var result = await forkAgv.ForkLifter.ForkGoHome(speed);
-                CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                while (forkAgv.ForkLifter.CurrentForkLocation != FORK_LOCATIONS.HOME)
-                {
-                    await Task.Delay(1);
-                    if (_wait.IsCancellationRequested)
-                    {
-                        forkAgv.ForkLifter.IsManualOperation = false;
-                        return Ok(new { confirm = false, message = "Go Home Timeout" });
-                    }
-                }
                 forkAgv.ForkLifter.IsManualOperation = false;
                 return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
             }

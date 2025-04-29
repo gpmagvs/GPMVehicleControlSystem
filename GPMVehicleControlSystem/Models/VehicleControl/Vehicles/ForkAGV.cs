@@ -66,8 +66,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 PinHardware.rosSocket = AGVC.rosSocket;
 
             ForkAGVController forkAGVC = (AGVC as ForkAGVController);
-            forkAGVC.verticalActionService = new VerticalForkActionService(AGVC.rosSocket);
-            forkAGVC.HorizonActionService = new HorizonForkActionService(AGVC.rosSocket);
+            forkAGVC.verticalActionService = new VerticalForkActionService(this, AGVC.rosSocket);
+            forkAGVC.HorizonActionService = new HorizonForkActionService(this, AGVC.rosSocket);
             forkAGVC.verticalActionService.AdertiseRequiredService();
             forkAGVC.HorizonActionService.AdertiseRequiredService();
 
@@ -311,6 +311,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (PinHardware == null)
                 return (true, "浮動牙叉定位PIN裝置未裝載");
 
+            if (Parameters.ForkAGV.IsPinDisabledTemptary)
+            {
+                SendNotifyierToFrontend($"注意! 浮動牙叉暫時被禁用中");
+                return (true, "浮動牙叉定位PIN裝置已暫時禁用");
+            }
+
             return await Task.Run(async () =>
             {
                 (bool pin_init_done, string message) _pin_init_result = (false, "");
@@ -398,20 +404,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal async Task<(bool, string)> HorizonForkInitProcess()
         {
-
-            if (GetSub_Status() != SUB_STATUS.Initializing)
-                SetSub_Status(SUB_STATUS.Initializing);
-
             if (!Parameters.ForkAGV.IsForkIsExtendable)
             {
                 DebugMessageBrocast("Fork Is Not Extendable,Horizon Fork arm initialize is bypassed!");
                 return (true, "Fork Is Not Extendable");
             }
-
+            if (Parameters.ForkAGV.IsHorizonExtendDisabledTemptary)
+            {
+                SendNotifyierToFrontend($"注意! 伸縮牙叉暫時被禁用中");
+                return (true, "伸縮牙叉已暫時禁用");
+            }
             return await Task.Run(async () =>
             {
                 try
                 {
+                    var resetResult = await ForkLifter.ForkHorizonResetAsync();
+                    if (!resetResult.success)
+                        return resetResult;
+
                     return await ForkLifter.ForkShortenInAsync();
                 }
                 catch (Exception ex)
@@ -477,8 +487,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.DIOStatusChangedEventRegist();
             WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleDriversStatusErrorAsync);
-
+            WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Home_Pose, HandleHomePoseSensorStateChanged);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Home_Pos, HandleHomePoseSensorStateChanged);
         }
+
+        private void HandleHomePoseSensorStateChanged(object? sender, bool state)
+        {
+            if (state)
+            {
+                clsIOSignal signal = (clsIOSignal)sender;
+                DebugMessageBrocast($"{signal.Name} Now is ON!");
+            }
+        }
+
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)
         {
             clsWorkStationModel? dat = JsonConvert.DeserializeObject<clsWorkStationModel>(json);

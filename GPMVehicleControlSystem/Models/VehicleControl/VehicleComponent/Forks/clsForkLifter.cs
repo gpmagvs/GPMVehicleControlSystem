@@ -354,6 +354,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
+        public virtual async Task<(bool success, string message)> ForkHorizonResetAsync()
+        {
+            return (true, "");
+        }
         /// <summary>
         /// 牙叉伸縮停止動作
         /// </summary>

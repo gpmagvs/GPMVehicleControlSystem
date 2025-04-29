@@ -37,6 +37,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public string AGV_Direct { get; set; }
         public BarcodeReaderState BCR_State_MoveBase { get; set; } = new BarcodeReaderState();
         public DriverState ZAxisDriverState { get; set; } = new DriverState();
+        public DriverState ForkHorizonDriverState { get; set; } = new DriverState();
         /// <summary>
         /// 地圖比對率
         /// </summary>

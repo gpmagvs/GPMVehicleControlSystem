@@ -57,11 +57,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public override async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
-            bool isReachHomePose = forkAGV.WagoDI.GetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Home_Pose);
-
-            if (isReachHomePose)
-                return (true, "");
-
             await horizonForkService.Stop();
             await Task.Delay(100);
             (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Retract();
@@ -84,7 +79,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 return actionResult;
         }
 
-
+        public override async Task<(bool success, string message)> ForkHorizonResetAsync()
+        {
+            (bool success, string message) result = await (horizonForkService as HorizonForkActionService).Reset();
+            return result;
+        }
         private async Task<(bool, string)> WaitHorizonForkPositionSensorStateMatch(bool isExtend, CancellationToken cancellationToken)
         {
             while (isExtend ? !isExtendSensorStateMatch() : !isShortenSensorStateMatch())
