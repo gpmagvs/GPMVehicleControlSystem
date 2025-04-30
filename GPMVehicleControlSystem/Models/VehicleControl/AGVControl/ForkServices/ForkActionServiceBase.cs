@@ -214,6 +214,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 target = 0
             };
             (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+            wait_action_down_cts?.Dispose();
+            wait_action_down_cts = new CancellationTokenSource();
             return callSerivceResult;
             //return await WaitStopActionDone();
         }

@@ -174,8 +174,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         internal string SubscribeSickSaftyScannerOuputPathsTopic()
         {
-            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
-            logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
+            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners2/output_paths", SickSaftyScannerOutputDataCallback);
+            logger.Trace($"Subscribe /sick_safetyscanners2/output_paths ({_output_paths_subscribe_id})");
             this._output_paths_subscribe_id = _output_paths_subscribe_id;
             return this._output_paths_subscribe_id;
         }
