@@ -913,7 +913,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
                     return (false, _arm_move_result.Item2);
                 }
-                else if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                else if (!ForkLifter.IsForkArmExtendLocationCorrect)
                 {
                     return (false, AlarmCodes.Fork_Arm_Pose_Error);
                 }

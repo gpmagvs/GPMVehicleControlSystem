@@ -1,5 +1,6 @@
 ﻿
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
@@ -18,6 +19,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         public clsForkLifterWithDriverBaseExtener(ForkAGV forkAGV) : base(forkAGV)
         {
             logger.Info("Fork Lifter with driver base extener instance created(牙叉伸縮使用馬達驅動方式)");
+        }
+
+        public override bool IsForkArmExtendLocationCorrect
+        {
+            get
+            {
+                bool isAtHome = this.forkAGV.WagoDI.GetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Home_Pose);
+                if (isAtHome)
+                    return false;
+                var driverState = (forkAGV.AGVC as ForkAGVController).HorizonActionService.driverState;
+                return Math.Abs(driverState.position - forkAGV.Parameters.ForkAGV.HorizonArmConfigs.ExtendPose) <= 1;
+            }
         }
 
         public async Task<(bool done, AlarmCodes alarm_code)> HorizonForkInitialize(double InitForkSpeed = 0.5)

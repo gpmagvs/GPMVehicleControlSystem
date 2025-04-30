@@ -71,6 +71,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     return FORK_ARM_LOCATIONS.UNKNOWN;
             }
         }
+
+        public virtual bool IsForkArmExtendLocationCorrect
+        {
+            get
+            {
+                return CurrentForkARMLocation == FORK_ARM_LOCATIONS.END;
+            }
+        }
+
         private SUB_STATUS Sub_Status = SUB_STATUS.IDLE;
         /// <summary>
         /// 是否以初始化
