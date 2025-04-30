@@ -125,7 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 if (CurrentForkActionRequesting.command == "stop")
                     return (true, "Stopped");
 
-                if (Math.Abs(driverState.position - aimPosition) < 0.01)
+                if (Math.Abs(driverState.position - aimPosition) <= 1)
                 {
                     logger.Info($"牙叉到達目標位置: {aimPosition}");
                     return (true, "");
