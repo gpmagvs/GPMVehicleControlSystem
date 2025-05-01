@@ -320,10 +320,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await Task.Run(async () =>
             {
                 (bool pin_init_done, string message) _pin_init_result = (false, "");
-                InitializingStatusText = "PIN-模組初始化";
+                CancellationTokenSource? updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-模組初始化中...");
                 try
                 {
                     await PinHardware.Init();
+                    updateInitMsgCancellationTokenSource?.Cancel();
+                    updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-Lock 中...");
                     await PinHardware.Lock();
                     _pin_init_result = (true, "");
                 }
@@ -334,6 +336,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 catch (Exception ex)
                 {
                     _pin_init_result = (false, ex.Message);
+                }
+                finally
+                {
+                    updateInitMsgCancellationTokenSource?.Cancel();
+                    updateInitMsgCancellationTokenSource?.Dispose();
                 }
                 return _pin_init_result;
             });
@@ -416,17 +423,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return await Task.Run(async () =>
             {
+                CancellationTokenSource? cancellationTokenSource = null;
                 try
                 {
+                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉 Reset...");
                     var resetResult = await ForkLifter.ForkHorizonResetAsync();
+                    cancellationTokenSource.Cancel();
+
                     if (!resetResult.success)
                         return resetResult;
-
+                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉縮回中...");
                     return await ForkLifter.ForkShortenInAsync();
                 }
                 catch (Exception ex)
                 {
                     return (false, ex.Message);
+                }
+                finally
+                {
+                    cancellationTokenSource?.Cancel();
+                    cancellationTokenSource?.Dispose();
                 }
             });
         }

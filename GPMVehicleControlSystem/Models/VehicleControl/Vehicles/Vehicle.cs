@@ -1530,5 +1530,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
             logger.LogDebug($"[DebugMessageBrocast] {message}");
         }
+        internal async Task<CancellationTokenSource> UpdateInitMesgTask(string message)
+        {
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            _ = Task.Run(async () =>
+            {
+
+                while (!cancellationTokenSource.IsCancellationRequested)
+                {
+                    try
+                    {
+                        InitializingStatusText = message;
+                        await Task.Delay(1000, cancellationTokenSource.Token);
+                    }
+                    catch (TaskCanceledException ex)
+                    {
+                        logger.LogDebug($"[UpdateInitMesgTask:{message}]{ex.Message}");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError($"[UpdateInitMesgTask:{message}]{ex.Message}");
+                        return;
+                    }
+                }
+            });
+            return cancellationTokenSource;
+        }
+
     }
 }

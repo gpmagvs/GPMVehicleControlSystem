@@ -189,6 +189,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
             finally
             {
+                _updateInitMesgcancellationTokenSource?.Cancel();
+                _updateInitMesgcancellationTokenSource?.Dispose();
                 await NoBypassLimitSensor();
             }
         }
@@ -213,10 +215,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             else
                 return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
         }
-
-        private void UpdateInitMessge(string msg)
+        private CancellationTokenSource _updateInitMesgcancellationTokenSource = null;
+        private async Task UpdateInitMessge(string msg)
         {
-            vehicle.InitializingStatusText = $"[{name}]原點復歸中...{msg}";
+            _updateInitMesgcancellationTokenSource?.Cancel();
+            _updateInitMesgcancellationTokenSource?.Dispose();
+            _updateInitMesgcancellationTokenSource = await vehicle.UpdateInitMesgTask($"[{name}]原點復歸中...{msg}");
         }
 
         protected abstract Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1);

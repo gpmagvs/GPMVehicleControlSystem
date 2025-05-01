@@ -21,6 +21,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             logger.Info("Fork Lifter with driver base extener instance created(牙叉伸縮使用馬達驅動方式)");
         }
 
+        public override FORK_ARM_LOCATIONS CurrentForkARMLocation
+        {
+            get
+            {
+                if (forkAGV.WagoDI.GetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Home_Pose) || IsForkArmShortLocationCorrect)
+                    return FORK_ARM_LOCATIONS.HOME;
+                else if (IsForkArmExtendLocationCorrect)
+                    return FORK_ARM_LOCATIONS.END;
+                else
+                    return FORK_ARM_LOCATIONS.UNKNOWN;
+            }
+        }
+        public override bool IsForkArmShortLocationCorrect
+        {
+            get
+            {
+                bool isAtHome = this.forkAGV.WagoDI.GetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Home_Pose);
+                if (isAtHome)
+                    return false;
+                var driverState = (forkAGV.AGVC as ForkAGVController).HorizonActionService.driverState;
+                return Math.Abs(driverState.position - forkAGV.Parameters.ForkAGV.HorizonArmConfigs.ShortenPose) <= 1;
+            }
+        }
         public override bool IsForkArmExtendLocationCorrect
         {
             get

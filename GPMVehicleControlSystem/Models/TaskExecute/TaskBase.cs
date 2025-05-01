@@ -260,6 +260,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer)
                 {
+                    Agv.SetSub_Status(SUB_STATUS.RUN);
                     (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(height, action);
                     if (!forkActionsResult.success)
                     {
@@ -404,11 +405,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
             if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
             {
-                tasks.Add(Task.Run(async () =>
+                if (action == ACTION_TYPE.None)
                 {
-                    Agv.HandshakeStatusText = "AGV動作中-牙叉縮回";
-                    await ForkLifter.ForkShortenInAsync();
-                }));
+                    //走行任務,要等伸縮牙叉完全縮回後才可以開始移動
+                    var forkShortenRet = await ForkLifter.ForkShortenInAsync();
+                    if (!forkShortenRet.confirm)
+                        return (false, new List<AlarmCodes>() { AlarmCodes.Fork_Arm_Action_Error });
+                }
+                else
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        Agv.HandshakeStatusText = "AGV動作中-牙叉縮回";
+                        await ForkLifter.ForkShortenInAsync();
+                    }));
 
             }
 

@@ -57,7 +57,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 else return FORK_LOCATIONS.UNKNOWN;
             }
         }
-        public FORK_ARM_LOCATIONS CurrentForkARMLocation
+        public virtual FORK_ARM_LOCATIONS CurrentForkARMLocation
         {
             get
             {
@@ -77,6 +77,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             get
             {
                 return CurrentForkARMLocation == FORK_ARM_LOCATIONS.END;
+            }
+        }
+
+        public virtual bool IsForkArmShortLocationCorrect
+        {
+            get
+            {
+                return CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME;
             }
         }
 
