@@ -547,7 +547,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async Task DOSettingWhenEmoTrigger()
         {
             await base.DOSettingWhenEmoTrigger();
-            await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
+            //await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
         }
 
         protected override async Task TryResetMotors()
