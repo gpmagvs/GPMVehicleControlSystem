@@ -508,7 +508,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void AGVC_OnRosSocketDisconnected(object? sender, EventArgs e)
         {
             ModuleInformationUpdatedInitState = false;
-            DebugMessageBrocast($"與RosBride Server 斷線!");
+            LogDebugMessage($"與RosBride Server 斷線!");
             AlarmManager.AddAlarm(AlarmCodes.Motion_control_Disconnected, false);
         }
 
@@ -854,7 +854,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
             }
-            DebugMessageBrocast("Handshake IO Reset done.");
+            LogDebugMessage("Handshake IO Reset done.");
             HandshakeLog($"Handshake IO Reset done.");
         }
 
@@ -1525,9 +1525,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await SaveParameters(Parameters, this.frontendHubContext);
         }
 
-        internal async Task DebugMessageBrocast(string message)
+        internal async Task LogDebugMessage(string message, bool signalRPub = false)
         {
-            await frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
+            if (signalRPub)
+                frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
             logger.LogDebug($"[DebugMessageBrocast] {message}");
         }
         internal async Task<CancellationTokenSource> UpdateInitMesgTask(string message)

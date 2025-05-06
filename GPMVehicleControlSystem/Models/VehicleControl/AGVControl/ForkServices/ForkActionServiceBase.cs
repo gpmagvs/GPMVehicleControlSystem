@@ -19,6 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         public bool _IsActionDone = false;
         public bool WaitActionDoneFlag { get; protected set; } = false;
+        public bool IsStoppedByObstacleDetected { get; protected set; } = false;
         public VerticalCommandRequest BeforeStopActionRequesting { get; set; } = new VerticalCommandRequest();
         public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
 
@@ -204,19 +205,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         public virtual async Task<(bool confirm, string message)> Stop()
         {
-            wait_action_down_cts?.Cancel();
-            WaitActionDoneFlag = false;
-            VerticalCommandRequest request = new VerticalCommandRequest
+            try
             {
-                model = modelName,
-                command = "stop",
-                speed = 0,
-                target = 0
-            };
-            (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
-            wait_action_down_cts?.Dispose();
-            wait_action_down_cts = new CancellationTokenSource();
-            return callSerivceResult;
+                wait_action_down_cts?.Cancel();
+                WaitActionDoneFlag = false;
+                VerticalCommandRequest request = new VerticalCommandRequest
+                {
+                    model = modelName,
+                    command = "stop",
+                    speed = 0,
+                    target = 0
+                };
+                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+                wait_action_down_cts?.Dispose();
+                wait_action_down_cts = new CancellationTokenSource();
+                return callSerivceResult;
+            }
+            finally
+            {
+            }
             //return await WaitStopActionDone();
         }
         public async Task<(bool confirm, string message)> ZAxisResume()
@@ -253,7 +260,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                     }
                     if (request.command == "stop")
                     {
-                        BeforeStopActionRequesting = CurrentForkActionRequesting.Clone();
+                        BeforeStopActionRequesting = CurrentForkActionRequesting.command == "stop" ? BeforeStopActionRequesting : CurrentForkActionRequesting.Clone();
                         OnActionDone?.Invoke(this, EventArgs.Empty);
                     }
                     else

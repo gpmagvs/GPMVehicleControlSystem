@@ -78,12 +78,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleOnEndWaitMainStatusIDLEReported(object? sender, EventArgs e)
         {
-            DebugMessageBrocast($"Action Finish上報前等待主狀態IDLE上報已完成...");
+            LogDebugMessage($"Action Finish上報前等待主狀態IDLE上報已完成...", signalRPub: true);
         }
 
         private void HandleOnStartWaitMainStatusIDLEReported(object? sender, EventArgs e)
         {
-            DebugMessageBrocast($"Action Finish上報前等待主狀態-IDLE上報完成...");
+            LogDebugMessage($"Action Finish上報前等待主狀態-IDLE上報完成...", signalRPub: true);
         }
 
         private async void AGVSPingSuccessHandler()

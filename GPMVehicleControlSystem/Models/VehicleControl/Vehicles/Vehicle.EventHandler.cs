@@ -151,7 +151,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             Task.Factory.StartNew(async () =>
             {
-                DebugMessageBrocast($"當前速度控制->{e}");
+                LogDebugMessage($"當前速度控制->{e}");
             });
         }
 
@@ -174,7 +174,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleCSTReaderStateChanged(object? sender, int state)
         {
-            DebugMessageBrocast($"CST Reader State Changed to [{state}]");
+            LogDebugMessage($"CST Reader State Changed to [{state}]");
         }
 
         private ManualResetEvent WaitOperatorCheckCargoStatusDone = new ManualResetEvent(false);
@@ -325,12 +325,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (AGVC.CycleStopActionExecuting)
             {
-                DebugMessageBrocast($"[Action Status Changed To SUCCEEDED by Cycle Stop Action Done Check. ] Action Status is SUCCESSED, reset actionClient.goal = new TaskCommandGoal()");
+                LogDebugMessage($"[Action Status Changed To SUCCEEDED by Cycle Stop Action Done Check. ] Action Status is SUCCESSED, reset actionClient.goal = new TaskCommandGoal()");
                 AGVC.actionClient.goal = new TaskCommandGoal();
             }
             if (_RunTaskData.Destination == Navigation.LastVisitedTag)
             {
-                DebugMessageBrocast($"Action Status now is SUCCESSED and AGV Position is Destine of Executed Task({Navigation.LastVisitedTag})");
+                LogDebugMessage($"Action Status now is SUCCESSED and AGV Position is Destine of Executed Task({Navigation.LastVisitedTag})");
                 AGVC.actionClient.goal = new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal();
             }
             _ = Task.Run(async () =>

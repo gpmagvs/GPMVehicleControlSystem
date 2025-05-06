@@ -4,6 +4,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -39,6 +40,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         }
 
         public double CurrentHeightPosition => Math.Round(Driver.CurrentPosition, 3);
+
+        public bool IsStopByObstacleDetected = false;
+
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -444,6 +448,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             try
             {
                 fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
+
+                #region 教點數據確認
+
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (target, false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
@@ -453,19 +460,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 if (teach.Down_Pose == 0 && teach.Up_Pose == 0)
                     return (target, false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
 
-                (bool confirm, string message) forkMoveResult = (false, "");
+                #endregion
 
+                #region 從教點數據中取出目標位置
 
                 if (position == FORK_HEIGHT_POSITION.UP_)
                     target = teach.Up_Pose;
                 if (position == FORK_HEIGHT_POSITION.DOWN_)
                     target = teach.Down_Pose;
-
-                int tryCnt = 0;
-                double positionError = 0;
+                #endregion
 
                 bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target;
-
                 if (!_isForkAlreadyGoingToTarget)
                 {
                     await ForkStopAsync();
@@ -475,49 +480,82 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 else
                     logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
 
-                bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
-                double _errorTorlence = 0.5;
-                while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
+                double _errorTorlence = 0.1;
+                CancellationTokenSource _waitPoseReachTargetCancellationTokenSource = new CancellationTokenSource();
+                Task actionTimeoutDetectTask = Task.Run(async () =>
                 {
-                    await Task.Delay(1, fork_ros_controller.verticalActionService.wait_action_down_cts.Token);
-
-                    if (AGVBeltStatusError())
-                        return (target, false, AlarmCodes.Belt_Sensor_Error);
-
-                    if (AGVStatusError())
+                    try
                     {
-                        logger.Error($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
-                        return (target, false, AlarmCodes.None);
-                    }
-                    tryCnt++;
-                    if (fork_ros_controller.verticalActionService.wait_action_down_cts.IsCancellationRequested)
-                        return (target, false, AlarmCodes.Fork_Action_Aborted);
-
-                    if (!_isForkAlreadyGoingToTarget)
-                    {
-                        logger.Warn($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
-                        forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
-                        logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
-                        if (!forkMoveResult.confirm)
+                        Stopwatch sw = Stopwatch.StartNew();
+                        while (sw.Elapsed.TotalSeconds < 60)
                         {
-                            AlarmCodes _alarm_code = fork_ros_controller.verticalActionService.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
-                            return (target, false, _alarm_code);
+                            if (IsStopByObstacleDetected)
+                                sw.Reset();
+                            else
+                                sw.Start();
+                            await Task.Delay(1000);
                         }
                     }
+                    catch (TaskCanceledException)
+                    {
+                        throw;
+                    }
+                });
+                Task<(bool confirm, string message, double positionError)> poseActionTask = Task.Run(async () =>
+                {
+                    (bool confirm, string message) forkMoveResult = (false, "");
+
+                    ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
+                    if (!_isForkAlreadyGoingToTarget)
+                    {
+                        forkMoveResult = await ForkPose(target, speed, false);
+                        if (!forkMoveResult.confirm)
+                            return (forkMoveResult.confirm, forkMoveResult.message, 0);
+                    }
+                    while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
+                    {
+                        try
+                        {
+                            await Task.Delay(1, _waitPoseReachTargetCancellationTokenSource.Token);
+                            if (AGVStatusError())
+                                throw new TaskCanceledException($"因AGV狀態異常取消等待");
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            return (false, "取消等待", positionError);
+                        }
+                    }
+                    return (true, "Fork Move Done", positionError);
+                });
+
+                Task taskEnd = await Task.WhenAny(actionTimeoutDetectTask, poseActionTask);
+
+                if (taskEnd == actionTimeoutDetectTask)
+                {
+                    _waitPoseReachTargetCancellationTokenSource.Cancel();
+                    logger.Error($"Fork Move Timeout, 牙叉當前位置={CurrentHeightPosition} cm, 目標位置={target} cm");
+                    return (target, false, AlarmCodes.Action_Timeout);
                 }
+                else
+                {
+                    _waitPoseReachTargetCancellationTokenSource.Cancel();
+                    (bool confirm, string message, double positionError) result = poseActionTask.Result;
+                    if (!result.confirm)
+                    {
+                        logger.Error($"Fork Move Error, 牙叉當前位置={CurrentHeightPosition} cm, 目標位置={target} cm");
+                        return (target, false, AlarmCodes.Fork_Arm_Action_Error);
+                    }
 
-                logger.Trace($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
-                //Final Check
-                if (!bypassFinalCheck && ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
-                    return (target, false, AlarmCodes.Fork_Height_Setting_Error);
+                    if (!bypassFinalCheck && ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _))
+                        return (target, false, AlarmCodes.Fork_Height_Setting_Error);
 
-                return (target, true, AlarmCodes.None);
-
+                    return (target, true, AlarmCodes.None);
+                }
                 #region Local Functions
                 //計算牙叉當前位置距離目標位置的誤差值
                 double GetPositionErrorVal(double currentHeightPosition, double position_to_reach)
                 {
-                    return positionError = Math.Abs(currentHeightPosition - position_to_reach);
+                    return Math.Abs(currentHeightPosition - position_to_reach);
                 }
                 //計算牙叉當前位置距離目標位置的誤差值是否在允許範圍內
                 bool ForkPositionLargeThanTorrlence(double currentHeightPosition, double position_to_reach, double errorTorlence, out double positionError)
@@ -526,7 +564,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     return positionError > errorTorlence;
                 }
                 //皮帶是否有異常
-                bool AGVBeltStatusError() => !belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass);
                 bool AGVStatusError() => forkAGV.GetSub_Status() == SUB_STATUS.DOWN || forkAGV.GetSub_Status() == SUB_STATUS.Initializing;
                 #endregion
             }

@@ -78,6 +78,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.SetIsCharging(false);
             });
             IsBackToSecondaryPt = true;
+            await Agv.Laser.SideLasersEnable(false);
             return await base.TransferTaskToAGVC();
         }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()

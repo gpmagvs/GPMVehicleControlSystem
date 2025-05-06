@@ -235,7 +235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     AGVC.OnAGVCActionChanged = null;
 
-                    DebugMessageBrocast("Action Finish Report To AGVS Process Start!");
+                    LogDebugMessage("Action Finish Report To AGVS Process Start!");
                     FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
 
                     //if (LoadUnloadTask != null && !_IsTaskFinishWithAbnormal)
@@ -245,7 +245,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     //    await LoadUnloadTask.AGVCOMPTHandshake(false);
                     //}
 
-                    if ((IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
+                    if (BarcodeReader.CurrentTag != 0 && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal &&
+                        (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
                         //自動復歸並上線
                         _ = Task.Run(async () =>
@@ -291,7 +292,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (intersectAlarmCodes.Any())
             {
                 logger.LogWarning($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
-                DebugMessageBrocast($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
+                LogDebugMessage($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
                 return false;
             }
             else
@@ -698,9 +699,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     laserSwitchStateDebugDebuncer.Debounce(() =>
                     {
                         if (!val)
-                            DebugMessageBrocast("End Laser Obs Monitor");
+                            LogDebugMessage("End Laser Obs Monitor");
                         else
-                            DebugMessageBrocast("Start Laser Obs Monitor");
+                            LogDebugMessage("Start Laser Obs Monitor");
                     }, 500);
 
                     _IsLaserMonitoring = value;

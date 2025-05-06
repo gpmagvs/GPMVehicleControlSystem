@@ -52,6 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public event EventHandler OnSickApplicationError;
 
+        public event EventHandler<LASER_MODE> OnLaserModeChanged;
         private bool _IsSickApplicationError = false;
         public bool IsSickApplicationError
         {
@@ -78,6 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     _CurrentLaserModeOfSick = value;
                     logger.Info($"[From Sick Topic] Laser Mode Chaged To : {value}({Mode})", true);
+                    OnLaserModeChanged?.Invoke(this, Mode);
                 }
             }
         }

@@ -406,7 +406,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleEQReadOFF(object? sender, EventArgs e)
         {
-            DebugMessageBrocast($"EQ READY OFF!");
+            LogDebugMessage($"EQ READY OFF!");
             EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF -= HandleEQReadOFF;
             if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT])
             {

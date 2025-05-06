@@ -95,11 +95,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             try
             {
                 //啟用前後雷射偵測 + Loading 組數
-                await Agv.Laser.SideLasersEnable(false);
                 await Agv.Laser.FrontBackLasersEnable(!Agv.Parameters.LDULDParams.BypassFrontLaserWhenEntryEQ, false);
-
                 await Task.Delay(200);
-
                 return await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
 
             }
@@ -258,11 +255,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
-        protected override Task<SendActionCheckResult> TransferTaskToAGVC()
+        protected override async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
-
-            return base.TransferTaskToAGVC();
+            await Agv.Laser.SideLasersEnable(false);
+            return await base.TransferTaskToAGVC();
         }
 
 
@@ -696,12 +693,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 stopwatch.Stop();
                 logger.Warn(message);
-                Agv.DebugMessageBrocast(message);
+                Agv.LogDebugMessage(message);
             }
             void _RestartTimer(string message)
             {
                 stopwatch.Restart();
-                Agv.DebugMessageBrocast(message);
+                Agv.LogDebugMessage(message);
                 logger.Warn(message);
             }
 
