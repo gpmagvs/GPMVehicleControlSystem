@@ -623,12 +623,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual async Task DOSignalDefaultSetting()
         {
             //WagoDO.AllOFF();
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_B, false);
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
-            await Laser.ModeSwitch(16);
+            await Laser.ModeSwitch(5);
         }
         protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
 

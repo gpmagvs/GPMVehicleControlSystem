@@ -293,12 +293,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
+
+
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
             if (!Parameters.CheckObstacleWhenForkInit)
                 return (true, "");
 
+            InitializingStatusText = "Laser Initizing...";
+
+            #region 雷射組數切換
+            await Laser.ModeSwitch(clsLaser.LASER_MODE.Normal);
+            await Task.Delay(250);
+            await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
+            await Task.Delay(250);
+            await Laser.SideLasersEnable(true);
+            #endregion
 
             if (!Parameters.SensorBypass.RightSideLaserBypass)
             {
