@@ -538,7 +538,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
-            if (Navigation.Data != null)
+
+            if (maintainModeData.IsMaintainMode)
+            {
+                Corrdination.X = Math.Round(maintainModeData.Coordination.X, 3);
+                Corrdination.Y = Math.Round(maintainModeData.Coordination.Y, 3);
+                Corrdination.Theta = Math.Round(maintainModeData.Coordination.Theta, 3);
+                lastVisitedNode = maintainModeData.TagSet;
+            }
+            else if (Navigation.Data != null)
             {
                 Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                 Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);

@@ -1162,6 +1162,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (true, AlarmCodes.None);
             }
 
+            if (Agv.Parameters.CargoExistSensorParams.ExistSensorSimulation)
+                Agv.CSTReader.ValidCSTID = "";
+
             if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
             Agv.CSTReader.ValidCSTID = "";

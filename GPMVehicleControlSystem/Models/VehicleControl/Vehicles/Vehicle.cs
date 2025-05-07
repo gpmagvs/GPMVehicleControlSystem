@@ -36,6 +36,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using Microsoft.Extensions.Caching.Memory;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -98,6 +99,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public CargoStateStore CargoStateStorer;
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
+        public MaintainModeDto maintainModeData = new MaintainModeDto();
+        public class MaintainModeDto
+        {
+            public bool IsMaintainMode { get; set; } = false;
+            public int TagSet { get; set; } = 0;
+            public clsCoordination Coordination { get; set; } = new clsCoordination(999, 999, 0);
+        }
+
         private string _HandshakeStatusText = "";
         internal string HandshakeStatusText
         {
@@ -1562,5 +1571,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return cancellationTokenSource;
         }
 
+
+        internal async Task MaintainModeSwitch(bool isMaintainMode)
+        {
+            this.maintainModeData.IsMaintainMode = isMaintainMode;
+
+            if (isMaintainMode)
+            {
+                var navigationClone = Navigation.Clone();
+
+                maintainModeData.TagSet = lastVisitedMapPoint.TagNumber;
+                maintainModeData.Coordination = navigationClone.CurrentCoordination;
+                maintainModeData.Coordination.Theta = navigationClone.Angle;
+
+                LogDebugMessage("現在是維護模式", true);
+            }
+            else
+            {
+                LogDebugMessage("已關閉維護模式", true);
+            }
+            BrocastMaintainStats();
+        }
+
+        internal async Task BrocastMaintainStats()
+        {
+            frontendHubContext.Clients.All.SendAsync("maintain-mode-status", maintainModeData);
+        }
     }
 }

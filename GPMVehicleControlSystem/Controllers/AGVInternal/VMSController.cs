@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -42,6 +43,41 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 }
             });
             return;
+        }
+
+        [HttpGet("MaintainModeStatus")]
+        public async Task<IActionResult> MaintainModeStatus()
+        {
+            return Ok(agv.maintainModeData);
+        }
+
+
+        [HttpPost("SwitchMaintainMode")]
+        public async Task<IActionResult> SwitchMaintainMode(bool maintainMode)
+        {
+            await agv.MaintainModeSwitch(maintainMode);
+            return Ok();
+        }
+
+        [HttpPost("SetMaintainingTag")]
+        public async Task<IActionResult> SetMaintainingTag(int tag)
+        {
+            agv.maintainModeData.TagSet = tag;
+            MapPoint? point = agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == tag);
+            if (point != null)
+                agv.maintainModeData.Coordination = new AGVSystemCommonNet6.AGVDispatch.Model.clsCoordination(point.X, point.Y, agv.Navigation.Angle);
+
+            agv.BrocastMaintainStats();
+
+            return Ok();
+        }
+
+        [HttpPost("SetMaintainingCoordination")]
+        public async Task<IActionResult> SetMaintainingCoordination(double x, double y, double theta)
+        {
+            agv.maintainModeData.Coordination = new AGVSystemCommonNet6.AGVDispatch.Model.clsCoordination(x, y, theta);
+            agv.BrocastMaintainStats();
+            return Ok();
         }
 
         [HttpPost("ResetAlarm")]
