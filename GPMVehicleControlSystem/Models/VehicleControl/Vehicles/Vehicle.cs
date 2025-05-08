@@ -700,13 +700,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 AlarmManager.ClearAlarm();
                 _RunTaskData = new clsTaskDownloadData();
-                //嘗試定位
-                //_ = Task.Run(async () =>
-                //{
-                //    await LocalizationWithCurrentTag();
-                //});
                 HandshakeStatusText = "";
-                IsHandshaking = false;
+                IsInitialized = IsHandshaking = false;
+                InitializingStatusText = "初始化開始";
+                SetSub_Status(SUB_STATUS.Initializing);
+
+
                 return await Task.Run(async () =>
                 {
                     StopAllHandshakeTimer();
@@ -724,10 +723,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             StatusLighter.AbortFlash();
                             return result;
                         }
-
-                        InitializingStatusText = "初始化開始";
-                        SetSub_Status(SUB_STATUS.Initializing);
-                        IsInitialized = false;
 
                         result = await InitializeActions(InitializeCancelTokenResourece);
                         if (!result.Item1)

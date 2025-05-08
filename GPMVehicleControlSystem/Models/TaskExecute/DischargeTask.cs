@@ -48,24 +48,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            if (ForkLifter != null)
+            IsBackToSecondaryPt = false;
+            if (forkGoHomeTask != null)
             {
-                if (!Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
-                {
-                    ForkHomeProcess(false);
-                }
-                ;
-                if (IsNeedWaitForkHome)
-                {
-                    logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
-                    Task.WaitAll(new Task[] { forkGoHomeTask });
-                    logger.Trace($"[Async Action] Fork is Home Now");
-                }
-                logger.Warn($"Fork Go Home When AGVC Action Finish , {ForkGoHomeResultAlarmCode}");
+                Task.WaitAll(new Task[] { forkGoHomeTask });
                 if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
-                {
                     return (false, ForkGoHomeResultAlarmCode);
-                }
             }
             Agv.SetIsCharging(false);
             return (true, AlarmCodes.None);
@@ -84,10 +72,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.WagoDO.SetState(DO_ITEM.Recharge_Circuit, false);
-            if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation)
-            {
-                ForkHomeProcess(false);
-            }
+            ForkHomeProcess();
             return (true, AlarmCodes.None);
         }
 

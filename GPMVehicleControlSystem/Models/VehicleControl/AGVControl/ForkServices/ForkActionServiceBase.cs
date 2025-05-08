@@ -4,7 +4,6 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using NLog;
 using RosSharp.RosBridgeClient;
-using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 {
@@ -21,7 +20,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         public bool WaitActionDoneFlag { get; protected set; } = false;
         public bool IsStoppedByObstacleDetected { get; protected set; } = false;
         public VerticalCommandRequest BeforeStopActionRequesting { get; set; } = new VerticalCommandRequest();
-        public VerticalCommandRequest CurrentForkActionRequesting { get; set; } = new VerticalCommandRequest();
+        public VerticalCommandRequest _CurrentForkActionRequesting = new VerticalCommandRequest();
+        public VerticalCommandRequest CurrentForkActionRequesting
+        {
+            get => _CurrentForkActionRequesting;
+            set
+            {
+                _CurrentForkActionRequesting = value;
+                logger.Debug($"current action requesting is {_CurrentForkActionRequesting.ToJson(Newtonsoft.Json.Formatting.None)}");
+            }
+        }
 
         public CancellationTokenSource wait_action_down_cts = new CancellationTokenSource();
 
@@ -84,6 +92,57 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             };
             return await CallVerticalCommandService(request);
         }
+        public virtual async Task<(bool confirm, string message)> Stop()
+        {
+            try
+            {
+                WaitActionDoneFlag = false;
+                VerticalCommandRequest request = new VerticalCommandRequest
+                {
+                    model = modelName,
+                    command = "stop",
+                    speed = 0,
+                    target = 0
+                };
+                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+                return callSerivceResult;
+            }
+            finally
+            {
+                try
+                {
+                    wait_action_down_cts?.Cancel();
+                    wait_action_down_cts?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+            //return await WaitStopActionDone();
+        }
+        public virtual async Task<(bool confirm, string message)> Home(double speed = 1.0, bool wait_done = true)
+        {
+            WaitActionDoneFlag = wait_done;
+            HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
+            logger.Info($"Fork ready Go Home Position,HSafe={HSafeSetting}");
+
+            VerticalCommandRequest request = new VerticalCommandRequest
+            {
+                model = modelName,
+                command = "orig",
+                speed = speed,
+            };
+
+            if (!wait_done)
+            {
+                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+                return callSerivceResult;
+            }
+            else
+            {
+                return await CallServiceAndWaitActionDone(request);
+            }
+        }
 
         public async Task<(bool success, string message)> Pose(double target, double speed = 1.0, bool wait_done = true)
         {
@@ -97,22 +156,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 speed = speed,
                 target = target
             };
-            try
+            if (!wait_done)
             {
-                IsActionDone = false;
                 (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
-                if (!wait_done)
-                    return callSerivceResult;
-                else
-                {
-                    if (IsActionDone)
-                        return (true, "");
-                    return await WaitActionDone();
-                }
+                return callSerivceResult;
             }
-            catch (Exception ex)
+            else
             {
-                throw ex;
+                return await CallServiceAndWaitActionDone(request);
             }
         }
         public async Task<(bool confirm, string message)> Down(double speed = 1.0)
@@ -135,22 +186,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             };
             return await CallVerticalCommandService(request);
         }
-        private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
-        {
-            logger.Info($"{CurrentForkActionRequesting.command} command action ack. AGVC Reply command =  {tin.command}");
-            IsActionDone = true;
-            response = new VerticalCommandResponse()
-            {
-                confirm = true
-            };
-            bool command_reply_done = tin.command == "done";
-            if (!command_reply_done)
-            {
-                logger.Info($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
-            }
-            CurrentForkActionRequesting = new VerticalCommandRequest();
-            return IsActionDone;
-        }
         public async Task<(bool confirm, string message)> UpSearch(double speed = 1.0)
         {
             VerticalCommandRequest request = new VerticalCommandRequest
@@ -172,60 +207,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             return await CallVerticalCommandService(request);
         }
 
-        public virtual async Task<(bool confirm, string message)> Home(double speed = 1.0, bool wait_done = true)
-        {
-            WaitActionDoneFlag = wait_done;
-            HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
-            logger.Info($"Fork ready Go Home Position,HSafe={HSafeSetting}");
-            VerticalCommandRequest request = new VerticalCommandRequest
-            {
-                model = modelName,
-                command = "orig",
-                speed = speed,
-            };
-            try
-            {
-                IsActionDone = false;
-                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
-                if (!wait_done)
-                    return callSerivceResult;
-                else
-                {
-                    if (IsActionDone)
-                        return (true, "");
-                    return await WaitActionDone();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-
-        public virtual async Task<(bool confirm, string message)> Stop()
-        {
-            try
-            {
-                wait_action_down_cts?.Cancel();
-                WaitActionDoneFlag = false;
-                VerticalCommandRequest request = new VerticalCommandRequest
-                {
-                    model = modelName,
-                    command = "stop",
-                    speed = 0,
-                    target = 0
-                };
-                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
-                wait_action_down_cts?.Dispose();
-                wait_action_down_cts = new CancellationTokenSource();
-                return callSerivceResult;
-            }
-            finally
-            {
-            }
-            //return await WaitStopActionDone();
-        }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
             await Task.Delay(800);
@@ -246,12 +227,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             try
             {
 
-                logger.Info($"Try rosservice call /command_action : {request.ToJson()}");
+                logger.Info($"Try rosservice call {CommandActionServiceName} : {request.ToJson(Newtonsoft.Json.Formatting.None)}");
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(CommandActionServiceName, request, 1000);
                 if (response == null)
                     throw new TimeoutException();
 
 
+                logger.Info($"Call {CommandActionServiceName} response: {response.ToJson(Newtonsoft.Json.Formatting.None)}");
                 if (response.confirm)
                 {
                     if (IsStartRunRequesting(request) || (CurrentForkActionRequesting.command == "stop" && request.command == "resume"))
@@ -277,43 +259,56 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             }
         }
 
-
-        protected virtual async Task<(bool success, string message)> WaitActionDone(int timeout = 300)
+        internal async Task<(bool confirm, string message)> CallServiceAndWaitActionDone(VerticalCommandRequest request, int timeout = 80)
         {
-            return await Task.Run(async () =>
-            {
-                wait_action_down_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-                Stopwatch sw = Stopwatch.StartNew();
-                while (!IsActionDone)
-                {
-                    await Task.Delay(1);
-
-                    if (wait_action_down_cts.IsCancellationRequested)
-                    {
-                        sw.Stop();
-                        string reason = sw.ElapsedMilliseconds >= timeout * 1000 ? $"[{modelName}] Timeout" : $"[{modelName}] Abort By Cancel Process";
-                        string log_ = $"[{modelName}] Fork Lifter Wait Action Done Fail- {reason}";
-                        logger.Error(log_);
-                        return (false, log_);
-                    }
-                    if (CurrentForkActionRequesting.command == "orig" && CurrentPosition < HSafeSetting)
-                    {
-                        WaitActionDoneFlag = false;
-                        return (true, $"[{modelName}] Position under safety height.");
-                    }
-                }
-                WaitActionDoneFlag = false;
-                return (true, "");
-            });
+            wait_action_down_cts = new CancellationTokenSource();
+            var requestResult = await CallVerticalCommandService(request);
+            if (!requestResult.confirm)
+                return requestResult;
+            return await WaitActionDone(wait_action_down_cts.Token, timeout);
         }
 
-        protected virtual async Task<(bool confirm, string message)> WaitStopActionDone()
+        protected virtual async Task<(bool success, string message)> WaitActionDone(CancellationToken token, int timeout = 300)
         {
-            while (CurrentDriverSpeed != 0)
+            try
             {
-                await Task.Delay(1);
+                await Task.Delay(TimeSpan.FromSeconds(timeout), token);
             }
-            return (true, "");
+            catch (TaskCanceledException)
+            {
+                logger.Info($"等待action done 任務已被取消(action done or stop command executed)");
+                return (true, "");
+            }
+
+            return (false, "Timeout");
         }
+
+        private bool VerticalDoneActionCallback(VerticalCommandRequest tin, out VerticalCommandResponse response)
+        {
+            WaitActionDoneFlag = false;
+            logger.Info($"{CurrentForkActionRequesting.command} command action ack({tin.ToJson(Newtonsoft.Json.Formatting.None)}). AGVC Reply command =  {tin.command}");
+            IsActionDone = true;
+            response = new VerticalCommandResponse()
+            {
+                confirm = true
+            };
+            bool command_reply_done = tin.command == "done";
+            if (!command_reply_done)
+            {
+                logger.Info($"{CurrentForkActionRequesting.command} command   action not done.. AGVC Reply command =  {tin.command}");
+            }
+            try
+            {
+                wait_action_down_cts?.Cancel();
+                wait_action_down_cts?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger.Warn("VerticalDoneActionCallback:" + ex.Message);
+            }
+            CurrentForkActionRequesting = new VerticalCommandRequest();
+            return true;
+        }
+
     }
 }

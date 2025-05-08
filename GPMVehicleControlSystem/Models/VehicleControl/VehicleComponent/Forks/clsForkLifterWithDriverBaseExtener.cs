@@ -4,6 +4,8 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
@@ -19,6 +21,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         public clsForkLifterWithDriverBaseExtener(ForkAGV forkAGV) : base(forkAGV)
         {
             logger.Info("Fork Lifter with driver base extener instance created(牙叉伸縮使用馬達驅動方式)");
+
         }
 
         public override FORK_ARM_LOCATIONS CurrentForkARMLocation

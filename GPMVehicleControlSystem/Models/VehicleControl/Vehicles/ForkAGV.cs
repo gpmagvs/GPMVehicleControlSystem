@@ -139,8 +139,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return true;
                 }
             };
+
+            if (this.IsForkHorizonDriverBase)
+            {
+                WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, HandleHorizonForkLimitSensorStateChanged);
+                WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, HandleHorizonForkLimitSensorStateChanged);
+
+            }
+
         }
         private bool _ForkSaftyProtectFlag = false;
+
+
+        private void HandleHorizonForkLimitSensorStateChanged(object? sender, bool inputState)
+        {
+            bool isReachLimit = !inputState;
+
+            if (isReachLimit)
+            {
+                ForkLifter.ForkARMStop().ContinueWith((t) =>
+                {
+                    clsIOSignal? signal = sender as clsIOSignal;
+                    AlarmCodes alarmCode = AlarmCodes.Fork_Horizon_Extend_Limit;
+                    if (signal != null)
+                        alarmCode = signal.Input == DI_ITEM.Fork_Extend_Exist_Sensor ? AlarmCodes.Fork_Horizon_Extend_Limit : AlarmCodes.Fork_Horizon_Retract_Limit;
+                    AlarmManager.AddAlarm(alarmCode, false);
+                });
+            }
+        }
+
         private void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
         {
             if (_ForkSaftyProtectFlag)

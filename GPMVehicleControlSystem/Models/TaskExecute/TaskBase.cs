@@ -132,9 +132,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         public int height { get; internal set; } = 0;
         public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
         public bool IsNeedHandshake = false;
-
-        protected bool IsNeedWaitForkHome = false;
-        protected Task forkGoHomeTask = null;
+        protected Task? forkGoHomeTask = null;
         protected AlarmCodes FrontendSecondarSensorTriggerAlarmCode
         {
             get
@@ -663,117 +661,138 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             _wait_agvc_action_done_pause.Set();
         }
         protected AlarmCodes ForkGoHomeResultAlarmCode = AlarmCodes.None;
-        protected async Task ForkHomeProcess(bool need_reach_secondary = true)
+        protected async Task ForkHomeProcess()
         {
             if (ForkLifter == null)
             {
-                IsNeedWaitForkHome = false;
+                forkGoHomeTask = null;
                 return;
             }
             //check StationType of AGV.lastVisitedMapPoint should be Normal
 
-            IsNeedWaitForkHome = action == ACTION_TYPE.Unload;
             forkGoHomeTask = await Task.Factory.StartNew(async () =>
             {
                 if (PinHardware != null)
                 {
                     PinHardware.Lock();
                 }
-                if (need_reach_secondary)
-                {
-                    logger.Trace($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.");
 
-                    while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination)
+                Task waitForkCanDoActionTask = Task.Run(async () =>
+                {
+
+                    if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                     {
-                        await Task.Delay(1);
-                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                        Agv.LogDebugMessage($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.", true);
+                        while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination || Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                         {
-                            IsNeedWaitForkHome = false;
-                            return;
+                            await Task.Delay(1);
+                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                                return;
                         }
                     }
-                }
-                logger.Trace($"Reach Tag {RunningTaskData.Destination}!, Fork Start Go Home NOW!!!");
+                    else
+                    {
+                        Agv.LogDebugMessage($"Wait AGVC Action done, Fork Will Start Go Home.", true);
+                        while (IsBackToSecondaryPt)
+                        {
+                            await Task.Delay(1);
+                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                                return;
+                        }
+                    }
+                });
+
+                await waitForkCanDoActionTask;
+
+                if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                    return;
+
+                logger.Trace($"Fork Action run accept!  Fork Start Go Home NOW!!!");
+
                 (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (Agv.ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME, AlarmCodes.None);
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
-                bool isCurrentHightAboveSaftyH() => Agv.ForkLifter.CurrentHeightPosition > _safty_height;
                 bool _needWaitPoseReach = action == ACTION_TYPE.Unload && Agv.Parameters.CST_READER_TRIGGER;
                 bool _isForkDownCmdSent = false;
-                if (isCurrentHightAboveSaftyH())
+
+                Task goHomeTask = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Task.Run(async () =>
                 {
-                    while (isCurrentHightAboveSaftyH())
+                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Standby Pose", true);
+                    (bool confirm, string message) _goStandyPoseResult = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, false);
+                    ForkGoHomeActionResult.confirm = _goStandyPoseResult.confirm;
+                }) : Task.Run(async () =>
+                {
+                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Home Pose", true);
+                    ForkGoHomeActionResult = await ForkLifter.ForkGoHome(wait_done: false);
+                });
+
+                Task waitPositionReachTarget = Task.Run(async () =>
+                {
+                    Agv.LogDebugMessage($"Start wait fork position reach target", true);
+                    CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(180));
+                    while (_needWaitForkActionDone())
                     {
                         await Task.Delay(1);
-                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                        if (cancel.IsCancellationRequested)
                         {
-                            IsNeedWaitForkHome = false;
+                            ForkGoHomeActionResult.confirm = false;
                             return;
                         }
-                        if (!_isForkDownCmdSent)
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                        {
+                            return;
+                        }
+                    }
+
+                    bool _needWaitForkActionDone()
+                    {
+                        if (_needWaitPoseReach)
                         {
                             if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
                             {
-                                (bool confirm, string message) _goStandyPoseResult = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, _needWaitPoseReach);
-                                ForkGoHomeActionResult.confirm = _goStandyPoseResult.confirm;
+                                double diff = Math.Abs(Agv.ForkLifter.CurrentHeightPosition - Agv.Parameters.ForkAGV.StandbyPose);
+                                return diff > 0.1;
                             }
                             else
-                                ForkGoHomeActionResult = await ForkLifter.ForkGoHome(wait_done: _needWaitPoseReach);
-                            logger.Trace($"[Fork Home Process At Secondary]ForkHome Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
-                        }
-                        _isForkDownCmdSent = ForkGoHomeActionResult.confirm;
-                        if (_isForkDownCmdSent && !_needWaitPoseReach && action == ACTION_TYPE.Load)
-                        {
-                            break; //放貨任務牙叉開始下降後就允許射後不理
-                        }
-                    }
-                    logger.Trace($"[Fork Home Process At Secondary] Fork position now is Under safty height({_safty_height}cm)");
-                }
-                else
-                {
-                    bool isForkPoseInCondition()
-                    {
-                        if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
-                        {
-                            double diff = Math.Abs(Agv.ForkLifter.CurrentHeightPosition - Agv.Parameters.ForkAGV.StandbyPose);
-                            return diff < 0.1;
+                            {
+                                return !Agv.WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
+                            }
                         }
                         else
                         {
-                            return !(Agv.ForkLifter.CurrentHeightPosition > 0.1);
+                            return Agv.ForkLifter.CurrentHeightPosition > _safty_height;
                         }
                     }
-                    while (!isForkPoseInCondition())
+                });
+
+                bool _timeoutDetectFlag = true;
+                Task timeoutDetectTask = Task.Run(async () =>
+                {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    while (sw.Elapsed.TotalSeconds < 60 && _timeoutDetectFlag)
                     {
-                        await Task.Delay(1);
-                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                        {
-                            IsNeedWaitForkHome = false;
-                            return;
-                        }
-                        double goPose = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Agv.Parameters.ForkAGV.StandbyPose : 0;
-                        (bool confirm, string message) go = await ForkLifter.ForkPose(goPose, 1, _needWaitPoseReach);
-                        logger.Trace($"[Fork Pose to zero Process At Secondary] ForkPose Confirm= {ForkGoHomeActionResult.confirm}/Z-Axis Position={Agv.ForkLifter.CurrentForkLocation}");
-
-                        if (!_needWaitPoseReach)
-                        {
-                            logger.Warn("放貨任務牙叉開始下降後就允許射後不理");
-                            break; //放貨任務牙叉開始下降後就允許射後不理
-                        }
+                        if (Agv.GetSub_Status() == SUB_STATUS.RUN && AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.SideLaserTriggerWhenForkMove))
+                            sw.Restart();
+                        await Task.Delay(1000);
                     }
-                    await Task.Delay(200);
-                    logger.Trace($"[Fork Home Process At Secondary] Fork position now is almost at home({Agv.ForkLifter.CurrentHeightPosition}cm)");
+                });
 
+                logger.Trace($"等待回home 或是 牙叉位置低於安全高度任務完成+Timeout Detection..");
+                Task doneTask = await Task.WhenAny(Task.WhenAll(goHomeTask, waitPositionReachTarget), timeoutDetectTask);
+
+                _timeoutDetectFlag = false;
+                if (doneTask == timeoutDetectTask)
+                {
+                    logger.Trace("Timeout 偵測任務返回完成:等待牙叉動作逾時");
+                    ForkGoHomeResultAlarmCode = AlarmCodes.Action_Timeout;
                 }
-                ForkGoHomeActionResult.confirm = true;
+                else
+                {
+                    logger.Trace("牙叉動作完成");
+                    ForkGoHomeResultAlarmCode = AlarmCodes.None;
+                }
                 await Task.Delay(500);
                 await Agv.Laser.SideLasersEnable(false);
-                if (!ForkGoHomeActionResult.confirm)
-                {
-                    Agv.SetSub_Status(SUB_STATUS.DOWN);
-                    ForkGoHomeResultAlarmCode = ForkGoHomeActionResult.alarm_code;
-                    AlarmManager.AddAlarm(ForkGoHomeResultAlarmCode, false);
-                }
             });
 
         }

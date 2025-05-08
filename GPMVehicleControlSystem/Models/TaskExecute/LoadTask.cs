@@ -569,19 +569,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     AlarmCodes _alarmcode = AlarmCodes.None;
                     if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                     {
-                        if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
-                            ForkHomeProcess();
-
+                        ForkHomeProcess();
                         _alarmcode = await AfterBackHomeActions(ActionStatus.SUCCEEDED);
                     }
                     else if (Agv.AGVC.IsRunning)
                     {
-                        if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
-                            ForkHomeProcess();
-
-
+                        ForkHomeProcess();
                         _WaitBackToHomeDonePause.Reset();
-
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                         StartWatchCargoState();
@@ -601,9 +595,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         {
                             logger.Info($"AGV [{action}] -退出至二次定位點任務已終止!(task_abort_alarmcode:{task_abort_alarmcode},Time Spend: {_timeSpend} ms)");
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
+                            IsBackToSecondaryPt = false;
                             return (false, task_abort_alarmcode);
                         }
                         logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
+                        IsBackToSecondaryPt = false;
                         //logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
@@ -777,11 +773,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     await ForkHomeProcess();
                 }
 
-                if (IsNeedWaitForkHome)
+                if (forkGoHomeTask != null)
                 {
-                    logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
                     Task.WaitAll(new Task[] { forkGoHomeTask });
-                    logger.Trace($"[Async Action] Fork is at safe height Now");
+                    if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
+                        return ForkGoHomeResultAlarmCode;
                 }
                 asyncCSTReadCancellationTokenSource.Cancel();
                 isForkReachStandyHeight = true;
