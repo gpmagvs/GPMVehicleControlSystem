@@ -214,6 +214,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (currentMode == clsLaser.LASER_MODE.Bypass || currentMode == clsLaser.LASER_MODE.Bypass16)
             {
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
                 logger.LogWarning($"Fork Vertical Moving, Laser Mode now changed to {currentMode}(Bypass status),switch laser mode to turning");
                 LogDebugMessage($"雷射組數現在為Bypass,但牙叉(Vertical)動作中=> 切換為 Truning 組數!");
                 Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
@@ -319,8 +320,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
-            (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
 
+            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+            (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
 
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
@@ -555,6 +557,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Run(async () =>
             {
                 logger.LogWarning($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
                 ForkLifter.ForkStopAsync(true);

@@ -75,20 +75,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         {
             await horizonForkService.Stop();
             await Task.Delay(100);
-            (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Extend();
+            (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Extend(wait_reach_end);
             if (actionResult.confirm)
-            {
-                if (wait_reach_end)
-                {
-                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    (bool confirm, string message) waitReachLocateResult = await WaitHorizonForkPositionSensorStateMatch(isExtend: true, cts.Token);
-                    if (waitReachLocateResult.confirm)
-                        return (true, AlarmCodes.None);
-                    else
-                        return (false, AlarmCodes.Fork_Arm_Action_Timeout);
-                }
                 return (true, AlarmCodes.None);
-            }
             else
                 return (false, AlarmCodes.Fork_Arm_Action_Error);
         }
@@ -98,61 +87,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         {
             await horizonForkService.Stop();
             await Task.Delay(100);
-            (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Retract();
-
-            if (actionResult.confirm)
-            {
-                if (wait_reach_home)
-                {
-                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-
-                    (bool confirm, string message) waitReachLocateResult = await WaitHorizonForkPositionSensorStateMatch(isExtend: false, cts.Token);
-                    if (waitReachLocateResult.confirm)
-                        return (true, "");
-                    else
-                        return (false, AlarmCodes.Fork_Arm_Action_Timeout.ToString());
-                }
-                return (true, "");
-            }
-            else
-                return actionResult;
+            (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Retract(wait_reach_home);
+            return actionResult;
         }
 
         public override async Task<(bool success, string message)> ForkHorizonResetAsync()
         {
             (bool success, string message) result = await (horizonForkService as HorizonForkActionService).Reset();
             return result;
-        }
-        private async Task<(bool, string)> WaitHorizonForkPositionSensorStateMatch(bool isExtend, CancellationToken cancellationToken)
-        {
-            while (isExtend ? !isExtendSensorStateMatch() : !isShortenSensorStateMatch())
-            {
-                try
-                {
-                    await Task.Delay(1000, cancellationToken);
-                }
-                catch (TaskCanceledException)
-                {
-                    return (false, "Timeout");
-                }
-                catch (Exception ex)
-                {
-                    return (false, ex.Message);
-                }
-            }
-
-            return (true, "");
-
-            bool isExtendSensorStateMatch()
-            {
-                return true;
-            }
-
-            bool isShortenSensorStateMatch()
-            {
-                bool isReachHomePose = forkAGV.WagoDI.GetState(GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule.DI_ITEM.Fork_Home_Pose);
-                return isReachHomePose;
-            }
         }
     }
 }
