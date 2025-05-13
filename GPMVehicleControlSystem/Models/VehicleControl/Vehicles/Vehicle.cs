@@ -683,12 +683,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new VehicleInitializeException("IO 模組異常", true);
                 }
 
-                if (CargoStateStorer.GetCargoType() == CST_TYPE.Unknown)
-                    throw new VehicleInitializeException("初始化檢查失敗-裝載未知類型的貨物", true);
-                if (CargoStateStorer.TrayCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
-                    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
-                if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
-                    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+                //if (CargoStateStorer.GetCargoType() == CST_TYPE.Unknown)
+                //    throw new VehicleInitializeException("初始化檢查失敗-裝載未知類型的貨物", true);
+                //if (CargoStateStorer.TrayCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                //    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
+                //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();

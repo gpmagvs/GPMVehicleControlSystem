@@ -71,8 +71,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal bool IsCargoMountedNormal(bool isLDULDNoEntryNow)
         {
-            if (TryReturnCargoExistByCheckSimulationModeInvoke())
-                return true;
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo))
+                return hasCargo;
 
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
             if (_IsCarrier_Exist_Interupt_SensorMounted)
@@ -82,18 +82,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         }
 
-        private bool TryReturnCargoExistByCheckSimulationModeInvoke()
+        private bool TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo)
         {
-            if (string.IsNullOrEmpty(reader?.ValidCSTID) || OnUseCarrierIdExistToSimulationCargoExistInvoked == null)
+            hasCargo = false;
+            if (OnUseCarrierIdExistToSimulationCargoExistInvoked == null || !OnUseCarrierIdExistToSimulationCargoExistInvoked.Invoke())
                 return false;
-            return OnUseCarrierIdExistToSimulationCargoExistInvoked.Invoke();
+            hasCargo = !string.IsNullOrEmpty(reader?.ValidCSTID);
+            return true;
         }
 
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
 
-            if (TryReturnCargoExistByCheckSimulationModeInvoke())
-                return true;
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo))
+                return hasCargo;
 
             if (_IsCarrier_Exist_Interupt_SensorMounted && IsCargoDetectedByInteruptSensor())
                 return true;
@@ -121,7 +123,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         {
             cargoType = CST_TYPE.None;
 
-            if (TryReturnCargoExistByCheckSimulationModeInvoke())
+
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo) && hasCargo)
             {
                 cargoType = CST_TYPE.Tray;
                 return CARGO_STATUS.HAS_CARGO_NORMAL;
