@@ -166,7 +166,7 @@ static void StaticFileProviderInit(WebApplication app)
         },
         new clsStaticFileProvider()
         {
-             folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/sounds"),
+             folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param","sounds"),
              routePath = "/audios"
         },
         new clsStaticFileProvider()
@@ -187,7 +187,7 @@ static void StaticFileProviderInit(WebApplication app)
         try
         {
             Directory.CreateDirectory(provider.folder);
-            PhysicalFileProvider _FileProvider = new PhysicalFileProvider(provider.folder);
+            PhysicalFileProvider _FileProvider = new PhysicalFileProvider(Path.GetFullPath(provider.folder));
             // Enable displaying browser links.
             app.UseStaticFiles(new StaticFileOptions
             {

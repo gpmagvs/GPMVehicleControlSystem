@@ -160,7 +160,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public ActionStatus ActionStatus
         {
             get => _ActionStatus;
-            private set
+            internal set
             {
                 if (_ActionStatus != value)
                 {

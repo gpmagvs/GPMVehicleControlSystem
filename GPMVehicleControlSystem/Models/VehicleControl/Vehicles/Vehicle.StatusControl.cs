@@ -72,6 +72,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
+                    LogDebugMessage(ex.Message, true);
                 }
                 finally
                 {

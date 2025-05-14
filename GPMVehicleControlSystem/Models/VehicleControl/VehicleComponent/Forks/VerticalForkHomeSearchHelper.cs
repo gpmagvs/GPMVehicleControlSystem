@@ -53,7 +53,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected override async Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1)
         {
             logger.Info($"開始向上搜尋-速度 {speed} ");
-            return await AGVC.verticalActionService.UpSearch(speed);
+            return await AGVC.verticalActionService.UpSearch(speed, startActionInvoke: false);
         }
         protected override async Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
         {
@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override async Task<(bool confirm, string message)> SendChangePoseCmd(double pose, double speed = 0.1)
         {
-            return await AGVC.verticalActionService.Pose(pose, speed, true);
+            return await AGVC.verticalActionService.Pose(pose, speed, true, startActionInvoke: false);
         }
 
         protected override async Task<(bool confirm, string message)> StopAsync()

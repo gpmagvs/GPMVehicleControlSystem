@@ -335,6 +335,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             _ = Task.Run(async () =>
             {
+                LogDebugMessage("EndLaserObsMonitorAsync->HandleAGVCActionSuccess");
                 await EndLaserObsMonitorAsync();
             });
         }
@@ -345,7 +346,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 SetSub_Status(SUB_STATUS.RUN);
                 StartLaserObstacleMonitor();
-                await Task.Delay(300);
                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
             });

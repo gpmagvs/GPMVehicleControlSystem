@@ -237,6 +237,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// 繼續動作
         /// </summary>
         /// <returns></returns>
+        internal async Task<(bool confirm, string message)> ForkResumeAction(AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest lastVerticalForkActionCmd)
+        {
+            return await fork_ros_controller.verticalActionService.ZAxisResume(lastVerticalForkActionCmd);
+        }
+
+
+        /// <summary>
+        /// 繼續動作
+        /// </summary>
+        /// <returns></returns>
         internal async Task<(bool confirm, string message)> ForkResumeAction()
         {
             return await fork_ros_controller.verticalActionService.ZAxisResume();

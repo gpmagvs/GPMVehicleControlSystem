@@ -27,14 +27,14 @@ namespace GPMVehicleControlSystem.Service
                 Models.VehicleControl.Vehicles.Params.clsVehicelParam param = await Vehicle.LoadParameters();
 
                 AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
-                bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param/AlarmList.json"), out string message);
+                bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "AlarmList.json"), out string message);
                 DBhelper.Initialize();
                 AlarmManager.RecoveryAlarmDB();
 
                 await _DeleteOldLogAndAlarm(param.Log.LogKeepDays);
 
                 vehicleCreateFactoryServiceAggregator.logger.LogTrace("Database Initialize done");
-                var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini");
+                var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "IO_Wago.ini");
                 if (!File.Exists(iniFilePath))
                 {
                     string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";

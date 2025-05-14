@@ -535,7 +535,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (!File.Exists(WorkStationSettingsJsonFilePath))
                 {
-                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src/WorkStation.json"), WorkStationSettingsJsonFilePath);
+                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src", "WorkStation.json"), WorkStationSettingsJsonFilePath);
                 }
                 string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
                 if (json == null)
@@ -703,6 +703,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 _RunTaskData = new clsTaskDownloadData();
                 HandshakeStatusText = "";
                 IsInitialized = IsHandshaking = false;
+
                 InitializingStatusText = "初始化開始";
                 SetSub_Status(SUB_STATUS.Initializing);
 

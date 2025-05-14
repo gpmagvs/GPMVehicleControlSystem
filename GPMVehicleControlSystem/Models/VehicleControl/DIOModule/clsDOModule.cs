@@ -120,21 +120,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         }
 
 
-        public override void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        public override bool SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
             try
             {
                 if (!Indexs.TryGetValue(signal, out int index))
                 {
                     logger.Warn($"{signal} 註冊事件失敗因為未定義該訊號的OUTPUT位置");
-                    return;
+                    return false;
                 }
 
                 VCSOutputs[Indexs[signal]].OnStateChanged += handler;
+                return true;
             }
             catch (Exception ex)
             {
                 logger.Error("Digital Output - [" + signal + "] Sbuscribe Error.", ex);
+                return false;
             }
 
         }

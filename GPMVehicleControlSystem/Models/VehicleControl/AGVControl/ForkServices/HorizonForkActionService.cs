@@ -3,7 +3,6 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using NLog;
 using RosSharp.RosBridgeClient;
-
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 {
     public class HorizonForkActionService : ForkActionServiceBase
@@ -37,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             return commandResponseResult;
         }
 
-        public override async Task<(bool confirm, string message)> Home(double speed = 1, bool wait_done = true)
+        public override async Task<(bool confirm, string message)> Home(double speed = 1, bool wait_done = true, bool startActionInvoke = true)
         {
             return await Retract(true);
         }
@@ -117,6 +116,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             {
                 return (false, ex.Message);
             }
+        }
+
+        protected override async Task<(bool success, string message)> WaitActionDone(CancellationToken token, int timeout = 300)
+        {
+            double aim = CurrentForkActionRequesting.command == "extend" ? vehicle.Parameters.ForkAGV.HorizonArmConfigs.ExtendPose : vehicle.Parameters.ForkAGV.HorizonArmConfigs.ShortenPose;
+            wait_action_down_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+            while (Math.Abs(aim - driverState.position) >= 2)
+            {
+                if (wait_action_down_cts.IsCancellationRequested)
+                    return (false, "WaitActionDone Timeout");
+                await Task.Delay(1);
+            }
+            return (true, "");
         }
     }
 }

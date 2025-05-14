@@ -117,6 +117,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         internal bool PlayAudio(string audioPath, out string errorMessage)
         {
             errorMessage = "";
+            audioPath = Path.GetFullPath(audioPath);
             try
             {
                 if (!File.Exists(audioPath))

@@ -29,6 +29,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {
@@ -230,20 +231,22 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             try
             {
+                Agv.StatusLighter.RUN(10);
+                logger.Trace($"Do Order_ {RunningTaskData.Task_Name}:" +
+                    $"\r\nAction:{action}" +
+                    $"\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}" +
+                    $"\r\nHeight:{RunningTaskData.Height}", false);
+
                 Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 task_abort_alarmcode = AlarmCodes.None;
                 await Task.Delay(10);
                 if (action != ACTION_TYPE.None)
                 {
-                    Agv.SetSub_Status(SUB_STATUS.RUN);
+                    await Agv.SetSub_Status(SUB_STATUS.RUN);
                     BuzzerPlayMusic(action);
                 }
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
-                if (!await LaserSettingBeforeTaskExecute())
-                {
-                    return new List<AlarmCodes> { AlarmCodes.Laser_Mode_value_fail };
-                }
                 Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
@@ -251,20 +254,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     return new List<AlarmCodes> { checkResult.alarm_code };
                 }
                 await Task.Delay(10);
-                logger.Trace($"Do Order_ {RunningTaskData.Task_Name}:" +
-                    $"\r\nAction:{action}" +
-                    $"\r\n起始角度{RunningTaskData.ExecutingTrajecory.First().Theta}, 終點角度 {RunningTaskData.ExecutingTrajecory.Last().Theta}" +
-                    $"\r\nHeight:{RunningTaskData.Height}", false);
 
                 if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer)
                 {
-                    Agv.SetSub_Status(SUB_STATUS.RUN);
+                    await Agv.SetSub_Status(SUB_STATUS.RUN);
                     (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(height, action);
                     if (!forkActionsResult.success)
-                    {
                         return forkActionsResult.alarm_codes;
-                    }
+                    if (action != ACTION_TYPE.None)
+                        await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Secondary);
                 }
+
+                await Task.Delay(300);
+
                 if (AGVCActionStatusChaged != null)
                 {
                     logger.Warn($"車控 AGVCActionStatusChaged event 註冊狀態未清空=>自動清空");
@@ -275,13 +277,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     logger.Error($"車載狀態錯誤:{Agv.GetSub_Status()}");
                     var _task_abort_alarmcode = IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : AlarmCodes.AGV_State_Cant_do_this_Action;
-
                     return new List<AlarmCodes> { IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode };
                 }
 
                 SendActionCheckResult agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Confirming);
                 //await Agv.WagoDO.SetState(DO_ITEM.Horizon_Motor_Free, true);
-                if ((action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && !IsDestineStationBuffer && Agv.Parameters.LDULD_Task_No_Entry)
+                if (Agv.Parameters.LDULD_Task_No_Entry && (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload) && !IsDestineStationBuffer)
                 {
                     logger.Trace("空取空放!");
                     agvc_response = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION);
@@ -713,7 +714,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
                 bool _needWaitPoseReach = action == ACTION_TYPE.Unload && Agv.Parameters.CST_READER_TRIGGER;
-                bool _isForkDownCmdSent = false;
 
                 Task goHomeTask = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Task.Run(async () =>
                 {

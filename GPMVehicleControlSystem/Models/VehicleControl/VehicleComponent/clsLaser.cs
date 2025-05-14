@@ -294,14 +294,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task AllLaserActive()
         {
-
-            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
-                    {
-                        new DOModifyWrapper(DO_ITEM.Right_LsrBypass.GetIOSignalOfModule(), false),
-                        new DOModifyWrapper(DO_ITEM.Left_LsrBypass.GetIOSignalOfModule(),  false),
-                    });
-            await DOModule.SetState(request);
             await SideLasersEnable(true);
+            await FrontBackLasersEnable(true);
         }
 
 

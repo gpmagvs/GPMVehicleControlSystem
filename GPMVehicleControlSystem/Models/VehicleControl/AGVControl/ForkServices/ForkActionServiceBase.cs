@@ -92,6 +92,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             };
             return await CallVerticalCommandService(request);
         }
+
+        public virtual async Task<(bool confirm, string message)> StopWithoutCallService()
+        {
+            try
+            {
+                WaitActionDoneFlag = false;
+                return (true, "");
+            }
+            finally
+            {
+                try
+                {
+                    wait_action_down_cts?.Cancel();
+                    wait_action_down_cts?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+        }
+
         public virtual async Task<(bool confirm, string message)> Stop()
         {
             try
@@ -120,7 +141,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             }
             //return await WaitStopActionDone();
         }
-        public virtual async Task<(bool confirm, string message)> Home(double speed = 1.0, bool wait_done = true)
+        public virtual async Task<(bool confirm, string message)> Home(double speed = 1.0, bool wait_done = true, bool startActionInvoke = true)
         {
             WaitActionDoneFlag = wait_done;
             HSafeSetting = OnForkStartGoHome == null ? 0 : OnForkStartGoHome();
@@ -135,16 +156,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
             if (!wait_done)
             {
-                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request, startActionInvoke);
                 return callSerivceResult;
             }
             else
             {
-                return await CallServiceAndWaitActionDone(request);
+                return await CallServiceAndWaitActionDone(request, startActionInvoke: startActionInvoke);
             }
         }
 
-        public async Task<(bool success, string message)> Pose(double target, double speed = 1.0, bool wait_done = true)
+        public async Task<(bool success, string message)> Pose(double target, double speed = 1.0, bool wait_done = true, bool startActionInvoke = true)
         {
             PoseTarget = target;
             Speed = speed;
@@ -158,15 +179,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             };
             if (!wait_done)
             {
-                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request);
+                (bool confirm, string message) callSerivceResult = await CallVerticalCommandService(request, startActionInvoke);
                 return callSerivceResult;
             }
             else
             {
-                return await CallServiceAndWaitActionDone(request);
+                return await CallServiceAndWaitActionDone(request, startActionInvoke: startActionInvoke);
             }
         }
-        public async Task<(bool confirm, string message)> Down(double speed = 1.0)
+        public async Task<(bool confirm, string message)> Down(double speed = 1.0, bool startActionInvoke = true)
         {
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -174,9 +195,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 command = "down",
                 speed = speed,
             };
-            return await CallVerticalCommandService(request);
+            return await CallVerticalCommandService(request, startActionInvoke);
         }
-        public async Task<(bool confirm, string message)> Up(double speed = 1.0)
+        public async Task<(bool confirm, string message)> Up(double speed = 1.0, bool startActionInvoke = true)
         {
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -184,9 +205,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 command = "up",
                 speed = speed,
             };
-            return await CallVerticalCommandService(request);
+            return await CallVerticalCommandService(request, startActionInvoke);
         }
-        public async Task<(bool confirm, string message)> UpSearch(double speed = 1.0)
+        public async Task<(bool confirm, string message)> UpSearch(double speed = 1.0, bool startActionInvoke = true)
         {
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -194,9 +215,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 command = "up_search",
                 speed = speed,
             };
-            return await CallVerticalCommandService(request);
+            return await CallVerticalCommandService(request, startActionInvoke);
         }
-        public async Task<(bool confirm, string message)> DownSearch(double speed = 1.0)
+        public async Task<(bool confirm, string message)> DownSearch(double speed = 1.0, bool startActionInvoke = true)
         {
             VerticalCommandRequest request = new VerticalCommandRequest
             {
@@ -204,9 +225,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 command = "down_search",
                 speed = speed,
             };
-            return await CallVerticalCommandService(request);
+            return await CallVerticalCommandService(request, startActionInvoke);
         }
 
+        public async Task<(bool confirm, string message)> ZAxisResume(VerticalCommandRequest lastVerticalForkActionCmd)
+        {
+            await Task.Delay(800);
+            logger.Warn($"Fork {lastVerticalForkActionCmd.command} resume to action");
+            return await CallVerticalCommandService(lastVerticalForkActionCmd);
+        }
         public async Task<(bool confirm, string message)> ZAxisResume()
         {
             await Task.Delay(800);
@@ -222,10 +249,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                                                 || request.command == "down" || request.command == "down_search";
         }
 
-        internal async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request)
+        internal async Task<(bool confirm, string message)> CallVerticalCommandService(VerticalCommandRequest request, bool startActionInvoke = true)
         {
             try
             {
+                if (request.command != "stop")
+                    BeforeStopActionRequesting = request.Clone();
+                else
+                    BeforeStopActionRequesting = new VerticalCommandRequest();
 
                 logger.Info($"Try rosservice call {CommandActionServiceName} : {request.ToJson(Newtonsoft.Json.Formatting.None)}");
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(CommandActionServiceName, request, 1000);
@@ -236,18 +267,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 logger.Info($"Call {CommandActionServiceName} response: {response.ToJson(Newtonsoft.Json.Formatting.None)}");
                 if (response.confirm)
                 {
-                    if (IsStartRunRequesting(request) || (CurrentForkActionRequesting.command == "stop" && request.command == "resume"))
+                    if (startActionInvoke && IsStartRunRequesting(request) || (CurrentForkActionRequesting.command == "stop" && request.command == "resume"))
                     {
                         OnActionStart?.Invoke(this, request);
                     }
                     if (request.command == "stop")
                     {
-                        BeforeStopActionRequesting = CurrentForkActionRequesting.command == "stop" ? BeforeStopActionRequesting : CurrentForkActionRequesting.Clone();
                         OnActionDone?.Invoke(this, EventArgs.Empty);
                     }
-                    else
-                        BeforeStopActionRequesting = new VerticalCommandRequest();//除了停止指令以外，需清空 BeforeForkStopActionRequesting 
-
                     CurrentForkActionRequesting = request;
                 }
                 return (response.confirm, "");
@@ -259,10 +286,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             }
         }
 
-        internal async Task<(bool confirm, string message)> CallServiceAndWaitActionDone(VerticalCommandRequest request, int timeout = 80)
+        internal async Task<(bool confirm, string message)> CallServiceAndWaitActionDone(VerticalCommandRequest request, int timeout = 80, bool startActionInvoke = true)
         {
             wait_action_down_cts = new CancellationTokenSource();
-            var requestResult = await CallVerticalCommandService(request);
+            var requestResult = await CallVerticalCommandService(request, startActionInvoke);
             if (!requestResult.confirm)
                 return requestResult;
             return await WaitActionDone(wait_action_down_cts.Token, timeout);
