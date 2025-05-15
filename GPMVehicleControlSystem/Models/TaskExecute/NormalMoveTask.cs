@@ -145,8 +145,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
         }
-        public override Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
+        public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            await LaserSettingBeforeTaskExecute();
             if (Agv.Parameters.CargoBiasDetectionWhenNormalMoving && Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) == CARGO_STATUS.HAS_CARGO_NORMAL)
             {
                 if (!Agv.IsCargoBiasDetecting)
@@ -160,7 +161,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             //Task.Run(() => WatchVirtualPtAndStopWorker());
             Agv.TryControlAutoDoor(Agv.Navigation.LastVisitedTag);
-            return base.BeforeTaskExecuteActions();
+            return await base.BeforeTaskExecuteActions();
         }
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()

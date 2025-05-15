@@ -16,6 +16,7 @@ using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
@@ -224,8 +225,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SOUNDS _soundBeforeStop = BuzzerPlayer.SoundPlaying;
             LogDebugMessage("因牙叉升降動作開始監視側邊雷射狀態", true);
             _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
-
+            bool lastLsrTriggerState = false;
             await Task.Delay(500);
+            Stopwatch triggerTimer = new Stopwatch();
+            const int durationMs = 250;
 
             while (!_forkVerticalMoveObsProcessCancellationTokenSource.IsCancellationRequested)
             {
@@ -236,47 +239,87 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     bool isRightSideLaserBypass = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
                     bool isLeftSideLaserBypass = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
 
-                    bool isLsrRightArea1Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.RightProtection_Area_Sensor_1) && !isRightSideLaserBypass && !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_1);
-                    bool isLsrRightArea2Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.RightProtection_Area_Sensor_2) && !isRightSideLaserBypass && !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_2);
-                    bool isLsrRightArea3Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.RightProtection_Area_Sensor_3) && !isRightSideLaserBypass && !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3);
 
-                    bool isLsrLeftArea1Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.LeftProtection_Area_Sensor_1) && !isLeftSideLaserBypass && !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_1);
-                    bool isLsrLeftArea2Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.LeftProtection_Area_Sensor_2) && !isLeftSideLaserBypass && !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_2);
-                    bool isLsrLeftArea3Trigger = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.LeftProtection_Area_Sensor_3) && !isLeftSideLaserBypass && !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                    bool _AnySideLaserTrigger()
+                    {
+                        Dictionary<DO_ITEM, DI_ITEM[]> monitorMap = new Dictionary<DO_ITEM, DI_ITEM[]>() {
 
-                    bool isAnySideLaserTriggering = isLsrLeftArea1Trigger || isLsrLeftArea2Trigger || isLsrLeftArea3Trigger ||
-                        isLsrRightArea1Trigger || isLsrRightArea2Trigger || isLsrRightArea3Trigger;
+                            { DO_ITEM.Right_LsrBypass , new DI_ITEM[] { DI_ITEM.RightProtection_Area_Sensor_3 } },
+                            { DO_ITEM.Left_LsrBypass , new DI_ITEM[] { DI_ITEM.LeftProtection_Area_Sensor_3 } }
+                        };
+
+                        foreach (var keypair in monitorMap)
+                        {
+                            DO_ITEM bypassOutput = keypair.Key;
+                            bool isBypassed = WagoDO.GetState(bypassOutput);
+
+                            if (isBypassed)
+                                continue;
+
+                            foreach (var input in keypair.Value)//觀世input薩??
+                            {
+                                if (!WagoDI.VCSInputs.Any(i => i.Input == input))
+                                    continue;
+
+                                if (!WagoDI.GetState(input))
+                                    return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    bool isAnySideLaserTriggering = _AnySideLaserTrigger();
 
                     if (isAnySideLaserTriggering && !_isStopCmdCalled)
                     {
-                        lastVerticalForkActionCmd = _fork_car_controller.verticalActionService.CurrentForkActionRequesting.Clone();
-                        _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
-                        _isStopCmdCalled = true;
-                        if (!IsLaserMonitoring)
+
+                        if (!lastLsrTriggerState)
                         {
-                            _soundBeforeStop = BuzzerPlayer.SoundPlaying;
-                            BuzzerPlayer.Alarm();
-                            AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
+                            triggerTimer.Restart();
                         }
-                        await ForkLifter.ForkStopAsync();
-                        LogDebugMessage($"雷射組數觸發，牙叉停止動作!", true);
+                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        {
+
+                            lastVerticalForkActionCmd = _fork_car_controller.verticalActionService.CurrentForkActionRequesting.Clone();
+                            _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
+                            _isStopCmdCalled = true;
+                            if (!IsLaserMonitoring)
+                            {
+                                _soundBeforeStop = BuzzerPlayer.SoundPlaying;
+                                BuzzerPlayer.Alarm();
+                                AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
+                            }
+                            await ForkLifter.ForkStopAsync();
+                            LogDebugMessage($"雷射組數觸發，牙叉停止動作!", true);
+                        }
                     }
                     else if (!isAnySideLaserTriggering && _isStopCmdCalled)
                     {
-                        _isStopCmdCalled = false;
-                        _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
-                        if (lastVerticalForkActionCmd != null)
+
+                        if (lastLsrTriggerState)
                         {
-                            if (!IsLaserMonitoring)
-                            {
-                                BuzzerPlayer.Stop();
-                                BuzzerPlayer.Play(_soundBeforeStop);
-                                AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
-                            }
-                            await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
-                            LogDebugMessage($"雷射復原，牙叉恢復動作!", true);
+                            triggerTimer.Restart();
                         }
+                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        {
+                            _isStopCmdCalled = false;
+                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+                            if (lastVerticalForkActionCmd != null)
+                            {
+                                if (!IsLaserMonitoring)
+                                {
+                                    BuzzerPlayer.Stop();
+                                    BuzzerPlayer.Play(_soundBeforeStop);
+                                    AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
+                                }
+                                await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
+                                LogDebugMessage($"雷射復原，牙叉恢復動作!", true);
+                            }
+                        }
+
                     }
+
+                    lastLsrTriggerState = isAnySideLaserTriggering;
 
                 }
                 catch (TaskCanceledException ex)

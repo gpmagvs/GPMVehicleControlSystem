@@ -488,17 +488,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             {
                 try
                 {
-                    if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
-                    {
+                    //if (cmd == ROBOT_CONTROL_CMD.SPEED_Reconvery && OnSpeedRecoveryRequesting != null)
+                    //{
 
-                        (bool confirmed, string message) = OnSpeedRecoveryRequesting();
-                        if (!confirmed && CheckLaserStatus)
-                        {
-                            logger.Info($"[ROBOT_CONTROL_CMD] {message}");
-                            _confirmed = false;
-                            return;
-                        }
-                    }
+                    //    (bool confirmed, string message) = OnSpeedRecoveryRequesting();
+                    //    if (!confirmed && CheckLaserStatus)
+                    //    {
+                    //        logger.Info($"[ROBOT_CONTROL_CMD] {message}");
+                    //        _confirmed = false;
+                    //        return;
+                    //    }
+                    //}
 
                     ComplexRobotControlCmdRequest req = new ComplexRobotControlCmdRequest()
                     {

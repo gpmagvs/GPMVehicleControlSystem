@@ -319,10 +319,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         if (task_abort_alarmcode != AlarmCodes.None)
                             return new List<AlarmCodes> { task_abort_alarmcode };
 
-                        await Agv.Laser.AllLaserDisable();
                         await Task.Delay(100);
                         await LaserSettingBeforeTaskExecute();
-
                         _wait_agvc_action_done_pause.Reset();
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
@@ -652,7 +650,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <summary>
         /// 任務開始前的雷射設定
         /// </summary>
-        public abstract Task<bool> LaserSettingBeforeTaskExecute();
+        public virtual async Task<bool> LaserSettingBeforeTaskExecute()
+        {
+            await Agv.Laser.AllLaserDisable();
+            return true;
+        }
 
         internal virtual void Abort(AlarmCodes alarm_code = AlarmCodes.None)
         {

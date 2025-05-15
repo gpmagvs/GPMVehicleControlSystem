@@ -28,6 +28,7 @@ using GPMVehicleControlSystem.Models.TaskExecute;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using YamlDotNet.Core.Tokens;
 using GPMVehicleControlSystem.Service;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -149,6 +150,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void AGVC_OnSpeedControlChanged(object? sender, ROBOT_CONTROL_CMD e)
         {
+            memoryCache.Set("CurrentRobotSpeedCommand", e.ToString());
+            frontendHubContext.Clients.All.SendAsync("CurrentRobotSpeedCommand", e.ToString());
             Task.Factory.StartNew(async () =>
             {
                 LogDebugMessage($"當前速度控制->{e}");
@@ -553,7 +556,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private (bool confirmed, string message) HandleSpeedReconveryRequesetRaised()
         {
             if (!IsAllLaserNoTrigger())
+            {
+                LogDebugMessage($"要求車控速度恢復但尚有雷射觸發中", true);
                 return (false, "要求車控速度恢復但尚有雷射觸發中");
+            }
             return (true, "");
         }
 

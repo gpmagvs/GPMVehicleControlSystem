@@ -729,6 +729,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Run(async () =>
                     {
                         IsLaserMonitoring = true;
+                        LaserStateDebouncer debouncer = Laser.Mode == LASER_MODE.Secondary ? new LaserStateDebouncer(1, 1) : new LaserStateDebouncer(250, 100); // 例如要持續500ms才認定有效
+
+                        Laser.OnLaserModeChanged += (sender, mode) =>
+                        {
+                            debouncer = mode == LASER_MODE.Secondary ? new LaserStateDebouncer(1, 1) : new LaserStateDebouncer(250, 100);
+                        };
+
                         while (!IsCanceled() && !IsLaserObsMonitorNotNeedActive())
                         {
                             try
@@ -737,6 +744,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     break;
 
                                 var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+
+                                if (!debouncer.IsStable(cmdGet))
+                                {
+                                    await Task.Delay(10, LaserObsMonitorCancel.Token);
+                                    continue;
+                                }
+
                                 if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
                                 {
                                     if (IsCanceled() || IsLaserObsMonitorNotNeedActive())
@@ -826,6 +840,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
             }, 10);
+        }
+
+
+        public class LaserStateDebouncer
+        {
+            private Stopwatch _stateTimer = new Stopwatch();
+            private ROBOT_CONTROL_CMD _lastSpeedControlCmd;
+            private readonly int _stableDurationMs;
+            private readonly int _stableDurationMsForSlowDownCmd;
+
+            public LaserStateDebouncer(int stableDurationMs, int stableDurationMsForSlowDownCmd)
+            {
+                _stableDurationMs = stableDurationMs;
+                _stableDurationMsForSlowDownCmd = stableDurationMsForSlowDownCmd;
+                _lastSpeedControlCmd = ROBOT_CONTROL_CMD.STOP;
+            }
+
+            public bool IsStable(ROBOT_CONTROL_CMD currentState)
+            {
+                if (currentState != _lastSpeedControlCmd)
+                {
+                    _lastSpeedControlCmd = currentState;
+                    _stateTimer.Restart();
+                    return false;
+                }
+                int _durationMs = currentState == ROBOT_CONTROL_CMD.DECELERATE ? _stableDurationMsForSlowDownCmd : _stableDurationMs;
+                if (_stateTimer.ElapsedMilliseconds >= _durationMs)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            public ROBOT_CONTROL_CMD CurrentStableState => _lastSpeedControlCmd;
         }
 
         protected virtual bool IsLaserObsMonitorNotNeedActive()

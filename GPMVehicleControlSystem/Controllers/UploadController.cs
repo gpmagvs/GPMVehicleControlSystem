@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers
 {
+    using GPMVehicleControlSystem.Models;
     using GPMVehicleControlSystem.Service;
     using Microsoft.AspNetCore.Mvc;
     using NLog;
@@ -92,6 +93,7 @@ namespace GPMVehicleControlSystem.Controllers
 
                 if (result.confirm)
                 {
+                    StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN);
                     _ = _updateService.BrocastRestartSystemCountDownNotify("系統更新", 5);
                 }
 
