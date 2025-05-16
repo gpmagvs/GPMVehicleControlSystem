@@ -260,6 +260,21 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
             await Agv.Laser.SideLasersEnable(false);
+
+            if (!RunningTaskData.GoTOHomePoint && isNeedArmExtend && Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                 {
+                     var result = await ForkHorizonExendAction();
+
+                     if (!result.success)
+                     {
+                         Agv.SoftwareEMO(result.alarmcode);
+                     }
+                 });
+            }
+
+
             return await base.TransferTaskToAGVC();
         }
 
@@ -893,26 +908,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (ForkLifter == null)
                 return (true, AlarmCodes.None);
 
-
             bool arm_move_Done = false;
             (bool confirm, string message) armMoveing = (false, "等待DO輸出");
 
             if (isNeedArmExtend)
             {
-                Agv.HandshakeStatusText = "AGV牙叉伸出中";
-                logger.Trace($"FORK ARM Extend Out");
-                var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
-                arm_move_Done = _arm_move_result.confirm;
-                if (!arm_move_Done)
+                if (!Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
                 {
-                    logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
-                    return (false, _arm_move_result.Item2);
+                    var forkExtendResult = await ForkHorizonExendAction();
+                    if (!forkExtendResult.success)
+                        return forkExtendResult;
                 }
-                else if (!ForkLifter.IsForkArmExtendLocationCorrect)
+                else
                 {
-                    return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    //checkPosition
+                    while (!ForkLifter.IsForkArmExtendLocationCorrect)
+                    {
+                        await Task.Delay(1000);
+                    }
                 }
-                logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
+
                 await Task.Delay(1000);
                 //check arm position 
             }
@@ -929,6 +944,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 
+            return (true, AlarmCodes.None);
+        }
+
+        private async Task<(bool success, AlarmCodes alarmcode)> ForkHorizonExendAction()
+        {
+            bool arm_move_Done = false;
+            Agv.HandshakeStatusText = "AGV牙叉伸出中";
+            logger.Trace($"FORK ARM Extend Out");
+            var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
+            arm_move_Done = _arm_move_result.confirm;
+            if (!arm_move_Done)
+            {
+                logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
+                return (false, _arm_move_result.Item2);
+            }
+            else if (!ForkLifter.IsForkArmExtendLocationCorrect)
+            {
+                return (false, AlarmCodes.Fork_Arm_Pose_Error);
+            }
+            logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
             return (true, AlarmCodes.None);
         }
 

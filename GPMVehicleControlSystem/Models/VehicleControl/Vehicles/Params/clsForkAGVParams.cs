@@ -74,5 +74,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
     {
         public double ExtendPose { get; set; } = 4999;
         public double ShortenPose { get; set; } = 1;
+        public bool ExtendWhenStartMoveToPort { get; set; } = false;
     }
 }

@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+﻿//#define wait_action_done_use_position
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using NLog;
@@ -120,6 +121,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         protected override async Task<(bool success, string message)> WaitActionDone(CancellationToken token, int timeout = 300)
         {
+#if wait_action_done_use_position
             double aim = CurrentForkActionRequesting.command == "extend" ? vehicle.Parameters.ForkAGV.HorizonArmConfigs.ExtendPose : vehicle.Parameters.ForkAGV.HorizonArmConfigs.ShortenPose;
             wait_action_down_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             while (Math.Abs(aim - driverState.position) >= 2)
@@ -129,6 +131,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
                 await Task.Delay(1);
             }
             return (true, "");
+#else
+            return await base.WaitActionDone(token, timeout);
+#endif
+
+
         }
     }
 }

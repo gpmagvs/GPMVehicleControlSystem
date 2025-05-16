@@ -139,22 +139,22 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             HorizonForkActionService service = (HorizonForkActionService)(forkAgv.AGVC as ForkAGVController).HorizonActionService;
 
             if (action == "home" || action == "orig")
-            {
                 result = await service.Home();
-            }
 
             if (action == "stop")
                 result = await service.Stop();
 
             if (action == "init")
-            {
                 result = await service.Init();
-            }
 
             if (action == "up_limit")
                 result = await service.Extend();
+
             if (action == "down_limit")
                 result = await service.Retract();
+
+            if (action == "pose")
+                result = await service.Pose(target: pose, speed: speed);
 
             return Ok(new
             {
