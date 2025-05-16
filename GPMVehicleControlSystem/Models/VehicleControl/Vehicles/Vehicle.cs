@@ -37,6 +37,7 @@ using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 using Microsoft.Extensions.Caching.Memory;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -77,7 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             location = clsDriver.DRIVER_LOCATION.FORK
         };
-
+        private Debouncer _alarmResetDebouncer = new Debouncer();
         /// <summary>
         /// 工位數據
         /// </summary>
@@ -1043,7 +1044,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 AGVC.EmergencyStop(bypass_stopped_check: true); //
             });
-            await _softwareEmoSemaphoreSlim.WaitAsync();
+            //await _softwareEmoSemaphoreSlim.WaitAsync();
             try
             {
                 logger.LogCritical($"EMO-{alarmCode}");
@@ -1092,7 +1093,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-                _softwareEmoSemaphoreSlim.Release();
+                //_softwareEmoSemaphoreSlim.Release();
 
                 Task.Factory.StartNew(async () =>
                 {
@@ -1102,30 +1103,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-
+        Debouncer actionFinishFeedbackWhenEmoDebouncer = new Debouncer();
         private void TryFeedbackActionFinisInEmoMoment()
         {
-            Task.Run(async () =>
+            actionFinishFeedbackWhenEmoDebouncer.Debounce(() =>
             {
-                CancellationTokenSource cancell = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                while (!AGVS.Connected)
+                Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
-                    if (cancell.IsCancellationRequested)
+                    CancellationTokenSource cancell = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    while (!AGVS.Connected)
                     {
-                        AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
-                        return;
+                        await Task.Delay(1000);
+                        if (cancell.IsCancellationRequested)
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
+                            return;
+                        }
                     }
-                }
-                try
-                {
-                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex.Message, ex);
-                }
-            });
+                    try
+                    {
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex.Message, ex);
+                    }
+                });
+            }, 250);
         }
 
         protected virtual void HandshakeIOOff()
@@ -1198,56 +1202,54 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
-        protected SemaphoreSlim _ResetAlarmSemaphoreSlim = new SemaphoreSlim(1, 1);
         internal virtual async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            await _ResetAlarmSemaphoreSlim.WaitAsync();
-            try
+            _alarmResetDebouncer.Debounce(async () =>
             {
-                if (IsResetAlarmWorking)
-                    return;
-
-                IsResetAlarmWorking = true;
-                BuzzerPlayer.Stop("ResetAlarmsAsync");
-                AlarmManager.ClearAlarm();
-                AGVAlarmReportable.ResetAlarmCodes();
-                AGVS?.ResetErrors();
-                Laser.ResetSickApplicationError();
-                IsMotorReseting = false;
-                await ResetMotor(IsTriggerByButton);
-                _ = Task.Factory.StartNew(async () =>
+                try
                 {
-                    await Task.Delay(1000);
-                    if (AGVC.ActionStatus == ActionStatus.ACTIVE && GetSub_Status() != SUB_STATUS.DOWN && GetSub_Status() != SUB_STATUS.IDLE)
+                    IsResetAlarmWorking = true;
+                    BuzzerPlayer.Stop("ResetAlarmsAsync");
+                    AlarmManager.ClearAlarm();
+                    AGVAlarmReportable.ResetAlarmCodes();
+                    AGVS?.ResetErrors();
+                    Laser.ResetSickApplicationError();
+                    IsMotorReseting = false;
+                    await ResetMotor(IsTriggerByButton);
+                    _ = Task.Factory.StartNew(async () =>
                     {
-                        bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-                        if (isObstacle)
+                        await Task.Delay(1000);
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE && GetSub_Status() != SUB_STATUS.DOWN && GetSub_Status() != SUB_STATUS.IDLE)
                         {
-                            BuzzerPlayer.Alarm();
-                            return;
-                        }
-                        else
-                        {
-                            if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
+                            bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                            if (isObstacle)
+                            {
+                                BuzzerPlayer.Alarm();
+                                return;
+                            }
                             else
-                                BuzzerPlayer.Action();
-                            return;
+                            {
+                                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                                    BuzzerPlayer.Move();
+                                else
+                                    BuzzerPlayer.Action();
+                                return;
+                            }
                         }
-                    }
 
-                });
-                await Task.Delay(500);
-                IsResetAlarmWorking = false;
-            }
-            catch (Exception ex)
-            {
-                logger.LogCritical(ex, ex.Message);
-            }
-            finally
-            {
-                _ResetAlarmSemaphoreSlim.Release();
-            }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogCritical(ex, ex.Message);
+                }
+                finally
+                {
+                    IsResetAlarmWorking = false;
+                    LogDebugMessage($"Clear alarms method invoked done.", true);
+                }
+
+            }, 400);
 
         }
         protected private async Task<bool> SetMotorStateAndDelay(DO_ITEM item, bool state, int delay = 10)
@@ -1276,12 +1278,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return true;
 
                 logger.LogTrace($"Reset Motor Process Start (caller:{caller_class_name})");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
-                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, true, 100)) throw new Exception($"Horizon_Motor_Free set true fail");
+                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, false, 100)) throw new Exception($"Horizon_Motor_Reset set false fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
-                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
+
                 logger.LogTrace("Reset Motor Process End");
 
                 IsMotorReseting = false;
@@ -1298,6 +1298,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsMotorReseting = false;
                 logger.LogError(ex, ex.Message);
                 return false;
+            }
+            finally
+            {
+                _ = SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false);
             }
 
         }

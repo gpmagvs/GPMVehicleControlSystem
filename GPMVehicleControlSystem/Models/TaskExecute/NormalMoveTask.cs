@@ -90,6 +90,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 _wait_agvc_action_done_pause.Set();
                 logger.Trace($"[移動]任務-Replan.{ex.Message}=>{task_abort_alarmcode}.]");
             }
+            finally
+            {
+                if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
+                {
+                    Agv.ForkLifter.EarlyMoveUpState.Reset();
+                    Agv.Navigation.OnLastVisitedTagUpdate -= Agv.WatchReachNextWorkStationSecondaryPtHandler;
+                }
+            }
         }
         private bool DetermineIsNeedDoForkAction(clsTaskDownloadData taskDownloadData, out int DoActionTag, out int nextWorkStationPointTag)
         {

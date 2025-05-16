@@ -455,10 +455,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleResetButtonPush(object? sender, EventArgs e)
         {
-            BuzzerPlayer.Stop("HandleResetButtonPush");
-            await TryResetMotors();
-            AlarmManager.ClearAlarm();
-            BuzzerPlayer.Stop("HandleResetButtonPush");
+            ResetAlarmsAsync(true);
+            //BuzzerPlayer.Stop("HandleResetButtonPush");
+            //await TryResetMotors();
+            //AlarmManager.ClearAlarm();
+            //BuzzerPlayer.Stop("HandleResetButtonPush");
 
         }
 
