@@ -999,6 +999,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)
         {
+            if (GetSub_Status() == SUB_STATUS.DOWN)
+            {
+                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                return;
+            }
             Task.Run(async () =>
             {
                 int NextSecondartPointTag = NormalMoveTask.NextSecondartPointTag;

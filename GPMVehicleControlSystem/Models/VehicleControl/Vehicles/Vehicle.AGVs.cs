@@ -239,6 +239,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //_TaskDownloadHandleDebouncer.Debounce(() => { }, 1, "CycleStop");
             TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
             logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
+            Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
 
             if (mode == RESET_MODE.ABORT)
             {
