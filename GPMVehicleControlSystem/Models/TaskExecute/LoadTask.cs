@@ -634,7 +634,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             finally
             {
-                //_WaitBackToHomeDonePause.Set();
+                if (Agv.GetSub_Status() != SUB_STATUS.DOWN)
+                    Agv.IsHandshaking = false;
             }
         }
 
@@ -1065,7 +1066,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
+            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5, invokeActionStart: false);
             _wait_fork_reach_position_cst.Cancel();
             return result;
         }

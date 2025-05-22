@@ -138,7 +138,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         }
         protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5);
+            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5, invokeActionStart: false);
             return forkHeightChangeReuslt;
         }
 

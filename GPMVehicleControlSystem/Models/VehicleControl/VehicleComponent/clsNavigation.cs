@@ -210,7 +210,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         protected override void _CommunicationErrorJudge()
         {
             double timeDiff = (DateTime.Now - lastUpdateTime).TotalSeconds;
-            IsCommunicationError = timeDiff > 2;
+            IsCommunicationError = timeDiff > 5;
         }
         public override bool IsCommunicationError { get => base.IsCommunicationError; set => base.IsCommunicationError = value; }
     }

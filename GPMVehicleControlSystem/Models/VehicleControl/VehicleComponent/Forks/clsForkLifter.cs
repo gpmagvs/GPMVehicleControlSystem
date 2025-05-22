@@ -274,7 +274,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             //    return (false, AlarmCodes.Fork_Go_Home_But_Home_Sensor_Signal_Error);
             //else
         }
-        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true, bool bypassCheck = false)
+        public async Task<(bool confirm, string message)> ForkPose(double pose, double speed = 0.1, bool wait_done = true, bool bypassCheck = false, bool invokeActionStart = true)
         {
             if (!bypassCheck)
             {
@@ -283,7 +283,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
                     pose = forkAGV.Parameters.ForkAGV.UplimitPose;
             }
-            return await fork_ros_controller.verticalActionService.Pose(pose, speed, wait_done);
+            return await fork_ros_controller.verticalActionService.Pose(pose, speed, wait_done, startActionInvoke: invokeActionStart);
         }
 
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
@@ -452,7 +452,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <param name="height">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed, bool bypassFinalCheck = false)
+        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed, bool bypassFinalCheck = false, bool invokeActionStart = true)
         {
             double target = 0;
             try
@@ -519,7 +519,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
                     if (!_isForkAlreadyGoingToTarget)
                     {
-                        forkMoveResult = await ForkPose(target, speed, false);
+                        forkMoveResult = await ForkPose(target, speed, false, invokeActionStart: invokeActionStart);
                         if (!forkMoveResult.confirm)
                             return (forkMoveResult.confirm, forkMoveResult.message, 0);
                     }

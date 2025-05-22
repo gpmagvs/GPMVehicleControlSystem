@@ -9,6 +9,7 @@ using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Protocols;
 using AGVSystemCommonNet6;
 using NLog;
+using GPMVehicleControlSystem.Tools;
 
 namespace GPMVehicleControlSystem.Models.Buzzer
 {
@@ -43,8 +44,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         public static OnBuzzerPlayDelate OnBuzzerPlay;
         public delegate SOUNDS BuzzerMovePlayDelate();
         public static BuzzerMovePlayDelate BeforeBuzzerMovePlay;
-        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         internal static APlayer APLAYER = null;
+        static Debouncer playDebouncer = new Debouncer();
         public static void DeterminePlayerUse()
         {
             if (Environment.OSVersion.Platform != PlatformID.Unix)
@@ -158,70 +159,69 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         }
         public static async void Play(SOUNDS sound)
         {
-            try
+            playDebouncer.Debounce(() =>
             {
-                SoundPlaying = sound;
-                await semaphore.WaitAsync();
-
-                if (sound == SOUNDS.Stop)
+                try
                 {
-                    IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = IsWaitingCargoStatusCheckPlaying = false;
-                }
-                else
-                {
-                    IsMovingPlaying = sound == SOUNDS.Move;
-                    IsGotoChargeStationPlaying = sound == SOUNDS.GoToChargeStation;
-                    IsActionPlaying = sound == SOUNDS.Action;
-                    IsAlarmPlaying = sound == SOUNDS.Alarm;
-                    IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
-                    IsHandshakingPlaying = sound == SOUNDS.Handshaking;
-                    IsWaitingCargoStatusCheckPlaying = sound == SOUNDS.WaitingCargoStatusCheck;
-                    IsSlowDownPlaying = sound == SOUNDS.SlowDownVoice;
-                    IsRotatingPlaying = sound == SOUNDS.RotatingVoice;
-                }
-
-                logger.Info($"Playing Sound : {sound}");
-
-                if (APLAYER != null)
-                {
-                    logger.Info($"Playing with APLAYER : {sound}");
-                    APLAYER.PlayAudio(sound, out string errorMsg);
-                    logger.Info($"Playing with APLAYER Done: {errorMsg}");
-                    return;
-                }
-
-                Thread playsound_thred = new Thread(() =>
-                {
-                    try
+                    SoundPlaying = sound;
+                    if (sound == SOUNDS.Stop)
                     {
-                        if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                        IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = IsWaitingCargoStatusCheckPlaying = false;
+                    }
+                    else
+                    {
+                        IsMovingPlaying = sound == SOUNDS.Move;
+                        IsGotoChargeStationPlaying = sound == SOUNDS.GoToChargeStation;
+                        IsActionPlaying = sound == SOUNDS.Action;
+                        IsAlarmPlaying = sound == SOUNDS.Alarm;
+                        IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
+                        IsHandshakingPlaying = sound == SOUNDS.Handshaking;
+                        IsWaitingCargoStatusCheckPlaying = sound == SOUNDS.WaitingCargoStatusCheck;
+                        IsSlowDownPlaying = sound == SOUNDS.SlowDownVoice;
+                        IsRotatingPlaying = sound == SOUNDS.RotatingVoice;
+                    }
+
+                    logger.Info($"Playing Sound : {sound}");
+
+                    if (APLAYER != null)
+                    {
+                        logger.Info($"Playing with APLAYER : {sound}");
+                        APLAYER.PlayAudio(sound, out string errorMsg);
+                        logger.Info($"Playing with APLAYER Done: {errorMsg}");
+                        return;
+                    }
+
+                    Thread playsound_thred = new Thread(() =>
+                    {
+                        try
                         {
-                            bool confirm = OnBuzzerPlay.Invoke();
-                            if (!confirm)
+                            if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
+                            {
+                                bool confirm = OnBuzzerPlay.Invoke();
+                                if (!confirm)
+                                    return;
+                            }
+                            if (rossocket == null)
                                 return;
+                            PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                            {
+                                file_path = sound.ToString().ToLower()
+                            }).Result;
                         }
-                        if (rossocket == null)
-                            return;
-                        PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
+                        catch (Exception ex)
                         {
-                            file_path = sound.ToString().ToLower()
-                        }).Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex);
-                    }
-                });
-                playsound_thred.IsBackground = false;
-                playsound_thred.Start();
-            }
-            catch (Exception)
-            {
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+                            logger.Error(ex);
+                        }
+                    });
+                    playsound_thred.IsBackground = false;
+                    playsound_thred.Start();
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex);
+                }
+            }, 250);
+
         }
 
     }
