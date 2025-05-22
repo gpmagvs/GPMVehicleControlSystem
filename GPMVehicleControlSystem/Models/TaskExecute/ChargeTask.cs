@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
@@ -23,8 +24,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             try
             {
+                await base.LaserSettingBeforeTaskExecute();
                 await Agv.Laser.FrontBackLasersEnable(true, false);
-                await Agv.Laser.SideLasersEnable(false);
                 await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
                 return true;
             }
@@ -51,7 +52,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             Agv.DirectionLighter.Forward();
         }
-
+        protected override async Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
+        {
+            await Agv.Laser.SideLasersEnable(false);
+            return await base.TransferTaskToAGVC();
+        }
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
             DelayChargeStatusJudgeWork();

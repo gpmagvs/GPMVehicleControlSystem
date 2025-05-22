@@ -209,22 +209,24 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
         //監視某個輸入的變化事件??
 
-        public virtual void SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
+        public virtual bool SubsSignalStateChange(Enum signal, EventHandler<bool> handler)
         {
             try
             {
                 if (!Indexs.TryGetValue(signal, out int index))
                 {
                     logger.Warn($"{signal} 註冊事件失敗因為未定義該訊號的INPUT位置");
-                    return;
+                    return false;
                 }
                 clsIOSignal inputSignal = VCSInputs[Indexs[signal]];
                 inputSignal.AddEvent(handler);
+                return true;
 
             }
             catch (Exception ex)
             {
                 logger.Error("Digital Input - [" + signal + "] Sbuscribe Error.", ex);
+                return false;
             }
         }
 

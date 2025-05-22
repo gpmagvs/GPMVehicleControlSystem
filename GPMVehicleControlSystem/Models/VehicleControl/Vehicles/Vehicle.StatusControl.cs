@@ -1,14 +1,19 @@
-﻿using GPMVehicleControlSystem.Models.Buzzer;
+﻿#define UseDebunce
+using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Tools;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
         private SUB_STATUS BeforeChargingSubStatus;
+
+        private Debouncer subStatusChangeDebouncer = new Debouncer();
+
+        private CancellationTokenSource delaySwitchDirectionLightsAsTrafficControllingCts = new CancellationTokenSource();
 
         /// <summary>
         /// 充電迴路是否已開啟
@@ -25,13 +30,84 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// 設定AGV目前的子狀態
         /// </summary>
         /// <param name="value"></param>
-        public async void SetSub_Status(SUB_STATUS value, bool auto_stop_buzzer = true)
+        public async Task SetSub_Status(SUB_STATUS value, bool auto_stop_buzzer = true)
         {
+#if UseDebunce
+            subStatusChangeDebouncer.Debounce(() =>
+            {
+                try
+                {
+                    _Sub_Status = value;
+                    if (_Sub_Status != SUB_STATUS.IDLE)
+                    {
+                        try
+                        {
+                            delaySwitchDirectionLightsAsTrafficControllingCts?.Cancel();
+                            delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "[SetSub_Status::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
+                        }
+                    }
+                    //var _caller = GetCallerClassName();
+                    if (_Sub_Status == SUB_STATUS.DOWN || _Sub_Status == SUB_STATUS.ALARM || _Sub_Status == SUB_STATUS.Initializing)
+                    {
+                        if (_Sub_Status == SUB_STATUS.DOWN)
+                            HandshakeIOOff();
+                        if (_Sub_Status != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
+                            BuzzerPlayer.Alarm();
+                        if (AGVC.ActionStatus != ActionStatus.ACTIVE)
+                            DirectionLighter.CloseAll();
+                        StatusLighter.DOWN();
+                    }
+                    else if (_Sub_Status == SUB_STATUS.IDLE)
+                    {
+                        guardVideoService.StopRecord();
+
+                        if (auto_stop_buzzer)
+                            BuzzerPlayer.Stop("SetSub_Status Change to IDLE & auto_stop_buzzer");
+                        StatusLighter.IDLE();
+                        DirectionLighter.CloseAll();
+
+                        if (Remote_Mode == AGVSystemCommonNet6.AGVDispatch.Messages.REMOTE_MODE.ONLINE && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal)
+                            SwitchDirectionLightAsWaitAGVSNextAction();
+                    }
+                    else if (_Sub_Status == SUB_STATUS.RUN)
+                    {
+                        StatusLighter.RUN();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "[SetSub_Status] " + ex.StackTrace);
+                }
+                finally
+                {
+                    logger.LogTrace($"Sub_Status change to {value}");
+                    StoreStatusToDataBase();
+                }
+
+            });
+
+#else
             if (_Sub_Status != value)
             {
                 await subStatusSemaphore.WaitAsync();
                 try
                 {
+                    if (value != SUB_STATUS.IDLE)
+                    {
+                        try
+                        {
+                            delaySwitchDirectionLightsAsTrafficControllingCts?.Cancel();
+                            delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "[SetSub_Status::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
+                        }
+                    }
                     //var _caller = GetCallerClassName();
                     if (value == SUB_STATUS.DOWN || value == SUB_STATUS.ALARM || value == SUB_STATUS.Initializing)
                     {
@@ -45,10 +121,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else if (value == SUB_STATUS.IDLE)
                     {
+                        guardVideoService.StopRecord();
+
                         if (auto_stop_buzzer)
                             BuzzerPlayer.Stop("SetSub_Status Change to IDLE & auto_stop_buzzer");
                         StatusLighter.IDLE();
                         DirectionLighter.CloseAll();
+
+                        if (Remote_Mode == AGVSystemCommonNet6.AGVDispatch.Messages.REMOTE_MODE.ONLINE && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal)
+                            SwitchDirectionLightAsWaitAGVSNextAction();
                     }
                     else if (value == SUB_STATUS.RUN)
                     {
@@ -57,6 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (Exception ex)
                 {
+                    logger.LogError(ex, "[SetSub_Status] " + ex.StackTrace);
                 }
                 finally
                 {
@@ -66,6 +148,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     subStatusSemaphore.Release();
                 }
             }
+#endif
+
+
+
 
             string GetCallerClassName()
             {
@@ -74,6 +160,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return "ClassClass";
                 return caller_class_declaring.Name;
             }
+        }
+
+        private async Task SwitchDirectionLightAsWaitAGVSNextAction()
+        {
+            try
+            {
+                delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
+                delaySwitchDirectionLightsAsTrafficControllingCts = new CancellationTokenSource();
+                await Task.Delay(TimeSpan.FromSeconds(5), delaySwitchDirectionLightsAsTrafficControllingCts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+            DirectionLighter.TrafficControllingLightsFlash();
         }
 
         /// <summary>

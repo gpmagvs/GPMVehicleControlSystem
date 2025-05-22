@@ -1,9 +1,11 @@
 ﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Microsoft.AspNetCore.Mvc;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -129,139 +131,160 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(confirm);
         }
 
+        [HttpGet("Fork/Horizon")]
+        public async Task<IActionResult> HorizonForkAction(string action, double pose = 0, double speed = 1)
+        {
+            (bool confirm, string message) result = (false, "");
+            forkAgv.logger.LogTrace($"[VMSController.Fork] Horizon Fork Action: {action} pose:{pose} speed:{speed}");
+            HorizonForkActionService service = (HorizonForkActionService)(forkAgv.AGVC as ForkAGVController).HorizonActionService;
+
+            if (action == "home" || action == "orig")
+                result = await service.Home();
+
+            if (action == "stop")
+                result = await service.Stop();
+
+            if (action == "init")
+                result = await service.Init();
+
+            if (action == "up_limit")
+                result = await service.Extend();
+
+            if (action == "down_limit")
+                result = await service.Retract();
+
+            if (action == "pose")
+                result = await service.Pose(target: pose, speed: speed);
+
+            return Ok(new
+            {
+                confirm = result.confirm,
+                message = result.message
+            });
+        }
 
         [HttpGet("Fork")]
         public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 1)
         {
-            if (speed == 0)
-                speed = 1;
-
-            bool _isMoveToPoseOperation = action != "home" && action != "orig";
-
-            if (_isMoveToPoseOperation)
-                speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
-
-            bool _isVerticalMotorStopped = forkAgv.WagoDO.GetState(DO_ITEM.Vertical_Motor_Stop);
-
-            bool _isForkUnderPressSensorBypassed = forkAgv.WagoDO.GetState(DO_ITEM.Fork_Under_Pressing_SensorBypass);
-            bool _isVerticalPreessSensorTrigered = !forkAgv.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
-
-            if (_isVerticalMotorStopped)
-                return Ok(new { confirm = false, message = "垂直馬達 [STOP] 訊號ON，Z軸無法動作。" });
-
-            if (_isVerticalPreessSensorTrigered && _isForkUnderPressSensorBypassed)
-            {
-                clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
-                return Ok(new
-                {
-                    confirm = false,
-                    message = $"牙叉防壓Sensor觸發中，Z軸無法動作。" +
-                              $"(須將 [{underPressedSensorBypassSignal.Address}] {underPressedSensorBypassSignal.Name} 開啟)"
-                });
-            }
-
-            if (!forkAgv.IsForkInitialized)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
-            if (forkAgv.ForkLifter.IsInitialing)
-                return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
-
-            string current_cmd = (forkAgv.AGVC as ForkAGVController).CurrentForkActionRequesting.command;
-
-            if (forkAgv.IsForkWorking && action != "stop")
-                return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
-
-            if (action == "home" || action == "orig")
+            try
             {
                 forkAgv.ForkLifter.IsManualOperation = true;
-                var result = await forkAgv.ForkLifter.ForkGoHome(speed);
-                CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                while (forkAgv.ForkLifter.CurrentForkLocation != Models.VehicleControl.VehicleComponent.clsForkLifter.FORK_LOCATIONS.HOME)
+                if (speed == 0)
+                    speed = 1;
+
+                bool _isMoveToPoseOperation = action != "home" && action != "orig";
+
+                if (_isMoveToPoseOperation)
+                    speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
+
+                bool _isVerticalMotorStopped = forkAgv.WagoDO.GetState(DO_ITEM.Vertical_Motor_Stop);
+
+                bool _isForkUnderPressSensorBypassed = forkAgv.WagoDO.GetState(DO_ITEM.Fork_Under_Pressing_SensorBypass);
+                bool _isVerticalPreessSensorTrigered = !forkAgv.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
+
+                if (_isVerticalMotorStopped)
+                    return Ok(new { confirm = false, message = "垂直馬達 [STOP] 訊號ON，Z軸無法動作。" });
+
+                if (_isVerticalPreessSensorTrigered && !_isForkUnderPressSensorBypassed)
                 {
-                    await Task.Delay(1);
-                    if (_wait.IsCancellationRequested)
+                    clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
+                    return Ok(new
                     {
-                        forkAgv.ForkLifter.IsManualOperation = false;
-                        return Ok(new { confirm = false, message = "Go Home Timeout" });
-                    }
+                        confirm = false,
+                        message = $"牙叉防壓Sensor觸發中，Z軸無法動作。" +
+                                  $"(須將 [{underPressedSensorBypassSignal.Address}] {underPressedSensorBypassSignal.Name} 開啟)"
+                    });
                 }
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
-            }
-            else if (action == "init")
-            {
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPositionInit();
-                return Ok(result);
-            }
-            else if (action == "pose")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                if (pose < forkAgv.Parameters.ForkAGV.DownlimitPose)
-                    pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
-                else if (pose > forkAgv.Parameters.ForkAGV.UplimitPose)
-                    pose = forkAgv.Parameters.ForkAGV.UplimitPose;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
 
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = result.success, message = result.message });
-            }
-            else if (action == "up")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + 0.1;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                if (!forkAgv.IsVerticalForkInitialized)
+                    return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
+                if (forkAgv.ForkLifter.IsInitialing)
+                    return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
 
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = result.success, message = result.message });
-            }
-            else if (action == "down")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition - 0.1;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                string current_cmd = (forkAgv.AGVC as ForkAGVController).verticalActionService.CurrentForkActionRequesting.command;
 
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = result.success, message = result.message });
-            }
-            else if (action == "up_limit")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                if (forkAgv.IsForkWorking && action != "stop")
+                    return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = true });
-            }
-            else if (action == "down_limit")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                if (action == "home" || action == "orig")
+                {
+                    var result = await forkAgv.ForkLifter.ForkGoHome(speed);
+                    return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
+                }
+                else if (action == "init")
+                {
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPositionInit();
+                    return Ok(result);
+                }
+                else if (action == "pose")
+                {
+                    if (pose < forkAgv.Parameters.ForkAGV.DownlimitPose)
+                        pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
+                    else if (pose > forkAgv.Parameters.ForkAGV.UplimitPose)
+                        pose = forkAgv.Parameters.ForkAGV.UplimitPose;
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
 
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = true });
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "up")
+                {
+                    var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + 0.1;
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "down")
+                {
+                    var pose_to = forkAgv.ForkLifter.CurrentHeightPosition - 0.1;
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "up_limit")
+                {
+                    var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    return Ok(new { confirm = true });
+                }
+                else if (action == "down_limit")
+                {
+                    var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                    return Ok(new { confirm = true });
+                }
+                else if (action == "stop")
+                {
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkStopAsync();
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "resume")
+                {
+                    (bool confirm, string message) result = await forkAgv.ForkLifter.ForkResumeAction();
+                    return Ok(new { confirm = result.confirm, message = result.message });
+                }
+                else if (action == "increase")
+                {
+                    var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
+                    logger.LogWarning($"USER adjust fork position from web ui:pose to = {pose_to}");
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else
+                    return Ok(new { confirm = false, message = "invalid action type" });
             }
-            else if (action == "stop")
+            catch (Exception ex)
             {
-                forkAgv.ForkLifter.IsManualOperation = false;
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkStopAsync();
-                return Ok(new { confirm = result.success, message = result.message });
+                return Ok(new { confirm = false, message = ex.Message });
+
             }
-            else if (action == "resume")
+            finally
             {
-                (bool confirm, string message) result = await forkAgv.ForkLifter.ForkResumeAction();
-                return Ok(new { confirm = result.confirm, message = result.message });
+                // 延遲一下再關閉
+                _ = Task.Delay(1000).ContinueWith(t => forkAgv.ForkLifter.IsManualOperation = false);
             }
-            else if (action == "increase")
-            {
-                forkAgv.ForkLifter.IsManualOperation = true;
-                var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
-                logger.LogWarning($"USER adjust fork position from web ui:pose to = {pose_to}");
-                (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
-                forkAgv.ForkLifter.IsManualOperation = false;
-                return Ok(new { confirm = result.success, message = result.message });
-            }
-            else
-                return Ok(new { confirm = false, message = "invalid action type" });
+
         }
 
         [HttpGet("Fork/Arm/Extend")]
@@ -302,7 +325,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Command_Action")]
         public async Task<IActionResult> Command_Action(string command, double target, double speed)
         {
-            (forkAgv.AGVC as ForkAGVController).CallVerticalCommandService(new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest
+            (forkAgv.AGVC as ForkAGVController).verticalActionService.CallVerticalCommandService(new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest
             {
                 command = command,
                 model = "FORK",

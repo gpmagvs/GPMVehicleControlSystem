@@ -19,6 +19,10 @@ namespace GPMVehicleControlSystem.Service
             logger.LogInformation($"Hub Client Connected");
             DiskUsageState _diskStatus = _memoryCache.Get<DiskUsageState>("DiskStatus");
             Clients.Caller.SendAsync("DiskStatus", _diskStatus);
+
+            if (_memoryCache.TryGetValue("CurrentRobotSpeedCommand", out string cmd) && !string.IsNullOrEmpty(cmd))
+                Clients.Caller.SendAsync("CurrentRobotSpeedCommand", cmd);
+
             return base.OnConnectedAsync();
         }
 

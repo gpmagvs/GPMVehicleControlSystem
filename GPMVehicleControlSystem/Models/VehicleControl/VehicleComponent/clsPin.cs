@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public async Task Init()
         {
             pin_command.command = "init";
-            await _CallPinCommandActionService(pin_command);
+            await _CallPinCommandActionService(pin_command, 30);
 
         }
 
@@ -61,15 +61,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-        private async Task<bool> _CallPinCommandActionService(PinCommandRequest request)
+        private async Task<bool> _CallPinCommandActionService(PinCommandRequest request, int timeout = 10)
         {
+            logger.Trace($"call service-> pin command={pin_command.ToJson(Newtonsoft.Json.Formatting.None)},wait agvc response...");
             IsPinActionDone = false;
             PinCommandResponse _resonpse = await _rosSocket.CallServiceAndWait<PinCommandRequest, PinCommandResponse>(PinActionServiceName, request);
             if (_resonpse == null)
                 throw new Exception("Call Service Fail");
+
+            logger.Trace($"call service-> pin command={pin_command.ToJson(Newtonsoft.Json.Formatting.None)},wait agvc response-> {_resonpse.ToJson(Newtonsoft.Json.Formatting.None)}..");
             if (_resonpse.confirm)
             {
-                CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                logger.Trace($"start wait action done...");
+
+                CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 while (!IsPinActionDone)
                 {
                     await Task.Delay(1);
@@ -97,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 confirm = true
             };
-            logger.Trace($"/pin_done_action , agvc response={tin.ToJson()}");
+            logger.Trace($"current pin command={pin_command.ToJson()}=> agvc action done. response={tin.ToJson()}");
             bool command_reply_done = tin.command == "done";
             if (!command_reply_done)
             {

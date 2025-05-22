@@ -138,17 +138,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         }
         protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
         {
-            CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            Task.Run(async () =>
-            {
-                while (!_wait_fork_reach_position_cst.IsCancellationRequested)
-                {
-                    await Task.Delay(1);
-                    Agv.HandshakeStatusText = $"AGV牙叉上升至取貨高度...({ForkLifter.CurrentHeightPosition} cm)";
-                }
-            });
             var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5);
-            _wait_fork_reach_position_cst.Cancel();
             return forkHeightChangeReuslt;
         }
 

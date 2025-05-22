@@ -65,7 +65,7 @@ namespace GPMVehicleControlSystem.Service
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(180, stoppingToken);
+                await Task.Delay(250, stoppingToken);
                 if (ViewModelFactory.VehicleInstanceCreateFailException != null)
                 {
                     await _hubContext.Clients.All.SendAsync("VehicleError", ViewModelFactory.VehicleInstanceCreateFailException.Message);

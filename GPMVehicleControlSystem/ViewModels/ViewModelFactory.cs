@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.Exceptions;
 using GPMVehicleControlSystem.Models.RDTEST;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Service;
 using NLog;
@@ -74,10 +75,12 @@ namespace GPMVehicleControlSystem.ViewModels
                     },
                     Current_LASER_MODE = GetLaserModeDescription(),
                     ZAxisDriverState = AGV.VerticalDriverState.StateData == null ? new DriverState() : AGV.VerticalDriverState.StateData as DriverState,
+                    ForkHorizonDriverState = GetForkHorizonDriverState(),
                     IsLaserModeSettingError = AGV.Laser.SickSsystemState.application_error,
                     ForkHasLoading = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     CargoExist = AGV.CargoStateStorer.HasAnyCargoOnAGV(AGV.Parameters.LDULD_Task_No_Entry),
                     IsForkExtenable = AGV.IsForkExtenable,
+                    IsForkExtenrDriverBase = IsForkHorizonDriveBased(),
                     HandShakeSignals = new
                     {
                         EQ = AGV.EQHsSignalStates.ToDictionary(kp => kp.Key, kp => kp.Value.State),
@@ -97,7 +100,7 @@ namespace GPMVehicleControlSystem.ViewModels
                         Connected = AGV.currentHandshakeProtocol != Vehicle.EQ_HS_METHOD.MODBUS ? true : StaStored.ConnectingEQHSModbus.Connected
                     },
                     OrderInfo = AGV.orderInfoViewModel,
-                    IsForkHeightAboveSafty = AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK ? false : AGV.ForkLifter.fork_ros_controller.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight,
+                    IsForkHeightAboveSafty = IsForkHeightAboveSaftyHeightSetting(),
                     InitializingStatusText = AGV.InitializingStatusText,
                     AMCAGVSensorState = GetSensorsActiveState(),
                     IMUMaxMinValRecord = AGV.IMU.MaxMinGValRecord,
@@ -164,6 +167,41 @@ namespace GPMVehicleControlSystem.ViewModels
             {
                 string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.Mode.ToString();
                 return $"{laserModeText}({(int)AGV.Laser.CurrentLaserModeOfSick})";
+            }
+
+            static bool IsForkHeightAboveSaftyHeightSetting()
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || AGV.ForkLifter.fork_ros_controller.verticalActionService == null)
+                    return false;
+                return AGV.ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight;
+            }
+        }
+
+        private static DriverState GetForkHorizonDriverState()
+        {
+            try
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK || !(AGV as ForkAGV).IsForkHorizonDriverBase)
+                    return new DriverState();
+                return ((AGV as ForkAGV).AGVC as ForkAGVController).HorizonActionService.driverState;
+            }
+            catch (Exception)
+            {
+                return new DriverState();
+            }
+        }
+
+        private static bool IsForkHorizonDriveBased()
+        {
+            try
+            {
+                if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK)
+                    return false;
+                return (AGV as ForkAGV).ForkLifter.GetType() == typeof(clsForkLifterWithDriverBaseExtener);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

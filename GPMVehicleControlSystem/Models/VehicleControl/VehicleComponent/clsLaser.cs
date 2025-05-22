@@ -52,6 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public event EventHandler OnSickApplicationError;
 
+        public event EventHandler<LASER_MODE> OnLaserModeChanged;
         private bool _IsSickApplicationError = false;
         public bool IsSickApplicationError
         {
@@ -78,6 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 {
                     _CurrentLaserModeOfSick = value;
                     logger.Info($"[From Sick Topic] Laser Mode Chaged To : {value}({Mode})", true);
+                    OnLaserModeChanged?.Invoke(this, Mode);
                 }
             }
         }
@@ -174,8 +176,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         internal string SubscribeSickSaftyScannerOuputPathsTopic()
         {
-            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners/output_paths", SickSaftyScannerOutputDataCallback);
-            logger.Trace($"Subscribe /sick_safetyscanners/output_paths ({_output_paths_subscribe_id})");
+            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners2/output_paths", SickSaftyScannerOutputDataCallback);
+            logger.Trace($"Subscribe /sick_safetyscanners2/output_paths ({_output_paths_subscribe_id})");
             this._output_paths_subscribe_id = _output_paths_subscribe_id;
             return this._output_paths_subscribe_id;
         }
@@ -292,14 +294,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <exception cref="NotImplementedException"></exception>
         internal async Task AllLaserActive()
         {
-
-            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
-                    {
-                        new DOModifyWrapper(DO_ITEM.Right_LsrBypass.GetIOSignalOfModule(), false),
-                        new DOModifyWrapper(DO_ITEM.Left_LsrBypass.GetIOSignalOfModule(),  false),
-                    });
-            await DOModule.SetState(request);
             await SideLasersEnable(true);
+            await FrontBackLasersEnable(true);
         }
 
 

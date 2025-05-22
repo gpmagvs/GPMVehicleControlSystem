@@ -32,26 +32,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         public CARGO_STATUS TrayCargoStatus { get; private set; } = CARGO_STATUS.NO_CARGO;
         public CARGO_STATUS RackCargoStatus { get; private set; } = CARGO_STATUS.NO_CARGO;
 
-
         internal CARGO_STATUS simulation_cargo_status = CARGO_STATUS.NO_CARGO;
-
         private Tools.Debouncer existSensorDebouncer = new Tools.Debouncer();
         private readonly List<clsIOSignal> digitalInputState = new List<clsIOSignal>();
         private readonly IHubContext<FrontendHub> hubContext;
-        private readonly bool simulationExistByHaseCstID;
         private readonly clsCSTReader reader;
 
         internal ManualResetEvent waitOperatorConfirmCargoStatus = new ManualResetEvent(false);
 
         internal CancellationTokenSource watchCargoExistStateCts = new CancellationTokenSource();
 
+        internal IsUseCarrierIdExistToSimulationCargoExistDelegate OnUseCarrierIdExistToSimulationCargoExistInvoked;
+
+        internal delegate bool IsUseCarrierIdExistToSimulationCargoExistDelegate();
+
         private bool _IsCarrier_Exist_Interupt_SensorMounted => digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
 
-        public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, bool simulationExistByHaseCstID = false, clsCSTReader reader = null)
+        public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, clsCSTReader reader = null)
         {
             digitalInputState = DigitalInputState;
             this.hubContext = hubContext;
-            this.simulationExistByHaseCstID = simulationExistByHaseCstID;
             this.reader = reader;
         }
 
@@ -71,8 +71,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal bool IsCargoMountedNormal(bool isLDULDNoEntryNow)
         {
-            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
-                return true;
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo))
+                return hasCargo;
+
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
             if (_IsCarrier_Exist_Interupt_SensorMounted)
                 return currentCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL && IsCargoDetectedByInteruptSensor();
@@ -81,10 +82,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         }
 
+        private bool TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo)
+        {
+            hasCargo = false;
+            if (OnUseCarrierIdExistToSimulationCargoExistInvoked == null || !OnUseCarrierIdExistToSimulationCargoExistInvoked.Invoke())
+                return false;
+            hasCargo = !string.IsNullOrEmpty(reader?.ValidCSTID);
+            return true;
+        }
+
         internal bool HasAnyCargoOnAGV(bool isLDULDNoEntryNow)
         {
-            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
-                return true;
+
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo))
+                return hasCargo;
+
             if (_IsCarrier_Exist_Interupt_SensorMounted && IsCargoDetectedByInteruptSensor())
                 return true;
             var currentCargoStatus = GetCargoStatus(isLDULDNoEntryNow, out CST_TYPE cargoType);
@@ -111,7 +123,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         {
             cargoType = CST_TYPE.None;
 
-            if (simulationExistByHaseCstID && !string.IsNullOrEmpty(reader?.ValidCSTID))
+
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo) && hasCargo)
             {
                 cargoType = CST_TYPE.Tray;
                 return CARGO_STATUS.HAS_CARGO_NORMAL;

@@ -78,12 +78,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleOnEndWaitMainStatusIDLEReported(object? sender, EventArgs e)
         {
-            SendCloseSpeficDialogToFrontend(33333);
+            LogDebugMessage($"Action Finish上報前等待主狀態IDLE上報已完成...", signalRPub: true);
         }
 
         private void HandleOnStartWaitMainStatusIDLEReported(object? sender, EventArgs e)
         {
-            SendNotifyierToFrontend($"Action Finish上報前等待主狀態-IDLE上報完成...", code: 33333);
+            LogDebugMessage($"Action Finish上報前等待主狀態-IDLE上報完成...", signalRPub: true);
         }
 
         private async void AGVSPingSuccessHandler()
@@ -239,6 +239,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //_TaskDownloadHandleDebouncer.Debounce(() => { }, 1, "CycleStop");
             TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
             logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
+            Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
 
             if (mode == RESET_MODE.ABORT)
             {
@@ -538,7 +539,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsCoordination Corrdination = new clsCoordination();
             MAIN_STATUS _Main_Status = Main_Status;
             int lastVisitedNode = 0;
-            if (Navigation.Data != null)
+
+            if (maintainModeData.IsMaintainMode)
+            {
+                Corrdination.X = Math.Round(maintainModeData.Coordination.X, 3);
+                Corrdination.Y = Math.Round(maintainModeData.Coordination.Y, 3);
+                Corrdination.Theta = Math.Round(maintainModeData.Coordination.Theta, 3);
+                lastVisitedNode = maintainModeData.TagSet;
+            }
+            else if (Navigation.Data != null)
             {
                 Corrdination.X = Math.Round(Navigation.Data.robotPose.pose.position.x, 3);
                 Corrdination.Y = Math.Round(Navigation.Data.robotPose.pose.position.y, 3);

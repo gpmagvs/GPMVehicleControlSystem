@@ -33,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param");
                 Directory.CreateDirectory(folder);
-                return Path.Combine(folder, ParamFileName);
+                return Path.GetFullPath(Path.Combine(folder, ParamFileName));
             }
         }
         public static Action<clsVehicelParam> OnParamEdited;

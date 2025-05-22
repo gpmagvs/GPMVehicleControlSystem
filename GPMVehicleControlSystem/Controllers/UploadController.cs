@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GPMVehicleControlSystem.Controllers
 {
+    using GPMVehicleControlSystem.Models;
+    using GPMVehicleControlSystem.Models.Buzzer;
     using GPMVehicleControlSystem.Service;
     using Microsoft.AspNetCore.Mvc;
     using NLog;
@@ -92,6 +94,14 @@ namespace GPMVehicleControlSystem.Controllers
 
                 if (result.confirm)
                 {
+                    StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN);
+                    _ = Task.Delay(1000).ContinueWith(async t =>
+                    {
+                        BuzzerPlayer.Stop();
+                        await Task.Delay(500);
+                        BuzzerPlayer.Alarm();
+                    });
+
                     _ = _updateService.BrocastRestartSystemCountDownNotify("系統更新", 5);
                 }
 

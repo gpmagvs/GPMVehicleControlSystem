@@ -4,7 +4,7 @@ using GPMVehicleControlSystem.ViewModels.WorkStation;
 using Newtonsoft.Json;
 using System.Security.Cryptography.X509Certificates;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
+namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
     public partial class clsForkLifter
     {

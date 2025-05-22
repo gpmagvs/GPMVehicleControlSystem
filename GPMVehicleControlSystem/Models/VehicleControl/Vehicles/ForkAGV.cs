@@ -1,19 +1,22 @@
-﻿using AGVSystemCommonNet6.AGVDispatch;
+﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
-using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using RosSharp.RosBridgeClient.Actionlib;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
@@ -30,14 +33,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AT_HOME_POSITION,
             UNDER_SAFTY_POSITION
         }
-        public bool IsForkInitialized => ForkLifter.IsInitialized;
-        public bool IsForkWorking => (AGVC as ForkAGVController).WaitActionDoneFlag;
+        public bool IsVerticalForkInitialized => ForkLifter.IsVerticalForkInitialized;
+        public bool IsForkWorking => (AGVC as ForkAGVController).verticalActionService.WaitActionDoneFlag;
+
 
         public override clsWorkStationModel WorkStations { get; set; } = new clsWorkStationModel();
-        public override clsForkLifter ForkLifter { get; set; } = new clsForkLifter();
+        public override clsForkLifter ForkLifter { get; set; }
 
         public clsPin PinHardware { get; set; }
         public override bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+        public bool IsForkHorizonDriverBase => WagoDI.Indexs.TryGetValue(DI_ITEM.Fork_Home_Pose, out _);
         public ForkAGV(clsVehicelParam param, VehicleServiceAggregator vehicleServiceAggregator) : base(param, vehicleServiceAggregator)
         {
 
@@ -45,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal override async Task CreateAsync()
         {
             await base.CreateAsync();
-            ForkLifter = new clsForkLifter(this);
+            ForkLifter = IsForkHorizonDriverBase ? new clsForkLifterWithDriverBaseExtener(this) : new clsForkLifter(this);
             ForkLifter.Driver = VerticalDriverState;
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
@@ -53,13 +58,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 PinHardware = new clsPin();
 
             logger.LogInformation($"FORK AGV 搭載Pin模組?{PinHardware != null}");
-            ForkMovingProtectedProcess();
         }
         protected internal override async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
             await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
             if (PinHardware != null)
                 PinHardware.rosSocket = AGVC.rosSocket;
+
+            ForkAGVController forkAGVC = (AGVC as ForkAGVController);
+            forkAGVC.verticalActionService = new VerticalForkActionService(this, AGVC.rosSocket);
+            forkAGVC.HorizonActionService = new HorizonForkActionService(this, AGVC.rosSocket);
+            forkAGVC.verticalActionService.AdertiseRequiredService();
+            forkAGVC.HorizonActionService.AdertiseRequiredService();
+
         }
 
         public async Task<bool> ResetVerticalDriver()
@@ -100,9 +111,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.CommonEventsRegist();
             var _fork_car_controller = (AGVC as ForkAGVController);
-            _fork_car_controller.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
-            _fork_car_controller.OnForkStartMove += _fork_car_controller_OnForkStartMove;
-            _fork_car_controller.OnForkStopMove += _fork_car_controller_OnForkStopMove;
+            _fork_car_controller.verticalActionService.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
+            _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -126,113 +136,255 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return true;
                 }
             };
+
+            if (this.IsForkHorizonDriverBase)
+            {
+                WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, HandleHorizonForkLimitSensorStateChanged);
+                WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, HandleHorizonForkLimitSensorStateChanged);
+
+            }
+
         }
-        private bool _ForkSaftyProtectFlag = false;
-        private void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
+
+        private void HandleHorizonForkLimitSensorStateChanged(object? sender, bool inputState)
         {
-            //throw new NotImplementedException();
-            logger.LogTrace("Fork Stop");
-            _ForkSaftyProtectFlag = false;
-            if (GetSub_Status() == SUB_STATUS.IDLE)
-                BuzzerPlayer.Stop($"_fork_car_controller_OnForkStopMove");
+            bool isReachLimit = !inputState;
+
+            if (isReachLimit)
+            {
+                ForkLifter.ForkARMStop().ContinueWith((t) =>
+                {
+                    clsIOSignal? signal = sender as clsIOSignal;
+                    AlarmCodes alarmCode = AlarmCodes.Fork_Horizon_Extend_Limit;
+                    if (signal != null)
+                        alarmCode = signal.Input == DI_ITEM.Fork_Extend_Exist_Sensor ? AlarmCodes.Fork_Horizon_Extend_Limit : AlarmCodes.Fork_Horizon_Retract_Limit;
+                    AlarmManager.AddAlarm(alarmCode, false);
+                });
+            }
         }
+
+
+        private SUB_STATUS _subStatusBeforeForkVerticalStartMove = SUB_STATUS.UNKNOWN;
+        private CancellationTokenSource? _forkVerticalMoveObsProcessCancellationTokenSource = null;
 
         private void _fork_car_controller_OnForkStartMove(object? sender, VerticalCommandRequest request)
         {
+            var _fork_car_controller = (AGVC as ForkAGVController);
+            LogDebugMessage($"Fork Start Move Event Invoked Handling(command:{request.command}). {request.ToJson(Formatting.None)}", true);
             bool isForkMoveInWorkStationByLduld = GetSub_Status() == SUB_STATUS.RUN && lastVisitedMapPoint.StationType != STATION_TYPE.Normal;
             if (isForkMoveInWorkStationByLduld)
             {
-                _ForkSaftyProtectFlag = false;
-                DebugMessageBrocast("注意! 目前在設備或儲格中移動牙叉，牙叉將不會因側邊雷射觸發而停止");
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+                LogDebugMessage("注意! 目前在設備或儲格中移動牙叉，牙叉將不會因側邊雷射觸發而停止");
                 return;
             }
 
-            ForkAGVController agvc = sender as ForkAGVController;
-            bool isInitializing = agvc.IsInitializing;
-            //throw new NotImplementedException();
-            logger.LogTrace($"Fork Star Run (Started by:{request.command})");
-            bool isGoUpAction = request.command == "pose" && request.target > ForkLifter.CurrentHeightPosition;
-            bool isGoUpByLdUldAction = (isGoUpAction && _isLoadUnloadTaskRunning);
-            _ForkSaftyProtectFlag = !isGoUpByLdUldAction;
-        }
-        private void ForkMovingProtectedProcess()
-        {
-            Thread _thread = new Thread(() =>
-            {
-                bool _isStopped = false;
-                WagoDI.SubsSignalStateChange(DI_ITEM.LeftProtection_Area_Sensor_3, HandlerSideLaserStateChange);
-                WagoDI.SubsSignalStateChange(DI_ITEM.RightProtection_Area_Sensor_3, HandlerSideLaserStateChange);
 
-                void HandlerSideLaserStateChange(object? sender, bool state)
+            if (request.command == "orig" && (WagoDI.GetState(DI_ITEM.Vertical_Home_Pos) || (Parameters.ForkAGV.HomePoseUseStandyPose && Math.Abs(Parameters.ForkAGV.StandbyPose - ForkLifter.fork_ros_controller.verticalActionService.driverState.position) <= 0.5)))
+            {
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+                LogDebugMessage("垂直牙叉已在Home位置或已接近待命位置", true);
+                return;
+            }
+
+            if (request.command == "pose" && Math.Abs(request.target - ForkLifter.fork_ros_controller.verticalActionService.driverState.position) <= 0.5)
+            {
+
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+                LogDebugMessage("垂直牙叉位置已經接近目標位置", true);
+                return;
+            }
+
+            _fork_car_controller.verticalActionService.OnActionStart -= _fork_car_controller_OnForkStartMove;
+
+            Laser.SideLasersEnable(lastVisitedMapPoint.StationType != STATION_TYPE.Charge).ContinueWith(async t =>
+            {
+                if (Laser.Mode == clsLaser.LASER_MODE.Bypass || Laser.Mode == clsLaser.LASER_MODE.Bypass16)
+                    await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
+
+                _forkVerticalMoveObsProcessCancellationTokenSource?.Dispose();
+                _forkVerticalMoveObsProcessCancellationTokenSource = new CancellationTokenSource();
+
+                _ = Task.Factory.StartNew(() => StartVerticalForkProtectProcess());
+
+            });
+        }
+
+        private async Task StartVerticalForkProtectProcess()
+        {
+            bool _isStopCmdCalled = false;
+            var _fork_car_controller = (AGVC as ForkAGVController);
+
+            Laser.OnLaserModeChanged += HandleLaserModeChangedWhenForkVerticalMoving;
+            VerticalCommandRequest? lastVerticalForkActionCmd = null;
+
+            SOUNDS _soundBeforeStop = BuzzerPlayer.SoundPlaying;
+            LogDebugMessage("因牙叉升降動作開始監視側邊雷射狀態", true);
+            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+            bool lastLsrTriggerState = false;
+            await Task.Delay(500);
+            Stopwatch triggerTimer = new Stopwatch();
+            const int durationMs = 250;
+
+            while (!_forkVerticalMoveObsProcessCancellationTokenSource.IsCancellationRequested)
+            {
+                try
                 {
-                    bool _isLsrTrigger = !state;
-                    bool _isLaserTriggerAndForkIsMoving = _isLsrTrigger && !_isStopped;
-                    bool _isLaserSafeAndForkIsStopping = !_isLsrTrigger && _isStopped;
-                    if (_ForkSaftyProtectFlag)
+                    await Task.Delay(10, _forkVerticalMoveObsProcessCancellationTokenSource.Token);
+
+                    bool isRightSideLaserBypass = WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+                    bool isLeftSideLaserBypass = WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+
+
+                    bool _AnySideLaserTrigger()
                     {
-                        if (_isLaserTriggerAndForkIsMoving)
+                        Dictionary<DO_ITEM, DI_ITEM[]> monitorMap = new Dictionary<DO_ITEM, DI_ITEM[]>() {
+
+                            { DO_ITEM.Right_LsrBypass , new DI_ITEM[] { DI_ITEM.RightProtection_Area_Sensor_3 } },
+                            { DO_ITEM.Left_LsrBypass , new DI_ITEM[] { DI_ITEM.LeftProtection_Area_Sensor_3 } }
+                        };
+
+                        foreach (var keypair in monitorMap)
                         {
-                            logger.LogWarning("Side Laser Trigger, Stop Fork");
-                            ForkLifter.ForkStopAsync();
-                            _isStopped = true;
-                            BuzzerPlayer.Alarm();
-                            //AGVStatusChangeToAlarmWhenLaserTrigger();
+                            DO_ITEM bypassOutput = keypair.Key;
+                            bool isBypassed = WagoDO.GetState(bypassOutput);
+
+                            if (isBypassed)
+                                continue;
+
+                            foreach (var input in keypair.Value)//觀世input薩??
+                            {
+                                if (!WagoDI.VCSInputs.Any(i => i.Input == input))
+                                    continue;
+
+                                if (!WagoDI.GetState(input))
+                                    return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    bool isAnySideLaserTriggering = _AnySideLaserTrigger();
+
+                    if (isAnySideLaserTriggering && !_isStopCmdCalled)
+                    {
+
+                        if (!lastLsrTriggerState)
+                        {
+                            triggerTimer.Restart();
+                        }
+                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        {
+
+                            lastVerticalForkActionCmd = _fork_car_controller.verticalActionService.CurrentForkActionRequesting.Clone();
+                            _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
+                            _isStopCmdCalled = true;
+                            if (!IsLaserMonitoring)
+                            {
+                                _soundBeforeStop = BuzzerPlayer.SoundPlaying;
+                                BuzzerPlayer.Alarm();
+                                AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
+                            }
+                            ForkLifter.IsStopByObstacleDetected = true;
+                            await ForkLifter.ForkStopAsync();
+                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+                            LogDebugMessage($"雷射組數觸發，牙叉停止動作!", true);
+
+                            if (ForkLifter.IsManualOperation)
+                            {
+                                SendNotifyierToFrontend($"注意!在手動操作下牙叉側邊雷射障礙物檢出停止動作!", title: "Fork Action Stop");
+                                break;
+                            }
 
                         }
                     }
-                    if (_isLaserSafeAndForkIsStopping)
+                    else if (!isAnySideLaserTriggering && _isStopCmdCalled)
                     {
-                        logger.LogInformation("Side Laser Reconvery, Resume Fork Action");
-                        ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning();
-                        ForkLifter.ForkResumeAction();
-                        _isStopped = false;
+
+                        if (lastLsrTriggerState)
+                        {
+                            triggerTimer.Restart();
+                        }
+                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        {
+                            _isStopCmdCalled = false;
+                            //_fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+                            if (lastVerticalForkActionCmd != null)
+                            {
+                                if (!IsLaserMonitoring)
+                                {
+                                    BuzzerPlayer.Stop();
+                                    BuzzerPlayer.Play(_soundBeforeStop);
+                                    AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
+                                }
+                                await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
+                                ForkLifter.IsStopByObstacleDetected = false;
+                                LogDebugMessage($"雷射復原，牙叉恢復動作!", true);
+                            }
+                        }
+
                     }
+
+                    lastLsrTriggerState = isAnySideLaserTriggering;
+
                 }
-
-            });
-            _thread.Start();
-            logger.LogTrace("Start Fork Safty Protect Process Thread");
-        }
-        private bool _isLoadUnloadTaskRunning => _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
-        private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
-        {
-            if (GetSub_Status() == SUB_STATUS.DOWN)
-                return;
-
-
-            bool _isForkRunningPreActionAndNoObstacleArround = ForkLifter.EarlyMoveUpState.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger();
-
-            if (_isLoadUnloadTaskRunning || _isForkRunningPreActionAndNoObstacleArround)
-            {
-                _Sub_Status = SUB_STATUS.RUN;
-                StatusLighter.RUN();
-                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                    BuzzerPlayer.Move();
-                else
-                    BuzzerPlayer.Action();
-            }
-            if (ForkLifter.IsInitialing || ForkLifter.IsManualOperation || ForkLifter.CurrentHeightPosition <= Parameters.ForkAGV.SaftyPositionHeight)
-            {
-                BuzzerPlayer.Stop($"ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning");
-                if (ForkLifter.IsInitialing)
+                catch (TaskCanceledException ex)
                 {
-                    //_Sub_Status = SUB_STATUS.Initializing;
-                    StatusLighter.AbortFlash();
-                    StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
+                    LogDebugMessage($"牙叉安全偵測任務取消!!", true);
+                    break;
                 }
+            }
+
+            LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", true);
+            _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
+            _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
+
+            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+
+            void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
+            {
+                _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
+                _forkVerticalMoveObsProcessCancellationTokenSource?.Cancel();
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+                LogDebugMessage($"取消註冊雷射組數切換事件", false);
+                logger.LogTrace("Fork Stop");
             }
         }
 
+        private void HandleLaserModeChangedWhenForkVerticalMoving(object? sender, clsLaser.LASER_MODE currentMode)
+        {
+            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+
+            if (currentMode == clsLaser.LASER_MODE.Bypass || currentMode == clsLaser.LASER_MODE.Bypass16)
+            {
+                logger.LogWarning($"Fork Vertical Moving, Laser Mode now changed to {currentMode}(Bypass status),switch laser mode to turning");
+                LogDebugMessage($"雷射組數現在為Bypass,但牙叉(Vertical)動作中=> 切換為 Truning 組數!", true);
+                Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
+                Laser.SideLasersEnable(true);
+            }
+        }
 
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {
+
+            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
             (bool, string) baseInitiazedResutl = await base.PreActionBeforeInitialize();
+
             if (!baseInitiazedResutl.Item1)
                 return baseInitiazedResutl;
 
             if (!Parameters.CheckObstacleWhenForkInit)
                 return (true, "");
 
+            InitializingStatusText = "Laser Initizing...";
+
+            #region 雷射組數切換
+            await Laser.ModeSwitch(clsLaser.LASER_MODE.Normal);
+            await Task.Delay(250);
+            await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
+            await Task.Delay(250);
+            await Laser.SideLasersEnable(true);
+            #endregion
 
             if (!Parameters.SensorBypass.RightSideLaserBypass)
             {
@@ -256,59 +408,120 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-            (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
+            (bool forklifer_init_done, string message) _forklift_vertical_init_result = (false, "");
+            (bool forklifer_init_done, string message) _forklift_horizon_init_result = (false, "");
             (bool pin_init_done, string message) _pin_init_result = (false, "");
 
             List<Task> _actions = new List<Task>();
-            if (PinHardware != null)
-            {
-                Task Pin_Init_Task = Task.Run(async () =>
-                {
-                    InitializingStatusText = "PIN-模組初始化";
-                    try
-                    {
-                        await PinHardware.Init();
-                        await PinHardware.Lock();
-                        _pin_init_result = (true, "");
-                    }
-                    catch (TimeoutException)
-                    {
-                        _pin_init_result = (false, "Pin Action Timeout");
-                    }
-                    catch (Exception ex)
-                    {
-                        _pin_init_result = (false, ex.Message);
-                    }
-                });
-                _actions.Add(Pin_Init_Task);
-            }
-            else
-                _pin_init_result = (true, "Pin is not mounted");
 
-            Task ForkLift_Init_Task = Task.Run(async () =>
+            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess();
+            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess();
+            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess();
+
+            _actions.Add(forkFloatHarwarePinInitTask);
+            _actions.Add(forkVerticalInitTask);
+            _actions.Add(forkHorizonInitTask);
+
+            Task.WaitAll(_actions.ToArray());
+
+            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+            _forkVerticalMoveObsProcessCancellationTokenSource?.Cancel();
+
+
+            _pin_init_result = forkFloatHarwarePinInitTask.Result;
+            _forklift_vertical_init_result = forkVerticalInitTask.Result;
+            _forklift_horizon_init_result = forkHorizonInitTask.Result;
+
+
+            bool pin_init_success = _pin_init_result.pin_init_done;
+            bool fork_vertical_init_success = _forklift_vertical_init_result.forklifer_init_done;
+            bool fork_horizon_init_success = _forklift_horizon_init_result.forklifer_init_done;
+
+            if (pin_init_success && fork_vertical_init_success && fork_horizon_init_success)
             {
+                return await base.InitializeActions(cancellation);
+            }
+
+            string errmsg = "";
+            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
+            errmsg += fork_vertical_init_success ? "" : $"[Fork_Vertical:{_forklift_vertical_init_result.message}]";
+            errmsg += fork_horizon_init_success ? "" : $"[Fork_Horizon :{_forklift_horizon_init_result.message}]";
+            return (false, errmsg);
+
+        }
+
+
+        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess()
+        {
+            if (PinHardware == null)
+                return (true, "浮動牙叉定位PIN裝置未裝載");
+
+            if (Parameters.ForkAGV.IsPinDisabledTemptary)
+            {
+                SendNotifyierToFrontend($"注意! 浮動牙叉暫時被禁用中");
+                return (true, "浮動牙叉定位PIN裝置已暫時禁用");
+            }
+
+            return await Task.Run(async () =>
+            {
+                (bool pin_init_done, string message) _pin_init_result = (false, "");
+                CancellationTokenSource? updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-模組初始化中...");
+                try
+                {
+                    await PinHardware.Init();
+                    updateInitMsgCancellationTokenSource?.Cancel();
+                    updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-Lock 中...");
+                    await PinHardware.Lock();
+                    _pin_init_result = (true, "");
+                }
+                catch (TimeoutException)
+                {
+                    _pin_init_result = (false, "Pin Action Timeout");
+                }
+                catch (Exception ex)
+                {
+                    _pin_init_result = (false, ex.Message);
+                }
+                finally
+                {
+                    updateInitMsgCancellationTokenSource?.Cancel();
+                    updateInitMsgCancellationTokenSource?.Dispose();
+                }
+                return _pin_init_result;
+            });
+        }
+
+        internal async Task<(bool, string)> VerticalForkInitProcess()
+        {
+            if (GetSub_Status() != SUB_STATUS.Initializing)
+                SetSub_Status(SUB_STATUS.Initializing);
+            return await Task.Run(async () =>
+            {
+                (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
+                await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
+                await Laser.SideLasersEnable(true);
+
                 await Task.Delay(700);
                 InitializingStatusText = "牙叉初始化動作中";
-                ForkLifter.fork_ros_controller.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                ForkLifter.fork_ros_controller.verticalActionService.CurrentForkActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
                 if (ForkLifter.Enable)
                 {
-                    ForkLifter.ForkShortenInAsync();
                     InitializingStatusText = "牙叉原點覆歸...";
                     await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, true);
 
-                    bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == clsForkLifter.FORK_LOCATIONS.HOME;
+                    bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME;
 
                     (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
                     if (isForkAllowNoDoInitializeAction)
                     {
                         (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
                         forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
-                        ForkLifter.IsInitialized = true;
+                        ForkLifter.IsVerticalForkInitialized = true;
                     }
                     else
                     {
                         double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                        forkInitizeResult = await ForkLifter.ForkInitialize(_speed_of_init);
+                        forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init);
                     }
                     if (forkInitizeResult.done)
                     {
@@ -316,6 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         //self test Home action 
                         if (Parameters.ForkAGV.HomePoseUseStandyPose)
                         {
+                            InitializingStatusText = $"Fork Height Go To Standby Pose..";
                             (bool confirm, string message) = await ForkLifter.ForkPose(Parameters.ForkAGV.StandbyPose, 1, true);
                             home_action_response.confirm = confirm;
                             home_action_response.alarm_code = confirm ? AlarmCodes.None : AlarmCodes.Fork_Action_Aborted;
@@ -339,24 +553,46 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AlarmManager.AddWarning(AlarmCodes.Fork_Disabled);
                     _forklift_init_result = (true, "");
                 }
+                return _forklift_init_result;
             });
-            _actions.Add(ForkLift_Init_Task);
-            Task.WaitAll(_actions.ToArray());
+        }
 
-            bool pin_init_success = _pin_init_result.pin_init_done;
-            bool fork_init_success = _forklift_init_result.forklifer_init_done;
-
-            if (pin_init_success && fork_init_success)
+        internal async Task<(bool, string)> HorizonForkInitProcess()
+        {
+            if (!Parameters.ForkAGV.IsForkIsExtendable)
             {
-                return await base.InitializeActions(cancellation);
+                LogDebugMessage("Fork Is Not Extendable,Horizon Fork arm initialize is bypassed!");
+                return (true, "Fork Is Not Extendable");
             }
+            if (Parameters.ForkAGV.IsHorizonExtendDisabledTemptary)
+            {
+                SendNotifyierToFrontend($"注意! 伸縮牙叉暫時被禁用中");
+                return (true, "伸縮牙叉已暫時禁用");
+            }
+            return await Task.Run(async () =>
+            {
+                CancellationTokenSource? cancellationTokenSource = null;
+                try
+                {
+                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉 Reset...");
+                    var resetResult = await ForkLifter.ForkHorizonResetAsync();
+                    cancellationTokenSource.Cancel();
 
-            string errmsg = "";
-
-            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
-            errmsg += fork_init_success ? "" : $"[Fork:{_forklift_init_result.message}]";
-            return (false, errmsg);
-
+                    if (!resetResult.success)
+                        return resetResult;
+                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉縮回中...");
+                    return await ForkLifter.ForkShortenInAsync();
+                }
+                catch (Exception ex)
+                {
+                    return (false, ex.Message);
+                }
+                finally
+                {
+                    cancellationTokenSource?.Cancel();
+                    cancellationTokenSource?.Dispose();
+                }
+            });
         }
 
         protected override void CreateAGVCInstance(string RosBridge_IP, int RosBridge_Port)
@@ -371,6 +607,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Run(async () =>
             {
                 logger.LogWarning($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
                 ForkLifter.ForkStopAsync(true);
@@ -415,8 +652,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             base.DIOStatusChangedEventRegist();
             WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Motor_Alarm, HandleDriversStatusErrorAsync);
-
+            WagoDI.SubsSignalStateChange(DI_ITEM.Fork_Home_Pose, HandleHomePoseSensorStateChanged);
+            WagoDI.SubsSignalStateChange(DI_ITEM.Vertical_Home_Pos, HandleHomePoseSensorStateChanged);
         }
+
+        private void HandleHomePoseSensorStateChanged(object? sender, bool state)
+        {
+            if (state)
+            {
+                clsIOSignal signal = (clsIOSignal)sender;
+                LogDebugMessage($"{signal.Name} Now is ON!");
+            }
+        }
+
         protected override clsWorkStationModel DeserializeWorkStationJson(string json)
         {
             clsWorkStationModel? dat = JsonConvert.DeserializeObject<clsWorkStationModel>(json);
@@ -448,6 +696,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected override async Task DOSettingWhenEmoTrigger()
         {
             await base.DOSettingWhenEmoTrigger();
+            //await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, true);
         }
 
         protected override async Task TryResetMotors()

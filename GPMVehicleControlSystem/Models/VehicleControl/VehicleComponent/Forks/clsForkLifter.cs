@@ -1,13 +1,16 @@
 ﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using static SQLite.SQLite3;
 
-namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
+namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
     public partial class clsForkLifter : CarComponent, IDIOUsagable
     {
@@ -31,16 +34,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             UNKNOWN
         }
 
-        public clsForkLifter()
-        {
-        }
-
         public clsForkLifter(ForkAGV forkAGV)
         {
             this.forkAGV = forkAGV;
         }
 
         public double CurrentHeightPosition => Math.Round(Driver.CurrentPosition, 3);
+
+        public bool IsStopByObstacleDetected = false;
+
         public FORK_LOCATIONS CurrentForkLocation
         {
             //TODO 
@@ -59,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else return FORK_LOCATIONS.UNKNOWN;
             }
         }
-        public FORK_ARM_LOCATIONS CurrentForkARMLocation
+        public virtual FORK_ARM_LOCATIONS CurrentForkARMLocation
         {
             get
             {
@@ -73,11 +75,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return FORK_ARM_LOCATIONS.UNKNOWN;
             }
         }
+
+        public virtual bool IsForkArmExtendLocationCorrect
+        {
+            get
+            {
+                return CurrentForkARMLocation == FORK_ARM_LOCATIONS.END;
+            }
+        }
+
+        public virtual bool IsForkArmShortLocationCorrect
+        {
+            get
+            {
+                return CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME;
+            }
+        }
+
         private SUB_STATUS Sub_Status = SUB_STATUS.IDLE;
         /// <summary>
         /// 是否以初始化
         /// </summary>
-        public bool IsInitialized { get; internal set; } = false;
+        public bool IsVerticalForkInitialized { get; internal set; } = false;
         public bool IsInitialing { get; private set; } = false;
         /// <summary>
         /// 可以走的上極限位置
@@ -135,7 +154,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         if (!IsInitialing)
                         {
-                            fork_ros_controller?.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Down_Limit;
                         }
                     }
@@ -143,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         if (!IsInitialing)
                         {
-                            fork_ros_controller?.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
                         }
                     }
@@ -151,7 +170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     {
                         if (!DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
                         {
-                            fork_ros_controller.ZAxisStop();
+                            fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Belt_Sensor_Error;
                         }
                     }
@@ -191,7 +210,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public bool IsManualOperation { get; internal set; } = false;
 
-        private ForkAGV forkAGV;
+        protected ForkAGV forkAGV;
 
         public override bool CheckStateDataContent()
         {
@@ -207,12 +226,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             if (IsEMS)
             {
-                fork_ros_controller.BeforeForkStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
-                fork_ros_controller.wait_action_down_cts.Cancel();
+                fork_ros_controller.verticalActionService.BeforeStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                fork_ros_controller.verticalActionService.wait_action_down_cts.Cancel();
                 logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
-            return await fork_ros_controller.ZAxisStop();
+            return await fork_ros_controller.verticalActionService.Stop();
         }
+
+        /// <summary>
+        /// 繼續動作
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<(bool confirm, string message)> ForkResumeAction(AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest lastVerticalForkActionCmd)
+        {
+            return await fork_ros_controller.verticalActionService.ZAxisResume(lastVerticalForkActionCmd);
+        }
+
 
         /// <summary>
         /// 繼續動作
@@ -220,13 +249,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <returns></returns>
         internal async Task<(bool confirm, string message)> ForkResumeAction()
         {
-            return await fork_ros_controller.ZAxisResume();
+            return await fork_ros_controller.verticalActionService.ZAxisResume();
         }
 
         public async Task<(bool confirm, string message)> ForkPositionInit()
         {
             await Task.Delay(300);
-            return await fork_ros_controller.ZAxisInit();
+            return await fork_ros_controller.verticalActionService.Init();
         }
 
         public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
@@ -237,7 +266,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 AlarmManager.AddAlarm(AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point, false);
             }
 
-            (bool confirm, string message) response = await fork_ros_controller.ZAxisGoHome(speed, wait_done);
+            (bool confirm, string message) response = await fork_ros_controller.verticalActionService.Home(speed, wait_done);
             if (!response.confirm)
                 return (false, AlarmCodes.Action_Timeout);
             return (true, AlarmCodes.None);
@@ -254,23 +283,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else if (pose > forkAGV.Parameters.ForkAGV.UplimitPose)
                     pose = forkAGV.Parameters.ForkAGV.UplimitPose;
             }
-            return await fork_ros_controller.ZAxisGoTo(pose, speed, wait_done);
+            return await fork_ros_controller.verticalActionService.Pose(pose, speed, wait_done);
         }
 
         public async Task<(bool confirm, string message)> ForkUpSearchAsync(double speed = 0.1)
         {
-            return await fork_ros_controller.ZAxisUpSearch(speed);
+            return await fork_ros_controller.verticalActionService.UpSearch(speed);
         }
 
         public async Task<(bool confirm, string message)> ForkDownSearchAsync(double speed = 0.1)
         {
-            return await fork_ros_controller.ZAxisDownSearch(speed);
+            return await fork_ros_controller.verticalActionService.DownSearch(speed);
         }
         /// <summary>
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
+        public virtual async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
             bool _checked = await ForkARMStop();
             if (!_checked)
@@ -322,7 +351,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
+        public virtual async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
         {
             ForkARMStop();
             await Task.Delay(400);
@@ -356,11 +385,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
+        public virtual async Task<(bool success, string message)> ForkHorizonResetAsync()
+        {
+            return (true, "");
+        }
         /// <summary>
         /// 牙叉伸縮停止動作
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> ForkARMStop()
+        public virtual async Task<bool> ForkARMStop()
         {
             if (DOModule.VCSOutputs.Any(it => it.Output == DO_ITEM.Fork_Extend))
             {
@@ -383,155 +416,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
-        public async Task<(bool done, AlarmCodes alarm_code)> ForkInitialize(double InitForkSpeed = 0.5)
+        public async Task<(bool done, AlarmCodes alarm_code)> VerticalForkInitialize(double InitForkSpeed = 0.5)
         {
-            logger.Info($"Fork 初始化動作開始，速度={InitForkSpeed}");
+            logger.Info($"Fork Z軸初始化動作開始，速度={InitForkSpeed}");
             IsInitialing = true;
             bool _isInitializeDone = false;
             (this.forkAGV.AGVC as ForkAGVController).IsInitializing = true;
-            fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
-            //bool isStartAtDownLimit = !DIModule.GetState(DI_ITEM.Vertical_Down_Hardware_limit);
+            fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
             try
             {
-                //if (isStartAtDownLimit)
-                //await BypassLimitSensor();
-
-                while (!_isInitializeDone)
-                {
-                    bool hasCargo = !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_1) || !DIModule.GetState(DI_ITEM.RACK_Exist_Sensor_2);
-
-                    SEARCH_DIRECTION search_direction = DetermineSearchDirection(CurrentForkLocation);
-                    ForkStartSearch(search_direction, hasCargo);
-
-                    (bool reachHome, bool isReachLimitSensor) = await WaitForkReachHome(jumpOutIfReachLimitSensor: true);
-                    if (!isReachLimitSensor)
-                    {
-                        await WaitForkLeaveHome();
-                    }
-                    else
-                    {
-                        await BypassLimitSensor();
-                        await Task.Delay(1000);
-                    }
-
-                    await UpSearchAndWaitLeaveHome(hasCargo);
-                    await Task.Delay(1000);
-                    await ShortMoveToFindHome();
-                    await Task.Delay(200);
-
-                    if (forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-                    {
-                        logger.Fatal($"Status Down Fork initialize action interupted.!");
-                        break;
-                    }
-                    _isInitializeDone = CurrentForkLocation == FORK_LOCATIONS.HOME && Math.Abs(CurrentHeightPosition - 0) < 0.01;
-                    await Task.Delay(1000);
-                }
+                VerticalForkHomeSearchHelper vertialForkHomeSearchHelper = new VerticalForkHomeSearchHelper(forkAGV, "Vertical");
+                (bool success, AlarmCodes alarmCode) result = await vertialForkHomeSearchHelper.StartSearchAsync();
+                IsVerticalForkInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
+                logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
+                return result;
             }
             catch (Exception ex)
             {
-                IsInitialing = IsInitialized = false;
+                IsInitialing = IsVerticalForkInitialized = false;
                 logger.Fatal($"[ForkInitialize] FAIL. {ex.Message}");
                 return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
             }
             finally
             {
-                await NoBypassLimitSensor();
-            }
-            (this.forkAGV.AGVC as ForkAGVController).IsInitializing = false;
-            IsInitialing = false;
-            IsInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
-            logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
-            return (true, AlarmCodes.None);
-
-            async Task ShortMoveToFindHome()
-            {
-                while (CurrentForkLocation != FORK_LOCATIONS.HOME)
-                {
-                    if (this.forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-                    {
-                        throw new Exception("AGV Status Down");
-                    }
-                    double _pose = CurrentHeightPosition - 0.1;
-                    await ForkPose(_pose, 1);
-                    await Task.Delay(1000);
-                }
-                await ForkPositionInit();
-            }
-            async Task UpSearchAndWaitLeaveHome(bool hasCargo)
-            {
-                await ForkStopAsync();
-                await Task.Delay(100);
-                await ForkPositionInit();
-                await Task.Delay(500);
-                ForkStartSearch(SEARCH_DIRECTION.UP, hasCargo);
-
-                await WaitForkReachHome(jumpOutIfReachLimitSensor: false);
-                await WaitForkLeaveHome();
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(500);
-                    await NoBypassLimitSensor();
-                });
-                await Task.Delay(hasCargo ? 1200 : 500);
-                await ForkPose(CurrentHeightPosition + 0.3, 0.3, bypassCheck: true);
+                DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
+                (this.forkAGV.AGVC as ForkAGVController).IsInitializing = false;
+                IsInitialing = false;
             }
 
-            async Task<(bool reachHome, bool isReachLimitSensor)> WaitForkReachHome(bool jumpOutIfReachLimitSensor)
-            {
-                while (CurrentForkLocation != FORK_LOCATIONS.HOME)
-                {
-                    await Task.Delay(1);
-                    if (this.forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-                    {
-                        throw new Exception("AGV Status Down");
-                    }
-                    if (jumpOutIfReachLimitSensor && CurrentForkLocation == FORK_LOCATIONS.DOWN_HARDWARE_LIMIT)
-                    {
-                        return (false, true);
-                    }
-                }
-                return (true, false);
-            }
-            async Task WaitForkLeaveHome()
-            {
-                while (CurrentForkLocation == FORK_LOCATIONS.HOME)
-                {
-                    if (this.forkAGV.GetSub_Status() == SUB_STATUS.DOWN)
-                    {
-                        throw new Exception("AGV Status Down");
-                    }
-                    await Task.Delay(1);
-                }
-
-                await ForkStopAsync();
-                await Task.Delay(500);
-            }
-            async Task NoBypassLimitSensor()
-            {
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, false);
-            }
-            async Task BypassLimitSensor()
-            {
-                await DOModule.SetState(DO_ITEM.Vertical_Hardware_limit_bypass, true);
-            }
-            async void ForkStartSearch(SEARCH_DIRECTION searchDriection, bool hasCargo)
-            {
-                if (searchDriection == SEARCH_DIRECTION.DOWN)
-                    await ForkDownSearchAsync(hasCargo ? InitForkSpeed : 1.0);
-                else
-                    await ForkUpSearchAsync(hasCargo ? InitForkSpeed : 1.0);
-            }
-
-            SEARCH_DIRECTION DetermineSearchDirection(FORK_LOCATIONS forkLocation)
-            {
-                if (forkLocation == FORK_LOCATIONS.HOME || forkLocation == FORK_LOCATIONS.UNKNOWN || forkLocation == FORK_LOCATIONS.UP_POSE)
-                    return SEARCH_DIRECTION.DOWN;
-                else
-                    return SEARCH_DIRECTION.UP;
-            }
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -544,7 +457,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             double target = 0;
             try
             {
-                fork_ros_controller.wait_action_down_cts = new CancellationTokenSource();
+                fork_ros_controller.verticalActionService.wait_action_down_cts = new CancellationTokenSource();
+
+                #region 教點數據確認
+
                 if (!StationDatas.TryGetValue(tag, out clsWorkStationData? workStation))
                     return (target, false, AlarmCodes.Fork_WorkStation_Teach_Data_Not_Found_Tag);
 
@@ -554,19 +470,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (teach.Down_Pose == 0 && teach.Up_Pose == 0)
                     return (target, false, AlarmCodes.Fork_Slot_Teach_Data_ERROR);
 
-                (bool confirm, string message) forkMoveResult = (false, "");
+                #endregion
 
+                #region 從教點數據中取出目標位置
 
                 if (position == FORK_HEIGHT_POSITION.UP_)
                     target = teach.Up_Pose;
                 if (position == FORK_HEIGHT_POSITION.DOWN_)
                     target = teach.Down_Pose;
-
-                int tryCnt = 0;
-                double positionError = 0;
+                #endregion
 
                 bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target;
-
                 if (!_isForkAlreadyGoingToTarget)
                 {
                     await ForkStopAsync();
@@ -576,49 +490,83 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                     logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
 
-                bool belt_sensor_bypass = forkAGV.Parameters.SensorBypass.BeltSensorBypass;
-                double _errorTorlence = 0.5;
-                while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
+                double _errorTorlence = 0.1;
+                CancellationTokenSource _waitPoseReachTargetCancellationTokenSource = new CancellationTokenSource();
+                Task actionTimeoutDetectTask = Task.Run(async () =>
                 {
-                    await Task.Delay(1, fork_ros_controller.wait_action_down_cts.Token);
-
-                    if (AGVBeltStatusError())
-                        return (target, false, AlarmCodes.Belt_Sensor_Error);
-
-                    if (AGVStatusError())
+                    try
                     {
-                        logger.Error($"Tag:{tag},Height:{height},{position} AGV Status Error ,Fork Try  Go to teach position process break!");
-                        return (target, false, AlarmCodes.None);
-                    }
-                    tryCnt++;
-                    if (fork_ros_controller.wait_action_down_cts.IsCancellationRequested)
-                        return (target, false, AlarmCodes.Fork_Action_Aborted);
-
-                    if (!_isForkAlreadyGoingToTarget)
-                    {
-                        logger.Warn($"[Tag={tag}] Fork pose error to Height-{height} {target} is {positionError}。Try change pose-{tryCnt}");
-                        forkMoveResult = await ForkPose(target, speed);//TODO move to error position (0) 0416
-                        logger.Warn($"[Tag={tag}] Call Fork Service and Fork Action done.(Current Position={Driver.CurrentPosition} cm)");
-                        if (!forkMoveResult.confirm)
+                        Stopwatch sw = Stopwatch.StartNew();
+                        while (sw.Elapsed.TotalSeconds < 60)
                         {
-                            AlarmCodes _alarm_code = fork_ros_controller.wait_action_down_cts.IsCancellationRequested ? AlarmCodes.Fork_Action_Aborted : AlarmCodes.Action_Timeout;
-                            return (target, false, _alarm_code);
+                            forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString()}";
+                            if (IsStopByObstacleDetected)
+                                sw.Reset();
+                            else
+                                sw.Start();
+                            await Task.Delay(100, _waitPoseReachTargetCancellationTokenSource.Token);
                         }
                     }
+                    catch (TaskCanceledException)
+                    {
+                        logger.Trace("Fork Move Timeout Detect Task Cancelled");
+                    }
+                });
+                Task<(bool confirm, string message, double positionError)> poseActionTask = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    (bool confirm, string message) forkMoveResult = (false, "");
+                    ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
+                    if (!_isForkAlreadyGoingToTarget)
+                    {
+                        forkMoveResult = await ForkPose(target, speed, false);
+                        if (!forkMoveResult.confirm)
+                            return (forkMoveResult.confirm, forkMoveResult.message, 0);
+                    }
+                    while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
+                    {
+                        try
+                        {
+                            await Task.Delay(1, _waitPoseReachTargetCancellationTokenSource.Token);
+                            if (AGVStatusError())
+                                throw new TaskCanceledException($"因AGV狀態異常取消等待");
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            return (false, "取消等待", positionError);
+                        }
+                    }
+                    return (true, "Fork Move Done", positionError);
+                });
+
+                Task taskEnd = await Task.WhenAny(actionTimeoutDetectTask, poseActionTask);
+
+                if (taskEnd == actionTimeoutDetectTask)
+                {
+                    _waitPoseReachTargetCancellationTokenSource.Cancel();
+                    logger.Error($"Fork Move Timeout, 牙叉當前位置={CurrentHeightPosition} cm, 目標位置={target} cm");
+                    return (target, false, AlarmCodes.Action_Timeout);
                 }
+                else
+                {
+                    _waitPoseReachTargetCancellationTokenSource.Cancel();
+                    (bool confirm, string message, double positionError) result = poseActionTask.Result;
+                    if (!result.confirm)
+                    {
+                        logger.Error($"Fork Move Error, 牙叉當前位置={CurrentHeightPosition} cm, 目標位置={target} cm");
+                        return (target, false, AlarmCodes.Fork_Arm_Action_Error);
+                    }
 
-                logger.Trace($"Position={Driver.CurrentPosition}/{target}(Error={positionError})");
-                //Final Check
-                if (!bypassFinalCheck && ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _) && forkMoveResult.confirm)
-                    return (target, false, AlarmCodes.Fork_Height_Setting_Error);
+                    if (!bypassFinalCheck && ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out _))
+                        return (target, false, AlarmCodes.Fork_Height_Setting_Error);
 
-                return (target, true, AlarmCodes.None);
-
+                    return (target, true, AlarmCodes.None);
+                }
                 #region Local Functions
                 //計算牙叉當前位置距離目標位置的誤差值
                 double GetPositionErrorVal(double currentHeightPosition, double position_to_reach)
                 {
-                    return positionError = Math.Abs(currentHeightPosition - position_to_reach);
+                    return Math.Abs(currentHeightPosition - position_to_reach);
                 }
                 //計算牙叉當前位置距離目標位置的誤差值是否在允許範圍內
                 bool ForkPositionLargeThanTorrlence(double currentHeightPosition, double position_to_reach, double errorTorlence, out double positionError)
@@ -627,7 +575,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     return positionError > errorTorlence;
                 }
                 //皮帶是否有異常
-                bool AGVBeltStatusError() => !belt_sensor_bypass && !DIModule.GetState(DI_ITEM.Vertical_Belt_Sensor) && !DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass);
                 bool AGVStatusError() => forkAGV.GetSub_Status() == SUB_STATUS.DOWN || forkAGV.GetSub_Status() == SUB_STATUS.Initializing;
                 #endregion
             }

@@ -1,40 +1,38 @@
 using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
+using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.MAP;
-using AGVSystemCommonNet6.Vehicle_Control;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using NLog;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
-using System.Drawing;
 using System.Net.Sockets;
-using System.Reflection;
-using System.Reflection.Metadata;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -75,7 +73,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             location = clsDriver.DRIVER_LOCATION.FORK
         };
-
+        private Debouncer _alarmResetDebouncer = new Debouncer();
         /// <summary>
         /// 工位數據
         /// </summary>
@@ -97,6 +95,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public CargoStateStore CargoStateStorer;
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
+        public MaintainModeDto maintainModeData = new MaintainModeDto();
+        public class MaintainModeDto
+        {
+            public bool IsMaintainMode { get; set; } = false;
+            public int TagSet { get; set; } = 0;
+            public clsCoordination Coordination { get; set; } = new clsCoordination(999, 999, 0);
+        }
+
         private string _HandshakeStatusText = "";
         internal string HandshakeStatusText
         {
@@ -310,7 +316,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Version = Parameters.Version
             };
             DirectionLighter.DOModule = WagoDO;
-            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext, Parameters.CargoExistSensorParams.ExistSensorSimulation, CSTReader);
+            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext, CSTReader);
+            CargoStateStorer.OnUseCarrierIdExistToSimulationCargoExistInvoked += () =>
+            {
+                return Parameters.CargoExistSensorParams.ExistSensorSimulation;
+            };
+
             StatusLighter = new clsStatusLighter(WagoDO);
             CreateLaserInstance();
             List<Task> WagoAndRosInitTasks = new List<Task>
@@ -502,7 +513,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void AGVC_OnRosSocketDisconnected(object? sender, EventArgs e)
         {
             ModuleInformationUpdatedInitState = false;
-            DebugMessageBrocast($"與RosBride Server 斷線!");
+            LogDebugMessage($"與RosBride Server 斷線!");
             AlarmManager.AddAlarm(AlarmCodes.Motion_control_Disconnected, false);
         }
 
@@ -520,7 +531,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (!File.Exists(WorkStationSettingsJsonFilePath))
                 {
-                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src/WorkStation.json"), WorkStationSettingsJsonFilePath);
+                    File.Copy(Path.Combine(Environment.CurrentDirectory, "src", "WorkStation.json"), WorkStationSettingsJsonFilePath);
                 }
                 string json = File.ReadAllText(WorkStationSettingsJsonFilePath);
                 if (json == null)
@@ -617,12 +628,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected virtual async Task DOSignalDefaultSetting()
         {
             //WagoDO.AllOFF();
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+            await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_B, false);
             await WagoDO.SetState(DO_ITEM.AGV_DiractionLight_R, true);
             await WagoDO.SetState(DO_ITEM.Right_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Front_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
-            await Laser.ModeSwitch(16);
+            await Laser.ModeSwitch(5);
         }
         protected CancellationTokenSource InitializeCancelTokenResourece = new CancellationTokenSource();
 
@@ -665,12 +679,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new VehicleInitializeException("IO 模組異常", true);
                 }
 
-                if (CargoStateStorer.GetCargoType() == CST_TYPE.Unknown)
-                    throw new VehicleInitializeException("初始化檢查失敗-裝載未知類型的貨物", true);
-                if (CargoStateStorer.TrayCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
-                    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
-                if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
-                    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+                //if (CargoStateStorer.GetCargoType() == CST_TYPE.Unknown)
+                //    throw new VehicleInitializeException("初始化檢查失敗-裝載未知類型的貨物", true);
+                //if (CargoStateStorer.TrayCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                //    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
+                //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
+                //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();
@@ -682,13 +697,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 AlarmManager.ClearAlarm();
                 _RunTaskData = new clsTaskDownloadData();
-                //嘗試定位
-                //_ = Task.Run(async () =>
-                //{
-                //    await LocalizationWithCurrentTag();
-                //});
                 HandshakeStatusText = "";
-                IsHandshaking = false;
+                IsInitialized = IsHandshaking = false;
+
+                InitializingStatusText = "初始化開始";
+                SetSub_Status(SUB_STATUS.Initializing);
+
+
                 return await Task.Run(async () =>
                 {
                     StopAllHandshakeTimer();
@@ -706,10 +721,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             StatusLighter.AbortFlash();
                             return result;
                         }
-
-                        InitializingStatusText = "初始化開始";
-                        SetSub_Status(SUB_STATUS.Initializing);
-                        IsInitialized = false;
 
                         result = await InitializeActions(InitializeCancelTokenResourece);
                         if (!result.Item1)
@@ -848,7 +859,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
             }
-            DebugMessageBrocast("Handshake IO Reset done.");
+            LogDebugMessage("Handshake IO Reset done.");
             HandshakeLog($"Handshake IO Reset done.");
         }
 
@@ -1011,7 +1022,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-
+            Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+            StartRecordViedo();
             if (StaSysControl.isAGVCRestarting)
             {
                 return;
@@ -1028,7 +1040,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 AGVC.EmergencyStop(bypass_stopped_check: true); //
             });
-            await _softwareEmoSemaphoreSlim.WaitAsync();
+            //await _softwareEmoSemaphoreSlim.WaitAsync();
             try
             {
                 logger.LogCritical($"EMO-{alarmCode}");
@@ -1077,7 +1089,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-                _softwareEmoSemaphoreSlim.Release();
+                //_softwareEmoSemaphoreSlim.Release();
 
                 Task.Factory.StartNew(async () =>
                 {
@@ -1087,30 +1099,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
         }
-
+        Debouncer actionFinishFeedbackWhenEmoDebouncer = new Debouncer();
         private void TryFeedbackActionFinisInEmoMoment()
         {
-            Task.Run(async () =>
+            actionFinishFeedbackWhenEmoDebouncer.Debounce(() =>
             {
-                CancellationTokenSource cancell = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                while (!AGVS.Connected)
+                Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
-                    if (cancell.IsCancellationRequested)
+                    CancellationTokenSource cancell = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    while (!AGVS.Connected)
                     {
-                        AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
-                        return;
+                        await Task.Delay(1000);
+                        if (cancell.IsCancellationRequested)
+                        {
+                            AlarmManager.AddWarning(AlarmCodes.Task_Feedback_T1_Timeout);
+                            return;
+                        }
                     }
-                }
-                try
-                {
-                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex.Message, ex);
-                }
-            });
+                    try
+                    {
+                        await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(vl => vl.EAlarmCode).ToList());
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex.Message, ex);
+                    }
+                });
+            }, 250);
         }
 
         protected virtual void HandshakeIOOff()
@@ -1183,56 +1198,54 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SoftwareEMO(AlarmCodes.SoftwareEMS);
         }
-        protected SemaphoreSlim _ResetAlarmSemaphoreSlim = new SemaphoreSlim(1, 1);
         internal virtual async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
-            await _ResetAlarmSemaphoreSlim.WaitAsync();
-            try
+            _alarmResetDebouncer.Debounce(async () =>
             {
-                if (IsResetAlarmWorking)
-                    return;
-
-                IsResetAlarmWorking = true;
-                BuzzerPlayer.Stop("ResetAlarmsAsync");
-                AlarmManager.ClearAlarm();
-                AGVAlarmReportable.ResetAlarmCodes();
-                AGVS?.ResetErrors();
-                Laser.ResetSickApplicationError();
-                IsMotorReseting = false;
-                await ResetMotor(IsTriggerByButton);
-                _ = Task.Factory.StartNew(async () =>
+                try
                 {
-                    await Task.Delay(1000);
-                    if (AGVC.ActionStatus == ActionStatus.ACTIVE && GetSub_Status() != SUB_STATUS.DOWN && GetSub_Status() != SUB_STATUS.IDLE)
+                    IsResetAlarmWorking = true;
+                    BuzzerPlayer.Stop("ResetAlarmsAsync");
+                    AlarmManager.ClearAlarm();
+                    AGVAlarmReportable.ResetAlarmCodes();
+                    AGVS?.ResetErrors();
+                    Laser.ResetSickApplicationError();
+                    IsMotorReseting = false;
+                    await ResetMotor(IsTriggerByButton);
+                    _ = Task.Factory.StartNew(async () =>
                     {
-                        bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
-                        if (isObstacle)
+                        await Task.Delay(1000);
+                        if (AGVC.ActionStatus == ActionStatus.ACTIVE && GetSub_Status() != SUB_STATUS.DOWN && GetSub_Status() != SUB_STATUS.IDLE)
                         {
-                            BuzzerPlayer.Alarm();
-                            return;
-                        }
-                        else
-                        {
-                            if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
+                            bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
+                            if (isObstacle)
+                            {
+                                BuzzerPlayer.Alarm();
+                                return;
+                            }
                             else
-                                BuzzerPlayer.Action();
-                            return;
+                            {
+                                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                                    BuzzerPlayer.Move();
+                                else
+                                    BuzzerPlayer.Action();
+                                return;
+                            }
                         }
-                    }
 
-                });
-                await Task.Delay(500);
-                IsResetAlarmWorking = false;
-            }
-            catch (Exception ex)
-            {
-                logger.LogCritical(ex, ex.Message);
-            }
-            finally
-            {
-                _ResetAlarmSemaphoreSlim.Release();
-            }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogCritical(ex, ex.Message);
+                }
+                finally
+                {
+                    IsResetAlarmWorking = false;
+                    LogDebugMessage($"Clear alarms method invoked done.", true);
+                }
+
+            }, 400);
 
         }
         protected private async Task<bool> SetMotorStateAndDelay(DO_ITEM item, bool state, int delay = 10)
@@ -1261,12 +1274,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return true;
 
                 logger.LogTrace($"Reset Motor Process Start (caller:{caller_class_name})");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
-                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, true, 100)) throw new Exception($"Horizon_Motor_Free set true fail");
+                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");
                 if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, false, 100)) throw new Exception($"Horizon_Motor_Reset set false fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false)) throw new Exception($"Horizon_Motor_Stop set false  fail");
-                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Free, false)) throw new Exception($"Horizon_Motor_Free set false fail");
+
                 logger.LogTrace("Reset Motor Process End");
 
                 IsMotorReseting = false;
@@ -1283,6 +1294,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsMotorReseting = false;
                 logger.LogError(ex, ex.Message);
                 return false;
+            }
+            finally
+            {
+                _ = SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false);
             }
 
         }
@@ -1512,6 +1527,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await frontendHubContext.Clients.All.SendAsync("close-notify-dialog", code);
         }
+
         internal async Task<(bool, string)> SwitchCSTReader(bool enable)
         {
             Parameters.EditKey = DateTime.Now.ToString("yyyyMMddHHmmssffff");
@@ -1519,10 +1535,65 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await SaveParameters(Parameters, this.frontendHubContext);
         }
 
-        internal async Task DebugMessageBrocast(string message)
+        internal async Task LogDebugMessage(string message, bool signalRPub = false)
         {
-            await frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
+            if (signalRPub)
+                frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
             logger.LogDebug($"[DebugMessageBrocast] {message}");
+        }
+        internal async Task<CancellationTokenSource> UpdateInitMesgTask(string message)
+        {
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            _ = Task.Run(async () =>
+            {
+
+                while (!cancellationTokenSource.IsCancellationRequested)
+                {
+                    try
+                    {
+                        InitializingStatusText = message;
+                        await Task.Delay(1000, cancellationTokenSource.Token);
+                    }
+                    catch (TaskCanceledException ex)
+                    {
+                        logger.LogDebug($"[UpdateInitMesgTask:{message}]{ex.Message}");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError($"[UpdateInitMesgTask:{message}]{ex.Message}");
+                        return;
+                    }
+                }
+            });
+            return cancellationTokenSource;
+        }
+
+
+        internal async Task MaintainModeSwitch(bool isMaintainMode)
+        {
+            this.maintainModeData.IsMaintainMode = isMaintainMode;
+
+            if (isMaintainMode)
+            {
+                var navigationClone = Navigation.Clone();
+
+                maintainModeData.TagSet = lastVisitedMapPoint.TagNumber;
+                maintainModeData.Coordination = navigationClone.CurrentCoordination;
+                maintainModeData.Coordination.Theta = navigationClone.Angle;
+
+                LogDebugMessage("現在是維護模式", true);
+            }
+            else
+            {
+                LogDebugMessage("已關閉維護模式", true);
+            }
+            BrocastMaintainStats();
+        }
+
+        internal async Task BrocastMaintainStats()
+        {
+            frontendHubContext.Clients.All.SendAsync("maintain-mode-status", maintainModeData);
         }
     }
 }

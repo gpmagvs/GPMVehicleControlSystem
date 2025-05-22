@@ -19,8 +19,8 @@ using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -94,12 +94,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             try
             {
+                await base.LaserSettingBeforeTaskExecute();
                 //啟用前後雷射偵測 + Loading 組數
-                await Agv.Laser.SideLasersEnable(false);
                 await Agv.Laser.FrontBackLasersEnable(!Agv.Parameters.LDULDParams.BypassFrontLaserWhenEntryEQ, false);
-
                 await Task.Delay(200);
-
                 return await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);
 
             }
@@ -112,6 +110,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            Agv.IsHandshaking = true;
             if (Agv.Parameters.LDULD_Task_No_Entry && !IsDestineStationBuffer)
             {
                 return await base.BeforeTaskExecuteActions();
@@ -258,11 +257,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
-        protected override Task<SendActionCheckResult> TransferTaskToAGVC()
+        protected override async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
             Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
+            await Agv.Laser.SideLasersEnable(false);
 
-            return base.TransferTaskToAGVC();
+            if (!RunningTaskData.GoTOHomePoint && isNeedArmExtend && Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
+            {
+                _ = Task.Factory.StartNew(async () =>
+                 {
+                     var result = await ForkHorizonExendAction();
+
+                     if (!result.success)
+                     {
+                         Agv.SoftwareEMO(result.alarmcode);
+                     }
+                 });
+            }
+
+
+            return await base.TransferTaskToAGVC();
         }
 
 
@@ -572,19 +586,15 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     AlarmCodes _alarmcode = AlarmCodes.None;
                     if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
                     {
-                        if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
-                            ForkHomeProcess();
-
+                        ForkHomeProcess();
                         _alarmcode = await AfterBackHomeActions(ActionStatus.SUCCEEDED);
                     }
                     else if (Agv.AGVC.IsRunning)
                     {
-                        if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
-                            ForkHomeProcess();
-
-
+                        ForkHomeProcess();
                         _WaitBackToHomeDonePause.Reset();
 
+                        _BackHomeActionDoneStatus = Agv.AGVC.ActionStatus;
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                         StartWatchCargoState();
@@ -607,6 +617,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             return (false, task_abort_alarmcode);
                         }
                         logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
+                        IsBackToSecondaryPt = false;
                         //logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
@@ -618,12 +629,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + ex.StackTrace);
-                throw;
+                logger.Error(ex);
+                return (false, AlarmCodes.Code_Error_In_System);
             }
             finally
             {
-                _WaitBackToHomeDonePause.Set();
+                //_WaitBackToHomeDonePause.Set();
             }
         }
 
@@ -696,12 +707,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 stopwatch.Stop();
                 logger.Warn(message);
-                Agv.DebugMessageBrocast(message);
+                Agv.LogDebugMessage(message);
             }
             void _RestartTimer(string message)
             {
                 stopwatch.Restart();
-                Agv.DebugMessageBrocast(message);
+                Agv.LogDebugMessage(message);
                 logger.Warn(message);
             }
 
@@ -780,11 +791,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     await ForkHomeProcess();
                 }
 
-                if (IsNeedWaitForkHome)
+                if (forkGoHomeTask != null)
                 {
-                    logger.Trace($"[Async Action] AGV Park Finish In Secondary, Waiting Fork Go Home Finish ");
                     Task.WaitAll(new Task[] { forkGoHomeTask });
-                    logger.Trace($"[Async Action] Fork is at safe height Now");
+                    if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
+                        return ForkGoHomeResultAlarmCode;
                 }
                 asyncCSTReadCancellationTokenSource.Cancel();
                 isForkReachStandyHeight = true;
@@ -898,26 +909,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (ForkLifter == null)
                 return (true, AlarmCodes.None);
 
-
             bool arm_move_Done = false;
             (bool confirm, string message) armMoveing = (false, "等待DO輸出");
 
             if (isNeedArmExtend)
             {
-                Agv.HandshakeStatusText = "AGV牙叉伸出中";
-                logger.Trace($"FORK ARM Extend Out");
-                var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
-                arm_move_Done = _arm_move_result.confirm;
-                if (!arm_move_Done)
+                if (!Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
                 {
-                    logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
-                    return (false, _arm_move_result.Item2);
+                    var forkExtendResult = await ForkHorizonExendAction();
+                    if (!forkExtendResult.success)
+                        return forkExtendResult;
                 }
-                else if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.END)
+                else
                 {
-                    return (false, AlarmCodes.Fork_Arm_Pose_Error);
+                    //checkPosition
+                    while (!ForkLifter.IsForkArmExtendLocationCorrect)
+                    {
+                        await Task.Delay(1000);
+                    }
                 }
-                logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
+
                 await Task.Delay(1000);
                 //check arm position 
             }
@@ -934,6 +945,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 
+            return (true, AlarmCodes.None);
+        }
+
+        private async Task<(bool success, AlarmCodes alarmcode)> ForkHorizonExendAction()
+        {
+            bool arm_move_Done = false;
+            Agv.HandshakeStatusText = "AGV牙叉伸出中";
+            logger.Trace($"FORK ARM Extend Out");
+            var _arm_move_result = await ForkLifter.ForkExtendOutAsync();
+            arm_move_Done = _arm_move_result.confirm;
+            if (!arm_move_Done)
+            {
+                logger.Trace($"FORK ARM Extend Action Done. {_arm_move_result.Item2}");
+                return (false, _arm_move_result.Item2);
+            }
+            else if (!ForkLifter.IsForkArmExtendLocationCorrect)
+            {
+                return (false, AlarmCodes.Fork_Arm_Pose_Error);
+            }
+            logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
             return (true, AlarmCodes.None);
         }
 
@@ -1034,20 +1065,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            WaitForkReachPoseAndUpdateStatusText(_wait_fork_reach_position_cst);
             var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return result;
-
-        }
-
-        private async Task WaitForkReachPoseAndUpdateStatusText(CancellationTokenSource _wait_fork_reach_position_cst)
-        {
-            while (!_wait_fork_reach_position_cst.IsCancellationRequested)
-            {
-                await Task.Delay(1);
-                Agv.HandshakeStatusText = $"AGV牙叉下降至放貨高度..({ForkLifter.CurrentHeightPosition} cm)";
-            }
         }
 
         internal virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
@@ -1164,6 +1184,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.CSTReader.ValidCSTID = "";
                 return (true, AlarmCodes.None);
             }
+
+            if (Agv.Parameters.CargoExistSensorParams.ExistSensorSimulation)
+                Agv.CSTReader.ValidCSTID = "";
 
             if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);

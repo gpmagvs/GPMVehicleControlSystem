@@ -27,6 +27,8 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.TaskExecute;
 using AGVSystemCommonNet6.GPMRosMessageNet.Actions;
 using YamlDotNet.Core.Tokens;
+using GPMVehicleControlSystem.Service;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -35,7 +37,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private bool IsLaserRecoveryHandled = false;
         internal bool WaitingForChargeStatusChangeFlag = false;
         private Debouncer _vehicleDirectionChangedDebouncer = new Debouncer();
-
+        private Debouncer _videoRecordDebuncer = new Debouncer();
+        GuardVideoService guardVideoService = new GuardVideoService();
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
             get
@@ -147,9 +150,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void AGVC_OnSpeedControlChanged(object? sender, ROBOT_CONTROL_CMD e)
         {
+            memoryCache.Set("CurrentRobotSpeedCommand", e.ToString());
+            frontendHubContext.Clients.All.SendAsync("CurrentRobotSpeedCommand", e.ToString());
             Task.Factory.StartNew(async () =>
             {
-                DebugMessageBrocast($"當前速度控制->{e}");
+                LogDebugMessage($"當前速度控制->{e}");
             });
         }
 
@@ -172,7 +177,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void HandleCSTReaderStateChanged(object? sender, int state)
         {
-            DebugMessageBrocast($"CST Reader State Changed to [{state}]");
+            LogDebugMessage($"CST Reader State Changed to [{state}]");
         }
 
         private ManualResetEvent WaitOperatorCheckCargoStatusDone = new ManualResetEvent(false);
@@ -323,16 +328,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (AGVC.CycleStopActionExecuting)
             {
-                DebugMessageBrocast($"[Action Status Changed To SUCCEEDED by Cycle Stop Action Done Check. ] Action Status is SUCCESSED, reset actionClient.goal = new TaskCommandGoal()");
+                LogDebugMessage($"[Action Status Changed To SUCCEEDED by Cycle Stop Action Done Check. ] Action Status is SUCCESSED, reset actionClient.goal = new TaskCommandGoal()");
                 AGVC.actionClient.goal = new TaskCommandGoal();
             }
             if (_RunTaskData.Destination == Navigation.LastVisitedTag)
             {
-                DebugMessageBrocast($"Action Status now is SUCCESSED and AGV Position is Destine of Executed Task({Navigation.LastVisitedTag})");
+                LogDebugMessage($"Action Status now is SUCCESSED and AGV Position is Destine of Executed Task({Navigation.LastVisitedTag})");
                 AGVC.actionClient.goal = new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal();
             }
             _ = Task.Run(async () =>
             {
+                LogDebugMessage("EndLaserObsMonitorAsync->HandleAGVCActionSuccess");
                 await EndLaserObsMonitorAsync();
             });
         }
@@ -343,7 +349,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 SetSub_Status(SUB_STATUS.RUN);
                 StartLaserObstacleMonitor();
-                await Task.Delay(300);
                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
                     BuzzerPlayer.Move();
             });
@@ -450,10 +455,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private async void HandleResetButtonPush(object? sender, EventArgs e)
         {
-            BuzzerPlayer.Stop("HandleResetButtonPush");
-            await TryResetMotors();
-            AlarmManager.ClearAlarm();
-            BuzzerPlayer.Stop("HandleResetButtonPush");
+            ResetAlarmsAsync(true);
+            //BuzzerPlayer.Stop("HandleResetButtonPush");
+            //await TryResetMotors();
+            //AlarmManager.ClearAlarm();
+            //BuzzerPlayer.Stop("HandleResetButtonPush");
 
         }
 
@@ -551,7 +557,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private (bool confirmed, string message) HandleSpeedReconveryRequesetRaised()
         {
             if (!IsAllLaserNoTrigger())
+            {
+                LogDebugMessage($"要求車控速度恢復但尚有雷射觸發中", true);
                 return (false, "要求車控速度恢復但尚有雷射觸發中");
+            }
             return (true, "");
         }
 
@@ -799,7 +808,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SoftwareEMO(alarm_code);
         }
 
+        internal async Task StartRecordViedo()
+        {
+            _ = Task.Factory.StartNew(async () =>
+            {
+                _videoRecordDebuncer.Debounce(async () =>
+                {
+                    logger.LogInformation("嚴重異常觸發錄影守衛");
 
+                    bool startSucess = await guardVideoService.StartRecord();
+                    logger.LogInformation($"錄影守衛啟動:{(startSucess ? "成功" : "失敗!!!!!")}");
+
+                }, 1000);
+            });
+        }
 
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
@@ -849,10 +871,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 GuideSensor.StateData = _ModuleInformation.GuideSensor;
                 BarcodeReader.StateData = _ModuleInformation.reader;
                 VerticalDriverState.StateData = _ModuleInformation.Action_Driver;
-                if (ForkLifter != null)
-                {
-                    ForkLifter.fork_ros_controller.CurrentPosition = VerticalDriverState.CurrentPosition;
-                }
+
                 for (int i = 0; i < _ModuleInformation.Wheel_Driver.driversState.Length; i++)
                     WheelDrivers[i].StateData = _ModuleInformation.Wheel_Driver.driversState[i];
 

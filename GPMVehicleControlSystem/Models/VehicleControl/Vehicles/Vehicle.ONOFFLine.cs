@@ -21,16 +21,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             get => _Remote_Mode;
             set
             {
-                _Remote_Mode = value;
-                if (value == REMOTE_MODE.ONLINE)
+                if (_Remote_Mode != value)
                 {
-                    StatusLighter.ONLINE();
+
+                    _Remote_Mode = value;
+                    LogDebugMessage($"Remote_Mode = {value}", true);
+                    HandleOnlineModeChanged(_Remote_Mode);
                 }
-                else
-                {
-                    StatusLighter.OFFLINE();
-                    AGVC.EmergencyStop(true);
-                }
+            }
+        }
+
+        private async Task HandleOnlineModeChanged(REMOTE_MODE currentOnlineMode)
+        {
+            if (currentOnlineMode == REMOTE_MODE.ONLINE)
+            {
+                await StatusLighter.ONLINE();
+                if (lastVisitedMapPoint.StationType == STATION_TYPE.Normal)
+                    _ = SwitchDirectionLightAsWaitAGVSNextAction();
+            }
+            else
+            {
+                await DirectionLighter.CloseAll();
+                await StatusLighter.OFFLINE();
             }
         }
 

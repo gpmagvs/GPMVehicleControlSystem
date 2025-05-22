@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public override async Task<bool> LaserSettingBeforeTaskExecute()
         {
-            Agv.Laser.AllLaserDisable();
+            await base.LaserSettingBeforeTaskExecute();
             return await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Bypass);
         }
         internal class clsBatInfo

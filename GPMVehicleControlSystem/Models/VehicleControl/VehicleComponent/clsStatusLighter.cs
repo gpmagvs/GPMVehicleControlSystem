@@ -40,7 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     });
             await DOModule.SetState(request);
         }
-        public async void RUN()
+        public async void RUN(int debunce = 300)
         {
             _Debouncer.Debounce(async () =>
             {
