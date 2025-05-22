@@ -110,6 +110,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
+            Agv.IsHandshaking = true;
             if (Agv.Parameters.LDULD_Task_No_Entry && !IsDestineStationBuffer)
             {
                 return await base.BeforeTaskExecuteActions();
@@ -1064,20 +1065,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
 
             CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            WaitForkReachPoseAndUpdateStatusText(_wait_fork_reach_position_cst);
             var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5);
             _wait_fork_reach_position_cst.Cancel();
             return result;
-
-        }
-
-        private async Task WaitForkReachPoseAndUpdateStatusText(CancellationTokenSource _wait_fork_reach_position_cst)
-        {
-            while (!_wait_fork_reach_position_cst.IsCancellationRequested)
-            {
-                await Task.Delay(1);
-                Agv.HandshakeStatusText = $"AGV牙叉下降至放貨高度..({ForkLifter.CurrentHeightPosition} cm)";
-            }
         }
 
         internal virtual async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)

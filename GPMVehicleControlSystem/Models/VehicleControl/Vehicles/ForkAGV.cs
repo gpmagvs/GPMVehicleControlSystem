@@ -285,8 +285,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 BuzzerPlayer.Alarm();
                                 AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
                             }
+                            ForkLifter.IsStopByObstacleDetected = true;
                             await ForkLifter.ForkStopAsync();
+                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
                             LogDebugMessage($"雷射組數觸發，牙叉停止動作!", true);
+
+                            if (ForkLifter.IsManualOperation)
+                            {
+                                SendNotifyierToFrontend($"注意!在手動操作下牙叉側邊雷射障礙物檢出停止動作!", title: "Fork Action Stop");
+                                break;
+                            }
+
                         }
                     }
                     else if (!isAnySideLaserTriggering && _isStopCmdCalled)
@@ -299,7 +308,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         else if (triggerTimer.ElapsedMilliseconds >= durationMs)
                         {
                             _isStopCmdCalled = false;
-                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+                            //_fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
                             if (lastVerticalForkActionCmd != null)
                             {
                                 if (!IsLaserMonitoring)
@@ -309,6 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
                                 }
                                 await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
+                                ForkLifter.IsStopByObstacleDetected = false;
                                 LogDebugMessage($"雷射復原，牙叉恢復動作!", true);
                             }
                         }
@@ -326,7 +336,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", true);
+            _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
+
             Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
 
             void _fork_car_controller_OnForkStopMove(object? sender, EventArgs e)
@@ -351,36 +363,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Laser.SideLasersEnable(true);
             }
         }
-        private bool _isLoadUnloadTaskRunning => _RunTaskData.IsLDULDAction() && !_RunTaskData.IsActionFinishReported;
-        private void ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning()
-        {
-            if (GetSub_Status() == SUB_STATUS.DOWN)
-                return;
-
-
-            bool _isForkRunningPreActionAndNoObstacleArround = ForkLifter.EarlyMoveUpState.IsHeightPreSettingActionRunning && IsAllLaserNoTrigger();
-
-            if (_isLoadUnloadTaskRunning || _isForkRunningPreActionAndNoObstacleArround)
-            {
-                _Sub_Status = SUB_STATUS.RUN;
-                StatusLighter.RUN();
-                if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                    BuzzerPlayer.Move();
-                else
-                    BuzzerPlayer.Action();
-            }
-            if (ForkLifter.IsInitialing || ForkLifter.IsManualOperation || ForkLifter.CurrentHeightPosition <= Parameters.ForkAGV.SaftyPositionHeight)
-            {
-                BuzzerPlayer.Stop($"ChangeSubStatusAndLighterBuzzerWhenLaserRecoveryInForkRunning");
-                if (ForkLifter.IsInitialing)
-                {
-                    //_Sub_Status = SUB_STATUS.Initializing;
-                    StatusLighter.AbortFlash();
-                    StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
-                }
-            }
-        }
-
 
         protected override async Task<(bool, string)> PreActionBeforeInitialize()
         {

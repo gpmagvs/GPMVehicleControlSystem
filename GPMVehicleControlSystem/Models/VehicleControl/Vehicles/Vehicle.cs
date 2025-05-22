@@ -1527,6 +1527,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await frontendHubContext.Clients.All.SendAsync("close-notify-dialog", code);
         }
+
         internal async Task<(bool, string)> SwitchCSTReader(bool enable)
         {
             Parameters.EditKey = DateTime.Now.ToString("yyyyMMddHHmmssffff");

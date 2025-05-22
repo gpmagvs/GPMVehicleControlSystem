@@ -499,22 +499,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         Stopwatch sw = Stopwatch.StartNew();
                         while (sw.Elapsed.TotalSeconds < 60)
                         {
+                            forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString()}";
                             if (IsStopByObstacleDetected)
                                 sw.Reset();
                             else
                                 sw.Start();
-                            await Task.Delay(1000);
+                            await Task.Delay(100, _waitPoseReachTargetCancellationTokenSource.Token);
                         }
                     }
                     catch (TaskCanceledException)
                     {
-                        throw;
+                        logger.Trace("Fork Move Timeout Detect Task Cancelled");
                     }
                 });
                 Task<(bool confirm, string message, double positionError)> poseActionTask = Task.Run(async () =>
                 {
+                    await Task.Delay(500);
                     (bool confirm, string message) forkMoveResult = (false, "");
-
                     ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
                     if (!_isForkAlreadyGoingToTarget)
                     {

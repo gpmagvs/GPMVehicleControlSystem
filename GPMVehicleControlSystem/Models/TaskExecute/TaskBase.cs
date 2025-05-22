@@ -810,20 +810,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (!Agv.Parameters.LDULD_Task_No_Entry && (action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark) && position == FORK_HEIGHT_POSITION.DOWN_)
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Down_Pose_When_Load_Action_Executing);
 
-            CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            _ = Task.Run(async () =>
-            {
-                while (!_wait_fork_reach_position_cst.IsCancellationRequested)
-                {
-                    await Task.Delay(1);
-                    Agv.HandshakeStatusText = $"AGV牙叉動作中({ForkLifter.CurrentHeightPosition} cm)";
-                }
-            });
-
             logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-
             (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, Agv.Parameters.LDULD_Task_No_Entry).Result;
-            _wait_fork_reach_position_cst.Cancel();
             return result;
         }
 
