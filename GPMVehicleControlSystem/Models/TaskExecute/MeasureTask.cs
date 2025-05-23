@@ -111,7 +111,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             logger.Warn($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure First Point");
             await Task.Delay(1000);
             FlashDirectorLighter();
-            BuzzerPlayer.Measure();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Measure;
             Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
             if (TsmcMiniAGV.Parameters.InspectionAGV.MeasureSimulation)
             {
@@ -119,7 +119,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(500);
-                    BuzzerPlayer.Measure();
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Measure;
                     TsmcMiniAGV.SetSub_Status(SUB_STATUS.RUN);
                     await Task.Delay(5000);
                     TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
@@ -174,8 +174,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     Agv.DirectionLighter.Forward();
                 }
-                BuzzerPlayer.Stop();
-                BuzzerPlayer.Move();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
                 logger.Info($"Bay Point 量測結束，開始離開Bay");
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 //Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
@@ -188,8 +187,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             else //移動到下一個點
             {
                 clsTaskDownloadData taskData = RunningTaskData.Splice(completed_point_index_, 2, true);
-                BuzzerPlayer.Stop();
-                BuzzerPlayer.Move();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
                 await Agv.AGVC.ExecuteTaskDownloaded(taskData);
                 AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
@@ -228,7 +226,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 await Task.Delay(1000);
 
                 FlashDirectorLighter();
-                BuzzerPlayer.Measure();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Measure;
                 logger.Warn($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
                 Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
 

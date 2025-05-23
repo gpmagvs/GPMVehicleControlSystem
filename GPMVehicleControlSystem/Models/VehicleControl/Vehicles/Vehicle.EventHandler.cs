@@ -185,10 +185,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             WaitOperatorCheckCargoStatusDone.Reset();
             frontendHubContext.Clients.All.SendAsync("ManualCheckCargoStatus", checkPointData);
-            BuzzerPlayer.WaitingCargoStatusCheck();
+            BuzzerPlayer.SoundPlaying = SOUNDS.WaitingCargoStatusCheck;
             bool checkDone = WaitOperatorCheckCargoStatusDone.WaitOne(TimeSpan.FromSeconds(checkPointData.Timeout));
             logger.LogInformation($"Operator Check Cargo Status Timeout:{!checkDone}");
-            BuzzerPlayer.Stop("LoadTask_OnManualCheckCargoStatusTrigger");
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             return checkDone;
         }
         internal void ManualCheckCargoStatusDone(string userName = "")
@@ -350,7 +350,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SetSub_Status(SUB_STATUS.RUN);
                 StartLaserObstacleMonitor();
                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                    BuzzerPlayer.Move();
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
             });
         }
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
@@ -693,9 +693,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         try
                         {
                             if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                                BuzzerPlayer.Move();
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
                             else
-                                BuzzerPlayer.Action();
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Action;
                         }
                         catch (Exception ex)
                         {
@@ -746,8 +746,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected void AGVStatusChangeToAlarmWhenLaserTrigger()
         {
             _Sub_Status = SUB_STATUS.ALARM;
-            BuzzerPlayer.Stop("AGVStatusChangeToAlarmWhenLaserTrigger");
-            BuzzerPlayer.Alarm();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             StatusLighter.DOWN();
         }
         public REMOTE_MODE RemoteModeWhenHorizonMotorAlarm { get; protected set; } = REMOTE_MODE.OFFLINE;

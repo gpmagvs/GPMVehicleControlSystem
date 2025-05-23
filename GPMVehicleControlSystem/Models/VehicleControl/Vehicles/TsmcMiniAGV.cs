@@ -318,7 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected internal async override void SoftwareEMO(AlarmCodes alarmCode)
         {
-            BuzzerPlayer.Alarm();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             if (Laser3rdTriggerHandlerFlag)
             {
                 logger.LogWarning($"EMS Trigger by Laser 3rd and Reset process is running, No Abort Task and AGV is not Down Status");

@@ -113,7 +113,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             var Agv = StaStored.CurrentVechicle;
             bool _isCargoStatusRecoveryNoraml = false;
-            BuzzerPlayer.Alarm();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             while (!_isCargoStatusRecoveryNoraml)
             {
                 //進入確認流程
@@ -133,7 +133,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
                 await Task.Delay(1000);
             }
-            BuzzerPlayer.Action();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             return true;
         }
         protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()

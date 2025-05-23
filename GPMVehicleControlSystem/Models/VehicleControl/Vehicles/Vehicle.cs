@@ -339,7 +339,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 await Startup();
                 HandshakeLog("Hello!World!");
-                BuzzerPlayer.Alarm();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             });
         }
 
@@ -689,7 +689,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();
-                BuzzerPlayer.Stop("Initialize");
+                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                 DirectionLighter.CloseAll();
                 orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
                 IsWaitForkNextSegmentTask = false;
@@ -717,7 +717,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             IsInitialized = false;
                             _Sub_Status = SUB_STATUS.ALARM;
-                            BuzzerPlayer.Alarm();
+                            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                             StatusLighter.AbortFlash();
                             return result;
                         }
@@ -767,7 +767,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         StatusLighter.AbortFlash();
                         _Sub_Status = SUB_STATUS.DOWN;
-                        BuzzerPlayer.Alarm();
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                         IsInitialized = false;
                         return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
                     }
@@ -778,7 +778,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (VehicleInitializeException ex)
             {
                 if (ex.alarmBuzzerOn)
-                    BuzzerPlayer.Alarm();
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return (false, ex.Message);
             }
             finally
@@ -913,7 +913,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             else
             {
                 AlarmManager.AddAlarm(alarmo_code, true);
-                BuzzerPlayer.Alarm();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return (false, error_message);
             }
         }
@@ -1058,7 +1058,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 StoreStatusToDataBase();
                 HandshakeIOOff();
-                BuzzerPlayer.Alarm();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 StatusLighter.CloseAll();
                 StatusLighter.DOWN();
                 DirectionLighter.CloseAll();
@@ -1205,7 +1205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 try
                 {
                     IsResetAlarmWorking = true;
-                    BuzzerPlayer.Stop("ResetAlarmsAsync");
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                     AlarmManager.ClearAlarm();
                     AGVAlarmReportable.ResetAlarmCodes();
                     AGVS?.ResetErrors();
@@ -1220,15 +1220,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             bool isObstacle = !WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.FrontProtection_Area_Sensor_2) || !WagoDI.GetState(DI_ITEM.RightProtection_Area_Sensor_3) || !WagoDI.GetState(DI_ITEM.LeftProtection_Area_Sensor_3);
                             if (isObstacle)
                             {
-                                BuzzerPlayer.Alarm();
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                                 return;
                             }
                             else
                             {
                                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                                    BuzzerPlayer.Move();
+                                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
                                 else
-                                    BuzzerPlayer.Action();
+                                    BuzzerPlayer.SoundPlaying = SOUNDS.Action;
                                 return;
                             }
                         }

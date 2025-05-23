@@ -14,25 +14,25 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Alarm")]
         public async Task<IActionResult> Alarm()
         {
-            BuzzerPlayer.Alarm();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             return Ok();
         }
         [HttpGet("Moving")]
         public async Task<IActionResult> Moving()
         {
-            BuzzerPlayer.Move();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Move;
             return Ok();
         }
         [HttpGet("Action")]
         public async Task<IActionResult> Action()
         {
-            BuzzerPlayer.Action();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             return Ok();
         }
         [HttpGet("Stop")]
         public async Task<IActionResult> Stop()
         {
-            BuzzerPlayer.Stop();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             return Ok();
         }
 

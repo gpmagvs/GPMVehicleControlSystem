@@ -97,9 +97,9 @@ namespace GPMVehicleControlSystem.Controllers
                     StaStored.CurrentVechicle.SetSub_Status(AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN);
                     _ = Task.Delay(1000).ContinueWith(async t =>
                     {
-                        BuzzerPlayer.Stop();
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                         await Task.Delay(500);
-                        BuzzerPlayer.Alarm();
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                     });
 
                     _ = _updateService.BrocastRestartSystemCountDownNotify("系統更新", 5);

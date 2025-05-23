@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected override void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            BuzzerPlayer.Play(SOUNDS.Action);
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
@@ -32,7 +32,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         internal override async Task<(bool success, AlarmCodes alarmCode)> HandleAGVCActionSucceess()
         {
-            BuzzerPlayer.Stop($"HandleAGVCActionSucceess ({GetType().Name})");
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             return (true, AlarmCodes.None);
         }
     }

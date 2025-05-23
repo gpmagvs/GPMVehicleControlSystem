@@ -65,13 +65,13 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         {
             Stop().GetAwaiter().GetResult();
             errorMessage = "";
-            Console.WriteLine($"APlay PlayAudio Method Invoked.({sound})");
-            string audioPath = GetAudioPath(sound);
             if (sound == SOUNDS.Stop)
             {
                 Stop().GetAwaiter().GetResult();
                 return true;
             }
+            Console.WriteLine($"APlay PlayAudio Method Invoked.({sound})");
+            string audioPath = GetAudioPath(sound);
             return PlayAudio(audioPath, out errorMessage);
         }
 

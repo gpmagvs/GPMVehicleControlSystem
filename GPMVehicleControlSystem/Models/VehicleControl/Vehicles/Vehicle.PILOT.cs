@@ -336,7 +336,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EndLaserObstacleMonitor();
             var currentStatus = GetSub_Status();
             if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
-                BuzzerPlayer.Stop("EndLaserObsMonitorAsync");
+                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
         }
 
         private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
@@ -981,12 +981,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (ExecutingTaskEntity?.action != ACTION_TYPE.None)
             {
                 if (ExecutingTaskEntity?.action == ACTION_TYPE.Charge)
-                    BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+                    BuzzerPlayer.SoundPlaying = SOUNDS.GoToChargeStation;
                 else
-                    BuzzerPlayer.Action();
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             }
             else
-                BuzzerPlayer.Move();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
             SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
         }
 
@@ -994,7 +994,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             var currentSubStatus = GetSub_Status();
             SetSub_Status(SUB_STATUS.ALARM);
-            BuzzerPlayer.Alarm();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
         }
 
         internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)

@@ -94,7 +94,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             TsmcMiniAGV.IsHandshaking = true;
             TsmcMiniAGV.HandshakeStatusText = $"{(Debugging ? "[DEBUG]" : "")}電池交換開始";
-            BuzzerPlayer.ExchangeBattery();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Exchange;
 
             #region 電池交換交握
             try
@@ -183,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (HandshakeException ex)
             {
-                BuzzerPlayer.Alarm();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 TsmcMiniAGV.IsHandshaking = false;
 
                 if (Debugging)
@@ -232,14 +232,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         private async Task<(bool success, AlarmCodes alarmCode)> BackwardToEntryPoint()
         {
-            BuzzerPlayer.Stop();
-            BuzzerPlayer.Action();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
 
             if (Debugging)
             {
                 StaStored.CurrentVechicle.SetSub_Status(SUB_STATUS.IDLE);
                 await Task.Delay(3000);
-                BuzzerPlayer.Stop();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                 return (true, AlarmCodes.None);
             }
             else

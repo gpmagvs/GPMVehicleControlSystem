@@ -46,7 +46,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         }
         protected override void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            BuzzerPlayer.Play(SOUNDS.GoToChargeStation);
+            BuzzerPlayer.SoundPlaying = SOUNDS.GoToChargeStation;
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
@@ -61,7 +61,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             DelayChargeStatusJudgeWork();
             Agv._IsCharging = true;
-            BuzzerPlayer.Stop($"HandleAGVCActionSucceess {GetType().Name}");
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             return (true, AlarmCodes.None);
         }
 

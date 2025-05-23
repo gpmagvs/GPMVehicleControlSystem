@@ -498,11 +498,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             if (action == ACTION_TYPE.None)
             {
-                BuzzerPlayer.Move();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
             }
             else
             {
-                BuzzerPlayer.Action();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             }
         }
         public static event EventHandler<clsTaskDownloadData> OnSegmentTaskExecuting2Sec;

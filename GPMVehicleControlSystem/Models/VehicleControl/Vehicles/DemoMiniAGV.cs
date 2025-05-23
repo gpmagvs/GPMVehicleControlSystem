@@ -90,7 +90,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.Horizon_Motor_Brake, false);
 
             }
-            BuzzerPlayer.Stop($"ResetAlarmsAsync ({GetType().Name})");
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
 
         }
 

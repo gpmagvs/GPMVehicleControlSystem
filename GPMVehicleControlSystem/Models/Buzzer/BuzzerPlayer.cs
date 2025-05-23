@@ -18,7 +18,46 @@ namespace GPMVehicleControlSystem.Models.Buzzer
         static Logger logger => LogManager.GetCurrentClassLogger();
 
         public static bool IsPlaying => IsAlarmPlaying || IsActionPlaying || IsMovingPlaying || IsGotoChargeStationPlaying || IsMeasurePlaying || IsExchangeBatteryPlaying || IsHandshakingPlaying || IsWaitingCargoStatusCheckPlaying;
-        public static SOUNDS SoundPlaying { get; private set; } = SOUNDS.Stop;
+
+
+        private static SOUNDS _playing = SOUNDS.Stop;
+
+        public static SOUNDS SoundPlaying
+        {
+            get => _playing;
+            set
+            {
+                if (_playing != value)
+                {
+                    if (OnBuzzerPlay != null)
+                    {
+                        bool isBuzzerOff = !OnBuzzerPlay.Invoke();
+                        if (isBuzzerOff)
+                        {
+                            _playing = SOUNDS.Stop;
+                            APLAYER.PlayAudio(_playing, out _);
+                            return;
+                        }
+                    }
+
+                    if (value == SOUNDS.Move && BeforeBuzzerMovePlay != null)
+                    {
+                        var _toPlaying = BeforeBuzzerMovePlay.Invoke();
+                        if (_playing == _toPlaying)
+                        {
+                            return;
+                        }
+                        else
+                            _playing = _toPlaying;
+                    }
+                    else
+                        _playing = value;
+
+                    APLAYER.PlayAudio(_playing, out string errorMsg);
+                }
+            }
+        }
+
         public static string PlayingAudio
         {
             get
@@ -69,72 +108,6 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 Console.WriteLine("Will use aplay to play audios!!");
             }
         }
-        public static void Alarm()
-        {
-            if (IsAlarmPlaying)
-                return;
-            Play(SOUNDS.Alarm);
-        }
-        public static void Action()
-        {
-            if (IsActionPlaying)
-                return;
-            Play(SOUNDS.Action);
-        }
-        public static void Move()
-        {
-            if (IsMovingPlaying)
-                return;
-            var _sound = SOUNDS.Move;
-            if (BeforeBuzzerMovePlay != null)
-                _sound = BeforeBuzzerMovePlay();
-            if (_sound == SOUNDS.GoToChargeStation && IsGotoChargeStationPlaying) return;
-
-            Play(_sound);
-        }
-
-        internal static void Measure()
-        {
-            if (IsMeasurePlaying)
-                return;
-            Play(SOUNDS.Measure);
-        }
-
-        internal static void ExchangeBattery()
-        {
-            if (IsExchangeBatteryPlaying)
-                return;
-            Play(SOUNDS.Exchange);
-        }
-        internal static void WaitingCargoStatusCheck()
-        {
-            if (IsWaitingCargoStatusCheckPlaying)
-                return;
-            Play(SOUNDS.WaitingCargoStatusCheck);
-        }
-        internal static void SlowDown()
-        {
-            if (IsSlowDownPlaying)
-                return;
-            IsSlowDownPlaying = true;
-            PlayInBackground(SOUNDS.Stop).GetAwaiter().GetResult();
-            PlayInBackground(SOUNDS.SlowDownVoice);
-        }
-
-        internal static void Rotating()
-        {
-            if (IsRotatingPlaying)
-                return;
-            IsRotatingPlaying = true;
-            PlayInBackground(SOUNDS.Stop).GetAwaiter().GetResult();
-            PlayInBackground(SOUNDS.RotatingVoice);
-        }
-        internal static void Stop(string description = "")
-        {
-            logger.Debug($"Stop BuzzerPlayer Invoke: {description}");
-            Play(SOUNDS.Stop);
-            BackgroundStop();
-        }
         internal static void BackgroundStop()
         {
             IsRotatingPlaying = IsSlowDownPlaying = false;
@@ -157,72 +130,5 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 APLAYER.PlayAudioBackground(sound, out string errorMsg);
             });
         }
-        public static async void Play(SOUNDS sound)
-        {
-            playDebouncer.Debounce(() =>
-            {
-                try
-                {
-                    SoundPlaying = sound;
-                    if (sound == SOUNDS.Stop)
-                    {
-                        IsGotoChargeStationPlaying = IsAlarmPlaying = IsActionPlaying = IsExchangeBatteryPlaying = IsMovingPlaying = IsMeasurePlaying = IsHandshakingPlaying = IsWaitingCargoStatusCheckPlaying = false;
-                    }
-                    else
-                    {
-                        IsMovingPlaying = sound == SOUNDS.Move;
-                        IsGotoChargeStationPlaying = sound == SOUNDS.GoToChargeStation;
-                        IsActionPlaying = sound == SOUNDS.Action;
-                        IsAlarmPlaying = sound == SOUNDS.Alarm;
-                        IsExchangeBatteryPlaying = sound == SOUNDS.Exchange;
-                        IsHandshakingPlaying = sound == SOUNDS.Handshaking;
-                        IsWaitingCargoStatusCheckPlaying = sound == SOUNDS.WaitingCargoStatusCheck;
-                        IsSlowDownPlaying = sound == SOUNDS.SlowDownVoice;
-                        IsRotatingPlaying = sound == SOUNDS.RotatingVoice;
-                    }
-
-                    logger.Info($"Playing Sound : {sound}");
-
-                    if (APLAYER != null)
-                    {
-                        logger.Info($"Playing with APLAYER : {sound}");
-                        APLAYER.PlayAudio(sound, out string errorMsg);
-                        logger.Info($"Playing with APLAYER Done: {errorMsg}");
-                        return;
-                    }
-
-                    Thread playsound_thred = new Thread(() =>
-                    {
-                        try
-                        {
-                            if (OnBuzzerPlay != null && sound != SOUNDS.Stop)
-                            {
-                                bool confirm = OnBuzzerPlay.Invoke();
-                                if (!confirm)
-                                    return;
-                            }
-                            if (rossocket == null)
-                                return;
-                            PlayMusicResponse response = rossocket.CallServiceAndWait<PlayMusicRequest, PlayMusicResponse>("/play_music", new PlayMusicRequest
-                            {
-                                file_path = sound.ToString().ToLower()
-                            }).Result;
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(ex);
-                        }
-                    });
-                    playsound_thred.IsBackground = false;
-                    playsound_thred.Start();
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex);
-                }
-            }, 250);
-
-        }
-
     }
 }

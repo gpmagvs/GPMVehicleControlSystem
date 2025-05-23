@@ -76,7 +76,7 @@ namespace GPMVehicleControlSystem.Service
                                 BuzzerPlayer.PlayInBackground(SOUNDS.RotatingVoice);
                             else
                             {
-                                BuzzerPlayer.Stop($"WatchRotateState (ROTATION_STATUS.ROTATATE_START)");
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                                 BuzzerPlayer.PlayInBackground(SOUNDS.RotatingMusic);
                             }
                             RotateStatus = ROTATION_STATUS.ROTATING;
@@ -89,7 +89,7 @@ namespace GPMVehicleControlSystem.Service
                                 BuzzerPlayer.BackgroundStop();
                                 if (AgvInstance.Parameters.SoundsParams.slowDownAndRotatinSoundPlay.SoundPlayType == SOUND_TYPE.MUSIC_AUDIO)
                                 {
-                                    BuzzerPlayer.Move();
+                                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
                                 }
                                 break;
                             }
@@ -161,7 +161,7 @@ namespace GPMVehicleControlSystem.Service
                                 BuzzerPlayer.PlayInBackground(SOUNDS.SlowDownVoice);
                             else
                             {
-                                BuzzerPlayer.Stop($"WatchRotateState (ROTATION_STATUS.SLOW_DOWN_START)");
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                                 BuzzerPlayer.PlayInBackground(SOUNDS.SlowDownMusic);
                             }
                             SlowDownStatus = SLOW_DOWN_STATUS.SLOW_DOWNING;

@@ -75,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                     if (AGV.BarcodeReader.Data.tagID == 0)
                     {
                         logger.Info($"測試過程中脫離Tag", false);
-                        BuzzerPlayer.Alarm();
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                         AlarmManager.RecordAlarm(AlarmCodes.Motion_control_Missing_Tag_On_End_Point);
                         TestEnd();
                         return;
@@ -84,7 +84,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
                     {
                         var speed_changed = options.rotation_speed / 4;
                         if (isTurnRight)
-                            AGV.ManualController.TurnRight(speed_changed,false);
+                            AGV.ManualController.TurnRight(speed_changed, false);
                         else
                             AGV.ManualController.TurnLeft(speed_changed, false);
                     }

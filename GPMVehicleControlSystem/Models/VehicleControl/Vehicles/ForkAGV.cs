@@ -282,7 +282,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             if (!IsLaserMonitoring)
                             {
                                 _soundBeforeStop = BuzzerPlayer.SoundPlaying;
-                                BuzzerPlayer.Alarm();
+                                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                                 AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
                             }
                             ForkLifter.IsStopByObstacleDetected = true;
@@ -313,8 +313,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             {
                                 if (!IsLaserMonitoring)
                                 {
-                                    BuzzerPlayer.Stop();
-                                    BuzzerPlayer.Play(_soundBeforeStop);
+                                    BuzzerPlayer.SoundPlaying = _soundBeforeStop;
                                     AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
                                 }
                                 await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
@@ -687,7 +686,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Switch))
             {
                 AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error_Vertical, false);
-                BuzzerPlayer.Alarm();
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return (false, "Z軸解煞車旋鈕尚未復歸");
             }
             return base.CheckHardwareStatus();

@@ -56,7 +56,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (_Sub_Status == SUB_STATUS.DOWN)
                             HandshakeIOOff();
                         if (_Sub_Status != SUB_STATUS.Initializing && _Sub_Status != SUB_STATUS.Charging && Operation_Mode == OPERATOR_MODE.AUTO)
-                            BuzzerPlayer.Alarm();
+                            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                         if (AGVC.ActionStatus != ActionStatus.ACTIVE)
                             DirectionLighter.CloseAll();
                         StatusLighter.DOWN();
@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         guardVideoService.StopRecord();
 
                         if (auto_stop_buzzer)
-                            BuzzerPlayer.Stop("SetSub_Status Change to IDLE & auto_stop_buzzer");
+                            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                         StatusLighter.IDLE();
                         DirectionLighter.CloseAll();
 

@@ -199,7 +199,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 _waitMoveToPortDonePause.Reset();
             }
 
-            BuzzerPlayer.Action();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             return await base.BeforeTaskExecuteActions();
         }
 
@@ -214,7 +214,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (!modelExist || !checkPointModel.Enabled || checkPointModel.TriggerMoment != CHECK_MOMENT.BEFORE_LOAD)
                 return;
             InvokeCargoManualCheckNotify(checkPointModel);
-            BuzzerPlayer.Action();
+            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
         }
 
         protected virtual async Task ManualCheckCargoStatusPrcessAfterAction()
