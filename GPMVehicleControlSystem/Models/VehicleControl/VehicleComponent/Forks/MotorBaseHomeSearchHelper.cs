@@ -36,7 +36,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected readonly clsDOModule DOModule;
         protected readonly clsDIModule DIModule;
         protected Logger logger = LogManager.GetCurrentClassLogger();
-        protected virtual double speedWhenSearchStartWithoutCargo { get; set; } = 1;
+        protected virtual double speedWhenSearchStartWithoutCargo { get; set; } = 0.5;
         private double searchSpeed => hasCargoMounted ? 0.5 : speedWhenSearchStartWithoutCargo;
 
         public readonly string name;
@@ -95,17 +95,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             break;
                         case SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME:
                             _Log($"START_DOWN_SEARCH_FIND_HOME");
-                            await DownSearchAsync(searchSpeed);
+                            await DownSearchAsync(0.2);
                             _searchStatus = SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME:
                             _Log($"START_UP_SEARCH_WAIT_LEAVE_HOME");
-                            await UpSearchAsync(0.5);
+                            await UpSearchAsync(0.1);
                             _searchStatus = SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME;
                             break;
                         case SEARCH_STATUS.START_UP_SEARCH_FIND_HOME:
                             _Log($"START_UP_SEARCH_FIND_HOME");
-                            await UpSearchAsync(0.5);
+                            await UpSearchAsync(0.1);
                             _searchStatus = SEARCH_STATUS.UP_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME:
