@@ -184,7 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                if (!IsInitialized || !ModuleInformationUpdatedInitState)
+                if (!ModuleInformationUpdatedInitState)
                     return MAIN_STATUS.DOWN;
                 switch (_Sub_Status)
                 {
@@ -197,7 +197,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Charging:
                         return MAIN_STATUS.Charging;
                     case SUB_STATUS.Initializing:
-                        return MAIN_STATUS.DOWN;
+                        return MAIN_STATUS.Initializing;
                     case SUB_STATUS.ALARM:
                         if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                             return MAIN_STATUS.RUN;
