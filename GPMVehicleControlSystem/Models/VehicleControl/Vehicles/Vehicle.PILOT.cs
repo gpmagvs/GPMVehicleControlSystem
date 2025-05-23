@@ -743,6 +743,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 if (IsCanceled() || IsLaserObsMonitorNotNeedActive())
                                     break;
 
+                                await Task.Delay(10, LaserObsMonitorCancel.Token);
+
                                 var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
 
                                 if (!debouncer.IsStable(cmdGet))
@@ -751,20 +753,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     continue;
                                 }
 
-                                if (_CurrentRobotControlCmd != cmdGet || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection)))
+                                if (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection))
                                 {
-                                    if (IsCanceled() || IsLaserObsMonitorNotNeedActive())
-                                        break;
-
-                                    await Task.Delay(10, LaserObsMonitorCancel.Token);
-
-                                    //需alarm 狀況
-                                    bool isAlarm = (_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP && cmdGet == ROBOT_CONTROL_CMD.STOP) || ((_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.SPEED_Reconvery || _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.DECELERATE) && cmdGet == ROBOT_CONTROL_CMD.STOP);
-                                    if (isAlarm)
-                                        ActionWhenObsDetectTrigger();
-                                    else
-                                        ActionWhenObsDetectReconvery(cmdGet);
-
                                     //已無異常清空所有雷射異常
                                     if (!alarmCodeCollection.Any())
                                         AlarmManager.ClearAlarm(_CurrentAlarmCodeCollection);
@@ -772,18 +762,41 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     {
                                         HandleLaserAlarmCodes(_CurrentAlarmCodeCollection, alarmCodeCollection);
                                     }
-                                    if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                                }
+                                _CurrentAlarmCodeCollection = alarmCodeCollection;
+
+                                if (_CurrentRobotControlCmd != cmdGet)// || (alarmCodeCollection.Length != 0 && !_CurrentAlarmCodeCollection.SequenceEqual(alarmCodeCollection))
+                                {
+                                    if (IsCanceled() || IsLaserObsMonitorNotNeedActive())
+                                        break;
+
+                                    bool isSpeedNeedToStop = cmdGet == ROBOT_CONTROL_CMD.STOP;
+                                    bool isSpeedNeedToDecelerate = cmdGet == ROBOT_CONTROL_CMD.DECELERATE;
+
+                                    bool isSpeedReconveryToSlow = _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP && cmdGet == ROBOT_CONTROL_CMD.DECELERATE;
+                                    bool isSpeedRecoveryToNormal = (_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.DECELERATE || _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP) && cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery;
+
+                                    if (isSpeedNeedToStop)
+                                    {
+                                        ActionWhenObsDetectTrigger();
+                                    }
+
+                                    if (isSpeedNeedToDecelerate || isSpeedReconveryToSlow)
+                                    {
+                                        ActionWhenObsDetectSlowDown();
+                                    }
+
+                                    if (isSpeedRecoveryToNormal)
                                     {
                                         DecreaseSpeedAndRecovery();
+                                        ActionWhenObsDetectReconvery();
                                     }
                                     else
                                         await AGVC.CarSpeedControl(cmdGet);
 
 
                                     _CurrentRobotControlCmd = cmdGet;
-                                    _CurrentAlarmCodeCollection = alarmCodeCollection;
                                 }
-                                await Task.Delay(10, LaserObsMonitorCancel.Token);
 
                                 //減速後恢復
                                 async Task DecreaseSpeedAndRecovery()
@@ -798,8 +811,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                             if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
                                                 return;
                                         }
-
                                         await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
+                                        BuzzerPlayWhenSpeedRecovery();
+                                        ClearAnyLaserDetectionAlarms();
+
                                     }
                                     catch (Exception ex)
                                     {
@@ -843,6 +858,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }, 10);
         }
 
+        private void ClearAnyLaserDetectionAlarms()
+        {
+            AlarmCodes[] laserAlarms = new AlarmCodes[]
+            {
+                 AlarmCodes.FrontProtection_Area2, AlarmCodes.FrontProtection_Area3, AlarmCodes.BackProtection_Area2, AlarmCodes.BackProtection_Area3,
+                 AlarmCodes.RightProtection_Area2, AlarmCodes.RightProtection_Area3,AlarmCodes.LeftProtection_Area2, AlarmCodes.LeftProtection_Area3
+            };
+            AlarmManager.ClearAlarm(laserAlarms);
+        }
 
         public class LaserStateDebouncer
         {
@@ -976,7 +1000,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        protected virtual void ActionWhenObsDetectReconvery(ROBOT_CONTROL_CMD cmdGet)
+        protected virtual void ActionWhenObsDetectSlowDown()
+        {
+            BuzzerPlayWhenSpeedRecovery();
+            SetSub_Status(SUB_STATUS.WARNING);
+        }
+        protected virtual void ActionWhenObsDetectReconvery()
+        {
+            BuzzerPlayWhenSpeedRecovery();
+            SetSub_Status(SUB_STATUS.RUN);
+        }
+
+        private void BuzzerPlayWhenSpeedRecovery()
         {
             if (ExecutingTaskEntity?.action != ACTION_TYPE.None)
             {
@@ -987,12 +1022,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
                 BuzzerPlayer.SoundPlaying = SOUNDS.Move;
-            SetSub_Status(cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery ? SUB_STATUS.RUN : SUB_STATUS.WARNING);
         }
 
         protected virtual void ActionWhenObsDetectTrigger()
         {
-            var currentSubStatus = GetSub_Status();
+
             SetSub_Status(SUB_STATUS.ALARM);
             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
         }

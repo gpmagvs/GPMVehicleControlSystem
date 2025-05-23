@@ -24,6 +24,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await Task.Delay(delay_ms);
                 AbortFlash();
+
                 DOWriteRequest writeRequest = new DOWriteRequest(new List<DOModifyWrapper>()
                                                     {
                                                          new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(), false),
@@ -31,6 +32,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                                                          new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(), false),
                                                          new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(), false),
                                                     });
+
                 await DOModule.SetState(writeRequest);
 
 
@@ -61,7 +63,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
             else
             {
-                AbortFlash();
                 this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
             }
         }
@@ -73,13 +74,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
             else
             {
-                AbortFlash();
                 this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
             }
         }
 
         public async virtual void Forward(bool opened = true)
         {
+            await CloseAll();
             await Task.Delay(500);
 
             DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
@@ -93,8 +94,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public async virtual void Backward(bool opened = true, int delay = 500)
         {
+            await CloseAll();
             await Task.Delay(delay);
-
 
             DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
                     {

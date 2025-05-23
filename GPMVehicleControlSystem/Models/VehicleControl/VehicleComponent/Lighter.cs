@@ -22,7 +22,15 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public void AbortFlash()
         {
-            flash_cts?.Cancel();
+            try
+            {
+                flash_cts?.Cancel();
+                flash_cts?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
         }
 
         /// <summary>
@@ -32,13 +40,12 @@ namespace AGVSystemCommonNet6.Abstracts
         public async Task TwoLightChangedOnFlashAsync(DO_ITEM light1, DO_ITEM light2, int flash_period = 500)
         {
 
-            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
-            flash_cts = new CancellationTokenSource();
+            AbortFlash();
             await Task.Delay(300);
-
             await DOModule.SetState(light1, false);
             await DOModule.SetState(light2, false);
             bool _active = true;
+            flash_cts = new CancellationTokenSource();
             while (true)
             {
                 try
@@ -59,7 +66,9 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public async Task FlashAsync(DO_ITEM light_DO, int flash_period = 400)
         {
-            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
+
+            AbortFlash();
+            await Task.Delay(500);
             await DOModule.SetState(light_DO, true);
             await Task.Delay(100);
             flash_cts = new CancellationTokenSource();
@@ -90,11 +99,11 @@ namespace AGVSystemCommonNet6.Abstracts
 
         public async Task Flash(DO_ITEM[] light_DOs, int on_period = 400, int off_period = 500)
         {
-
+            AbortFlash();
+            await Task.Delay(300);
+            flash_cts = new CancellationTokenSource();
             DOWriteRequest request = new DOWriteRequest(light_DOs.GetIOSignalOfModule().Select(i => new DOModifyWrapper(i, false)));
             await DOModule.SetState(request);
-            flash_cts?.Cancel();  // 取消之前的闪烁任务（如果存在）
-            flash_cts = new CancellationTokenSource();
 
             await Task.Run(async () =>
             {
