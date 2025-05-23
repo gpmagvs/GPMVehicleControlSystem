@@ -1242,7 +1242,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 finally
                 {
                     IsResetAlarmWorking = false;
-                    LogDebugMessage($"Clear alarms method invoked done.", true);
+                    LogDebugMessage($"Clear alarms method invoked done.", false);
                 }
 
             }, 400);

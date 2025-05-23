@@ -757,10 +757,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                         break;
 
                                     await Task.Delay(10, LaserObsMonitorCancel.Token);
-                                    if (cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery || cmdGet == ROBOT_CONTROL_CMD.DECELERATE)
-                                        ActionWhenObsDetectReconvery(cmdGet);
-                                    else
+
+                                    //需alarm 狀況
+                                    bool isAlarm = (_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP && cmdGet == ROBOT_CONTROL_CMD.STOP) || ((_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.SPEED_Reconvery || _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.DECELERATE) && cmdGet == ROBOT_CONTROL_CMD.STOP);
+                                    if (isAlarm)
                                         ActionWhenObsDetectTrigger();
+                                    else
+                                        ActionWhenObsDetectReconvery(cmdGet);
 
                                     //已無異常清空所有雷射異常
                                     if (!alarmCodeCollection.Any())
@@ -787,10 +790,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 {
                                     try
                                     {
-                                        await _SpeedRecoveryHandleSemaphoreSlim.WaitAsync();
                                         await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE);
                                         Stopwatch timer = Stopwatch.StartNew();
-                                        while (timer.Elapsed.Seconds < 1)
+                                        while (timer.Elapsed.TotalSeconds < 1)
                                         {
                                             await Task.Delay(1);
                                             if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
@@ -805,7 +807,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     }
                                     finally
                                     {
-                                        _SpeedRecoveryHandleSemaphoreSlim.Release();
                                     }
 
                                 }
@@ -813,7 +814,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             catch (TaskCanceledException ex)
                             {
                                 logger.LogInformation("雷射偵測流程已取消");
-                                LogDebugMessage("TaskCanceledException-雷射偵測流程已取消", true);
+                                LogDebugMessage("TaskCanceledException-雷射偵測流程已取消", false);
                                 break;
                             }
                         }
@@ -881,7 +882,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (AGVC.ActionStatus == ActionStatus.SUCCEEDED)
             {
-                LogDebugMessage("ActionStatus == SUCCEEDED Not Laser Monitor Needed", true);
                 return true;
             }
             else

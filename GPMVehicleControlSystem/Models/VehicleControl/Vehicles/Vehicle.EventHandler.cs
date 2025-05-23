@@ -558,7 +558,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (!IsAllLaserNoTrigger())
             {
-                LogDebugMessage($"要求車控速度恢復但尚有雷射觸發中", true);
+                LogDebugMessage($"要求車控速度恢復但尚有雷射觸發中", false);
                 return (false, "要求車控速度恢復但尚有雷射觸發中");
             }
             return (true, "");

@@ -27,6 +27,14 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             get => _playing;
             set
             {
+
+                if (value == SOUNDS.Stop)
+                {
+                    APLAYER.PlayAudio(SOUNDS.Stop, out _);
+                    _playing = SOUNDS.Stop;
+                    return;
+                }
+
                 if (_playing != value)
                 {
                     if (OnBuzzerPlay != null)

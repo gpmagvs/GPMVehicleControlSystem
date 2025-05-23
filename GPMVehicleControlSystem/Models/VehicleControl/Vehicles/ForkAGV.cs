@@ -183,7 +183,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (request.command == "orig" && (WagoDI.GetState(DI_ITEM.Vertical_Home_Pos) || (Parameters.ForkAGV.HomePoseUseStandyPose && Math.Abs(Parameters.ForkAGV.StandbyPose - ForkLifter.fork_ros_controller.verticalActionService.driverState.position) <= 0.5)))
             {
                 Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
-                LogDebugMessage("垂直牙叉已在Home位置或已接近待命位置", true);
+                LogDebugMessage("垂直牙叉已在Home位置或已接近待命位置", false);
                 return;
             }
 
@@ -191,7 +191,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
 
                 Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
-                LogDebugMessage("垂直牙叉位置已經接近目標位置", true);
+                LogDebugMessage("垂直牙叉位置已經接近目標位置", false);
                 return;
             }
 
@@ -219,7 +219,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             VerticalCommandRequest? lastVerticalForkActionCmd = null;
 
             SOUNDS _soundBeforeStop = BuzzerPlayer.SoundPlaying;
-            LogDebugMessage("因牙叉升降動作開始監視側邊雷射狀態", true);
+            LogDebugMessage("因牙叉升降動作開始監視側邊雷射狀態", false);
             _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
             bool lastLsrTriggerState = false;
             await Task.Delay(500);
@@ -288,7 +288,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             ForkLifter.IsStopByObstacleDetected = true;
                             await ForkLifter.ForkStopAsync();
                             _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
-                            LogDebugMessage($"雷射組數觸發，牙叉停止動作!", true);
+                            LogDebugMessage($"雷射組數觸發，牙叉停止動作!", false);
 
                             if (ForkLifter.IsManualOperation)
                             {
@@ -318,7 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 }
                                 await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
                                 ForkLifter.IsStopByObstacleDetected = false;
-                                LogDebugMessage($"雷射復原，牙叉恢復動作!", true);
+                                LogDebugMessage($"雷射復原，牙叉恢復動作!", false);
                             }
                         }
 
@@ -329,12 +329,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (TaskCanceledException ex)
                 {
-                    LogDebugMessage($"牙叉安全偵測任務取消!!", true);
+                    LogDebugMessage($"牙叉安全偵測任務取消!!", false);
                     break;
                 }
             }
 
-            LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", true);
+            LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", false);
             _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
 
@@ -357,7 +357,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (currentMode == clsLaser.LASER_MODE.Bypass || currentMode == clsLaser.LASER_MODE.Bypass16)
             {
                 logger.LogWarning($"Fork Vertical Moving, Laser Mode now changed to {currentMode}(Bypass status),switch laser mode to turning");
-                LogDebugMessage($"雷射組數現在為Bypass,但牙叉(Vertical)動作中=> 切換為 Truning 組數!", true);
+                LogDebugMessage($"雷射組數現在為Bypass,但牙叉(Vertical)動作中=> 切換為 Truning 組數!", false);
                 Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
                 Laser.SideLasersEnable(true);
             }

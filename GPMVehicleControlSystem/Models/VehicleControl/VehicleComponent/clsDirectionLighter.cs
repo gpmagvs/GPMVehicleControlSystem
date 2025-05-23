@@ -55,7 +55,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public virtual async void TurnRight(bool opened = true)
         {
-            CloseAll();
+            await CloseAll();
+            await Task.Delay(300);
             if (opened)
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
             else
@@ -66,7 +67,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public virtual async void TurnLeft(bool opened = true)
         {
-            CloseAll();
+            await CloseAll();
+            await Task.Delay(300);
             if (opened)
                 FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
             else
@@ -110,7 +112,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
 
-        internal void TrafficControllingLightsFlash(int period=500)
+        internal void TrafficControllingLightsFlash(int period = 500)
         {
             TwoLightChangedOnFlashAsync(DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left, period);
             //Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, 2000, 500);

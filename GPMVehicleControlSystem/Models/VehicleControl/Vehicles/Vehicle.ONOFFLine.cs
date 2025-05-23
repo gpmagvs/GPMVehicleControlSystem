@@ -25,7 +25,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
 
                     _Remote_Mode = value;
-                    LogDebugMessage($"Remote_Mode = {value}", true);
+                    LogDebugMessage($"Remote_Mode = {value}", false);
                     HandleOnlineModeChanged(_Remote_Mode);
                 }
             }

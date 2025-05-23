@@ -685,7 +685,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                     if (Agv.Parameters.ForkAGV.NoWaitParkingFinishAndForkGoHomeWhenBackToSecondary)
                     {
-                        Agv.LogDebugMessage($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.", true);
+                        Agv.LogDebugMessage($"Wait Reach Tag {RunningTaskData.Destination}, Fork Will Start Go Home.", false);
                         while (Agv.BarcodeReader.CurrentTag != RunningTaskData.Destination || Agv.lastVisitedMapPoint.StationType != STATION_TYPE.Normal)
                         {
                             await Task.Delay(1);
@@ -695,7 +695,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     }
                     else
                     {
-                        Agv.LogDebugMessage($"Wait AGVC Action done, Fork Will Start Go Home.", true);
+                        Agv.LogDebugMessage($"Wait AGVC Action done, Fork Will Start Go Home.", false);
                         while (IsBackToSecondaryPt)
                         {
                             await Task.Delay(1);
@@ -719,18 +719,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 Task goHomeTask = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Task.Run(async () =>
                 {
-                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Standby Pose", true);
+                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Standby Pose", false);
                     (bool confirm, string message) _goStandyPoseResult = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, false);
                     ForkGoHomeActionResult.confirm = _goStandyPoseResult.confirm;
                 }) : Task.Run(async () =>
                 {
-                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Home Pose", true);
+                    Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Home Pose", false);
                     ForkGoHomeActionResult = await ForkLifter.ForkGoHome(wait_done: false);
                 });
 
                 Task waitPositionReachTarget = Task.Run(async () =>
                 {
-                    Agv.LogDebugMessage($"Start wait fork position reach target", true);
+                    Agv.LogDebugMessage($"Start wait fork position reach target", false);
                     CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(180));
                     while (_needWaitForkActionDone())
                     {
