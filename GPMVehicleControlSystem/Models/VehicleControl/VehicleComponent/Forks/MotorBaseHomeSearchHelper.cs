@@ -74,6 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             bool _isInitializeDone = false;
             logger.Info("Start Search Home");
             string key = $"{DateTime.Now.ToString("yyyyMMddHHmmssffff")}";
+            double downSearchSpeed = vehicle.Parameters.ForkAGV.DownSearchSpeedWhenInitialize;
             try
             {
                 SEARCH_STATUS _searchStatus = SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION;
@@ -95,7 +96,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             break;
                         case SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME:
                             _Log($"START_DOWN_SEARCH_FIND_HOME");
-                            await DownSearchAsync(0.2);
+                            await DownSearchAsync(downSearchSpeed);
                             _searchStatus = SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME:

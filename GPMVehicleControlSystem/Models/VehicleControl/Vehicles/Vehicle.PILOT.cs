@@ -191,10 +191,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
                         }
-                        finally
-                        {
-                            SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
-                        }
+                        await SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
                     }
                     else
                     {
@@ -237,15 +234,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGVC.OnAGVCActionChanged = null;
 
                     LogDebugMessage("Action Finish Report To AGVS Process Start!");
-                    FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
-
-                    //if (LoadUnloadTask != null && !_IsTaskFinishWithAbnormal)
-                    //{
-                    //    await Task.Delay(200);
-                    //    DebugMessageBrocast("AGV_COMPT Handshake Process Start!");
-                    //    await LoadUnloadTask.AGVCOMPTHandshake(false);
-                    //}
-
+                    await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
                     if (BarcodeReader.CurrentTag != 0 && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal &&
                         (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
@@ -1092,7 +1081,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                             double _Height_PreAction = saftyHeight;
                             if (!CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) || isDestineHeightLowerThanSafyPosition)
+                            {
                                 _Height_PreAction = _position_aim;
+                                LogDebugMessage($"因AGV無載貨或目標高度低於安全高度->牙叉上升至取放貨目標高度({_Height_PreAction})", true);
+                            }
 
                             logger.LogWarning($"抵達二次定位點 TAG{currentTagNumber}, 牙叉開始動作上升至第{height}層. ({_Height_PreAction}cm)");
 

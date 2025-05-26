@@ -21,9 +21,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 是否搭載PIN
         /// </summary>
         public bool IsPinMounted { get; set; } = true;
-        public bool IsPinDisabledTemptary { get; set; } = true;
+        public bool IsPinDisabledTemptary { get; set; } = false;
         public bool IsForkIsExtendable { get; set; } = true;
-        public bool IsHorizonExtendDisabledTemptary { get; set; } = true;
+        public bool IsHorizonExtendDisabledTemptary { get; set; } = false;
         public bool NoWaitForkArmFinishAndMoveOutInWorkStation { get; set; } = true;
         /// <summary>
         /// 退至二次定位點不等待就定位牙叉即開始回HOME
@@ -49,6 +49,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 
         [JsonConverter(typeof(StringEnumConverter))]
         public IO_CONEECTION_POINT_TYPE ObsSensorPointType { get; set; } = IO_CONEECTION_POINT_TYPE.A;
+        public double DownSearchSpeedWhenInitialize { get; set; } = 0.8;
     }
     public class clsForkInit
     {

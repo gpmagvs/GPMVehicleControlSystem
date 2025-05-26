@@ -68,7 +68,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override async Task<(bool confirm, string message)> StopAsync()
         {
-            return await AGVC.verticalActionService.Stop();
+            var stopCmdResult = await AGVC.verticalActionService.Stop();
+            if (!stopCmdResult.confirm)
+                return stopCmdResult;
+
+            while (vehicle.ForkLifter.Driver.Data.speed != 0)
+            {
+                await Task.Delay(100);
+            }
+            return (true, "停止完成");
         }
 
         protected override async Task<(bool confirm, string message)> PositionInit()

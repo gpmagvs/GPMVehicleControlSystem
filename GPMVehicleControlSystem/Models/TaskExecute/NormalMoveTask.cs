@@ -42,7 +42,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
             {
                 Agv.Navigation.OnLastVisitedTagUpdate -= Agv.WatchReachNextWorkStationSecondaryPtHandler;
-
                 Agv.ForkLifter.EarlyMoveUpState.Reset();
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
@@ -94,7 +93,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 if (Agv.Parameters.AgvType == AGV_TYPE.FORK)
                 {
-                    Agv.ForkLifter.EarlyMoveUpState.Reset();
                     Agv.Navigation.OnLastVisitedTagUpdate -= Agv.WatchReachNextWorkStationSecondaryPtHandler;
                 }
             }

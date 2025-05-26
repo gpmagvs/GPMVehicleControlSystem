@@ -427,8 +427,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 task_abort_alarmcode = AlarmCodes.None;
                 logger.Info($"AGV已完成 [{action}] -移動至設備任務(Time Spend: {_stopWatch.Elapsed})");
+                logger.Info($"等待AGV完成設備內所有動作+退出致設備進入點[{action}]");
                 _wait_agvc_action_done_pause.WaitOne();
-                logger.Trace($"AGV完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
+                logger.Trace($"AGV退出至進入點完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
             }
             else
             {
@@ -603,15 +604,16 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         if (task_abort_alarmcode != AlarmCodes.None)
                         {
-                            logger.Info($"AGV [{action}] -退出至二次定位點任務已終止!(task_abort_alarmcode:{task_abort_alarmcode},Time Spend: {_timeSpend} ms)");
+                            logger.Info($"AGV [{action}] -移動退出至二次定位點任務已終止!(task_abort_alarmcode:{task_abort_alarmcode},Time Spend: {_timeSpend} ms)");
                             Agv.SetSub_Status(SUB_STATUS.DOWN);
                             return (false, task_abort_alarmcode);
                         }
-                        logger.Info($"AGV已完成 [{action}] -退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
+                        logger.Info($"AGV已完成 [{action}] -移動退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
                         IsBackToSecondaryPt = false;
                         //logger.Trace("車控回HOME位置任務完成");
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
 
+                        logger.Info($"After Back Home Actions done. alarm code={_alarmcode}");
                     }
                     Agv.SetSub_Status(_alarmcode == AlarmCodes.None ? SUB_STATUS.IDLE : SUB_STATUS.DOWN);
                     return (_alarmcode == AlarmCodes.None, _alarmcode);
@@ -849,6 +851,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 await ManualCheckCargoStatusPrcessAfterAction();
 
+                logger.Trace($"AfterBackHomeActions all done.");
                 return AlarmCodes.None;
             }
             else

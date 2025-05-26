@@ -348,6 +348,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         }
                         await WaitTaskDoneAsync();
 
+                        logger.Trace($"{RunningTaskData.Task_Name}-{action} 任務結束-");
+
                         if ((DateTime.Now - startTime).TotalSeconds < 2)
                             await Task.Delay(1000);
                         AGVCActionStatusChaged -= HandleAGVActionChanged;

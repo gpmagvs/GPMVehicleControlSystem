@@ -1556,7 +1556,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (TaskCanceledException ex)
                     {
-                        logger.LogDebug($"[UpdateInitMesgTask:{message}]{ex.Message}");
                         return;
                     }
                     catch (Exception ex)

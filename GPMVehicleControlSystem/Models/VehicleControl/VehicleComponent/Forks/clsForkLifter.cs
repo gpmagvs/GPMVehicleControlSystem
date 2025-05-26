@@ -481,6 +481,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 #endregion
 
                 bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target;
+
+                if (forkAGV.Navigation.LastVisitedTag % 2 != 0)
+                    forkAGV.LogDebugMessage($"設備/WIP進入前上升牙叉,牙叉 {(_isForkAlreadyGoingToTarget ? "已提前動作中" : "準備上升")}", true);
+
                 if (!_isForkAlreadyGoingToTarget)
                 {
                     await ForkStopAsync();
@@ -489,6 +493,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 }
                 else
                     logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
+
 
                 double _errorTorlence = 0.1;
                 CancellationTokenSource _waitPoseReachTargetCancellationTokenSource = new CancellationTokenSource();
@@ -499,7 +504,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         Stopwatch sw = Stopwatch.StartNew();
                         while (sw.Elapsed.TotalSeconds < 60)
                         {
-                            forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString()}";
+                            forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString(@"mm\:ss")}";
                             if (IsStopByObstacleDetected)
                                 sw.Reset();
                             else

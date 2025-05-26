@@ -407,6 +407,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
+
+            ForkLifter?.EarlyMoveUpState.Reset();
             (bool forklifer_init_done, string message) _forklift_vertical_init_result = (false, "");
             (bool forklifer_init_done, string message) _forklift_horizon_init_result = (false, "");
             (bool pin_init_done, string message) _pin_init_result = (false, "");

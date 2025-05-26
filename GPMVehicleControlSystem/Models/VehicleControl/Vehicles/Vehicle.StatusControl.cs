@@ -47,7 +47,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "[SetSub_Status::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
+                            logger.LogWarning(ex, "[SetSub_Status::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
                         }
                     }
                     //var _caller = GetCallerClassName();
