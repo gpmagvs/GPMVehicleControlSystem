@@ -138,6 +138,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
+                    CancelSwitchToTrafficLightsCase();
+                    if (DirectionLighter.IsWaitingTaskLightsFlashing)
+                        await DirectionLighter.CloseAll();
+
                     if (AGV_Reset_Flag)
                         return;
                     //LDULDRecord
@@ -147,7 +151,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _RunTaskData.IsEQHandshake = _isNeedHandshaking;
                     AGV_Reset_Flag = AGVSResetCmdFlag = false;
                     TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
-
                     List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
                     logger.LogTrace($"Execute Task Done-{_taskSimplex}");
                     if (alarmCodes.Any(al => al == AlarmCodes.Replan))
@@ -261,6 +264,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
 
 
+        }
+
+        private void CancelSwitchToTrafficLightsCase()
+        {
+            try
+            {
+                delaySwitchDirectionLightsAsTrafficControllingCts?.Cancel();
+            }
+            catch (Exception)
+            {
+            }
         }
 
         private bool GetAutoInitAcceptStateWithCargoStatus(List<AlarmCodes> currentAlarmCodes)

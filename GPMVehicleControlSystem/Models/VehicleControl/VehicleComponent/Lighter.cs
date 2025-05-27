@@ -39,28 +39,32 @@ namespace AGVSystemCommonNet6.Abstracts
         /// <returns></returns>
         public async Task TwoLightChangedOnFlashAsync(DO_ITEM light1, DO_ITEM light2, int flash_period = 500)
         {
-
             AbortFlash();
             await Task.Delay(300);
             await DOModule.SetState(light1, false);
             await DOModule.SetState(light2, false);
             bool _active = true;
             flash_cts = new CancellationTokenSource();
-            while (true)
+
+            await Task.Run(async () =>
             {
-                try
+                while (true)
                 {
-                    await DOModule.SetState(light1, _active);
-                    await DOModule.SetState(light2, !_active);
-                    await Task.Delay(flash_period, flash_cts.Token);
-                    _active = !_active;
-                }
-                catch (Exception)
-                {
-                    return;
+                    try
+                    {
+                        await DOModule.SetState(light1, _active);
+                        await DOModule.SetState(light2, !_active);
+                        await Task.Delay(flash_period, flash_cts.Token);
+                        _active = !_active;
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+
                 }
 
-            }
+            });
 
         }
 
@@ -73,27 +77,31 @@ namespace AGVSystemCommonNet6.Abstracts
             await Task.Delay(100);
             flash_cts = new CancellationTokenSource();
             bool light_active = false;
-            try
+            await Task.Run(async () =>
             {
-                while (true)
+                try
                 {
-                    await Task.Delay(flash_period, flash_cts.Token);
-                    await DOModule.SetState(light_DO, light_active);
-                    light_active = !light_active;
-                    if (flash_cts.IsCancellationRequested)
+                    while (true)
                     {
-                        break;  // 如果收到取消请求，则退出循环
+                        await Task.Delay(flash_period, flash_cts.Token);
+                        await DOModule.SetState(light_DO, light_active);
+                        light_active = !light_active;
+                        if (flash_cts.IsCancellationRequested)
+                        {
+                            break;  // 如果收到取消请求，则退出循环
+                        }
                     }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                logger.Trace("Flash Task Canceled", false);
-            }
-            catch (Exception ex)
-            {
-                logger.Trace("Flash Task Canceled", false);
-            }
+                catch (OperationCanceledException)
+                {
+                    logger.Trace("Flash Task Canceled", false);
+                }
+                catch (Exception ex)
+                {
+                    logger.Trace("Flash Task Canceled", false);
+                }
+            });
+
         }
 
 

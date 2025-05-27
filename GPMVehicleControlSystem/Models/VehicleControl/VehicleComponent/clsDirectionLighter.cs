@@ -10,6 +10,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         internal delegate bool NormalMoveOpenLigherdelegate();
         internal NormalMoveOpenLigherdelegate OnAGVDirectionChangeToForward;
+        internal bool IsWaitingTaskLightsFlashing = false;
         public clsDirectionLighter() : base()
         {
         }
@@ -24,6 +25,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await Task.Delay(delay_ms);
                 AbortFlash();
+                if (IsWaitingTaskLightsFlashing)
+                    await Task.Delay(200);
 
                 DOWriteRequest writeRequest = new DOWriteRequest(new List<DOModifyWrapper>()
                                                     {
@@ -40,6 +43,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             catch (Exception ex)
             {
                 logger.Error(ex);
+            }
+            finally
+            {
+                IsWaitingTaskLightsFlashing = false;
             }
         }
 
@@ -115,6 +122,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         internal void TrafficControllingLightsFlash(int period = 500)
         {
+            IsWaitingTaskLightsFlashing = true;
             TwoLightChangedOnFlashAsync(DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left, period);
             //Flash(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Right, DO_ITEM.AGV_DiractionLight_Left }, 2000, 500);
         }

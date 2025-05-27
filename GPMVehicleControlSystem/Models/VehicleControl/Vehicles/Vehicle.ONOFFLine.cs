@@ -41,15 +41,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             else
             {
-                try
-                {
-                    delaySwitchDirectionLightsAsTrafficControllingCts?.Cancel();
-                    delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "[HandleOnlineModeChanged::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
-                }
+                CancelSwitchToTrafficLightsCase();
                 await DirectionLighter.CloseAll();
                 await StatusLighter.OFFLINE();
             }

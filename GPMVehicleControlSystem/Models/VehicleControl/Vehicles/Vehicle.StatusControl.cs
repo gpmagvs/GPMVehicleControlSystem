@@ -40,15 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _Sub_Status = value;
                     if (_Sub_Status != SUB_STATUS.IDLE)
                     {
-                        try
-                        {
-                            delaySwitchDirectionLightsAsTrafficControllingCts?.Cancel();
-                            delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogWarning(ex, "[SetSub_Status::delaySwitchDirectionLightsAsTrafficControllingCts dispose prcess] " + ex.StackTrace);
-                        }
+                        CancelSwitchToTrafficLightsCase();
                     }
                     //var _caller = GetCallerClassName();
                     if (_Sub_Status == SUB_STATUS.DOWN || _Sub_Status == SUB_STATUS.ALARM || _Sub_Status == SUB_STATUS.Initializing)
@@ -166,7 +158,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                delaySwitchDirectionLightsAsTrafficControllingCts?.Dispose();
                 delaySwitchDirectionLightsAsTrafficControllingCts = new CancellationTokenSource();
                 await Task.Delay(TimeSpan.FromSeconds(5), delaySwitchDirectionLightsAsTrafficControllingCts.Token);
             }
