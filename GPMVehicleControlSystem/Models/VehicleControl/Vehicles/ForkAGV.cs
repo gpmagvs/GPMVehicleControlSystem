@@ -415,9 +415,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             List<Task> _actions = new List<Task>();
 
-            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess();
-            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess();
-            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess();
+            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token);
+            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token);
+            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token);
 
             _actions.Add(forkFloatHarwarePinInitTask);
             _actions.Add(forkVerticalInitTask);
@@ -452,7 +452,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess()
+        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess(CancellationToken token)
         {
             if (PinHardware == null)
                 return (true, "浮動牙叉定位PIN裝置未裝載");
@@ -465,13 +465,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             return await Task.Run(async () =>
             {
+                using var initMsgUpdater = CreateInitMsgUpdater();
                 (bool pin_init_done, string message) _pin_init_result = (false, "");
-                CancellationTokenSource? updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-模組初始化中...");
+                await initMsgUpdater.Update("PIN-模組初始化中...");
                 try
                 {
                     await PinHardware.Init();
-                    updateInitMsgCancellationTokenSource?.Cancel();
-                    updateInitMsgCancellationTokenSource = await UpdateInitMesgTask("PIN-Lock 中...");
+                    await initMsgUpdater.Update("PIN-Lock 中...");
                     await PinHardware.Lock();
                     _pin_init_result = (true, "");
                 }
@@ -485,14 +485,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 finally
                 {
-                    updateInitMsgCancellationTokenSource?.Cancel();
-                    updateInitMsgCancellationTokenSource?.Dispose();
                 }
                 return _pin_init_result;
             });
         }
 
-        internal async Task<(bool, string)> VerticalForkInitProcess()
+        internal async Task<(bool, string)> VerticalForkInitProcess(CancellationToken token)
         {
             if (GetSub_Status() != SUB_STATUS.Initializing)
                 SetSub_Status(SUB_STATUS.Initializing);
@@ -522,7 +520,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                     {
                         double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                        forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init);
+                        forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init, token);
                     }
                     if (forkInitizeResult.done)
                     {
@@ -558,7 +556,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        internal async Task<(bool, string)> HorizonForkInitProcess()
+        internal async Task<(bool, string)> HorizonForkInitProcess(CancellationToken token)
         {
             if (!Parameters.ForkAGV.IsForkIsExtendable)
             {
@@ -572,16 +570,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return await Task.Run(async () =>
             {
-                CancellationTokenSource? cancellationTokenSource = null;
+                using var initMsgUpdater = CreateInitMsgUpdater();
                 try
                 {
-                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉 Reset...");
+                    await initMsgUpdater.Update("伸縮牙叉 Reset...");
                     var resetResult = await ForkLifter.ForkHorizonResetAsync();
-                    cancellationTokenSource.Cancel();
-
                     if (!resetResult.success)
                         return resetResult;
-                    cancellationTokenSource = await UpdateInitMesgTask("伸縮牙叉縮回中...");
+                    await initMsgUpdater.Update("伸縮牙叉縮回中...");
                     return await ForkLifter.ForkShortenInAsync();
                 }
                 catch (Exception ex)
@@ -590,8 +586,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 finally
                 {
-                    cancellationTokenSource?.Cancel();
-                    cancellationTokenSource?.Dispose();
                 }
             });
         }

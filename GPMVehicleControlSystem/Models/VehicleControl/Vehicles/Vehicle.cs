@@ -116,7 +116,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-        internal string InitializingStatusText = "";
+        private string _InitializingStatusText = "";
+        internal string InitializingStatusText
+        {
+            get => _InitializingStatusText;
+            set
+            {
+                if (_InitializingStatusText != value)
+                {
+                    _InitializingStatusText = value;
+                    logger.LogTrace($"Initialzing Status Text Changed To :{_InitializingStatusText}");
+                }
+            }
+        }
         /// <summary>
         /// 里程數
         /// </summary>
@@ -1541,33 +1553,85 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 frontendHubContext.Clients.All.SendAsync("DebugMessage", message);
             logger.LogDebug($"[DebugMessageBrocast] {message}");
         }
-        internal async Task<CancellationTokenSource> UpdateInitMesgTask(string message)
+        internal class InitMessageUpdater : IDisposable
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-            _ = Task.Run(async () =>
+            private Vehicle _agv;
+            private CancellationTokenSource cancellationTokenSource;
+            private bool _updating = false;
+            private bool disposedValue;
+
+            public InitMessageUpdater(Vehicle agv)
+            {
+                _agv = agv;
+            }
+
+            public async Task Update(string newMsg)
             {
 
-                while (!cancellationTokenSource.IsCancellationRequested)
+                if (_updating)
                 {
-                    try
+                    cancellationTokenSource.Cancel();
+                    while (_updating)
                     {
-                        InitializingStatusText = message;
-                        await Task.Delay(1000, cancellationTokenSource.Token);
-                    }
-                    catch (TaskCanceledException ex)
-                    {
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError($"[UpdateInitMesgTask:{message}]{ex.Message}");
-                        return;
+                        await Task.Delay(10);
                     }
                 }
-            });
-            return cancellationTokenSource;
+
+                cancellationTokenSource = new CancellationTokenSource();
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        _updating = true;
+                        try
+                        {
+                            if (_agv.InitializingStatusText != newMsg)
+                                _agv.InitializingStatusText = newMsg;
+                            await Task.Delay(1, cancellationTokenSource.Token);
+                        }
+                        catch (Exception)
+                        {
+                            break;
+                        }
+                    }
+                    _updating = false;
+
+                });
+
+            }
+
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        // TODO: 處置受控狀態 (受控物件)
+                    }
+                    cancellationTokenSource.Cancel();
+                    disposedValue = true;
+                }
+            }
+
+            // // TODO: 僅有當 'Dispose(bool disposing)' 具有會釋出非受控資源的程式碼時，才覆寫完成項
+            // ~InitMessageUpdater()
+            // {
+            //     // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+            //     Dispose(disposing: false);
+            // }
+
+            public void Dispose()
+            {
+                // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
+            }
         }
 
+        internal InitMessageUpdater CreateInitMsgUpdater()
+        {
+            return new InitMessageUpdater(this);
+        }
 
         internal async Task MaintainModeSwitch(bool isMaintainMode)
         {

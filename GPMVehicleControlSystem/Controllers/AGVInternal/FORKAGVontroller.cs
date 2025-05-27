@@ -15,13 +15,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("VerticalInit")]
         public async Task VerticalInit()
         {
-            agv.VerticalForkInitProcess();
+
+            agv.VerticalForkInitProcess(new CancellationToken());
         }
 
         [HttpPost("HorizonInit")]
         public async Task HorizonInit()
         {
-            agv.HorizonForkInitProcess();
+            agv.HorizonForkInitProcess(new CancellationToken());
         }
 
     }

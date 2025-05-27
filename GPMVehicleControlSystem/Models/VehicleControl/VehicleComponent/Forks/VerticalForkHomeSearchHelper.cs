@@ -81,8 +81,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override async Task<(bool confirm, string message)> PositionInit()
         {
-            return await AGVC.verticalActionService.Init();
-
+            var initCmdResult = await AGVC.verticalActionService.Init();
+            return initCmdResult;
         }
     }
 }

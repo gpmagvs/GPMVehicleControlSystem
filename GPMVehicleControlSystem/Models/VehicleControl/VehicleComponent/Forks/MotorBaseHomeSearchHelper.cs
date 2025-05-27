@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
-    public abstract class MotorBaseHomeSearchHelper
+    public abstract class MotorBaseHomeSearchHelper : IDisposable
     {
         private enum SEARCH_DIRECTION
         {
@@ -67,17 +67,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected abstract double CurrentActualPosition { get; }
 
-        private SEARCH_DIRECTION currentSearchDirection;
+        private CancellationToken cancelToken;
 
-        public async Task<(bool done, AlarmCodes alarm_code)> StartSearchAsync()
+        private SEARCH_DIRECTION currentSearchDirection;
+        private bool disposedValue;
+
+        public async Task<(bool done, AlarmCodes alarm_code)> StartSearchAsync(CancellationToken token)
         {
+            cancelToken = token;
             bool _isInitializeDone = false;
             logger.Info("Start Search Home");
             string key = $"{DateTime.Now.ToString("yyyyMMddHHmmssffff")}";
             double downSearchSpeed = vehicle.Parameters.ForkAGV.DownSearchSpeedWhenInitialize;
             try
             {
+                using Vehicle.InitMessageUpdater initMsgUpdater = vehicle.CreateInitMsgUpdater();
                 SEARCH_STATUS _searchStatus = SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION;
+
                 while (!_isInitializeDone)
                 {
                     if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
@@ -86,36 +92,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         logger.Fatal($"Status Down Fork initialize action interupted.!");
                         break;
                     }
-                    await Task.Delay(1);
+                    await Task.Delay(50, cancelToken);
                     switch (_searchStatus)
                     {
                         case SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION:
                             _searchStatus = GetSearchDirection();
-                            UpdateInitMessge($"尋原點方向:{_searchStatus}");
-                            _Log($"尋原點方向:{_searchStatus}");
+                            await initMsgUpdater.Update($"尋原點方向:{_searchStatus}");
                             break;
                         case SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME:
-                            _Log($"START_DOWN_SEARCH_FIND_HOME");
                             await DownSearchAsync(downSearchSpeed);
                             _searchStatus = SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME:
-                            _Log($"START_UP_SEARCH_WAIT_LEAVE_HOME");
                             await UpSearchAsync(0.1);
                             _searchStatus = SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME;
                             break;
                         case SEARCH_STATUS.START_UP_SEARCH_FIND_HOME:
-                            _Log($"START_UP_SEARCH_FIND_HOME");
                             await UpSearchAsync(0.1);
                             _searchStatus = SEARCH_STATUS.UP_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME:
-                            UpdateInitMessge($"向下搜尋原點...");
-                            _Log($"向下搜尋原點中");
+                            await initMsgUpdater.Update($"向下搜尋原點...");
                             if (IsHomePoseSensorOn)
                             {
                                 await StopAsync();
-                                await Task.Delay(1000);
+                                await Task.Delay(1000, cancelToken);
                                 if (IsDownLimitSensorOn)
                                     await BypassLimitSensor();
                                 _searchStatus = SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME;
@@ -123,26 +124,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             }
                             break;
                         case SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME:
-                            UpdateInitMessge($"等待下緣離開原點...");
-                            _Log($"等待下緣離開原點");
+                            await initMsgUpdater.Update($"等待下緣離開原點...");
                             if (!IsHomePoseSensorOn)
                             {
                                 await StopAsync();
                                 _Log($"下緣離開原點 StopAsync");
-                                await Task.Delay(1000);
+                                await Task.Delay(1000, cancelToken);
                                 await PositionInit();
                                 _Log($"下緣離開原點 PositionInit");
-                                await Task.Delay(1000);
-                                _Log($"下緣離開原點 SendChangePoseCmd(0.3, 1)");
-                                await SendChangePoseCmd(0.3, 1);
-                                await Task.Delay(1000);
+                                await Task.Delay(1000, cancelToken);
+                                _Log($"下緣離開原點 SendChangePoseCmd(0.2, 1)");
+                                await initMsgUpdater.Update($"移動至吋動搜尋位置:向上0.3cm");
+                                await SendChangePoseCmd(0.2, 1);
+                                await Task.Delay(1000, cancelToken);
                                 _searchStatus = SEARCH_STATUS.MOVE_STEP_TO_FIND_HOME;
                             }
                             break;
                         case SEARCH_STATUS.UP_SEARCHING_FIND_HOME:
-                            UpdateInitMessge($"向上搜尋原點...");
-                            _Log($"向上搜尋原點...");
-
+                            await initMsgUpdater.Update($"向上搜尋原點...");
                             if (IsHomePoseSensorOn)
                             {
                                 _searchStatus = SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME;
@@ -151,13 +150,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
                             break;
                         case SEARCH_STATUS.MOVE_STEP_TO_FIND_HOME:
-                            _Log($"吋動中原點搜尋...");
                             if (!IsHomePoseSensorOn)
                             {
-                                await StopAsync();
-                                await Task.Delay(1000);
-                                await SendChangePoseCmd(CurrentActualPosition - 0.1);
-                                UpdateInitMessge($"原點搜尋..{CurrentActualPosition}");
+                                await Task.Delay(1000, cancelToken);
+                                double newPose = CurrentActualPosition - 0.1;
+                                string currentPosStr = Math.Round(CurrentActualPosition, 3).ToString();
+                                string newPoseStr = Math.Round(newPose, 3).ToString();
+                                await initMsgUpdater.Update($"吋動搜尋中..{currentPosStr}->{newPoseStr}");
+                                await SendChangePoseCmd(newPose);
                             }
                             else
                             {
@@ -166,7 +166,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             break;
                         case SEARCH_STATUS.COMPLETE:
                             await PositionInit();
-                            await Task.Delay(1000);
+                            await Task.Delay(1000, cancelToken);
                             logger.Info($"牙叉尋原點完成.目前位置:{CurrentActualPosition}.");
                             _isInitializeDone = true;
                             break;
@@ -182,6 +182,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     logger.Trace($"[{key}]{_searchStatus}:{msg}");
                 }
             }
+            catch (TaskCanceledException ex)
+            {
+                logger.Warn("[TaskCanceledException] " + ex.Message);
+                return (false, AlarmCodes.Fork_Initialize_Process_Interupt);
+            }
             catch (Exception ex)
             {
                 vehicle.SendNotifyierToFrontend($"牙叉尋原點失敗.{ex.Message}.{ex.StackTrace}");
@@ -190,8 +195,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
             finally
             {
-                _updateInitMesgcancellationTokenSource?.Cancel();
-                _updateInitMesgcancellationTokenSource?.Dispose();
                 await NoBypassLimitSensor();
             }
         }
@@ -216,13 +219,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             else
                 return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
         }
-        private CancellationTokenSource _updateInitMesgcancellationTokenSource = null;
-        private async Task UpdateInitMessge(string msg)
-        {
-            _updateInitMesgcancellationTokenSource?.Cancel();
-            _updateInitMesgcancellationTokenSource?.Dispose();
-            _updateInitMesgcancellationTokenSource = await vehicle.UpdateInitMesgTask($"[{name}]原點復歸中...{msg}");
-        }
 
         protected abstract Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1);
         protected abstract Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1);
@@ -244,6 +240,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 }
                 await NoBypassLimitSensor();
             });
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: 處置受控狀態 (受控物件)
+                }
+
+                // TODO: 釋出非受控資源 (非受控物件) 並覆寫完成項
+                // TODO: 將大型欄位設為 Null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: 僅有當 'Dispose(bool disposing)' 具有會釋出非受控資源的程式碼時，才覆寫完成項
+        // ~MotorBaseHomeSearchHelper()
+        // {
+        //     // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // 請勿變更此程式碼。請將清除程式碼放入 'Dispose(bool disposing)' 方法
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

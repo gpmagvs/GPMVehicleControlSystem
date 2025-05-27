@@ -62,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         public async Task<(bool done, AlarmCodes alarm_code)> HorizonForkInitialize(double InitForkSpeed = 0.5)
         {
             HorizonForkHomeSearchHelper horizonForkHomeSearchHelper = new HorizonForkHomeSearchHelper(forkAGV, "Horizon");
-            return await horizonForkHomeSearchHelper.StartSearchAsync();
+            return await horizonForkHomeSearchHelper.StartSearchAsync(new CancellationToken());
         }
 
         public override async Task<bool> ForkARMStop()

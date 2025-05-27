@@ -416,7 +416,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <summary>
         /// 初始化Fork , 尋找原點
         /// </summary>
-        public async Task<(bool done, AlarmCodes alarm_code)> VerticalForkInitialize(double InitForkSpeed = 0.5)
+        public async Task<(bool done, AlarmCodes alarm_code)> VerticalForkInitialize(double InitForkSpeed = 0.5, CancellationToken token = default)
         {
             logger.Info($"Fork Z軸初始化動作開始，速度={InitForkSpeed}");
             IsInitialing = true;
@@ -426,7 +426,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             try
             {
                 VerticalForkHomeSearchHelper vertialForkHomeSearchHelper = new VerticalForkHomeSearchHelper(forkAGV, "Vertical");
-                (bool success, AlarmCodes alarmCode) result = await vertialForkHomeSearchHelper.StartSearchAsync();
+                (bool success, AlarmCodes alarmCode) result = await vertialForkHomeSearchHelper.StartSearchAsync(token);
                 IsVerticalForkInitialized = CurrentForkLocation == FORK_LOCATIONS.HOME;
                 logger.Info($"Fork Initialize Done,Current Position : {Driver.CurrentPosition}_cm");
                 return result;
