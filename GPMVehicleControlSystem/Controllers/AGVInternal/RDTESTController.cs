@@ -47,5 +47,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             await UnloadTask.WaitOperatorCheckCargoStatusProcess(tag);
         }
+
+        [HttpPost("AGVSDisConnectedSimulation")]
+        public async Task AGVSDisConnectedSimulation(bool simulationOn)
+        {
+            agv.AGVS.disConnectedSimulation = simulationOn;
+        }
     }
 }

@@ -352,6 +352,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await Startup();
                 HandshakeLog("Hello!World!");
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
+                DirectionLighter.CloseAll();
             });
         }
 
