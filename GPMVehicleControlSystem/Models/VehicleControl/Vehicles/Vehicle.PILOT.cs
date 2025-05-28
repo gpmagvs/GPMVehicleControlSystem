@@ -644,9 +644,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 List<int> alarm_codes_reported = new List<int>();
                 if (AGVS.UseWebAPI)
-                    alarm_codes_reported = AGVS.previousRunningStatusReport_via_WEBAPI.Alarm_Code.Select(al => al.Alarm_ID).ToList();
+                {
+                    lock (AGVS.previousRunningStatusReport_via_WEBAPI)
+                    {
+                        alarm_codes_reported = AGVS.previousRunningStatusReport_via_WEBAPI.Alarm_Code.Select(al => al.Alarm_ID).ToList();
+                    }
+                }
                 else
-                    alarm_codes_reported = AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Select(al => al.Alarm_ID).ToList();
+                {
+                    lock (AGVS.previousRunningStatusReport_via_TCPIP)
+                    {
+                        alarm_codes_reported = AGVS.previousRunningStatusReport_via_TCPIP.Alarm_Code.Select(al => al.Alarm_ID).ToList();
+                    }
+                }
                 return alarms_tracking.All(alarm => alarm_codes_reported.Contains((int)alarm));
             }
 
