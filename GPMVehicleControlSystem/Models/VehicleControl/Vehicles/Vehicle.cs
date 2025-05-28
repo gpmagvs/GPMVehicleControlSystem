@@ -1055,6 +1055,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             //await _softwareEmoSemaphoreSlim.WaitAsync();
             try
             {
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 logger.LogCritical($"EMO-{alarmCode}");
                 _Sub_Status = SUB_STATUS.DOWN;
 
@@ -1070,7 +1071,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 StoreStatusToDataBase();
                 HandshakeIOOff();
-                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 StatusLighter.CloseAll();
                 StatusLighter.DOWN();
                 DirectionLighter.CloseAll();
@@ -1212,16 +1212,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal virtual async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
+            AlarmManager.ClearAlarm();
+            AGVAlarmReportable.ResetAlarmCodes();
+            AGVS?.ResetErrors();
+            Laser.ResetSickApplicationError();
             _alarmResetDebouncer.Debounce(async () =>
             {
                 try
                 {
                     IsResetAlarmWorking = true;
-                    BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
-                    AlarmManager.ClearAlarm();
-                    AGVAlarmReportable.ResetAlarmCodes();
-                    AGVS?.ResetErrors();
-                    Laser.ResetSickApplicationError();
                     IsMotorReseting = false;
                     await ResetMotor(IsTriggerByButton);
                     _ = Task.Factory.StartNew(async () =>
@@ -1411,7 +1411,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             SetIsCharging(IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging()));
             //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
             if (!IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
-                SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status(), false);
+                SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status());
         }
 
 

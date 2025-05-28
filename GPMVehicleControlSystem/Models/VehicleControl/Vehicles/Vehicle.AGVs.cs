@@ -19,6 +19,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Tools.DiskUsage;
 using Microsoft.Extensions.Caching.Memory;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -578,7 +579,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Escape_Flag = ExecutingTaskEntity == null ? false : ExecutingTaskEntity.RunningTaskData.Escape_Flag,
                     IsCharging = GetIsCharging(),
                     AppVersion = StaStored.APPVersion,
-                    AvailableDiskSpace = homeDiskUsage.TotalAvailableSpace
+                    AvailableDiskSpace = homeDiskUsage.TotalAvailableSpace,
+                    ForkStatus = Parameters.AgvType == AGV_TYPE.FORK ? new clsForkStates
+                    {
+                        VerticalPose = ForkLifter == null ? 0 : (AGVC as ForkAGVController).verticalActionService.driverState.position,
+                        HorizonPose = ForkLifter == null ? 0 : (AGVC as ForkAGVController).HorizonActionService.driverState.position,
+                    } : new clsForkStates()
                 };
                 return status;
             }

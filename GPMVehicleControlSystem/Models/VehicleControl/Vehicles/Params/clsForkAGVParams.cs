@@ -50,6 +50,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         [JsonConverter(typeof(StringEnumConverter))]
         public IO_CONEECTION_POINT_TYPE ObsSensorPointType { get; set; } = IO_CONEECTION_POINT_TYPE.A;
         public double DownSearchSpeedWhenInitialize { get; set; } = 0.8;
+        public double START_DONW_STEP_FIND_HOME_POSE { get; set; } = 0.2;
+
     }
     public class clsForkInit
     {

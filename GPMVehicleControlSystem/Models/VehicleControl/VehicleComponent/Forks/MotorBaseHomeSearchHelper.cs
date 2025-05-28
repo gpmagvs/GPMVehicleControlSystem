@@ -37,7 +37,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         protected readonly clsDIModule DIModule;
         protected Logger logger = LogManager.GetCurrentClassLogger();
         protected virtual double speedWhenSearchStartWithoutCargo { get; set; } = 0.5;
-        private double searchSpeed => hasCargoMounted ? 0.5 : speedWhenSearchStartWithoutCargo;
 
         public readonly string name;
 
@@ -79,6 +78,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             logger.Info("Start Search Home");
             string key = $"{DateTime.Now.ToString("yyyyMMddHHmmssffff")}";
             double downSearchSpeed = vehicle.Parameters.ForkAGV.DownSearchSpeedWhenInitialize;
+            double start_down_step_find_home_pose = vehicle.Parameters.ForkAGV.START_DONW_STEP_FIND_HOME_POSE;
             try
             {
                 using Vehicle.InitMessageUpdater initMsgUpdater = vehicle.CreateInitMsgUpdater();
@@ -117,8 +117,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             {
                                 await StopAsync();
                                 await Task.Delay(1000, cancelToken);
+
                                 if (IsDownLimitSensorOn)
                                     await BypassLimitSensor();
+
+                                if (!IsHomePoseSensorOn) //停止後可能又離開了 Home位置=>等同於需要向上蒐尋找原點
+                                {
+                                    _searchStatus = SEARCH_STATUS.START_UP_SEARCH_FIND_HOME;
+                                    break;
+                                }
+
                                 _searchStatus = SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME;
                                 break;
                             }
@@ -133,9 +141,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                                 await PositionInit();
                                 _Log($"下緣離開原點 PositionInit");
                                 await Task.Delay(1000, cancelToken);
-                                _Log($"下緣離開原點 SendChangePoseCmd(0.2, 1)");
-                                await initMsgUpdater.Update($"移動至吋動搜尋位置:向上0.3cm");
-                                await SendChangePoseCmd(0.2, 1);
+                                _Log($"下緣離開原點 SendChangePoseCmd({start_down_step_find_home_pose}, 1)");
+                                await initMsgUpdater.Update($"移動至吋動搜尋位置:向上 {start_down_step_find_home_pose} cm");
+                                await SendChangePoseCmd(start_down_step_find_home_pose, 1);
                                 await Task.Delay(1000, cancelToken);
                                 _searchStatus = SEARCH_STATUS.MOVE_STEP_TO_FIND_HOME;
                             }
