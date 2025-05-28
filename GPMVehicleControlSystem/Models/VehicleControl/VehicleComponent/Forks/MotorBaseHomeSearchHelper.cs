@@ -40,6 +40,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public readonly string name;
 
+        private string _initText = string.Empty;
 
         public MotorBaseHomeSearchHelper(Vehicle vehicle, string name)
         {
@@ -81,9 +82,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             double start_down_step_find_home_pose = vehicle.Parameters.ForkAGV.START_DONW_STEP_FIND_HOME_POSE;
             try
             {
-                using Vehicle.InitMessageUpdater initMsgUpdater = vehicle.CreateInitMsgUpdater();
                 SEARCH_STATUS _searchStatus = SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION;
-
+                StartUpdateInitTextProcess(token);
                 while (!_isInitializeDone)
                 {
                     if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
@@ -96,8 +96,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     switch (_searchStatus)
                     {
                         case SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION:
-                            _searchStatus = GetSearchDirection();
-                            await initMsgUpdater.Update($"尋原點方向:{_searchStatus}");
+                            _initText = $"尋原點方向:{_searchStatus}";
+                            _searchStatus = await GetSearchDirectionAsync();
+
                             break;
                         case SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME:
                             await DownSearchAsync(downSearchSpeed);
@@ -112,7 +113,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             _searchStatus = SEARCH_STATUS.UP_SEARCHING_FIND_HOME;
                             break;
                         case SEARCH_STATUS.DOWN_SEARCHING_FIND_HOME:
-                            await initMsgUpdater.Update($"向下搜尋原點...");
+                            _initText = $"向下搜尋原點,Speed:{downSearchSpeed}";
+
                             if (IsHomePoseSensorOn)
                             {
                                 await StopAsync();
@@ -130,9 +132,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                                 _searchStatus = SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME;
                                 break;
                             }
+
+                            if (IsDownLimitSensorOn && !IsHomePoseSensorOn)
+                            {
+                                await StopAsync();
+                                await BypassLimitSensor();
+                                await Task.Delay(200);
+                                _searchStatus = SEARCH_STATUS.START_UP_SEARCH_FIND_HOME;
+                                break;
+                            }
+
                             break;
                         case SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME:
-                            await initMsgUpdater.Update($"等待下緣離開原點...");
+
+                            _initText = $"等待下緣離開原點";
                             if (!IsHomePoseSensorOn)
                             {
                                 await StopAsync();
@@ -142,14 +155,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                                 _Log($"下緣離開原點 PositionInit");
                                 await Task.Delay(1000, cancelToken);
                                 _Log($"下緣離開原點 SendChangePoseCmd({start_down_step_find_home_pose}, 1)");
-                                await initMsgUpdater.Update($"移動至吋動搜尋位置:向上 {start_down_step_find_home_pose} cm");
+
+                                _initText = $"移動至吋動搜尋位置:向上 {start_down_step_find_home_pose} cm";
                                 await SendChangePoseCmd(start_down_step_find_home_pose, 1);
                                 await Task.Delay(1000, cancelToken);
                                 _searchStatus = SEARCH_STATUS.MOVE_STEP_TO_FIND_HOME;
                             }
                             break;
                         case SEARCH_STATUS.UP_SEARCHING_FIND_HOME:
-                            await initMsgUpdater.Update($"向上搜尋原點...");
+                            _initText = $"向上搜尋原點...";
                             if (IsHomePoseSensorOn)
                             {
                                 _searchStatus = SEARCH_STATUS.UP_SEARCHING_LEAVE_HOME;
@@ -164,7 +178,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                                 double newPose = CurrentActualPosition - 0.1;
                                 string currentPosStr = Math.Round(CurrentActualPosition, 3).ToString();
                                 string newPoseStr = Math.Round(newPose, 3).ToString();
-                                await initMsgUpdater.Update($"吋動搜尋中..{currentPosStr}->{newPoseStr}");
+                                _initText = $"吋動搜尋中..{currentPosStr}->{newPoseStr}";
                                 await SendChangePoseCmd(newPose);
                             }
                             else
@@ -207,21 +221,51 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
         }
 
-        private SEARCH_STATUS GetSearchDirection()
+        private async Task StartUpdateInitTextProcess(CancellationToken token)
         {
+            _ = Task.Run(async () =>
+            {
+                using Vehicle.InitMessageUpdater initMsgUpdater = vehicle.CreateInitMsgUpdater();
+                while (true)
+                {
+                    try
+                    {
+                        if (vehicle.GetSub_Status() == SUB_STATUS.DOWN || vehicle.IsInitialized)
+                            break;
+                        await initMsgUpdater.Update(_initText);
+                        await Task.Delay(100, token);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
+                }
+                vehicle.LogDebugMessage("Home search Init Message updater process end", true);
+            });
+        }
+
+        private async Task<SEARCH_STATUS> GetSearchDirectionAsync()
+        {
+            //原點、極限皆未ON 或 上極限ON 
+
             if ((!IsHomePoseSensorOn && !IsDownLimitSensorOn && !IsUpLimitSensorOn) || IsUpLimitSensorOn)
             {
                 return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
             }
-            else if (IsHomePoseSensorOn)
+            else if (IsHomePoseSensorOn && !IsDownLimitSensorOn) //原點ON但下極限OFF 
             {
-                if (IsDownLimitSensorOn)
-                    BypassLimitSensor();
                 return SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME;
             }
-            else if (!IsHomePoseSensorOn && IsDownLimitSensorOn)
+            else if (IsHomePoseSensorOn && IsDownLimitSensorOn) //原點ON且下極限ON
             {
-                BypassLimitSensor();
+                await BypassLimitSensor();
+                await Task.Delay(200);
+                return SEARCH_STATUS.START_UP_SEARCH_WAIT_LEAVE_HOME;
+            }
+            else if (!IsHomePoseSensorOn && IsDownLimitSensorOn) //僅下極限 ON 且原點OFF
+            {
+                await BypassLimitSensor();
+                await Task.Delay(200);
                 return SEARCH_STATUS.START_UP_SEARCH_FIND_HOME;
             }
             else

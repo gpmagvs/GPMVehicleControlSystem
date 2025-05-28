@@ -77,9 +77,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.TrySendOnlineModeChangeRequest(BarcodeReader.CurrentTag, REMOTE_MODE.OFFLINE);
         }
 
-        private void HandleOnEndWaitMainStatusIDLEReported(object? sender, EventArgs e)
+        private void HandleOnEndWaitMainStatusIDLEReported(object? sender, bool timeout)
         {
-            LogDebugMessage($"Action Finish上報前等待主狀態IDLE上報已完成...", signalRPub: false);
+            LogDebugMessage($"Action Finish上報前等待主狀態IDLE上報已結束. {(timeout ? "失敗!" : "完成!")}", signalRPub: false);
         }
 
         private void HandleOnStartWaitMainStatusIDLEReported(object? sender, EventArgs e)
