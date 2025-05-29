@@ -338,9 +338,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Laser.ModeSwitch(LASER_MODE.Bypass, true);
             await Task.Delay(100);
             EndLaserObstacleMonitor();
-            var currentStatus = GetSub_Status();
-            if (currentStatus == SUB_STATUS.IDLE || currentStatus == SUB_STATUS.Charging)
-                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
         }
 
         private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
