@@ -9,7 +9,7 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<Optimize>False</Optimize>
-		<WarningLevel>1</WarningLevel>
+		<WarningLevel>0</WarningLevel>
 		<ShouldCreateLogs>True</ShouldCreateLogs>
 		<AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
 		<UpdateAssemblyVersion>True</UpdateAssemblyVersion>
@@ -24,7 +24,7 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<Optimize>False</Optimize>
-		<WarningLevel>1</WarningLevel>
+		<WarningLevel>0</WarningLevel>
 		<ShouldCreateLogs>True</ShouldCreateLogs>
 		<AdvancedSettingsExpanded>True</AdvancedSettingsExpanded>
 		<UpdateAssemblyVersion>True</UpdateAssemblyVersion>
@@ -39,8 +39,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.4.7.5</AssemblyVersion>
-		<FileVersion>3.4.7.5</FileVersion>
+		<AssemblyVersion>3.4.8</AssemblyVersion>
+		<FileVersion>3.4.8</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
