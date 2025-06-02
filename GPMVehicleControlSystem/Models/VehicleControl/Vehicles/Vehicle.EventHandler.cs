@@ -351,6 +351,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StartLaserObstacleMonitor();
                 if (ExecutingTaskEntity.action == ACTION_TYPE.None)
                     BuzzerPlayer.SoundPlaying = SOUNDS.Move;
+
+                AlarmManager.ClearAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
             });
         }
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
