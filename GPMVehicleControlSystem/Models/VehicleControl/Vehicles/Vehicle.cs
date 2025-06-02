@@ -1001,11 +1001,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVC.OnModuleInformationUpdated += ModuleInformationHandler;
             AGVC.OnSickLocalicationDataUpdated += HandleSickLocalizationStateChanged;
             AGVC.OnSickRawDataUpdated += SickRawDataHandler;
+            AGVC.OnActionGoalSendToRetrying += AGVC_OnActionGoalSendToRetrying;
             Laser.rosSocket = AGVC.rosSocket;
             Navigation.OnAlarmHappened += AGVC.HandleAlarm;
             StartPublishIOListsMsg();
 
         }
+
+        private void AGVC_OnActionGoalSendToRetrying(object? sender, string mesg)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                AlarmManager.AddWarning(AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
+                LogDebugMessage(mesg, true);
+            });
+        }
+
         private void SickRawDataHandler(object? sender, RawMicroScanDataMsg RawData)
         {
             Task.Factory.StartNew(() =>

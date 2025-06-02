@@ -14,6 +14,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using NLog;
+using Polly;
+using Polly.Retry;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
@@ -131,6 +133,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         public event EventHandler OnRosSocketReconnected;
         public event EventHandler OnRosSocketDisconnected;
         public event EventHandler OnSTOPCmdRequesting;
+        public event EventHandler<string> OnActionGoalSendToRetrying;
         public delegate CST_TYPE delgateOnCstTypeUnknown();
         public delgateOnCstTypeUnknown OnCstTriggerButTypeUnknown;
         public delegate (bool confirmed, string message) SpeedRecoveryRequestingDelegate();
@@ -548,9 +551,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal virtual async Task<SendActionCheckResult> ExecuteTaskDownloaded(clsTaskDownloadData taskDownloadData, double action_timeout = 5)
         {
+            SendActionCheckResult result = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
             RunningTaskData = taskDownloadData;
             var rosCommandGoal = clsTaskDownloadData.GetTaskDataToRosCommandGoal(taskDownloadData, IsApprilTagLocateSupport);
-            return await SendGoal(rosCommandGoal, action_timeout);
+
+            var retryPolicy = Policy.Handle<Exception>()
+                                    .WaitAndRetryAsync(retryCount: 5, retryAttempt => TimeSpan.FromMilliseconds(500),  // 每次重试间隔 500 毫秒
+                                                        (exception, timeSpan, retryCount, context) =>
+                                                        {
+                                                            string msg = $"因{exception.Message}, 第{retryCount}次嘗試發送命令給車控..";
+                                                            OnActionGoalSendToRetrying?.Invoke(this, msg);
+                                                            logger.Warn(msg);
+                                                        });
+            try
+            {
+                await retryPolicy.ExecuteAsync(async () =>
+                {
+                    result = await SendGoal(rosCommandGoal, action_timeout);
+                    if (result.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION)
+                    {
+                        ActionStatus = ActionStatus.NO_GOAL;
+                        this.CycleStop();
+                        throw new Exception("Send action to AGVC failure");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
+            return result;
         }
 
         CancellationTokenSource wait_agvc_execute_action_cts;
