@@ -52,7 +52,10 @@ namespace GPMVehicleControlSystem.Service
             {
                 await SendOutVehicleData(stoppingToken);
             }));
-
+            _taskList.Add(Task.Run(async () =>
+            {
+                await SendOutDIOStatus(stoppingToken);
+            }));
             _taskList.Add(Task.Run(async () =>
             {
                 await SendOutVDiskStatus(stoppingToken);
@@ -76,19 +79,15 @@ namespace GPMVehicleControlSystem.Service
                     Dictionary<string, object> _ws_data_store = new Dictionary<string, object>();
                     ConnectionStateVM conn_data = ViewModelFactory.GetConnectionStatesVM();
                     AGVCStatusVM state_data = ViewModelFactory.GetVMSStatesVM();
-                    DIOTableVM dio_data = ViewModelFactory.GetDIOTableVM();
                     object rd_data = ViewModelFactory.GetRDTestData();
                     _ws_data_store["ConnectionStatesVM"] = conn_data;
                     _ws_data_store["VMSStatesVM"] = state_data;
-                    _ws_data_store["DIOTableVM"] = dio_data;
                     _ws_data_store["RDTestData"] = rd_data;
                     await _hubContext.Clients.All.SendAsync("ReceiveData", "VMS", _ws_data_store);
 
                     state_data.Dispose();
-                    dio_data.Dispose();
                     conn_data = null;
                     state_data = null;
-                    dio_data = null;
                     rd_data = null;
 
                 }
@@ -100,6 +99,22 @@ namespace GPMVehicleControlSystem.Service
         }
 
 
+        private async Task SendOutDIOStatus(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200), stoppingToken);
+                try
+                {
+                    DIOTableVM dio_data = ViewModelFactory.GetDIOTableVM();
+                    await _hubContext.Clients.All.SendAsync("DIOStatus", dio_data);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("CollectViewModelData Error" + ex.ToString());
+                }
+            }
+        }
 
         private async Task SendOutVDiskStatus(CancellationToken stoppingToken)
         {
