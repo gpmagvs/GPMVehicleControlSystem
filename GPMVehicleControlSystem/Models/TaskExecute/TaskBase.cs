@@ -451,14 +451,40 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度");
 
                     FORK_HEIGHT_POSITION _position = _GetForkPositionToReachAtSecondaryPoint(action);
+                    (double position, bool success, AlarmCodes alarm_code) forkGoTeachPositionResult = (-1, false, AlarmCodes.Fork_Action_Aborted);
 
-                    (double position, bool success, AlarmCodes alarm_code) forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
+                    const int MAX_RETRY = 3;
+                    int retryCount = 0;
+
+                    while (retryCount < MAX_RETRY)
+                    {
+                        forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
+                        if (forkGoTeachPositionResult.success)
+                            break;
+
+                        if (forkGoTeachPositionResult.alarm_code == AlarmCodes.Action_Timeout)
+                        {
+                            ForkLifter.EarlyMoveUpState.Reset();
+                            logger.Warn($"[ForkLift] 牙叉升至設定高度失敗 (Action Timeout)，準備重試... ({retryCount}/{MAX_RETRY})");
+                            retryCount++;
+                            await ForkLifter.ForkStopAsync();
+                            await Task.Delay(1000); //等待1秒後重試
+                            continue;
+                        }
+                        else
+                        {
+                            logger.Error($"[ForkLift] 牙叉升至設定高度失敗,錯誤碼:{forkGoTeachPositionResult.alarm_code}");
+                            break;
+                        }
+
+                    }
+
                     if (!forkGoTeachPositionResult.success)
                         alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
                     else
                     {
                         ExpectedForkPostionWhenEntryWorkStation = forkGoTeachPositionResult.position;
-                        logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度({ExpectedForkPostionWhenEntryWorkStation})-牙叉已升至{ForkLifter.CurrentHeightPosition} cm");
+                        logger.Warn($"[ForkLift] 牙叉升至設定高度({ExpectedForkPostionWhenEntryWorkStation} cm) 已完成!-目前位置:{ForkLifter.CurrentHeightPosition} cm");
                     }
                 }));
 
@@ -813,7 +839,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (0, false, AlarmCodes.Fork_Cannot_Move_To_Down_Pose_When_Load_Action_Executing);
 
             logger.Warn($"Before Go Into Work Station_Tag:{destineTag}, Fork Pose need change to {(position == FORK_HEIGHT_POSITION.UP_ ? "Load Pose" : "Unload Pose")}");
-            (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, Agv.Parameters.LDULD_Task_No_Entry).Result;
+            (double position, bool success, AlarmCodes alarm_code) result = ForkLifter.ForkGoTeachedPoseAsync(destineTag, Height, position, 1, bypassFinalCheck: Agv.Parameters.LDULD_Task_No_Entry).Result;
             return result;
         }
 

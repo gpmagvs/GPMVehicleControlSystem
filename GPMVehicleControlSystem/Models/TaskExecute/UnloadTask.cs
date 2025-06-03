@@ -136,9 +136,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             BuzzerPlayer.SoundPlaying = SOUNDS.Action;
             return true;
         }
-        protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
+        protected override async Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation(int timeout)
         {
-            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5, invokeActionStart: false);
+            var forkHeightChangeReuslt = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.UP_, 0.5, timeout: timeout, invokeActionStart: false);
             return forkHeightChangeReuslt;
         }
 

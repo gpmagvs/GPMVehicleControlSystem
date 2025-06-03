@@ -452,7 +452,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <param name="height">第N層(Zero-base)</param>
         /// <param name="position">該層之上/下位置</param>
         /// <exception cref="NotImplementedException"></exception>
-        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed, bool bypassFinalCheck = false, bool invokeActionStart = true)
+        internal async Task<(double position, bool success, AlarmCodes alarm_code)> ForkGoTeachedPoseAsync(int tag, int height, FORK_HEIGHT_POSITION position, double speed, int timeout = 60, bool bypassFinalCheck = false, bool invokeActionStart = true)
         {
             double target = 0;
             try
@@ -502,7 +502,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     try
                     {
                         Stopwatch sw = Stopwatch.StartNew();
-                        while (sw.Elapsed.TotalSeconds < 60)
+                        while (sw.Elapsed.TotalSeconds < timeout)
                         {
                             forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString(@"mm\:ss")}";
                             if (IsStopByObstacleDetected)
