@@ -1074,6 +1074,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
+            if (alarmCode.IsMotorAlarm())
+            {
+                Task<bool> DetectEmoTriggering = await Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(500);
+                    bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
+                    return isEmoTrigger;
+                });
+
+                bool isEmoTriggering = await DetectEmoTriggering;
+                if (isEmoTriggering)
+                    return;
+            }
+
             Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
             StartRecordViedo();
             if (StaSysControl.isAGVCRestarting)
