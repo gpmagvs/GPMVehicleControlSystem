@@ -932,8 +932,31 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (true, AlarmCodes.None);
             }
 
-            (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation();
+
+            (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = (-1, false, AlarmCodes.Fork_Action_Aborted);
+
+            const int MAX_RETRY = 3;
+            int retry_count = 0;
+
+            while (retry_count < MAX_RETRY)
+            {
+                fork_height_change_result = await ChangeForkPositionInWorkStation(timeout: 20);
+                if (fork_height_change_result.success)
+                    break;
+
+                if (fork_height_change_result.alarm_code == AlarmCodes.Action_Timeout)
+                {
+                    logger.Warn($"Fork Height Change Action Timeout, Retry Count: {retry_count + 1}/{MAX_RETRY}");
+                    await Task.Delay(1000);
+                    retry_count++;
+                    continue;
+                }
+                else
+                    break;
+            }
+
             ExpectedForkPostionWhenEntryWorkStation = fork_height_change_result.position;
+
             if (!fork_height_change_result.success)
                 return (false, fork_height_change_result.alarm_code);
 
@@ -1053,12 +1076,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             logger.Trace($"CST ID =  {Agv.CSTReader.ValidCSTID} Reported TO AGVS SUCCESS");
         }
 
-        protected async virtual Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="timeout">單位:秒</param>
+        /// <returns></returns>
+        protected async virtual Task<(double position, bool success, AlarmCodes alarm_code)> ChangeForkPositionInWorkStation(int timeout)
         {
-
-            CancellationTokenSource _wait_fork_reach_position_cst = new CancellationTokenSource();
-            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5, invokeActionStart: false);
-            _wait_fork_reach_position_cst.Cancel();
+            var result = await ForkLifter.ForkGoTeachedPoseAsync(destineTag, height, FORK_HEIGHT_POSITION.DOWN_, 0.5, timeout: timeout, invokeActionStart: false);
             return result;
         }
 
