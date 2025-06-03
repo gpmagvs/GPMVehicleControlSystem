@@ -77,28 +77,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
-                IsMotorReseting = true;
-                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Stop, true, 100)) throw new Exception($"Vertical_Motor_Stop set true fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Reset, true, 100)) throw new Exception($"Vertical_Motor_Reset set true fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Reset, false, 100)) throw new Exception($"Vertical_Motor_Reset set false fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Vertical_Motor_Stop, false, 100)) throw new Exception($"Vertical_Motor_Stop set false fail");
+                await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, true).ContinueWith(async t =>
+                {
+                    await WagoDO.SetState(DO_ITEM.Vertical_Motor_Reset, false);
+                    await WagoDO.SetState(DO_ITEM.Vertical_Motor_Stop, false);
+                });
                 return true;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, ex.Message);
-                IsMotorReseting = false;
                 return false;
             }
         }
-        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush)
         {
             try
             {
-                await base.ResetMotor(triggerByResetButtonPush, bypass_when_motor_busy_on);
-
-                if (WagoDI.GetState(DI_ITEM.Vertical_Motor_Busy))
-                    return true;
+                await base.ResetMotor(triggerByResetButtonPush);
                 return await ResetVerticalDriver();
             }
             catch (Exception ex)

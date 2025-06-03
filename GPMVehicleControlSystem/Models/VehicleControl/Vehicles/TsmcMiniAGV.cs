@@ -378,7 +378,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, "");
         }
 
-        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
+        public override async Task<bool> ResetMotor(bool triggerByResetButtonPush)
         {
             try
             {

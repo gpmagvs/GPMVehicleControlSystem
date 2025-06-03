@@ -1,5 +1,6 @@
 ﻿using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using System;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
@@ -18,7 +19,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public override COMPOENT_NAME component_name => COMPOENT_NAME.DRIVER;
         public DRIVER_LOCATION location = DRIVER_LOCATION.RIGHT;
         public new DriverState Data => StateData == null ? new DriverState() : (DriverState)StateData;
-
+        public bool isInitMode { get; private set; } = false;
         public double CurrentPosition { get => Data.position; }
 
         public override string alarm_locate_in_name => component_name.ToString();
@@ -28,35 +29,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (!base.CheckStateDataContent())
                 return false;
             DriverState _driverState = (DriverState)StateData;
-            AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
-            if (_Current_Alarm_Code == Current_Alarm_Code)
+            bool _isHasAlarm = _driverState.errorCode != 0;
+
+            if (!_isHasAlarm)
                 return true;
 
-            Task.Run(async () =>
+            if (isInitMode)
             {
-                if (OnAlarmHappened != null && _Current_Alarm_Code != AlarmCodes.None)
-                {
-                    bool allow_added = await OnAlarmHappened(_Current_Alarm_Code);
-                    if (!allow_added)
-                    {
-                        _Current_Alarm_Code = AlarmCodes.None;
-                    }
-                }
-                if (_Current_Alarm_Code != AlarmCodes.None)
-                {
-                    logger.Error($"{location} Driver Alarm , Code=_{_Current_Alarm_Code}({_driverState.errorCode})");
-                }
-                if (_Current_Alarm_Code == AlarmCodes.Other_error && location == DRIVER_LOCATION.FORK)
-                {
-                    _Current_Alarm_Code = AlarmCodes.Fork_Pose_Change_Too_Large;
-                }
-                await Task.Delay(1000);
-                if (((DriverState)StateData).errorCode == 0)
-                    return;
-                Current_Alarm_Code = _Current_Alarm_Code;
-            });
+                return true;
+            }
 
+            AlarmCodes _Current_Alarm_Code = _driverState.errorCode.ToDriverAlarmCode();
+
+            bool _isAlarmCodeChanged = _Current_Alarm_Code != Current_Alarm_Code;
+            if (!_isAlarmCodeChanged)
+                return true;
+
+            logger.Error($"{location} Driver Alarm , Code=_{_Current_Alarm_Code}({_driverState.errorCode})");
+            Current_Alarm_Code = _Current_Alarm_Code;
             return true;
+        }
+
+        internal void SetAsInitMode()
+        {
+            isInitMode = true;
+        }
+        internal void SetAsNormalMode()
+        {
+            isInitMode = false;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace GPMVehicleControlSystem.Models
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+
+namespace GPMVehicleControlSystem.Models
 {
     public static class Extensions
     {
@@ -10,5 +12,24 @@
         {
             return value ? symbol_true : sybol_false;
         }
+
+        public static bool IsMotorAlarm(this clsAlarmCode alarm)
+        {
+            if (alarm == null || alarm.EAlarmCode == AlarmCodes.Unknown)
+                return false;
+            AlarmCodes[] motorAlarms = new AlarmCodes[]
+            {
+                 AlarmCodes.Motor_Active_Error,
+                 AlarmCodes.Motor_Driver_Over_Heat_Error,
+                 AlarmCodes.Motor_Over_Speed_Error,
+                 AlarmCodes.Motor_Encoder_Error,
+                 AlarmCodes.Motor_Run_Forbid,
+                 AlarmCodes.Motor_Extern_Stop,
+                 AlarmCodes.Motor_Hall_Sequence_Error,
+                 AlarmCodes.Motor_Parameters_Error,
+            };
+            return motorAlarms.Contains(alarm.EAlarmCode);
+        }
+
     }
 }

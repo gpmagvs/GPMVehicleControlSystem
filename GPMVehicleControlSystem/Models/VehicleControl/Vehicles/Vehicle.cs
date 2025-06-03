@@ -33,6 +33,7 @@ using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using clsAlarmCode = AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM.clsAlarmCode;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
@@ -699,6 +700,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                 //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
 
+                SetAllDriversComponentAsInitMode();
+                await Task.Delay(500);
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();
@@ -708,6 +711,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 IsWaitForkNextSegmentTask = false;
                 AGVSResetCmdFlag = false;
                 InitializeCancelTokenResourece = new CancellationTokenSource();
+
                 AlarmManager.ClearAlarm();
                 _RunTaskData = new clsTaskDownloadData();
                 HandshakeStatusText = "";
@@ -725,6 +729,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         IsMotorReseting = false;
                         await ResetMotor(false);
+                        SetAllDriversComponentAsNormalMode();
+                        await Task.Delay(500);
+                        List<clsAlarmCode> motorAlarms = AlarmManager.CurrentAlarms.Values.Where(alObj => alObj.IsMotorAlarm()).ToList();
+                        if (motorAlarms.Any())
+                        {
+                            return (false, $"馬達異常，請檢查馬達狀態，異常碼：{string.Join(",", motorAlarms.Select(al => al.Code))}。");
+                        }
+
                         (bool, string) result = await PreActionBeforeInitialize();
                         if (!result.Item1)
                         {
@@ -797,6 +809,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             finally
             {
 
+            }
+        }
+
+        private void SetAllDriversComponentAsNormalMode()
+        {
+            foreach (var _driver in driverList)
+            {
+                _driver.SetAsNormalMode();
+            }
+        }
+
+        private void SetAllDriversComponentAsInitMode()
+        {
+            foreach (var _driver in driverList)
+            {
+                _driver.SetAsInitMode();
             }
         }
 
@@ -1217,6 +1245,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return isHSAlarmCode;
         }
 
+        protected virtual List<clsDriver> driverList
+        {
+            get
+            {
+                List<clsDriver> drivers = new List<clsDriver>();
+                drivers.Add(VerticalDriverState);
+                if (WheelDrivers != null && WheelDrivers.Length > 0)
+                    drivers.AddRange(WheelDrivers);
+                return drivers;
+            }
+        }
 
         protected internal virtual void SoftwareEMO()
         {
@@ -1224,6 +1263,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal virtual async Task ResetAlarmsAsync(bool IsTriggerByButton)
         {
+            SetAllDriversComponentAsInitMode();
             BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             AlarmManager.ClearAlarm();
             AGVAlarmReportable.ResetAlarmCodes();
@@ -1236,6 +1276,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     IsResetAlarmWorking = true;
                     IsMotorReseting = false;
                     await ResetMotor(IsTriggerByButton);
+                    await Task.Delay(300);
+                    SetAllDriversComponentAsNormalMode();
                     _ = Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(1000);
@@ -1279,31 +1321,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await Task.Delay(delay);
             return true;
         }
-        public virtual async Task<bool> ResetMotor(bool triggerByResetButtonPush, bool bypass_when_motor_busy_on = true)
+        public virtual async Task<bool> ResetMotor(bool triggerByResetButtonPush)
         {
             try
             {
-                var caller_class_name = new StackTrace().GetFrame(1).GetMethod().DeclaringType.Name;
                 if (IsMotorReseting)
                 {
                     logger.LogWarning($"Reset Motor Action is excuting by other process");
                     return false;
                 }
+                logger.LogTrace($"Reset Motor Process Start");
+
                 IsMotorReseting = true;
                 if (!triggerByResetButtonPush)
                     await WagoDO.ResetSaftyRelay();
-                else
-                    await Task.Delay(1000);
-                if (bypass_when_motor_busy_on & WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_1) && WagoDI.GetState(DI_ITEM.Horizon_Motor_Busy_2))
-                    return true;
 
-                logger.LogTrace($"Reset Motor Process Start (caller:{caller_class_name})");
-                //if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, true, 100)) throw new Exception($"Horizon_Motor_Stop set true fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, true, 100)) throw new Exception($"Horizon_Motor_Reset set true fail");
-                if (!await SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Reset, false, 100)) throw new Exception($"Horizon_Motor_Reset set false fail");
+                await Task.Delay(200);
+
+                await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, true).ContinueWith(async t =>
+                {
+                    await Task.Delay(200);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Reset, false);
+                    await WagoDO.SetState(DO_ITEM.Horizon_Motor_Stop, false);
+                });
 
                 logger.LogTrace("Reset Motor Process End");
-
                 IsMotorReseting = false;
                 return true;
             }
@@ -1321,7 +1363,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-                _ = SetMotorStateAndDelay(DO_ITEM.Horizon_Motor_Stop, false);
             }
 
         }
