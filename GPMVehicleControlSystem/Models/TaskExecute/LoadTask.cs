@@ -256,22 +256,22 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (true, AlarmCodes.None);
             }
         }
-
+        /// <summary>
+        /// 伸縮牙叉同步伸出任務
+        /// </summary>
+        Task<(bool success, AlarmCodes alarmcode)> ForkHorizonExtendAsyncTask = null;
         protected override async Task<SendActionCheckResult> TransferTaskToAGVC()
         {
-            Agv.HandshakeStatusText = RunningTaskData.GoTOHomePoint ? "AGV退出設備中..." : "AGV進入設備中...";
+            bool isEntryPortAction = !RunningTaskData.GoTOHomePoint;
+            Agv.HandshakeStatusText = isEntryPortAction ? "AGV進入設備中..." : "AGV退出設備中...";
             await Agv.Laser.SideLasersEnable(false);
 
-            if (!RunningTaskData.GoTOHomePoint && isNeedArmExtend && Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
+            if (isEntryPortAction && isNeedArmExtend && Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
             {
-                _ = Task.Factory.StartNew(async () =>
+                ForkHorizonExtendAsyncTask = await Task.Factory.StartNew(async () =>
                  {
                      var result = await ForkHorizonExendAction();
-
-                     if (!result.success)
-                     {
-                         Agv.SoftwareEMO(result.alarmcode);
-                     }
+                     return result;
                  });
             }
 
@@ -909,23 +909,20 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             if (isNeedArmExtend)
             {
-                if (!Agv.Parameters.ForkAGV.HorizonArmConfigs.ExtendWhenStartMoveToPort)
+                (bool success, AlarmCodes alarmcode) forkExtendResult = (false, AlarmCodes.None);
+                if (ForkHorizonExtendAsyncTask != null)
                 {
-                    var forkExtendResult = await ForkHorizonExendAction();
-                    if (!forkExtendResult.success)
-                        return forkExtendResult;
+                    forkExtendResult = await ForkHorizonExtendAsyncTask;
+                    ForkHorizonExtendAsyncTask = null;
                 }
                 else
-                {
-                    //checkPosition
-                    while (!ForkLifter.IsForkArmExtendLocationCorrect)
-                    {
-                        await Task.Delay(1000);
-                    }
-                }
+                    forkExtendResult = await ForkHorizonExendAction();
 
-                await Task.Delay(1000);
-                //check arm position 
+                if (!forkExtendResult.success)
+                    return forkExtendResult;
+                //checkPosition
+                if (!ForkLifter.IsForkArmExtendLocationCorrect)
+                    return (false, AlarmCodes.Fork_Arm_Pose_Error);
             }
 
             //在RACK取放貨且是空取空放模式
