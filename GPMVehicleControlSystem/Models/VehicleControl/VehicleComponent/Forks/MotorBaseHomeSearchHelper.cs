@@ -246,9 +246,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         private async Task<SEARCH_STATUS> GetSearchDirectionAsync()
         {
-            //原點、極限皆未ON 或 上極限ON 
-
-            if ((!IsHomePoseSensorOn && !IsDownLimitSensorOn && !IsUpLimitSensorOn) || IsUpLimitSensorOn)
+            //僅有上極限ON 
+            if (!IsHomePoseSensorOn && !IsDownLimitSensorOn && IsUpLimitSensorOn)
+            {
+                await BypassLimitSensor();
+                await Task.Delay(200);
+                return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
+            }
+            //原點、極限皆未ON 
+            else if (!IsHomePoseSensorOn && !IsDownLimitSensorOn && !IsUpLimitSensorOn)
             {
                 return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
             }
