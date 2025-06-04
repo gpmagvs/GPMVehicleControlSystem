@@ -451,34 +451,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     logger.Warn($"取貨、放貨、充電任務-牙叉升至設定高度");
 
                     FORK_HEIGHT_POSITION _position = _GetForkPositionToReachAtSecondaryPoint(action);
-                    (double position, bool success, AlarmCodes alarm_code) forkGoTeachPositionResult = (-1, false, AlarmCodes.Fork_Action_Aborted);
-
-                    const int MAX_RETRY = 3;
-                    int retryCount = 0;
-
-                    while (retryCount < MAX_RETRY)
-                    {
-                        forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
-                        if (forkGoTeachPositionResult.success)
-                            break;
-
-                        if (forkGoTeachPositionResult.alarm_code == AlarmCodes.Action_Timeout)
-                        {
-                            ForkLifter.EarlyMoveUpState.Reset();
-                            logger.Warn($"[ForkLift] 牙叉升至設定高度失敗 (Action Timeout)，準備重試... ({retryCount}/{MAX_RETRY})");
-                            retryCount++;
-                            await ForkLifter.ForkStopAsync();
-                            await Task.Delay(1000); //等待1秒後重試
-                            continue;
-                        }
-                        else
-                        {
-                            logger.Error($"[ForkLift] 牙叉升至設定高度失敗,錯誤碼:{forkGoTeachPositionResult.alarm_code}");
-                            break;
-                        }
-
-                    }
-
+                    (double position, bool success, AlarmCodes alarm_code) forkGoTeachPositionResult = await ChangeForkPositionInSecondaryPtOfWorkStation(Height, _position);
                     if (!forkGoTeachPositionResult.success)
                         alarmCodes.Add(forkGoTeachPositionResult.alarm_code);
                     else
@@ -955,7 +928,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                     if (Agv.Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS)
                     {
-                        accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, (int)Agv.BarcodeReader.Data.tagID);
+                        accept = await Agv.AGVS.LeaveWorkStationRequest(Agv.Parameters.VehicleName, ExitPointTag);
                         Agv.HandshakeStatusText = $"等待派車允許AGV退出設備-{stopwatch.Elapsed}";
                     }
                     else

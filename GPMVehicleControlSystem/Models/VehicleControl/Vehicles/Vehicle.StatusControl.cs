@@ -173,6 +173,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 if (!ModuleInformationUpdatedInitState)
                     return MAIN_STATUS.DOWN;
+
+                bool _isAgvAtWorkStation = lastVisitedMapPoint.StationType != AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal;
+
                 switch (_Sub_Status)
                 {
                     case SUB_STATUS.IDLE:
@@ -186,12 +189,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     case SUB_STATUS.Initializing:
                         return MAIN_STATUS.Initializing;
                     case SUB_STATUS.ALARM:
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        if (_isAgvAtWorkStation || AGVC.ActionStatus == ActionStatus.ACTIVE)
                             return MAIN_STATUS.RUN;
                         else
                             return MAIN_STATUS.IDLE;
                     case SUB_STATUS.WARNING:
-                        if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                        if (_isAgvAtWorkStation || AGVC.ActionStatus == ActionStatus.ACTIVE)
                             return MAIN_STATUS.RUN;
                         else
                             return MAIN_STATUS.IDLE;

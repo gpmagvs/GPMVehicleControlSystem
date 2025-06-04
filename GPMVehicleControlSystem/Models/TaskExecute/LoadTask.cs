@@ -615,7 +615,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         logger.Info($"After Back Home Actions done. alarm code={_alarmcode}");
                     }
-                    Agv.SetSub_Status(_alarmcode == AlarmCodes.None ? SUB_STATUS.IDLE : SUB_STATUS.DOWN);
+                    if (_alarmcode != AlarmCodes.None)
+                        Agv.SetSub_Status(SUB_STATUS.DOWN);
                     return (_alarmcode == AlarmCodes.None, _alarmcode);
                 }
 
@@ -832,16 +833,25 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         default:
                             break;
                     }
-                    Agv.SetSub_Status(Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS ? SUB_STATUS.DOWN : SUB_STATUS.IDLE);
+
+                    if (Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                        Agv.SetSub_Status(SUB_STATUS.DOWN);
+
                     if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
+                    {
                         await WaitCSTIDReported();
+                        await Task.Delay(500);
+                    }
                     AlarmManager.AddAlarm(cst_read_fail_alarm, false);
                     //await Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarm_tracking: cst_read_fail_alarm);
                 }
                 else
                 {
                     if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
+                    {
                         await WaitCSTIDReported();
+                        await Task.Delay(500);
+                    }
                     //await base.HandleAGVCActionSucceess();
                 }
                 lduld_record.CargoID_Reader = Agv.CSTReader.ValidCSTID;
@@ -932,29 +942,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (true, AlarmCodes.None);
             }
 
-
-            (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = (-1, false, AlarmCodes.Fork_Action_Aborted);
-
-            const int MAX_RETRY = 3;
-            int retry_count = 0;
-
-            while (retry_count < MAX_RETRY)
-            {
-                fork_height_change_result = await ChangeForkPositionInWorkStation(timeout: 20);
-                if (fork_height_change_result.success)
-                    break;
-
-                if (fork_height_change_result.alarm_code == AlarmCodes.Action_Timeout)
-                {
-                    logger.Warn($"Fork Height Change Action Timeout, Retry Count: {retry_count + 1}/{MAX_RETRY}");
-                    await ForkLifter.ForkStopAsync();
-                    await Task.Delay(1000);
-                    retry_count++;
-                    continue;
-                }
-                else
-                    break;
-            }
+            (double position, bool success, AlarmCodes alarm_code) fork_height_change_result = await ChangeForkPositionInWorkStation(timeout: 20);
 
             ExpectedForkPostionWhenEntryWorkStation = fork_height_change_result.position;
 
@@ -1145,7 +1133,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     return (false, AlarmCodes.Cst_ID_Not_Match);
                 }
 
-                Agv.CSTReader.ValidCSTID = reader_valid_id;
+                Agv.CSTReader.ValidCSTID = reader_actual_read_id;
 
                 if (reader_valid_id == "ERROR" || string.IsNullOrEmpty(reader_valid_id) || reader_actual_read_id == "ERROR" || reader_actual_read_id.Contains("ERROR"))
                 {

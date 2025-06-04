@@ -194,6 +194,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
                         }
+
                         await SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
                         BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                     }

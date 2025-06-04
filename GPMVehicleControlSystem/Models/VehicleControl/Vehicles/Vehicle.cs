@@ -741,7 +741,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!result.Item1)
                         {
                             IsInitialized = false;
-                            _Sub_Status = SUB_STATUS.ALARM;
+                            _Sub_Status = SUB_STATUS.DOWN;
                             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                             StatusLighter.AbortFlash();
                             return result;
