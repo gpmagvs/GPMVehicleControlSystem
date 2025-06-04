@@ -1113,12 +1113,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             ForkLifter.EarlyMoveUpState.SetHeightPreSettingActionRunning(_Height_PreAction);
                             await ForkLifter.ForkStopAsync();
                             await Task.Delay(1000);
-                            (bool confirm, string message) = await ForkLifter.ForkPose(_Height_PreAction, 1);
-                            ForkLifter.EarlyMoveUpState.Reset();
+                            (bool confirm, string message) = await ForkLifter.ForkPose(_Height_PreAction, 1, wait_done: false);
+
                             if (!confirm)
                             {
-                                logger.LogWarning($"[牙叉提前上升]  ForkLifter.ForkPose 失敗:{message}");
+                                logger.LogWarning($"[牙叉提前上升] ForkLifter.ForkPose 請求失敗:{message}");
+                                ForkLifter.EarlyMoveUpState.Reset();
                             }
+                            else
+                                logger.LogInformation($"[牙叉提前上升] ForkLifter.ForkPose 請求成功!");
 
                         }
                         else

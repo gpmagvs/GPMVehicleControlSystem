@@ -1145,8 +1145,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     return (false, AlarmCodes.Cst_ID_Not_Match);
                 }
 
+                Agv.CSTReader.ValidCSTID = reader_valid_id;
 
-                if (reader_valid_id == "ERROR" || string.IsNullOrEmpty(reader_valid_id) || reader_actual_read_id == "ERROR" || reader_actual_read_id == "ERROR")
+                if (reader_valid_id == "ERROR" || string.IsNullOrEmpty(reader_valid_id) || reader_actual_read_id == "ERROR" || reader_actual_read_id.Contains("ERROR"))
                 {
                     logger.Error($"CST Reader Action done and CSTID get(From /module_information), CST READER : {reader_actual_read_id}");
                     return (false, AlarmCodes.Read_Cst_ID_Fail);
@@ -1156,7 +1157,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     logger.Error($"AGVS CST Download: {cst_id_expect}, CST READER : {reader_valid_id}");
                     return (false, AlarmCodes.Cst_ID_Not_Match);
                 }
-                Agv.CSTReader.ValidCSTID = reader_valid_id;
                 return (true, AlarmCodes.None);
             }
             catch (Exception ex)

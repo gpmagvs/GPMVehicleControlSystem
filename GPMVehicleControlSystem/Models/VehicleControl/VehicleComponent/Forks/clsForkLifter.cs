@@ -519,6 +519,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 });
                 Task<(bool confirm, string message, double positionError)> poseActionTask = Task.Run(async () =>
                 {
+                    EarlyMoveUpState.Reset();
                     await Task.Delay(500);
                     (bool confirm, string message) forkMoveResult = (false, "");
                     ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
