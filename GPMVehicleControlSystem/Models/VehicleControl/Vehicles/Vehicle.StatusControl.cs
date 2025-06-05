@@ -219,10 +219,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool isVehicleAtChargstation = lastVisitedMapPoint.IsChargeAble();
 
             if (!isVehicleAtChargstation || isAgvRunning)
+            {
+                _IsCharging = false;
                 return;
+            }
 
             if (_Sub_Status == SUB_STATUS.DOWN || _Sub_Status == SUB_STATUS.Initializing || !IsInitialized)
+            {
+                _IsCharging = false;
                 return;
+            }
 
             if (_IsCharging != value)
             {

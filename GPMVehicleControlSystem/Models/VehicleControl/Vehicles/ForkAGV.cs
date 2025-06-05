@@ -312,7 +312,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     BuzzerPlayer.SoundPlaying = _soundBeforeStop;
                                     AlarmManager.ClearAlarm(AlarmCodes.SideLaserTriggerWhenForkMove);
                                 }
-                                await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd);
+
+                                const int MAX_RETRY = 3;
+                                int retry = 0;
+                                while (!(await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd)).confirm)
+                                {
+                                    if (retry >= MAX_RETRY)
+                                    {
+                                        logger.LogWarning($"嘗試恢復牙叉動作嘗試次數已達{MAX_RETRY}次.");
+                                        ForkLifter.IsStopByObstacleDetected = false;
+                                        break;
+                                    }
+                                    logger.LogWarning($"嘗試恢復牙叉動作失敗,一秒後將重新嘗試...");
+                                    await Task.Delay(1000);
+                                }
                                 ForkLifter.IsStopByObstacleDetected = false;
                                 LogDebugMessage($"雷射復原，牙叉恢復動作!", false);
                             }
