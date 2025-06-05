@@ -698,9 +698,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
                 //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                 //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
-
+                InitializeCancelTokenResourece = new CancellationTokenSource();
                 SetAllDriversComponentAsInitMode();
-                await Task.Delay(500);
+                await Task.Delay(500, InitializeCancelTokenResourece.Token);
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();
@@ -709,7 +709,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 orderInfoViewModel.ActionName = ACTION_TYPE.NoAction;
                 IsWaitForkNextSegmentTask = false;
                 AGVSResetCmdFlag = false;
-                InitializeCancelTokenResourece = new CancellationTokenSource();
 
                 AlarmManager.ClearAlarm();
                 _RunTaskData = new clsTaskDownloadData();
@@ -729,7 +728,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         IsMotorReseting = false;
                         await ResetMotor(false);
                         SetAllDriversComponentAsNormalMode();
-                        await Task.Delay(500);
+                        await Task.Delay(500, InitializeCancelTokenResourece.Token);
                         List<clsAlarmCode> motorAlarms = AlarmManager.CurrentAlarms.Values.Where(alObj => alObj.IsMotorAlarm()).ToList();
                         if (motorAlarms.Any())
                         {
@@ -754,9 +753,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             StatusLighter.AbortFlash();
                             return result;
                         }
-                        await Task.Delay(500);
+                        await Task.Delay(500, InitializeCancelTokenResourece.Token);
                         InitializingStatusText = "雷射模式切換(Bypass)..";
-                        await Task.Delay(200);
+                        await Task.Delay(200, InitializeCancelTokenResourece.Token);
 
                         if (Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
                             await (Laser as clsAMCLaser).ModeSwitch(clsAMCLaser.AMC_LASER_MODE.Bypass16);
@@ -798,6 +797,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 }, InitializeCancelTokenResourece.Token);
 
+            }
+            catch (TaskCanceledException)
+            {
+                StatusLighter.AbortFlash();
+                SetSub_Status(SUB_STATUS.DOWN);
+                IsInitialized = false;
+                logger.LogCritical($"AGV Initizlize Task Canceled!");
+                return (false, $"AGV Initizlize Task Canceled!");
             }
             catch (VehicleInitializeException ex)
             {

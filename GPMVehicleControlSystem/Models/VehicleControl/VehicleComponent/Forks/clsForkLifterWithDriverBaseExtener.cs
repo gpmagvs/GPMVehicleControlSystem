@@ -83,7 +83,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         }
 
 
-        public override async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
+        public override async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true, CancellationToken cancellationToken = default)
         {
             await horizonForkService.Stop();
             await Task.Delay(100);

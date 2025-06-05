@@ -351,15 +351,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// 牙叉縮回
         /// </summary>
         /// <returns></returns>
-        public virtual async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true)
+        public virtual async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true, CancellationToken cancellationToken = default)
         {
-            ForkARMStop();
-            await Task.Delay(400);
-            if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
-                return (true, "");
-
             try
             {
+
+                ForkARMStop();
+                await Task.Delay(400, cancellationToken);
+                if (CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
+                    return (true, "");
                 await DOModule.SetState(DO_ITEM.Fork_Extend, true);
                 if (wait_reach_home)
                 {
@@ -367,8 +367,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     cts.CancelAfter(TimeSpan.FromSeconds(30));
                     while (CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
                     {
-                        await Task.Delay(1);
+                        await Task.Delay(1, cancellationToken);
                         bool isStopState = !DOModule.GetState(DO_ITEM.Fork_Extend) && !DOModule.GetState(DO_ITEM.Fork_Shortend);
+
                         if (isStopState)
                             return (true, "");
                         if (cts.IsCancellationRequested)
@@ -376,13 +377,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     }
                 }
                 return (true, "");
+
             }
             catch (Exception ex)
             {
                 return (false, ex.Message); ;
-
             }
-            //已經有註冊極限Sensor輸入變化事件,到位後OFF Y輸出
         }
 
         public virtual async Task<(bool success, string message)> ForkHorizonResetAsync()
@@ -535,10 +535,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         {
                             await Task.Delay(1, _waitPoseReachTargetCancellationTokenSource.Token);
                             if (AGVStatusError())
+                            {
                                 throw new TaskCanceledException($"因AGV狀態異常取消等待");
+                            }
                         }
                         catch (TaskCanceledException)
                         {
+                            ForkStopAsync();
                             return (false, "取消等待", positionError);
                         }
                     }
@@ -549,6 +552,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
                 if (taskEnd == actionTimeoutDetectTask)
                 {
+                    ForkStopAsync();
                     _waitPoseReachTargetCancellationTokenSource.Cancel();
                     logger.Error($"Fork Move Timeout, 牙叉當前位置={CurrentHeightPosition} cm, 目標位置={target} cm");
                     return (target, false, AlarmCodes.Action_Timeout);

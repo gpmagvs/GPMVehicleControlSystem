@@ -42,26 +42,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 清除異常初始化回到原點
         /// </summary>
         /// <returns></returns>
-        public async Task Init()
+        public async Task Init(CancellationToken token = default)
         {
             pin_command.command = "init";
-            await _CallPinCommandActionService(pin_command, 30);
+            await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
 
         }
 
-        public async Task Lock()
+        public async Task Lock(CancellationToken token = default)
         {
             pin_command.command = "lock";
-            await _CallPinCommandActionService(pin_command);
+            await _CallPinCommandActionService(pin_command, cancelToken: token);
         }
-        public async Task Release()
+        public async Task Release(CancellationToken token = default)
         {
             pin_command.command = "release";
-            await _CallPinCommandActionService(pin_command);
+            await _CallPinCommandActionService(pin_command, cancelToken: token);
         }
 
 
-        private async Task<bool> _CallPinCommandActionService(PinCommandRequest request, int timeout = 10)
+        private async Task<bool> _CallPinCommandActionService(PinCommandRequest request, int timeout = 10, CancellationToken cancelToken = default)
         {
             logger.Trace($"call service-> pin command={pin_command.ToJson(Newtonsoft.Json.Formatting.None)},wait agvc response...");
             IsPinActionDone = false;
@@ -77,7 +77,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 CancellationTokenSource _wait = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
                 while (!IsPinActionDone)
                 {
-                    await Task.Delay(1);
+                    try
+                    {
+                        await Task.Delay(1, cancelToken);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        throw new TaskCanceledException($"Pin-{request.command} action be canceled.");
+                    }
                     if (_wait.IsCancellationRequested)
                     {
                         logger.Error($"Pin-{request.command} request timeout");

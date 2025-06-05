@@ -403,6 +403,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
+            if (cancellation.IsCancellationRequested)
+                throw new TaskCanceledException();
 
             ForkLifter?.EarlyMoveUpState.Reset();
             (bool forklifer_init_done, string message) _forklift_vertical_init_result = (false, "");
@@ -466,11 +468,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await initMsgUpdater.Update("PIN-模組初始化中...");
                 try
                 {
-                    await PinHardware.Init();
+                    await PinHardware.Init(token);
                     await initMsgUpdater.Update("PIN-Lock 中...");
-                    await PinHardware.Lock();
+                    await PinHardware.Lock(token);
                     _pin_init_result = (true, "");
                 }
+
+                catch (TaskCanceledException ex)
+                {
+                    _pin_init_result = (false, ex.Message);
+                }
+
                 catch (TimeoutException)
                 {
                     _pin_init_result = (false, "Pin Action Timeout");

@@ -388,7 +388,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             while (isCargoExistWatchingRunning && !cancel.IsCancellationRequested)
             {
                 Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
-                await Task.Delay(100);
+                try
+                {
+                    await Task.Delay(100, TaskCancelCTS.Token);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
         }
         protected virtual async Task WaitTaskDoneAsync()

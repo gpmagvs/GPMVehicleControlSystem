@@ -500,7 +500,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 Agv.DirectionLighter.CloseAll();
                 back_to_secondary_flag = false;
-                await Task.Delay(500);
+                await Task.Delay(500, TaskCancelCTS.Token);
                 await WaitCargoExistMonitorProcessNotRun();
                 (bool success, AlarmCodes alarmcode) forkActionResult = await ForkActionsInWorkStation();
                 if (!forkActionResult.success)
@@ -515,6 +515,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     ForkLifter.ForkShortenInAsync();
 
                 return await StartBackToHome();
+            }
+            catch (TaskCanceledException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {
@@ -788,9 +792,17 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 if (forkGoHomeTask != null)
                 {
-                    Task.WaitAll(new Task[] { forkGoHomeTask });
-                    if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
-                        return ForkGoHomeResultAlarmCode;
+                    try
+                    {
+                        Task.WaitAll(new Task[] { forkGoHomeTask }, TaskCancelCTS.Token);
+                        if (ForkGoHomeResultAlarmCode != AlarmCodes.None)
+                            return ForkGoHomeResultAlarmCode;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        ForkLifter.ForkStopAsync();
+                        throw new TaskCanceledException();
+                    }
                 }
                 asyncCSTReadCancellationTokenSource.Cancel();
                 isForkReachStandyHeight = true;
@@ -913,6 +925,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             if (ForkLifter == null)
                 return (true, AlarmCodes.None);
+
+            if (TaskCancelCTS.IsCancellationRequested)
+                throw new TaskCanceledException();
 
             bool arm_move_Done = false;
             (bool confirm, string message) armMoveing = (false, "等待DO輸出");
