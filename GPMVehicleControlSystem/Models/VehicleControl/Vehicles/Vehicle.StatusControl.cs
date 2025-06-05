@@ -1,4 +1,5 @@
 ﻿#define UseDebunce
+using AGVSystemCommonNet6;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Tools;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -9,7 +10,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
+
+        internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         private SUB_STATUS BeforeChargingSubStatus;
+
+        /// <summary>
+        /// 上報給派車系統的主狀態
+        /// </summary>
+        public MAIN_STATUS Main_Status { get; private set; } = MAIN_STATUS.DOWN;
 
         private Debouncer subStatusChangeDebouncer = new Debouncer();
 
@@ -33,11 +41,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public async Task SetSub_Status(SUB_STATUS value)
         {
 #if UseDebunce
+
             subStatusChangeDebouncer.Debounce(() =>
             {
                 try
                 {
                     _Sub_Status = value;
+
+                    UpdateMainStatus(_Sub_Status);
+
                     if (_Sub_Status != SUB_STATUS.IDLE)
                     {
                         CancelSwitchToTrafficLightsCase();
@@ -150,6 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+
         private async Task SwitchDirectionLightAsWaitAGVSNextAction()
         {
             try
@@ -164,46 +177,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             DirectionLighter.TrafficControllingLightsFlash();
         }
 
-        /// <summary>
-        /// 上報給派車系統的主狀態
-        /// </summary>
-        public MAIN_STATUS Main_Status
+        private void UpdateMainStatus(SUB_STATUS sub_Status)
         {
-            get
+
+            if (!ModuleInformationUpdatedInitState)
+                Main_Status = MAIN_STATUS.DOWN;
+
+            SUB_STATUS[] _ignoreChangeSubStatus = new SUB_STATUS[] { SUB_STATUS.ALARM, SUB_STATUS.WARNING, SUB_STATUS.STOP };
+
+            Dictionary<SUB_STATUS, MAIN_STATUS> statusConvertMap = new Dictionary<SUB_STATUS, MAIN_STATUS>()
             {
-                if (!ModuleInformationUpdatedInitState)
-                    return MAIN_STATUS.DOWN;
+                { SUB_STATUS.Initializing , MAIN_STATUS.Initializing },
+                { SUB_STATUS.RUN, MAIN_STATUS.RUN},
+                { SUB_STATUS.DOWN, MAIN_STATUS.DOWN},
+                { SUB_STATUS.IDLE, MAIN_STATUS.IDLE},
+                { SUB_STATUS.Charging, MAIN_STATUS.Charging},
+                { SUB_STATUS.UNKNOWN, MAIN_STATUS.Unknown},
+            };
 
-                bool _isAgvAtWorkStation = lastVisitedMapPoint.StationType != AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal;
+            if (_ignoreChangeSubStatus.Contains(sub_Status))
+                return;
 
-                switch (_Sub_Status)
-                {
-                    case SUB_STATUS.IDLE:
-                        return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.RUN:
-                        return MAIN_STATUS.RUN;
-                    case SUB_STATUS.DOWN:
-                        return MAIN_STATUS.DOWN;
-                    case SUB_STATUS.Charging:
-                        return MAIN_STATUS.Charging;
-                    case SUB_STATUS.Initializing:
-                        return MAIN_STATUS.Initializing;
-                    case SUB_STATUS.ALARM:
-                        if (_isAgvAtWorkStation || AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            return MAIN_STATUS.RUN;
-                        else
-                            return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.WARNING:
-                        if (_isAgvAtWorkStation || AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            return MAIN_STATUS.RUN;
-                        else
-                            return MAIN_STATUS.IDLE;
-                    case SUB_STATUS.STOP:
-                        return MAIN_STATUS.IDLE;
-                    default:
-                        return MAIN_STATUS.DOWN;
-                }
-            }
+            Main_Status = statusConvertMap[sub_Status];
+
         }
 
         /// <summary>
@@ -219,16 +215,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public void SetIsCharging(bool value)
         {
+            bool isAgvRunning = AGVC.ActionStatus == ActionStatus.ACTIVE || AGVC.ActionStatus == ActionStatus.PENDING;
+            bool isVehicleAtChargstation = lastVisitedMapPoint.IsChargeAble();
+
+            if (!isVehicleAtChargstation || isAgvRunning)
+                return;
+
+            if (_Sub_Status == SUB_STATUS.DOWN || _Sub_Status == SUB_STATUS.Initializing || !IsInitialized)
+                return;
+
             if (_IsCharging != value)
             {
                 if (value)
                 {
                     BeforeChargingSubStatus = _Sub_Status;
-                    _Sub_Status = SUB_STATUS.Charging;
+                    SetSub_Status(SUB_STATUS.Charging);
                     StatusLighter.ActiveGreen();
                 }
                 else
-                    SetSub_Status(IsInitialized ? AGVC.ActionStatus == ActionStatus.ACTIVE ? SUB_STATUS.RUN : SUB_STATUS.IDLE : SUB_STATUS.DOWN);
+                {
+                    SetSub_Status(SUB_STATUS.IDLE);
+                }
                 _IsCharging = value;
             }
         }

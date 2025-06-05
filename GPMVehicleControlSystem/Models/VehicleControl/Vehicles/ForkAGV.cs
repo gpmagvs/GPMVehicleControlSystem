@@ -627,17 +627,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
-            if (!status)
-                return;
-            base.HandleDriversStatusErrorAsync(sender, status);
             var signal = (sender as clsIOSignal);
+
             if (signal.Input == DI_ITEM.Vertical_Motor_Alarm)
             {
-                await Task.Delay(1000);
-                if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+                (bool needAddAlar, bool recoveryable) = DetermineDriverAlarmNeedAddOrNot(VerticalDriverState, AlarmCodes.Vertical_Motor_IO_Error);
+                if (needAddAlar)
+                {
+                    AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
                     return;
-                AlarmManager.AddAlarm(AlarmCodes.Vertical_Motor_IO_Error, false);
+                }
+                if (recoveryable)
+                    AlarmManager.AddWarning(AlarmCodes.Vertical_Motor_IO_Error);
             }
+            else
+                base.HandleDriversStatusErrorAsync(sender, status);
         }
         protected override void DIOStatusChangedEventRegist()
         {

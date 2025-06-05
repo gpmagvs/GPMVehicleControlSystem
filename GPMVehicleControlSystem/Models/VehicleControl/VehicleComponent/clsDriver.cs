@@ -24,6 +24,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override string alarm_locate_in_name => component_name.ToString();
 
+        public static DriverAlarmTryAddelegate OnTryAddDriverAlarm;
+
+        public delegate (bool needAdd, bool recoveryable) DriverAlarmTryAddelegate(clsDriver driverEntity, AlarmCodes alarmCode);
+
+        public override AlarmCodes Current_Alarm_Code
+        {
+            get => base.Current_Alarm_Code;
+            set
+            {
+                if (_current_alarm_code != value)
+                {
+                    try
+                    {
+
+                        if (value == AlarmCodes.None)
+                            return;
+
+                        if (OnTryAddDriverAlarm != null && !OnTryAddDriverAlarm.Invoke(this, value).needAdd)
+                            return;
+
+                        AlarmManager.AddAlarm(value, false);
+                    }
+                    finally
+                    {
+                        _current_alarm_code = value;
+                    }
+                }
+            }
+        }
+
         public override bool CheckStateDataContent()
         {
             if (!base.CheckStateDataContent())

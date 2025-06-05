@@ -100,6 +100,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return Parameters.FrontLighterFlashWhenNormalMove;
             };
+
+            clsDriver.OnTryAddDriverAlarm += DetermineDriverAlarmNeedAddOrNot;
+
             foreach (var driver in WheelDrivers)
             {
                 driver.OnAlarmHappened += async (alarm_code) =>
@@ -146,6 +149,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SendNotifyierToFrontend("車控系統重啟完成!");
             };
 
+        }
+
+
+
+        protected (bool needAdd, bool isRecoverable) DetermineDriverAlarmNeedAddOrNot(clsDriver driverEntity, AlarmCodes alarmCode)
+        {
+            logger.LogTrace($"{driverEntity.component_name}-has alarm and start determine is need add or not");
+            if (!alarmCode.IsMotorAlarm())
+                return (true, false);
+
+            bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
+            bool isBumperTrigger = !WagoDI.GetState(DI_ITEM.Bumper_Sensor);
+
+            if (isEmoTrigger || isBumperTrigger)
+            {
+                LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 {(isEmoTrigger ? "EMO觸發" : "")},{(isBumperTrigger ? "BUMPER 觸發" : "")}", true);
+                return (false, false);
+            }
+            else
+            {
+                bool isAtChargeStation = lastVisitedMapPoint.IsChargeAble();
+                bool isIdleOrCharging = _Sub_Status == SUB_STATUS.IDLE || _Sub_Status == SUB_STATUS.Charging;
+
+                if (isAtChargeStation && isIdleOrCharging)
+                {
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 AGV 目前在充電站中閒置或充電中=> 可嘗試自動賦歸異常", true);
+                    return (false, true);
+                }
+            }
+            return (true, true);
         }
 
         private void AGVC_OnSpeedControlChanged(object? sender, ROBOT_CONTROL_CMD e)
@@ -690,8 +723,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     if (AGVC.ActionStatus == ActionStatus.ACTIVE)
                     {
-                        _Sub_Status = SUB_STATUS.RUN;
-                        StatusLighter.RUN();
+                        SetSub_Status(SUB_STATUS.RUN);
                         try
                         {
                             if (_RunTaskData.Action_Type == ACTION_TYPE.None)
@@ -764,39 +796,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
 
-            await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+            if (!WheelDrivers.Any())
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;
+            clsDriver? wheelDriver = WheelDrivers[0];
             var input = signal?.Input;
             var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             if (input == DI_ITEM.Horizon_Motor_Alarm_1)
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left;
             else if (input == DI_ITEM.Horizon_Motor_Alarm_2)
+            {
                 alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right;
+                wheelDriver = WheelDrivers[1];
+            }
 
-            if (GetSub_Status() != SUB_STATUS.IDLE && GetSub_Status() != SUB_STATUS.Charging)
+
+            (bool needAddAlar, bool recoveryable) = DetermineDriverAlarmNeedAddOrNot(wheelDriver, alarmCode);
+
+            if (needAddAlar)
             {
                 AlarmManager.AddAlarm(alarmCode, false);
                 return;
             }
 
-            AlarmManager.AddWarning(alarmCode);
-            //#region 嘗試Reset馬達
-            //_ = Task.Factory.StartNew(async () =>
-            //{
-            //    logger.LogWarning($"Horizon Motor IO Alarm, Try auto reset process start");
-            //    await Task.Delay(500);
-            //    while (signal.State) //異常持續存在
-            //    {
-            //        await Task.Delay(1000);
-            //        IsMotorReseting = false;
-            //        await ResetMotorWithWait(TimeSpan.FromSeconds(5), signal, alarmCode);
-            //    }
-            //});
-
-            //#endregion
+            if (recoveryable)
+                AlarmManager.AddWarning(alarmCode);
         }
 
         protected DateTime previousSoftEmoTime = DateTime.MinValue;

@@ -184,7 +184,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         public bool IsSystemInitialized { get; internal set; }
         protected bool IsResetAlarmWorking = false;
         protected bool IsMotorReseting = false;
-        internal SUB_STATUS _Sub_Status = SUB_STATUS.DOWN;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
         public virtual bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
@@ -741,7 +740,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!result.Item1)
                         {
                             IsInitialized = false;
-                            _Sub_Status = SUB_STATUS.DOWN;
+                            SetSub_Status(SUB_STATUS.DOWN);
                             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                             StatusLighter.AbortFlash();
                             return result;
@@ -750,7 +749,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         result = await InitializeActions(InitializeCancelTokenResourece);
                         if (!result.Item1)
                         {
-                            SetSub_Status(SUB_STATUS.STOP);
+                            SetSub_Status(SUB_STATUS.DOWN);
                             IsInitialized = false;
                             StatusLighter.AbortFlash();
                             return result;
@@ -783,7 +782,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     catch (TaskCanceledException ex)
                     {
                         StatusLighter.AbortFlash();
-                        _Sub_Status = SUB_STATUS.DOWN;
+                        SetSub_Status(SUB_STATUS.DOWN);
                         IsInitialized = false;
                         logger.LogCritical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
                         return (false, $"AGV Initizlize Task Canceled! : \r\n{ex.Message}");
@@ -791,7 +790,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     catch (Exception ex)
                     {
                         StatusLighter.AbortFlash();
-                        _Sub_Status = SUB_STATUS.DOWN;
+                        SetSub_Status(SUB_STATUS.DOWN);
                         BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                         IsInitialized = false;
                         return (false, $"AGV Initizlize Code Error ! : \r\n{ex.Message}");
@@ -1074,20 +1073,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
-            if (alarmCode.IsMotorAlarm())
-            {
-                Task<bool> DetectEmoTriggering = await Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(500);
-                    bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
-                    return isEmoTrigger;
-                });
-
-                bool isEmoTriggering = await DetectEmoTriggering;
-                if (isEmoTriggering)
-                    return;
-            }
-
             Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
             StartRecordViedo();
             if (StaSysControl.isAGVCRestarting)
@@ -1111,7 +1096,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 logger.LogCritical($"EMO-{alarmCode}");
-                _Sub_Status = SUB_STATUS.DOWN;
+                SetSub_Status(SUB_STATUS.DOWN);
 
                 if (ExecutingTaskEntity != null)
                 {
@@ -1477,6 +1462,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool IsFakeCharging = lastVisitedMapPoint.IsCharge && IsInitialized && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.All(bat => bat.Value.Data.batteryLevel > Parameters.BatteryModule.ChargeLevelThreshold);
             SetIsCharging(IsFakeCharging ? true : Batteries.Values.Any(battery => battery.IsCharging()));
             //當電量僅在低於閥值才充電的設定下，若AGV在充電站但充電迴路沒開 且電量低於閥值，須將狀態轉成IDLE
+
             if (!IsChargeCircuitOpened && Parameters.BatteryModule.ChargeWhenLevelLowerThanThreshold && Batteries.Any(bat => bat.Value.Data.batteryLevel < Parameters.BatteryModule.ChargeLevelThreshold))
                 SetSub_Status(GetSub_Status() == SUB_STATUS.Charging ? SUB_STATUS.IDLE : GetSub_Status());
         }
