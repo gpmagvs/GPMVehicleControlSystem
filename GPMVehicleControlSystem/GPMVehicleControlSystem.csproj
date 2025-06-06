@@ -43,8 +43,8 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.4.8.11</AssemblyVersion>
-		<FileVersion>3.4.8.11</FileVersion>
+		<AssemblyVersion>3.4.8.12</AssemblyVersion>
+		<FileVersion>3.4.8.12</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />
@@ -197,8 +197,17 @@
 		<WriteLinesToFile File="PublishOutputDirectory.txt" Lines="$(PublishDir)" Overwrite="true" />
 	</Target>
 
-	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(CheckGitClean)' == 'true'">
-		<Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File CheckGitStatus.ps1" />
+	<Target Name="GenerateVersionJson" AfterTargets="Compile">
+		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;generate-version.ps1&quot; &quot;$(OutputDir).&quot; &quot;$(AssemblyVersion)&quot;" />
+	</Target>
+
+	<Target Name="GenerateVersionJson" AfterTargets="Publish">
+		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;generate-version.ps1&quot; &quot;$(PublishDir).&quot; &quot;$(AssemblyVersion)&quot;" />
+	</Target>
+
+	<Target Name="CheckGitStatusBeforePublish" BeforeTargets="Publish" Condition="'$(CheckGitClean)' == 'true'">
+		<Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File CheckGitStatus.ps1" IgnoreExitCode="false" />
+		<Error Condition="'$(MSBuildLastTaskResult)' == 'false'" Text="❌ Git 狀態檢查失敗，請先 commit 未提交的變更！" />
 	</Target>
 </Project>
 
