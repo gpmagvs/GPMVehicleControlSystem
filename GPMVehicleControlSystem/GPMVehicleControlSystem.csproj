@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 	<PropertyGroup>
+		<!-- 若要在建置前檢查是否有尚未commit的檔案請將布林值改為 true -->
+		<CheckGitClean Condition="'$(CHECK_GIT_CLEAN)' == ''">true</CheckGitClean>
+	</PropertyGroup>
+	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -191,6 +195,10 @@
 		<!-- 输出发布目录 -->
 		<Message Text="Publish Directory: $(PublishDir)" Importance="high" />
 		<WriteLinesToFile File="PublishOutputDirectory.txt" Lines="$(PublishDir)" Overwrite="true" />
+	</Target>
+
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(CheckGitClean)' == 'true'">
+		<Exec Command="CheckGitStatus.cmd" />
 	</Target>
 </Project>
 
