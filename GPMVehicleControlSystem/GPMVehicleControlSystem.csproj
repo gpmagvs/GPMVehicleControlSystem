@@ -198,7 +198,7 @@
 	</Target>
 
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(CheckGitClean)' == 'true'">
-		<Exec Command="CheckGitStatus.cmd" />
+		<Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File CheckGitStatus.ps1" />
 	</Target>
 </Project>
 
