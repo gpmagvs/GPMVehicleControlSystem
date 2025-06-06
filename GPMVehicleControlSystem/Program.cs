@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models;
+﻿using AGVSystemCommonNet6.Configuration.AutomationTransfers;
+using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.Tools;
@@ -79,6 +80,10 @@ try
     builder.Services.AddSignalR().AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNamingPolicy = null; });
     builder.Services.AddSignalR();
 
+
+
+    var config = new ConfigurationBuilder().AddJsonFile("./version.json", optional: true).Build();
+    builder.Services.Configure<VersionOptions>(config);
 
     _ = Task.Run(async () =>
     {

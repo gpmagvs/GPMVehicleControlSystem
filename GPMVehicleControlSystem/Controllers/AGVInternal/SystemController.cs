@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -23,9 +24,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         private readonly IHubContext<FrontendHub> hubContext;
         private readonly ParameterRestore parameterRestore;
         private readonly SystemUpdateService systemUpdateService;
+        private readonly VersionOptions version;
         IMemoryCache _memoryCache;
         public SystemController(SystemUpdateService sysUpdateService, ParameterRestore parameterRestore
-                                , LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext, SystemUpdateService systemUpdateService, IMemoryCache memoryCache)
+                                , LinuxDiskUsageMonitor diskUsageMonitor, IHubContext<FrontendHub> hubContext, SystemUpdateService systemUpdateService, IMemoryCache memoryCache
+                                , IOptions<VersionOptions> versionOptions)
         {
             _sysUpdateService = sysUpdateService;
             _diskUsageMonitor = diskUsageMonitor;
@@ -33,7 +36,17 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             this.parameterRestore = parameterRestore;
             this.systemUpdateService = systemUpdateService;
             _memoryCache = memoryCache;
+            version = versionOptions.Value;
         }
+
+
+        [HttpGet("VersionInfo")]
+        public async Task<IActionResult> GetVersionInfo()
+        {
+            return Ok(version);
+        }
+
+
 
         [HttpGet("Settings")]
         public async Task<IActionResult> GetParameters()

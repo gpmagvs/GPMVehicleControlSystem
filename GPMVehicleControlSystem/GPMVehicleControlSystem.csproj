@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 	<PropertyGroup>
 		<!-- 若要在建置前檢查是否有尚未commit的檔案請將布林值改為 true -->
-		<CheckGitClean Condition="'$(CHECK_GIT_CLEAN)' == ''">true</CheckGitClean>
+		<CheckGitClean Condition="'$(CHECK_GIT_CLEAN)' == ''">false</CheckGitClean>
 	</PropertyGroup>
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
@@ -197,12 +197,20 @@
 		<WriteLinesToFile File="PublishOutputDirectory.txt" Lines="$(PublishDir)" Overwrite="true" />
 	</Target>
 
-	<Target Name="GenerateVersionJson" AfterTargets="Compile">
+	<Target Name="GenerateVersionJson_Complie" AfterTargets="Build">
 		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;generate-version.ps1&quot; &quot;$(OutputDir).&quot; &quot;$(AssemblyVersion)&quot;" />
 	</Target>
 
-	<Target Name="GenerateVersionJson" AfterTargets="Publish">
+	<Target Name="GenerateVersionJson_Pub" AfterTargets="Publish">
 		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;generate-version.ps1&quot; &quot;$(PublishDir).&quot; &quot;$(AssemblyVersion)&quot;" />
+	</Target>
+
+	<Target Name="CreatePathchZipFile_WithWWWROOT" AfterTargets="Publish">
+		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;create-patch-zip-file.ps1&quot; &quot;$(PublishDir).&quot; &quot;true&quot;" />
+	</Target>
+
+	<Target Name="CreatePathchZipFile" AfterTargets="Publish">
+		<Exec Command="powershell -ExecutionPolicy Bypass -File &quot;create-patch-zip-file.ps1&quot; &quot;$(PublishDir).&quot; &quot;false&quot;" />
 	</Target>
 
 	<Target Name="CheckGitStatusBeforePublish" BeforeTargets="Publish" Condition="'$(CheckGitClean)' == 'true'">

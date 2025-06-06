@@ -22,75 +22,78 @@ namespace GPMVehicleControlSystem.Service
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            try
+            Task.Run(async () =>
             {
-                Models.VehicleControl.Vehicles.Params.clsVehicelParam param = await Vehicle.LoadParameters();
-
-                AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
-                bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "AlarmList.json"), out string message);
-                DBhelper.Initialize();
-                //AlarmManager.RecoveryAlarmDB();
-                //await _DeleteOldLogAndAlarm(param.Log.LogKeepDays);
-
-                vehicleCreateFactoryServiceAggregator.logger.LogTrace("Database Initialize done");
-                var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "IO_Wago.ini");
-                if (!File.Exists(iniFilePath))
+                try
                 {
-                    string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
-                    if (param.AgvType == AGV_TYPE.FORK)
-                        src_ini_file_name = "IO_Wago_Fork_AGV.ini";
-                    if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
-                        src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
-                    if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
-                        src_ini_file_name = "IO_Wago_Submarine_AGV_Parts.ini";
-                    if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+                    Models.VehicleControl.Vehicles.Params.clsVehicelParam param = await Vehicle.LoadParameters();
+
+                    AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
+                    bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "AlarmList.json"), out string message);
+                    DBhelper.Initialize();
+                    //AlarmManager.RecoveryAlarmDB();
+                    //await _DeleteOldLogAndAlarm(param.Log.LogKeepDays);
+
+                    vehicleCreateFactoryServiceAggregator.logger.LogTrace("Database Initialize done");
+                    var iniFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "IO_Wago.ini");
+                    if (!File.Exists(iniFilePath))
                     {
-                        src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
+                        string src_ini_file_name = "IO_Wago_Inspection_AGV.ini";
+                        if (param.AgvType == AGV_TYPE.FORK)
+                            src_ini_file_name = "IO_Wago_Fork_AGV.ini";
+                        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
+                            src_ini_file_name = "IO_Wago_Submarine_AGV.ini";
+                        if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+                            src_ini_file_name = "IO_Wago_Submarine_AGV_Parts.ini";
+                        if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+                        {
+                            src_ini_file_name = param.Version == 1 ? "IO_Wago_Inspection_AGV.ini" : "IO_Wago_Inspection_AGV_V2.ini";
+                        }
+                        File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
+
+                        vehicleCreateFactoryServiceAggregator.logger.LogTrace("New IO_Wago.ini file sync done.");
                     }
-                    File.Copy(Path.Combine(Environment.CurrentDirectory, $"src/{src_ini_file_name}"), iniFilePath);
 
-                    vehicleCreateFactoryServiceAggregator.logger.LogTrace("New IO_Wago.ini file sync done.");
+                    vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
+                    if (param.AgvType == AGV_TYPE.FORK)
+                    {
+                        StaStored.CurrentVechicle = new ForkAGV(param, vehicleCreateFactoryServiceAggregator);
+                    }
+                    else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+                    {
+                        StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleCreateFactoryServiceAggregator);
+                    }
+                    else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+                    {
+                        if (param.Version == 1)
+                            StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleCreateFactoryServiceAggregator);
+                        else
+                            StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleCreateFactoryServiceAggregator);
+                    }
+
+                    StaStored.CurrentVechicle.memoryCache = vehicleCreateFactoryServiceAggregator.memoryCache;
+
+                    await StaStored.CurrentVechicle.CreateAsync();
+                    vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle-{param.AgvType} Created！！");
+                    //LinuxTools.SysLoadingLogProcess();
                 }
-
-                vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle Model = {param.AgvType}. Start Create Instance...");
-                if (param.AgvType == AGV_TYPE.FORK)
+                catch (VehicleInstanceInitializeFailException ex)
                 {
-                    StaStored.CurrentVechicle = new ForkAGV(param, vehicleCreateFactoryServiceAggregator);
+                    vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤:{ex.Message}");
+                    ViewModelFactory.VehicleInstanceCreateFailException = ex;
+                    AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, true);
                 }
-                else if (param.AgvType == AGV_TYPE.SUBMERGED_SHIELD || param.AgvType == AGV_TYPE.SUBMERGED_SHIELD_Parts)
+                catch (Exception ex)
                 {
-                    StaStored.CurrentVechicle = new SubmarinAGV(param, vehicleCreateFactoryServiceAggregator);
+                    vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤");
+                    Environment.Exit(4);
                 }
-                else if (param.AgvType == AGV_TYPE.INSPECTION_AGV)
+                finally
                 {
-                    if (param.Version == 1)
-                        StaStored.CurrentVechicle = new TsmcMiniAGV(param, vehicleCreateFactoryServiceAggregator);
-                    else
-                        StaStored.CurrentVechicle = new DemoMiniAGV(param, vehicleCreateFactoryServiceAggregator);
+                    AlarmManager.AddAlarm(AlarmCodes.None, true);
+
                 }
-
-                StaStored.CurrentVechicle.memoryCache = vehicleCreateFactoryServiceAggregator.memoryCache;
-
-                await StaStored.CurrentVechicle.CreateAsync();
-                vehicleCreateFactoryServiceAggregator.logger.LogInformation($"Vehicle-{param.AgvType} Created！！");
-                //LinuxTools.SysLoadingLogProcess();
-            }
-            catch (VehicleInstanceInitializeFailException ex)
-            {
-                vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤:{ex.Message}");
-                ViewModelFactory.VehicleInstanceCreateFailException = ex;
-                AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, true);
-            }
-            catch (Exception ex)
-            {
-                vehicleCreateFactoryServiceAggregator.logger.LogCritical(ex, $"建立車輛時發生錯誤");
-                Environment.Exit(4);
-            }
-            finally
-            {
-                AlarmManager.AddAlarm(AlarmCodes.None, true);
-
-            }
+            });
         }
 
         private async Task _DeleteOldLogAndAlarm(int days)
