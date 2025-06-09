@@ -496,20 +496,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     target = teach.Down_Pose;
                 #endregion
 
-                bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target;
+                bool _isForkAlreadyGoingToTarget = EarlyMoveUpState.IsHeightPreSettingActionRunning && EarlyMoveUpState.GoalHeight == target && Driver.Data.speed != 0;
 
                 if (forkAGV.Navigation.LastVisitedTag % 2 != 0)
                     forkAGV.LogDebugMessage($"設備/WIP進入前上升牙叉,牙叉 {(_isForkAlreadyGoingToTarget ? "已提前動作中" : "準備上升")}", true);
-
-                if (!_isForkAlreadyGoingToTarget)
-                {
-                    await ForkStopAsync();
-                    await Task.Delay(1000);
-                    logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
-                }
-                else
-                    logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
-
 
                 double _errorTorlence = 0.1;
                 CancellationTokenSource _waitPoseReachTargetCancellationTokenSource = new CancellationTokenSource();
@@ -536,15 +526,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 Task<(bool confirm, string message, double positionError)> poseActionTask = Task.Run(async () =>
                 {
                     EarlyMoveUpState.Reset();
-                    await Task.Delay(500);
                     (bool confirm, string message) forkMoveResult = (false, "");
                     ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out double positionError);
                     if (!_isForkAlreadyGoingToTarget)
                     {
+                        await ForkStopAsync(waitSpeedZero: true);
+                        await Task.Delay(500);
+                        logger.Warn($"Fork Start Goto Height={height},Position={target}(Current Position={Driver.CurrentPosition}cm) at Tag:{tag}.[{position}]");
                         forkMoveResult = await ForkPose(target, speed, false, invokeActionStart: invokeActionStart);
                         if (!forkMoveResult.confirm)
                             return (forkMoveResult.confirm, forkMoveResult.message, 0);
                     }
+                    else
+                        logger.Info($"Fork Already Going to Target Position={target} cm,Just Waiting reach aim");
+
 
                     while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
                     {
