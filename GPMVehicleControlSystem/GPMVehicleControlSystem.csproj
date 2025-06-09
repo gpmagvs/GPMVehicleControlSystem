@@ -3,14 +3,21 @@
 		<!-- 若要在建置前檢查是否有尚未commit的檔案請將布林值改為 true -->
 		<CheckGitClean Condition="'$(CHECK_GIT_CLEAN)' == ''">false</CheckGitClean>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<RestorePackages>false</RestorePackages>
+		<AssemblyVersion>3.4.8.16</AssemblyVersion>
+		<FileVersion>3.4.8.16</FileVersion>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>GPM_VCS</AssemblyName>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-
 	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<Optimize>False</Optimize>
 		<WarningLevel>0</WarningLevel>
@@ -40,11 +47,6 @@
 		<AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementOnDemand.IncrementOnDemand</AssemblyFileVersionSettings>
 		<IsPublishable>True</IsPublishable>
 		<AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementOnDemand.IncrementOnDemand</AssemblyVersionSettings>
-	</PropertyGroup>
-	<PropertyGroup>
-		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.4.8.15</AssemblyVersion>
-		<FileVersion>3.4.8.15</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="src\IO_Wago.ini" />

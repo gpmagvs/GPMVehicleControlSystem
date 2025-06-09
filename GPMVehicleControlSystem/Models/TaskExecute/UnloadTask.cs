@@ -63,8 +63,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <returns></returns>
         protected override async Task<(bool confirm, AlarmCodes alarmCode)> CstExistCheckAfterEQActionFinishInEQAsync()
         {
-            clsCST cstInfoFromAGVS = this.RunningTaskData.CST.Any() ? this.RunningTaskData.CST.First() : new clsCST() { CST_ID = "", CST_Type = CST_TYPE.Unknown };
-            bool isUnknowCstIDFromAGVS = string.IsNullOrEmpty(cstInfoFromAGVS.CST_ID) || cstInfoFromAGVS.CST_ID.ToLower().Contains("un");
             Agv.HandshakeStatusText = "檢查在席狀態.(車上應有物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.After_EQ_Busy_Off)
             {
@@ -74,7 +72,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             Agv.CSTReader.ValidCSTID = "TrayUnknow";
 
-            if (!await IsCargoPlacedNormal())
+
+            //貨物在席狀態檢查
+            if (!await _IsCargoPlacedNormal())
             {
                 Agv.CSTReader.ValidCSTID = "";
                 //
@@ -88,27 +88,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     return (false, AlarmCodes.Has_Job_Without_Cst);
             }
 
-            try
+            ///貨物類型檢查
+            if (Agv.Parameters.LDULDParams.CheckCargoTypeMatchWhenUnload)
             {
-                CST_TYPE orderCstTypeRequest = cstInfoFromAGVS.CST_Type;
-                CST_TYPE currentCargoType = Agv.CargoStateStorer.GetCargoType();
-                if (!isUnknowCstIDFromAGVS && currentCargoType != orderCstTypeRequest)
-                {
-                    if (currentCargoType == CST_TYPE.Tray)
-                        return (false, AlarmCodes.Cst_Type_Not_Match_Rack_But_Get_Tray);
-                    else
-                        return (false, AlarmCodes.Cst_Type_Not_Match_Tray_But_Get_Rack);
+                var cargoTypeCheckResult = CheckCstTypeMounted();
+                if (!cargoTypeCheckResult.confirm)
+                    return cargoTypeCheckResult;
+            }
 
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex);
-            }
 
             return (true, AlarmCodes.None);
 
-            async Task<bool> IsCargoPlacedNormal()
+            async Task<bool> _IsCargoPlacedNormal()
             {
                 sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(1000), TimeSpan.FromSeconds(5));
                 (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
@@ -121,6 +112,37 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         }
 
+        /// <summary>
+        /// 檢查貨物類型是否符合派車命令指定的類型
+        /// </summary>
+        /// <returns></returns>
+        private (bool confirm, AlarmCodes alarmCode) CheckCstTypeMounted()
+        {
+            try
+            {
+                clsCST cstInfoFromAGVS = this.RunningTaskData.CST.Any() ? this.RunningTaskData.CST.First() : new clsCST() { CST_ID = "", CST_Type = CST_TYPE.Unknown };
+                bool isUnknowCstIDFromAGVS = string.IsNullOrEmpty(cstInfoFromAGVS.CST_ID) || cstInfoFromAGVS.CST_ID.ToLower().Contains("un");
+
+                CST_TYPE orderCstTypeRequest = cstInfoFromAGVS.CST_Type;
+                CST_TYPE currentCargoType = Agv.CargoStateStorer.GetCargoType();
+
+                if (!isUnknowCstIDFromAGVS && currentCargoType != orderCstTypeRequest)
+                {
+                    if (currentCargoType == CST_TYPE.Tray)
+                        return (false, AlarmCodes.Cst_Type_Not_Match_Rack_But_Get_Tray);
+                    else
+                        return (false, AlarmCodes.Cst_Type_Not_Match_Tray_But_Get_Rack);
+
+                }
+
+                return (true, AlarmCodes.None);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+                return (false, AlarmCodes.Code_Error_In_System);
+            }
+        }
 
         public static async Task<bool> WaitOperatorCheckCargoStatusProcess(int destineTag)
         {
