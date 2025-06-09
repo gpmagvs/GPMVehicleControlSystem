@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.SignalR;
 using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
+using System.Threading;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
@@ -39,6 +40,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         public delegate bool CheckCargotatusDelegate(CheckPointModel checkPointData);
         public static event CheckCargotatusDelegate OnManualCheckCargoStatusTrigger;
+
+        protected Tools.StateDebouncer<CARGO_STATUS> sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5));
+
+
         public override int MoveActionTimeout => Agv.Parameters.LDULDParams.MoveActionTimeoutInSec * 1000;
         public enum CST_ID_NO_MATCH_ACTION
         {
@@ -118,7 +123,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (Agv.Parameters.CheckEQDOStatusWorkStationTags.Contains(RunningTaskData.Destination))
                 CheckEQDIOStates();
 
-            (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = CstExistCheckBeforeHSStartInFrontOfEQ();
+            (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = await CstExistCheckBeforeHSStartInFrontOfEQ();
             if (!CstExistCheckResult.confirm)
                 return (false, CstExistCheckResult.alarmCode);
 
@@ -1181,12 +1186,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        protected virtual (bool confirm, AlarmCodes alarmCode) CstExistCheckBeforeHSStartInFrontOfEQ()
+        protected virtual async Task<(bool confirm, AlarmCodes alarmCode)> CstExistCheckBeforeHSStartInFrontOfEQ()
         {
+            Agv.HandshakeStatusText = "檢查在席狀態.(車上應有物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
-            if (!Agv.CargoStateStorer.HasAnyCargoOnAGV(Agv.Parameters.LDULD_Task_No_Entry))
+            sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(1000), TimeSpan.FromSeconds(5));
+            (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
+
+            if (IsTimeout)
+                logger.Error($"確認車上應該有貨但在席狀態持續抖動無法穩定");
+
+            if (!successCheck)
                 return (false, AlarmCodes.Has_Job_Without_Cst);
 
             return (true, AlarmCodes.None);
@@ -1207,10 +1219,17 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
 
             if (Agv.Parameters.CargoExistSensorParams.ExistSensorSimulation)
-                Agv.CSTReader.ValidCSTID = "";
+                Task.Delay(500).ContinueWith(t => Agv.CSTReader.ValidCSTID = "");
 
-            if (Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO) //不該有料卻有料
+            sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(1000), TimeSpan.FromSeconds(5));
+            (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.NO_CARGO);
+
+            if (IsTimeout)
+                logger.Error($"確認車上應該無貨但在席狀態持續抖動無法穩定");
+
+            if (!successCheck) //不該有料卻有料
                 return (false, AlarmCodes.Has_Cst_Without_Job);
+
             Agv.CSTReader.ValidCSTID = "";
             return (true, AlarmCodes.None);
         }

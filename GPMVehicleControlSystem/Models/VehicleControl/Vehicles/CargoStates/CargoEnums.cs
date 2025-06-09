@@ -2,6 +2,7 @@
 {
     public enum CARGO_STATUS
     {
+        Unknown = 0,
         /// <summary>
         /// 沒有貨物(通常為所有在席訊號皆ON)
         /// </summary>

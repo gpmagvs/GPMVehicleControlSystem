@@ -324,6 +324,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                         break;
                                     }
                                     logger.LogWarning($"嘗試恢復牙叉動作失敗,一秒後將重新嘗試...");
+                                    retry += 1;
                                     await Task.Delay(1000);
                                 }
                                 ForkLifter.IsStopByObstacleDetected = false;

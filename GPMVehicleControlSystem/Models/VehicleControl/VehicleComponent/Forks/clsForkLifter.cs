@@ -529,6 +529,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         if (!forkMoveResult.confirm)
                             return (forkMoveResult.confirm, forkMoveResult.message, 0);
                     }
+
                     while (ForkPositionLargeThanTorrlence(CurrentHeightPosition, target, _errorTorlence, out positionError))
                     {
                         try
@@ -582,6 +583,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 bool ForkPositionLargeThanTorrlence(double currentHeightPosition, double position_to_reach, double errorTorlence, out double positionError)
                 {
                     positionError = GetPositionErrorVal(currentHeightPosition, position_to_reach);
+                    if (fork_ros_controller.verticalActionService.driverState.speed != 0)
+                        return true;
                     return positionError > errorTorlence;
                 }
                 //皮帶是否有異常

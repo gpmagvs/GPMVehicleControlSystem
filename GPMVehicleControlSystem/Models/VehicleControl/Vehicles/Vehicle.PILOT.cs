@@ -152,7 +152,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGV_Reset_Flag = AGVSResetCmdFlag = false;
                     TaskDispatchStatus = TASK_DISPATCH_STATUS.Running;
                     List<AlarmCodes> alarmCodes = (await ExecutingTaskEntity.Execute()).FindAll(al => al != AlarmCodes.None);
+
                     logger.LogTrace($"Execute Task Done-{_taskSimplex}");
+
                     if (alarmCodes.Any(al => al == AlarmCodes.Replan))
                     {
                         logger.LogWarning("Replan.");
@@ -163,6 +165,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         logger.LogWarning("AGVS Cancel Request Raised and AGV is executing cycle stop action");
                         return;
                     }
+
+                    await WaitLaserMonitorEnd();
 
                     IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                     bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
@@ -181,28 +185,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                                                           alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On) ||
                                                                           alarmCodes.Contains(AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
 
-                    bool _IsTaskFinishWithAbnormal = IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown;
+                    bool _isTaskFail = IsAlarmHappedWhenTaskExecuting || IsAGVNowIsDown;
 
-                    if (!_IsTaskFinishWithAbnormal)
-                    {
-                        AlarmManager.ClearAlarm();
-                        try
-                        {
-                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
-                        }
-                        catch (TaskCanceledException ex)
-                        {
-                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
-                        }
-
-                        await SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
-                        BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
-                    }
-                    else
+                    if (_isTaskFail)
                     {
                         AGVC.EmergencyStop();
                         _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
-
                         IsAutoInitWhenExecuteMoveAction = IsAGVNowIsDown && action == ACTION_TYPE.None && GetAutoInitAcceptStateWithCargoStatus(alarmCodes);
                         if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
                         {
@@ -214,30 +202,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             alarmCodes.Add(AlarmCodes.Handshake_Fail_AGV_DOWN);
                         }
-                        try
-                        {
-                            await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
-                        }
-                        catch (TaskCanceledException ex)
-                        {
-                            logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
-                        }
-                        finally
-                        {
-                            SetSub_Status(SUB_STATUS.DOWN);
-                        }
                         alarmCodes.ForEach(alarm =>
                         {
                             AlarmManager.AddAlarm(alarm, false);
                         });
                         _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
                         logger.LogError($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
+                        SetSub_Status(SUB_STATUS.DOWN);
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
 
-                        TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+                    }
+                    else
+                    {
+                        AlarmManager.ClearAlarm();
+                        await SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
+                        BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
                     }
 
+                    TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                     AGVC.OnAGVCActionChanged = null;
-
                     LogDebugMessage("Action Finish Report To AGVS Process Start!");
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
                     if (BarcodeReader.CurrentTag != 0 && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal &&
@@ -265,6 +248,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             });
 
+
+        }
+
+        private async Task WaitLaserMonitorEnd()
+        {
+            try
+            {
+                await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+            }
+            catch (TaskCanceledException ex)
+            {
+                logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
+            }
 
         }
 

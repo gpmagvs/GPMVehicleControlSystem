@@ -39,12 +39,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// 準備Unload(取貨)=>車上應該無貨
         /// </summary>
         /// <returns></returns>
-        protected override (bool confirm, AlarmCodes alarmCode) CstExistCheckBeforeHSStartInFrontOfEQ()
+        protected override async Task<(bool confirm, AlarmCodes alarmCode)> CstExistCheckBeforeHSStartInFrontOfEQ()
         {
+            Agv.HandshakeStatusText = "檢查在席狀態.(車上應無物料)";
             if (!Agv.Parameters.CST_EXIST_DETECTION.Before_In)
                 return (true, AlarmCodes.None);
 
-            if (Agv.CargoStateStorer.HasAnyCargoOnAGV(Agv.Parameters.LDULD_Task_No_Entry))
+            sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5));
+            (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.NO_CARGO);
+
+            if (IsTimeout)
+                logger.Error($"確認車上應該無貨但在席狀態持續抖動無法穩定");
+
+            if (!successCheck)
                 return (false, AlarmCodes.Has_Cst_Without_Job);
 
             return (true, AlarmCodes.None);
@@ -67,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             Agv.CSTReader.ValidCSTID = "TrayUnknow";
 
-            if (!IsCargoPlacedNormal())
+            if (!await IsCargoPlacedNormal())
             {
                 Agv.CSTReader.ValidCSTID = "";
                 //
@@ -101,9 +108,15 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             return (true, AlarmCodes.None);
 
-            bool IsCargoPlacedNormal()
+            async Task<bool> IsCargoPlacedNormal()
             {
-                return Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry) == CARGO_STATUS.HAS_CARGO_NORMAL;
+                sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(1000), TimeSpan.FromSeconds(5));
+                (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
+
+                if (IsTimeout)
+                    logger.Error($"確認車上應該有貨但在席狀態持續抖動無法穩定");
+
+                return successCheck;
             }
 
         }

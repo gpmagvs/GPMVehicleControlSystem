@@ -66,7 +66,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         internal void HandleCargoExistSensorStateChanged(object? sender, EventArgs eventArgs)
         {
-            existSensorDebouncer.Debounce(() => { DetermineCargoState(); }, 300);
+            existSensorDebouncer.Debounce(() => { DetermineCargoState(); }, 100);
         }
 
         internal bool IsCargoMountedNormal(bool isLDULDNoEntryNow)
@@ -124,10 +124,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
             cargoType = CST_TYPE.None;
 
 
-            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo) && hasCargo)
+            if (TryReturnCargoExistByCheckSimulationModeInvoke(out bool hasCargo))
             {
-                cargoType = CST_TYPE.Tray;
-                return CARGO_STATUS.HAS_CARGO_NORMAL;
+                if (hasCargo)
+                {
+                    cargoType = CST_TYPE.Tray;
+                    return CARGO_STATUS.HAS_CARGO_NORMAL;
+                }
+                else
+                {
+                    cargoType = CST_TYPE.Unknown;
+                    return CARGO_STATUS.NO_CARGO;
+                }
             }
 
             if (isLDULDNoEntryNow)
