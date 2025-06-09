@@ -222,7 +222,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// </summary>
         /// <param name="IsEMS"></param>
         /// <returns></returns>
-        public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = false)
+        public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = false, bool waitSpeedZero = false)
         {
             if (IsEMS)
             {
@@ -230,7 +230,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 fork_ros_controller.verticalActionService.wait_action_down_cts.Cancel();
                 logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
             }
-            return await fork_ros_controller.verticalActionService.Stop();
+            if (!waitSpeedZero)
+                return await fork_ros_controller.verticalActionService.Stop();
+            else
+            {
+                var _result = await fork_ros_controller.verticalActionService.Stop();
+                if (!_result.confirm)
+                    return _result;
+
+                CancellationTokenSource _cancel = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                while (fork_ros_controller.verticalActionService.driverState.speed != 0)
+                {
+                    if (_cancel.IsCancellationRequested)
+                        return (false, "Wait Fork Vertical Stop->Speed Zero Timeout!");
+                    await Task.Delay(100);
+                }
+                return (true, "");
+            }
         }
 
         /// <summary>

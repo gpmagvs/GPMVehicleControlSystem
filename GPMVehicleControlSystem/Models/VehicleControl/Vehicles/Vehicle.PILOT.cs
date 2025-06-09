@@ -1110,7 +1110,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             ForkLifter.EarlyMoveUpState.SetHeightPreSettingActionRunning(_Height_PreAction);
                             await ForkLifter.ForkStopAsync();
                             await Task.Delay(1000);
-                            (bool confirm, string message) = await ForkLifter.ForkPose(_Height_PreAction, 1, wait_done: false);
+                            (bool confirm, string message) = await ForkLifter.ForkPose(_Height_PreAction, 1, wait_done: false, invokeActionStart: true);
 
                             if (!confirm)
                             {

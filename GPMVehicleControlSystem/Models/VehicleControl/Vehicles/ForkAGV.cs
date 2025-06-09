@@ -282,9 +282,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                 AlarmManager.AddWarning(AlarmCodes.SideLaserTriggerWhenForkMove);
                             }
                             ForkLifter.IsStopByObstacleDetected = true;
-                            await ForkLifter.ForkStopAsync();
-                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
+                            await ForkLifter.ForkStopAsync(waitSpeedZero: true);
                             LogDebugMessage($"雷射組數觸發，牙叉停止動作!", false);
+                            _fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
 
                             if (ForkLifter.IsManualOperation)
                             {
