@@ -781,6 +781,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     Stopwatch sw = Stopwatch.StartNew();
                     while (sw.Elapsed.TotalSeconds < 60 && _timeoutDetectFlag)
                     {
+                        Agv.HandshakeStatusText = $"等待牙叉回到原點/待命點動作完成..{ForkLifter.CurrentHeightPosition} cm.. {sw.Elapsed.ToString(@"mm\:ss")}";
                         bool isAnySideLsrObsDetecting = AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.SideLaserTriggerWhenForkMove) ||
                                                         AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.RightProtection_Area3) ||
                                                         AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.LeftProtection_Area3);
@@ -788,8 +789,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         bool isForkActionStopping = ForkLifter.IsStopByObstacleDetected || isAnySideLsrObsDetecting;
 
                         if (Agv.GetSub_Status() == SUB_STATUS.RUN && isForkActionStopping)
-                            sw.Restart();
-
+                            sw.Stop();
+                        else
+                            sw.Start();
                         await Task.Delay(1000);
                     }
                 });

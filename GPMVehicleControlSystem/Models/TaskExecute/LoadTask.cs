@@ -419,11 +419,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected override async Task WaitTaskDoneAsync()
         {
+
             Stopwatch _stopWatch = Stopwatch.StartNew();
             logger.Trace($"等待AGV完成 [{action}] 任務");
             logger.Info($"等待AGV完成 [{action}] -移動至設備 (Timeout : {MoveActionTimeout})");
+
+            bool _updateMessgFlag = true;
+            Task.Run(async () =>
+            {
+                while (_updateMessgFlag)
+                {
+                    Agv.HandshakeStatusText = $"移動至設備..{_stopWatch.Elapsed.ToString(@"mm\:ss")}";
+                    await Task.Delay(1000);
+                }
+            });
+
+
             bool inTime = _waitMoveToPortDonePause.WaitOne(MoveActionTimeout);
             _stopWatch.Stop();
+            _updateMessgFlag = false;
+
             if (task_abort_alarmcode != AlarmCodes.None)
             {
                 logger.Info($"AGV [{action}] 動作中止-task_abort_alarmcode={task_abort_alarmcode}");
@@ -691,8 +706,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     _WaitBackToHomeDonePause.WaitOne();
                     _cancelWaitFlag = true;
                 });
+
                 while (stopwatch.ElapsedMilliseconds < moveActionTimeout)
                 {
+                    bool isEntryPortAction = !RunningTaskData.GoTOHomePoint;
+                    Agv.HandshakeStatusText = (isEntryPortAction ? "AGV進入設備中..." : "AGV退出設備中...") + stopwatch.Elapsed.ToString(@"mm\:ss");
+
                     await Task.Delay(100);
                     if (_cancelWaitFlag)
                     {
@@ -752,7 +771,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             void _RestartTimer(string message)
             {
-                stopwatch.Restart();
+                stopwatch.Start();
                 Agv.LogDebugMessage(message, true);
                 logger.Warn(message);
             }

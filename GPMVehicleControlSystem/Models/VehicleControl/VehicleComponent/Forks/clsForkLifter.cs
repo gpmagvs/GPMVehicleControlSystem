@@ -512,7 +512,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                         {
                             forkAGV.HandshakeStatusText = $"等待牙叉移動至設定高度...({CurrentHeightPosition}/{target})..{sw.Elapsed.ToString(@"mm\:ss")}";
                             if (IsStopByObstacleDetected)
-                                sw.Reset();
+                                sw.Stop();
                             else
                                 sw.Start();
                             await Task.Delay(100, _waitPoseReachTargetCancellationTokenSource.Token);
