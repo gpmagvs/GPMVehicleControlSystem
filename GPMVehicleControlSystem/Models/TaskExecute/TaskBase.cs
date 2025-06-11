@@ -781,8 +781,15 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     Stopwatch sw = Stopwatch.StartNew();
                     while (sw.Elapsed.TotalSeconds < 60 && _timeoutDetectFlag)
                     {
-                        if (Agv.GetSub_Status() == SUB_STATUS.RUN && AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.SideLaserTriggerWhenForkMove))
+                        bool isAnySideLsrObsDetecting = AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.SideLaserTriggerWhenForkMove) ||
+                                                        AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.RightProtection_Area3) ||
+                                                        AlarmManager.CurrentAlarms.Any(al => al.Value.EAlarmCode == AlarmCodes.LeftProtection_Area3);
+
+                        bool isForkActionStopping = ForkLifter.IsStopByObstacleDetected || isAnySideLsrObsDetecting;
+
+                        if (Agv.GetSub_Status() == SUB_STATUS.RUN && isForkActionStopping)
                             sw.Restart();
+
                         await Task.Delay(1000);
                     }
                 });

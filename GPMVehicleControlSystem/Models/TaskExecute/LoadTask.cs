@@ -12,6 +12,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Tools;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Microsoft.AspNetCore.SignalR;
 using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
@@ -661,14 +662,28 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             bool _cancelWaitFlag = false;
-            GPMVehicleControlSystem.VehicleControl.DIOModule.clsIOSignal? backLaserArea3 = Agv.WagoDI.VCSInputs.FirstOrDefault(o => o.Input == DI_ITEM.BackProtection_Area_Sensor_3);
+            clsIOSignal? backLaserArea3 = Agv.WagoDI.VCSInputs.FirstOrDefault(o => o.Input == DI_ITEM.BackProtection_Area_Sensor_3);
+            clsIOSignal? rightLaserArea3 = Agv.WagoDI.VCSInputs.FirstOrDefault(o => o.Input == DI_ITEM.RightProtection_Area_Sensor_3);
+            clsIOSignal? leftLaserArea3 = Agv.WagoDI.VCSInputs.FirstOrDefault(o => o.Input == DI_ITEM.LeftProtection_Area_Sensor_3);
 
             try
             {
                 if (backLaserArea3 != null)
                 {
-                    backLaserArea3.OnSignalOFF += HandleBackLaserArea3SignalOFF;
-                    backLaserArea3.OnSignalON += HandleBackLaserArea3SignalON;
+                    backLaserArea3.OnSignalOFF += HandleLaserArea3SignalOFF;
+                    backLaserArea3.OnSignalON += HandleLaserArea3SignalON;
+                }
+
+                if (rightLaserArea3 != null)
+                {
+                    rightLaserArea3.OnSignalOFF += HandleLaserArea3SignalOFF;
+                    rightLaserArea3.OnSignalON += HandleLaserArea3SignalON;
+                }
+
+                if (leftLaserArea3 != null)
+                {
+                    leftLaserArea3.OnSignalOFF += HandleLaserArea3SignalOFF;
+                    leftLaserArea3.OnSignalON += HandleLaserArea3SignalON;
                 }
 
                 _ = Task.Factory.StartNew(async () =>
@@ -696,28 +711,49 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 if (backLaserArea3 != null)
                 {
-                    backLaserArea3.OnSignalOFF -= HandleBackLaserArea3SignalOFF;
-                    backLaserArea3.OnSignalON -= HandleBackLaserArea3SignalON;
+                    backLaserArea3.OnSignalOFF -= HandleLaserArea3SignalOFF;
+                    backLaserArea3.OnSignalON -= HandleLaserArea3SignalON;
+                }
+
+
+                if (rightLaserArea3 != null)
+                {
+                    rightLaserArea3.OnSignalOFF -= HandleLaserArea3SignalOFF;
+                    rightLaserArea3.OnSignalON -= HandleLaserArea3SignalON;
+                }
+
+                if (leftLaserArea3 != null)
+                {
+                    leftLaserArea3.OnSignalOFF -= HandleLaserArea3SignalOFF;
+                    leftLaserArea3.OnSignalON -= HandleLaserArea3SignalON;
                 }
             }
-            void HandleBackLaserArea3SignalOFF(object obj, EventArgs e)
+            void HandleLaserArea3SignalOFF(object obj, EventArgs e)
             {
-                _PauseTimer($"後方雷射觸發，退出工作站Timeout暫停監視");
+                _PauseTimer($"雷射觸發[停止]，退出工作站Timeout暫停監視");
             }
-            void HandleBackLaserArea3SignalON(object obj, EventArgs e)
+            void HandleLaserArea3SignalON(object obj, EventArgs e)
             {
-                _RestartTimer("後方雷射解除觸發，退出工作站Timeout監視重新計時");
+
+                bool _isAllLaserArea3Off = (backLaserArea3 == null || backLaserArea3.State) &&
+                                    (rightLaserArea3 == null || rightLaserArea3.State) &&
+                                    (leftLaserArea3 == null || leftLaserArea3.State);
+
+                if (_isAllLaserArea3Off)
+                    _RestartTimer("雷射解除[恢復動作]，退出工作站Timeout監視重新計時");
+                else
+                    Agv.LogDebugMessage("尚有雷射觸發中,退出工作站Timeout暫停監視", true);
             }
             void _PauseTimer(string message)
             {
                 stopwatch.Stop();
                 logger.Warn(message);
-                Agv.LogDebugMessage(message);
+                Agv.LogDebugMessage(message, true);
             }
             void _RestartTimer(string message)
             {
                 stopwatch.Restart();
-                Agv.LogDebugMessage(message);
+                Agv.LogDebugMessage(message, true);
                 logger.Warn(message);
             }
 
