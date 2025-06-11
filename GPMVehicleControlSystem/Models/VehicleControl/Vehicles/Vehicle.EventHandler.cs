@@ -372,22 +372,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _ = Task.Run(async () =>
             {
                 LogDebugMessage("EndLaserObsMonitorAsync->HandleAGVCActionSuccess");
-                await EndLaserObsMonitorAsync();
+                EndLaserObstacleMonitor();
             });
         }
 
         private async void HandleAGVCActionActive(object? sender, EventArgs e)
         {
-            _ = Task.Run(async () =>
-            {
-                SetSub_Status(SUB_STATUS.RUN);
-                StartLaserObstacleMonitor();
-                if (ExecutingTaskEntity.action == ACTION_TYPE.None)
-                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
+            SetSub_Status(SUB_STATUS.RUN);
 
-                AlarmManager.ClearAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
-            });
+            if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
+
+            AlarmManager.ClearAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
         }
+
         private void HandleBatteryUnderVoltage(object? sender, clsBattery e)
         {
             bool _isCharging = Batteries.Any(bat => bat.Value.Data.chargeCurrent > 0);

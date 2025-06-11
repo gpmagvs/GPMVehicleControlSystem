@@ -25,6 +25,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
+            Agv.HandshakeStatusText = "Cargo ID Reading...";
             string cstIDFromAGVS = RunningTaskData.CST == null || !RunningTaskData.CST.Any() ? "" : RunningTaskData.CST.First().CST_ID;
             bool isCstIDFromAGVSUnknown = string.IsNullOrEmpty(cstIDFromAGVS) || cstIDFromAGVS.ToLower().Contains("un");
             if (!CSTTrigger || isCstIDFromAGVSUnknown)
@@ -32,7 +33,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.CSTReader.ValidCSTID = cstIDFromAGVS;
                 return (true, AlarmCodes.None);
             }
-            return CSTBarcodeRead(cancellationToken).Result;
+            var result = CSTBarcodeRead(cancellationToken).Result;
+            Agv.HandshakeStatusText = $"Cargo ID Read Result={Agv.CSTReader.ValidCSTID}";
+            return result;
         }
 
         /// <summary>

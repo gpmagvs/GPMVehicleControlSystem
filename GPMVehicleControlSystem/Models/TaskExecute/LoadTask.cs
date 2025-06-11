@@ -583,6 +583,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
                 else
                 {
+                    Agv.StartLaserObstacleMonitor();
                     await Task.Delay(500);
                     AlarmCodes _alarmcode = AlarmCodes.None;
                     if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)

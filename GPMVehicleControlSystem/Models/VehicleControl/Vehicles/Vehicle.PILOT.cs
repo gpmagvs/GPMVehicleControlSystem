@@ -330,13 +330,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private async Task EndLaserObsMonitorAsync()
-        {
-            Laser.ModeSwitch(LASER_MODE.Bypass, true);
-            await Task.Delay(100);
-            EndLaserObstacleMonitor();
-        }
-
         private TaskBase? CreateTaskBasedOnDownloadedData(clsTaskDownloadData taskDownloadData)
         {
             TaskBase? _ExecutingTaskEntity = null;
@@ -699,16 +692,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 結束雷射障礙物監控
         /// </summary>
-        public void EndLaserObstacleMonitor()
+        public void EndLaserObstacleMonitor(int debounceTime = 500)
         {
             try
             {
-                _LaserMonitorSwitchDebouncer?.Debounce(() =>
+                _LaserMonitorSwitchDebouncer?.Debounce(async () =>
                 {
                     LogDebugMessage("EndLaserObsMonitorAsync Method called.");
                     LaserObsMonitorCancel?.Cancel();
-                }
-                , 500);
+                    await WaitLaserMonitorEnd();
+                    Laser.ModeSwitch(LASER_MODE.Bypass, true);
+
+                }, debounceTime);
             }
             catch (Exception ex)
             {
@@ -743,7 +738,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             debouncer = mode == LASER_MODE.Secondary ? new LaserStateDebouncer(1, 1) : new LaserStateDebouncer(250, 100);
                         };
-
+                        LogDebugMessage($"雷射偵測障礙物速度控制流程已啟動", true);
                         while (!IsCanceled() && !IsLaserObsMonitorNotNeedActive())
                         {
                             try
@@ -815,7 +810,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                         Stopwatch timer = Stopwatch.StartNew();
                                         while (timer.Elapsed.TotalSeconds < 1)
                                         {
-                                            await Task.Delay(1);
+                                            await Task.Delay(1, LaserObsMonitorCancel.Token);
                                             if (_CurrentRobotControlCmd != ROBOT_CONTROL_CMD.SPEED_Reconvery)
                                                 return;
                                         }

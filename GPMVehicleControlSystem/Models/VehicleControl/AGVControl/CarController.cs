@@ -19,6 +19,7 @@ using Polly.Retry;
 using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Threading;
+using YamlDotNet.Core.Tokens;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 {
@@ -169,10 +170,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     _ActionStatus = value;
                     if (value == ActionStatus.SUCCEEDED)
-                    {
                         OnAGVCActionSuccess?.Invoke(this, EventArgs.Empty);
-
-                    }
                 }
             }
         }
@@ -630,8 +628,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                     return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
                 }
             }
-            logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}(Destine={rosGoal.finalGoalID})");
             OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
+            logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}(Destine={rosGoal.finalGoalID})");
 
             if (!checkTaskConfirmed)
             {

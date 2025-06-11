@@ -265,7 +265,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Secondary);
                 }
 
-                await Task.Delay(300);
 
                 if (AGVCActionStatusChaged != null)
                 {
@@ -321,6 +320,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         await Task.Delay(100);
                         await LaserSettingBeforeTaskExecute();
+                        Agv.StartLaserObstacleMonitor();
                         _wait_agvc_action_done_pause.Reset();
 
                         if (Agv.AGVC.ActionStatus == ActionStatus.SUCCEEDED)
