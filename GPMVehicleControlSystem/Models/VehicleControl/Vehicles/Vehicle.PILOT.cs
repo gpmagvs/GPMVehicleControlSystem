@@ -359,7 +359,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 else if (action == ACTION_TYPE.Unload)
                 {
-                    _ExecutingTaskEntity = new UnloadTask(this, taskDownloadData);
+                    _ExecutingTaskEntity = Parameters.AgvType == AGV_TYPE.FORK ? new ForkAGVUnloadTask(this, taskDownloadData) : new UnloadTask(this, taskDownloadData);
+
                     (_ExecutingTaskEntity as UnloadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
                     if (_RunTaskData.CST.Length > 0)
