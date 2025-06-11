@@ -591,7 +591,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
             if (isEmptyPathPlan)
+            {
                 logger.Warn("Empty Action Goal To AGVC To Emergency Stop AGV");
+                actionClient.goal = rosGoal;
+                actionClient?.SendGoal();
+                return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+            }
             else
                 _IsEmergencyStopFlag = false;
 
@@ -611,10 +616,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             actionClient.goal = goalModified;
             logger.Info("Action Goal Will Send To AGVC:\r\n" + actionClient.goal.ToJson(Formatting.Indented));
             actionClient?.SendGoal();
-            if (isEmptyPathPlan)
-            {
-                return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
-            }
             wait_agvc_execute_action_cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             while (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
             {
