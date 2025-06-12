@@ -1,5 +1,6 @@
 ﻿
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -56,6 +57,9 @@ namespace GPMVehicleControlSystem.Service
                         await file.CopyToAsync(stream);
                     }
                     Console.WriteLine($"store zip file to : {zipFilePath} done");
+
+
+
                     //要先提高權限 _temp資料夾
                     Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
                     //2 unzip to current folder
@@ -96,13 +100,92 @@ namespace GPMVehicleControlSystem.Service
             }
         }
 
+        internal async Task<(bool confirm, string message)> RollbackSystem(string version)
+        {
+            try
+            {
+
+
+                if (StaStored.APPVersion == version)
+                {
+                    return (false, $"目前已經是 {version}");
+                }
+
+                // 嘗試備份目前版本
+
+                if (!BackupCurrentProgram(out string message))
+                {
+                    return (false, $"備份目前版本失敗,禁止 Roll back version...: {message}");
+                }
+
+
+                string currentDirectory = AppContext.BaseDirectory;
+                string backupFolder = Path.Combine(currentDirectory, "backup");
+
+                //check back up file exist 
+                string zipPath = Path.Combine(backupFolder, $"backup_{version}.zip");
+
+                if (!File.Exists(zipPath))
+                {
+                    return (false, $"version {version} not has backup file");
+                }
+
+
+                string zipFileTempFolder = Path.Combine(currentDirectory, "_temp");
+                try
+                {
+                    if (Directory.Exists(zipFileTempFolder))
+                        Directory.Delete(zipFileTempFolder, true); //刪除現有的 _temp
+                }
+                catch (Exception ex)
+                {
+                    return (false, ex.Message);
+                }
+                Console.WriteLine($"Create temp folder : {zipFileTempFolder}");
+                Directory.CreateDirectory(zipFileTempFolder);
+                Directory.CreateDirectory(Path.Combine(zipFileTempFolder, "wwwroot"));
+
+                Console.WriteLine($"Create temp folder : {zipFileTempFolder} done");
+
+
+                Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                Tools.LinuxTools.RunShellCommand($"unzip \"{zipPath}\" -d \"{zipFileTempFolder}\"", out _, out _);
+                Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+
+
+                string scriptFile = Path.Combine(currentDirectory, "update.sh");
+
+                if (!File.Exists(scriptFile))
+                    File.WriteAllText(scriptFile, $"sleep 5 && killall -9 GPM_VCS>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
+                        $"&& cd {currentDirectory} && ./GPM_VCS");
+
+                Process.Start("chmod", $"777 {scriptFile}").WaitForExit();
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = "-c \"./update.sh\"",
+                    WorkingDirectory = currentDirectory,
+                    UseShellExecute = false,
+                    CreateNoWindow = false
+                };
+                // Start the process
+                Process process = Process.Start(startInfo);
+
+                return (true, "");
+            }
+            catch (Exception ex)
+            {
+
+                return (false, ex.Message);
+            }
+        }
+
         // create a function : backup current work directory files and folders (use command just like cvf)
         internal bool BackupCurrentProgram(out string ErrorMessage)
         {
             ErrorMessage = "";
             try
             {
-
                 // 取得目前執行檔所在的目錄
                 string currentDirectory = AppContext.BaseDirectory;
                 string backupFolder = Path.Combine(currentDirectory, "backup");
@@ -283,6 +366,30 @@ namespace GPMVehicleControlSystem.Service
                 hubContext?.Clients.All.SendAsync($"AGV-Notify-Message", new { title = $"系統重啟中{(string.IsNullOrEmpty(reason) ? "" : $"({reason})")}", message = $"System will restart after {duration} second.", alarmCode = 3384 });
                 await Task.Delay(1000);
             });
+        }
+
+        internal List<VersionInfoViewModel> GetHistoryVersions()
+        {  // 取得目前執行檔所在的目錄
+            string currentDirectory = AppContext.BaseDirectory;
+            string backupFolder = Path.Combine(currentDirectory, "backup");
+
+            if (!Directory.Exists(backupFolder))
+            {
+                return new List<VersionInfoViewModel>();
+            }
+
+            // 取得所有備份檔案
+            List<VersionInfoViewModel> versionList = Directory.GetFiles(backupFolder, "backup_*.zip")
+                                                    .Select(file =>
+                                                    {
+                                                        return new VersionInfoViewModel()
+                                                        {
+                                                            Version = Path.GetFileNameWithoutExtension(file).Replace("backup_", "").Trim(),
+                                                            CreateTime = new FileInfo(file).CreationTime
+                                                        };
+                                                    }).ToList();
+
+            return versionList;
         }
     }
 }

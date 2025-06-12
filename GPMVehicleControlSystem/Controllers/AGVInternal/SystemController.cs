@@ -134,6 +134,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new { confirm = false, message = errMsg });
         }
 
+        [HttpPost("RollbackSystem")]
+        public async Task<IActionResult> RollbackSystem(string version)
+        {
+            (bool confirm, string message) = await _sysUpdateService.RollbackSystem(version);
+            return Ok(new { confirm = confirm, message = message });
+        }
+
+        [HttpGet("GetBackupedVersion")]
+        public async Task<List<VersionInfoViewModel>> GetBackupedVersion()
+        {
+            return _sysUpdateService.GetHistoryVersions();
+        }
+
         [HttpPost("SaveManualCheckCargoConfiguration")]
         public async Task<IActionResult> SaveManualCheckCargoConfiguration([FromBody] clsManualCheckCargoStatusParams configs)
         {
