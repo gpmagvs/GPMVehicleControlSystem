@@ -129,7 +129,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg);
             if (backupSuccess)
-                return Ok(new { confirm = true, message = "" });
+                return Ok(new { confirm = true, message = errMsg });
             else
                 return Ok(new { confirm = false, message = errMsg });
         }

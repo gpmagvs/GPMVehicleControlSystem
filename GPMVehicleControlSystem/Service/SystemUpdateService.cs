@@ -1,8 +1,10 @@
 ﻿
+using GPMVehicleControlSystem.Models;
 using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace GPMVehicleControlSystem.Service
 {
@@ -18,6 +20,16 @@ namespace GPMVehicleControlSystem.Service
         {
             if (file.Length > 0)
             {
+
+                try
+                {
+                    BackupCurrentProgram(out string backupMesg);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"backup progrss exception:" + ex.Message);
+                }
+
                 try
                 {
                     string currentDirectory = Directory.GetCurrentDirectory();
@@ -90,17 +102,48 @@ namespace GPMVehicleControlSystem.Service
             ErrorMessage = "";
             try
             {
-                string currentDirectory = Directory.GetCurrentDirectory();
+
+                // 取得目前執行檔所在的目錄
+                string currentDirectory = AppContext.BaseDirectory;
                 string backupFolder = Path.Combine(currentDirectory, "backup");
-                string tempBackupFolder = Path.Combine(currentDirectory, "_tempBackup");
+                Directory.CreateDirectory(backupFolder);
+                //嘗試取得版本號
+                string version = StaStored.APPVersion;
+                // 設定壓縮檔案的完整路徑（存放在同一目錄下）
+                string zipPath = Path.Combine(backupFolder, $"backup_{version}.zip");
 
-                // copy files to backup folder first 
-                CopyFilesToBackupFolder(currentDirectory, tempBackupFolder);
-                // create a local function  to get startInfo by OS
-                CompressBackupFolder(currentDirectory, tempBackupFolder, backupFolder);
+                // 若已有同名檔案，先刪除以避免例外
+                if (File.Exists(zipPath))
+                {
+                    ErrorMessage = $"Version {version} 此版本已經有備份檔";
+                    return true;
+                }
 
-                RemoveFolder(tempBackupFolder);
+                // 建立暫存資料夾來放要壓縮的檔案
+                string tempDir = Path.Combine(Path.GetTempPath(), "vms_backup_temp");
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+                Directory.CreateDirectory(tempDir);
 
+
+
+                string[] excludesFileNames = new string[] { "vms.db" };
+                string[] excludesFolderNames = new string[] { "backup", "uploads", "linux-x64", "updates" };
+
+                CopyDirectory(currentDirectory, tempDir, excludesFileNames, excludesFolderNames);
+
+
+                // 壓縮目前目錄下的所有內容到 backup.zip（不包含壓縮檔本身）
+                ZipFile.CreateFromDirectory(
+                    sourceDirectoryName: tempDir,
+                    destinationArchiveFileName: zipPath,
+                    compressionLevel: CompressionLevel.Optimal,
+                    includeBaseDirectory: false
+
+                );
+                Directory.Delete(tempDir, true);
+                ErrorMessage = $"✅ 備份完成：{zipPath}";
+                Console.WriteLine(ErrorMessage);
                 return true;
 
             }
@@ -110,7 +153,33 @@ namespace GPMVehicleControlSystem.Service
                 return false;
             }
         }
+        public static void CopyDirectory(string sourceDir, string destinationDir, string[] excludesFileNames, string[] excludesFolderNames)
+        {
+            // 建立目標資料夾（若不存在）
+            Directory.CreateDirectory(destinationDir);
 
+            // 複製所有檔案
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                string fileName = Path.GetFileName(file);
+                if (excludesFileNames.Contains(fileName.ToLower()))
+                    continue;
+
+                string targetFilePath = Path.Combine(destinationDir, fileName);
+                File.Copy(file, targetFilePath, overwrite: true);
+            }
+
+
+            // 遞迴處理子資料夾
+            foreach (var directory in Directory.GetDirectories(sourceDir))
+            {
+                string dirName = Path.GetFileName(directory);
+                if (excludesFolderNames.Contains(dirName.ToLower()))
+                    continue;
+                string targetSubDir = Path.Combine(destinationDir, dirName);
+                CopyDirectory(directory, targetSubDir, excludesFileNames, excludesFolderNames);
+            }
+        }
         // Create function : Copy current work directory files and folders to backup folder by OS 
         private void CopyFilesToBackupFolder(string currentDirectory, string backupFolder)
         {

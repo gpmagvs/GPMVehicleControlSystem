@@ -57,6 +57,7 @@ try
     builder.Services.AddScoped<LinuxDiskUsageMonitor>();
     builder.Services.AddScoped<ParameterRestore>();
     builder.Services.AddSingleton<VehicleServiceAggregator>();
+    builder.Services.AddHostedService<BackupStartupService>();
     builder.Services.AddHostedService<VehicleFactoryService>();
     builder.Services.AddHostedService<WebsocketBrocastBackgroundService>();
     builder.Services.AddHostedService<SystemLoadingMonitorBackgroundServeice>();
