@@ -172,7 +172,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 if (speed == 0)
                     speed = 1;
 
+                bool _isStop = action == "stop";
                 bool _isMoveToPoseOperation = action != "home" && action != "orig";
+                bool _isSearchOperation = action == "up_search" || action == "down_search";
+                clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
+
 
                 if (_isMoveToPoseOperation)
                     speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
@@ -185,9 +189,35 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 if (_isVerticalMotorStopped)
                     return Ok(new { confirm = false, message = "垂直馬達 [STOP] 訊號ON，Z軸無法動作。" });
 
-                if (_isVerticalPreessSensorTrigered && !_isForkUnderPressSensorBypassed)
+                if (_isSearchOperation)
                 {
-                    clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
+                    if (action == "down_search")
+                    {
+                        if (_isForkUnderPressSensorBypassed)
+                            return Ok(new
+                            {
+                                confirm = false,
+                                message = $"[{underPressedSensorBypassSignal.Address}] {underPressedSensorBypassSignal.Name} 開啟中禁止操作向下搜尋動作"
+                            });
+
+                        if (_isVerticalPreessSensorTrigered)
+                            return Ok(new
+                            {
+                                confirm = false,
+                                message = $"牙叉防壓Sensor觸發中:禁止操作向下搜尋動作"
+                            });
+                    }
+
+                    if (_isVerticalPreessSensorTrigered && !_isForkUnderPressSensorBypassed)
+                        return Ok(new
+                        {
+                            confirm = false,
+                            message = $"(須將 [{underPressedSensorBypassSignal.Address}] {underPressedSensorBypassSignal.Name} 開啟)"
+                        });
+                }
+
+                if (!_isSearchOperation && !_isStop && _isVerticalPreessSensorTrigered && !_isForkUnderPressSensorBypassed)
+                {
                     return Ok(new
                     {
                         confirm = false,
@@ -196,14 +226,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     });
                 }
 
-                if (!forkAgv.IsVerticalForkInitialized)
+                if (!_isSearchOperation && !_isStop && !forkAgv.IsVerticalForkInitialized)
                     return Ok(new { confirm = false, message = "禁止操作:Z軸尚未初始化" });
+
                 if (forkAgv.ForkLifter.IsInitialing)
                     return Ok(new { confirm = false, message = "禁止操作:Z軸正在進行初始化" });
 
                 string current_cmd = (forkAgv.AGVC as ForkAGVController).verticalActionService.CurrentForkActionRequesting.command;
 
-                if (forkAgv.IsForkWorking && action != "stop")
+                if (forkAgv.IsForkWorking && !_isStop)
                     return Ok(new { confirm = false, message = $"禁止操作:Z軸正在執行動作({current_cmd})" });
 
                 if (action == "home" || action == "orig")
@@ -269,6 +300,16 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     logger.LogWarning($"USER adjust fork position from web ui:pose to = {pose_to}");
                     (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: stopByObstacle);
 
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "up_search")
+                {
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkUpSearchAsync(speed);
+                    return Ok(new { confirm = result.success, message = result.message });
+                }
+                else if (action == "down_search")
+                {
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkDownSearchAsync(speed);
                     return Ok(new { confirm = result.success, message = result.message });
                 }
                 else
