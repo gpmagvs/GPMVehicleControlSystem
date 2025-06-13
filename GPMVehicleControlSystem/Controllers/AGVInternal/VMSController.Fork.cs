@@ -132,7 +132,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpGet("Fork/Horizon")]
-        public async Task<IActionResult> HorizonForkAction(string action, double pose = 0, double speed = 1)
+        public async Task<IActionResult> HorizonForkAction(string action, double pose = 0, double speed = 1, bool stopByObstacle = true)
         {
             (bool confirm, string message) result = (false, "");
             forkAgv.logger.LogTrace($"[VMSController.Fork] Horizon Fork Action: {action} pose:{pose} speed:{speed}");
@@ -164,7 +164,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpGet("Fork")]
-        public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 1)
+        public async Task<IActionResult> ForkAction(string action, double pose = 0, double speed = 1, bool stopByObstacle = true)
         {
             try
             {
@@ -222,34 +222,34 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                         pose = forkAgv.Parameters.ForkAGV.DownlimitPose;
                     else if (pose > forkAgv.Parameters.ForkAGV.UplimitPose)
                         pose = forkAgv.Parameters.ForkAGV.UplimitPose;
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose, speed, invokeActionStart: stopByObstacle);
 
                     return Ok(new { confirm = result.success, message = result.message });
                 }
                 else if (action == "up")
                 {
                     var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + 0.1;
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: false);
 
                     return Ok(new { confirm = result.success, message = result.message });
                 }
                 else if (action == "down")
                 {
                     var pose_to = forkAgv.ForkLifter.CurrentHeightPosition - 0.1;
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: false);
 
                     return Ok(new { confirm = result.success, message = result.message });
                 }
                 else if (action == "up_limit")
                 {
                     var pose_to = forkAgv.Parameters.ForkAGV.UplimitPose;
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: stopByObstacle);
                     return Ok(new { confirm = true });
                 }
                 else if (action == "down_limit")
                 {
                     var pose_to = forkAgv.Parameters.ForkAGV.DownlimitPose;
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: stopByObstacle);
 
                     return Ok(new { confirm = true });
                 }
@@ -267,7 +267,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 {
                     var pose_to = forkAgv.ForkLifter.CurrentHeightPosition + pose;
                     logger.LogWarning($"USER adjust fork position from web ui:pose to = {pose_to}");
-                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed);
+                    (bool success, string message) result = await forkAgv.ForkLifter.ForkPose(pose_to, speed, invokeActionStart: stopByObstacle);
 
                     return Ok(new { confirm = result.success, message = result.message });
                 }

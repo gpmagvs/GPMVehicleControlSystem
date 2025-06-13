@@ -275,7 +275,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(100);
+                    await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
@@ -478,11 +479,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, _TimeoutAlarmCode);
-                if (!_result.success)
+                if (!AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] && !_result.success)
                     return _result;
 
                 _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF);
-                if (!_result.success)
+                if (!AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] && !_result.success)
                     return _result;
 
                 await SetAGV_COMPT(false);
