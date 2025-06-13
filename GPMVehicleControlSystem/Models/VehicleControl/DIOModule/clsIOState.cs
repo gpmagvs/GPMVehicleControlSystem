@@ -93,11 +93,21 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                     _State = value;
                     logger.Info($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}");
 
-                    if (handshake_outputs.Any(i => i.ToString() == Name) || handshake_inputs.Any(i => i.ToString() == Name))
+                    Task.Run(() =>
                     {
-                        Logger hslogger = LogManager.GetLogger("HandshakeLog");
-                        hslogger.Info($"[IO]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}");
-                    }
+                        try
+                        {
+                            if (handshake_outputs.Any(i => i.ToString() == Name) || handshake_inputs.Any(i => i.ToString() == Name))
+                            {
+                                Logger hslogger = LogManager.GetLogger("HandshakeLog");
+                                hslogger.Info($"[From IO Module]-[{Address}]-{Name} Changed to : {(value ? 1 : 0)}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, $"Error logging handshake signal change for {Name} at {Address}.");
+                        }
+                    });
 
                     OnStateChanged?.Invoke(this, value);
                     if (_State)

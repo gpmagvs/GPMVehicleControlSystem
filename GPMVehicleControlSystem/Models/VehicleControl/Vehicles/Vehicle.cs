@@ -302,7 +302,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal virtual async Task CreateAsync()
         {
-            HandShakeLogger = LogManager.GetCurrentClassLogger();
             IMU.Options = Parameters.ImpactDetection;
             CIMConnectionInitialize();
             LoadWorkStationConfigs();
@@ -350,7 +349,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Delay(1000);
                 }
                 await Startup();
-                HandshakeLog("Hello!World!");
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 DirectionLighter.CloseAll();
             });
@@ -907,7 +905,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
             }
             LogDebugMessage("Handshake IO Reset done.");
-            HandshakeLog($"Handshake IO Reset done.");
+            HandShakeLogger.Info($"Handshake IO Reset done.");
         }
 
         public virtual (bool confirm, string message) CheckHardwareStatus()

@@ -12,12 +12,13 @@ using NLog;
 using NLog.Web;
 using System.Reflection;
 using System.Runtime.InteropServices;
-BuzzerPlayer.DeterminePlayerUse();
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+BuzzerPlayer.DeterminePlayerUse();
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 Console.Title = $"車載系統-V{StaStored.APPVersion}";
+logger.Info($"車載系統啟動-V{StaStored.APPVersion}");
 LinuxTools.SaveCurrentProcessPID();
 
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -30,9 +31,7 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddMemoryCache();
-    //將NLog註冊到此專案內
     builder.Logging.ClearProviders();
-    //設定log紀錄的最小等級
     builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
     builder.Host.UseNLog();
 

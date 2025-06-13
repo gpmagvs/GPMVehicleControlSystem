@@ -11,7 +11,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     public partial class Vehicle
     {
 
-        Logger HandShakeLogger;
+        Logger HandShakeLogger = LogManager.GetLogger("HandshakeLog");
         public enum HANDSHAKE_AGV_TIMEOUT
         {
             Normal,
@@ -275,8 +275,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 _ = Task.Factory.StartNew(async () =>
                 {
-                    await Task.Delay(100);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_GO, false);
+                    await Task.Delay(1000);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_READY, false);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_L_REQ, false);
                     await WagoDO.SetState(DO_ITEM.EMU_EQ_U_REQ, false);
@@ -322,7 +322,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 item.ClearEventRegist();
             }
-            HandshakeLog($"Handshake Timers/Events Reset done.");
+            HandShakeLogger.Info($"Handshake Timers/Events Reset done.");
         }
         internal async Task<(bool done, AlarmCodes alarmCode)> Handshake_AGV_BUSY_ON(bool isBackToHome)
         {
@@ -359,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return (true, AlarmCodes.None);
 
             if (watchEQGO)
-                WatchE84EQGOSignalWhenHSStart();
+                StartWatchE84EQGOSignal();
 
             EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
             await SetAGVVALID(true);
@@ -467,6 +467,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eqready_off, AlarmCodes alarmCode)> WaitEQReadyOFF(ACTION_TYPE action)
         {
+            StopE84EQGOSignal();
 
             if (Parameters.LDULD_Task_No_Entry)
                 return (true, AlarmCodes.None);
@@ -478,18 +479,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
+
+                bool isAGVComptSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_COMPT); }
+                bool isAGVValidSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_VALID); }
+
                 (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, _TimeoutAlarmCode);
-                if (!AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] && !_result.success)
+                if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
                     return _result;
 
                 _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF);
-                if (!AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT] && !_result.success)
+                if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
                     return _result;
 
                 await SetAGV_COMPT(false);
                 await SetAGV_TR_REQ(false);
                 await SetAGVVALID(false);
-                HandshakeLog("EQ READY OFF=>Handshake Done");
+                HandShakeLogger.Info("EQ READY OFF=>Handshake Done");
                 _ = Task.Run(async () =>
                 {
                     HandshakeStatusText = "Finish!";
@@ -499,7 +504,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                HandshakeLog(ex, "WaitEQReadyOFF Exception");
+                HandShakeLogger.Error(ex, "WaitEQReadyOFF Exception");
                 return (false, AlarmCodes.Handshake_Fail);
             }
             return (true, AlarmCodes.None);
@@ -508,24 +513,30 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         #endregion
-        private async Task WatchE84EQGOSignalWhenHSStart()
+        private async Task StartWatchE84EQGOSignal()
         {
+            HandShakeLogger.Info($"Start Watch EQ_GO Signal OFF Event");
             EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF += HandleEQGOOff;
         }
-
+        private async Task StopE84EQGOSignal()
+        {
+            HandShakeLogger.Info($"Stop Watch EQ_GO Signal OFF Event");
+            IsEQGoOFF_When_Handshaking = false;
+            EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF -= HandleEQGOOff;
+        }
         private void HandleEQGOOff(object? sender, EventArgs e)
         {
-            EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF -= HandleEQGOOff;
+            StopE84EQGOSignal();
 
-            bool isAGVComptSignalOnNow = AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
-
+            bool isAGVComptSignalOnNow = WagoDO.GetState(DO_ITEM.AGV_COMPT);
+            bool isAGVValidSignalOnNow = WagoDO.GetState(DO_ITEM.AGV_VALID);
             if (isAGVComptSignalOnNow)
             {
-                HandshakeLog($"EQ GO OFF when AGV COMPT ON => Task continue, NO ABORT");
+                HandShakeLogger.Info($"EQ GO OFF when AGV COMPT ON => Task continue, NO ABORT");
                 return;
             }
 
-            if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] && !ExecutingTaskEntity.IsBackToSecondaryPt)
+            if (isAGVValidSignalOnNow && !ExecutingTaskEntity.IsBackToSecondaryPt)
             {
                 IsEQGoOFF_When_Handshaking = true;
                 hs_abnormal_happen_cts.Cancel();
@@ -587,12 +598,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private async Task<(bool success, AlarmCodes alarm_code)> HandshakeWith(Enum Signal, HS_SIGNAL_STATE EXPECTED_State, HANDSHAKE_EQ_TIMEOUT Timer, AlarmCodes alarm_code_timeout)
         {
             int timeout = Parameters.EQHSTimeouts[Timer];
-            HandshakeLog($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
+            HandShakeLogger.Info($"[EQ Handshake] 等待 {Signal} {EXPECTED_State}-(Timeout_{timeout}) sec");
             if (Signal.GetType().Name == "EQ_HSSIGNAL")
                 HandshakeStatusText = CreateHandshakeStatusDisplayText(Signal, EXPECTED_State);
             StartTimer(Timer);
             bool changed_done = await WaitHSSignalStateChanged(Signal, EXPECTED_State, timeout, hs_abnormal_happen_cts, HandshakeStatusText);
-            HandshakeLog($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
+            HandShakeLogger.Info($"[EQ Handshake] {Signal} changed to {EXPECTED_State}, {(changed_done ? "success" : "fail")}");
             EndTimer(Timer);
             AlarmCodes _alarmcode = AlarmCodes.None;
             if (!changed_done || GetSub_Status() == SUB_STATUS.DOWN)
@@ -697,17 +708,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        internal void HandshakeLog(string message)
-        {
-            LogEventInfo logEvent = new LogEventInfo(NLog.LogLevel.Trace, "HandshakeLog", message);
-            logEvent.Properties["EventID"] = "test";
-            HandShakeLogger.Log(logEvent);
-        }
-        internal void HandshakeLog(Exception ex, string message)
-        {
-            LogEventInfo logEvent = new LogEventInfo(NLog.LogLevel.Error, "HandshakeLog", message + $"{ex.Message} \n {ex.StackTrace}");
-            logEvent.Properties["EventID"] = "test";
-            HandShakeLogger.Log(logEvent);
-        }
     }
 }
