@@ -515,6 +515,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void HandleEQGOOff(object? sender, EventArgs e)
         {
             EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].OnSignalOFF -= HandleEQGOOff;
+
+            bool isAGVComptSignalOnNow = AGVHsSignalStates[AGV_HSSIGNAL.AGV_COMPT];
+
+            if (isAGVComptSignalOnNow)
+            {
+                HandshakeLog($"EQ GO OFF when AGV COMPT ON => Task continue, NO ABORT");
+                return;
+            }
+
             if (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID] && !ExecutingTaskEntity.IsBackToSecondaryPt)
             {
                 IsEQGoOFF_When_Handshaking = true;

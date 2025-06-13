@@ -672,7 +672,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             _wait_agvc_action_done_pause.Set();
         }
         protected AlarmCodes ForkGoHomeResultAlarmCode = AlarmCodes.None;
-        protected async Task ForkHomeProcess()
+        protected async Task ForkHomeProcess(ManualResetEvent waitMoveActionResetEvent = null)
         {
             if (ForkLifter == null)
             {
@@ -704,17 +704,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     else
                     {
                         Agv.LogDebugMessage($"Wait AGVC Action done, Fork Will Start Go Home.", false);
-                        while (IsBackToSecondaryPt)
-                        {
-                            await Task.Delay(1);
-                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                                return;
-                        }
+                        if (waitMoveActionResetEvent != null)
+                            waitMoveActionResetEvent.WaitOne();
                     }
                 });
 
                 await waitForkCanDoActionTask;
-
+                await Task.Delay(500);
                 if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                     return;
 

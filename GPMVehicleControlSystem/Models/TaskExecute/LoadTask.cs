@@ -609,9 +609,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     }
                     else if (Agv.AGVC.IsRunning)
                     {
-                        ForkHomeProcess();
                         _WaitBackToHomeDonePause.Reset();
-
+                        ForkHomeProcess(_WaitBackToHomeDonePause);
                         _BackHomeActionDoneStatus = Agv.AGVC.ActionStatus;
                         AGVCActionStatusChaged += BackToHomeActionDoneCallback;
                         Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
@@ -635,10 +634,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             return (false, task_abort_alarmcode);
                         }
                         logger.Info($"AGV已完成 [{action}] -移動退出至二次定位點任務(Time Spend: {_timeSpend} ms)");
-                        IsBackToSecondaryPt = false;
                         //logger.Trace("車控回HOME位置任務完成");
+                        IsBackToSecondaryPt = false;
                         _alarmcode = await AfterBackHomeActions(_BackHomeActionDoneStatus);
-
                         logger.Info($"After Back Home Actions done. alarm code={_alarmcode}");
                     }
                     if (_alarmcode != AlarmCodes.None)
