@@ -46,6 +46,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override bool IsUpLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Vertical_Up_Hardware_limit);
 
+        protected override bool IsUnderPressingSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
+
         public VerticalForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
         {
         }
@@ -68,14 +70,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override async Task<(bool confirm, string message)> StopAsync()
         {
-            var stopCmdResult = await AGVC.verticalActionService.Stop();
+            var stopCmdResult = await vehicle.ForkLifter.ForkStopAsync(waitSpeedZero: true);
+            //var stopCmdResult = AGVC.verticalActionService.Stop();
             if (!stopCmdResult.confirm)
                 return stopCmdResult;
-
-            while (vehicle.ForkLifter.Driver.Data.speed != 0)
-            {
-                await Task.Delay(100);
-            }
             return (true, "停止完成");
         }
 

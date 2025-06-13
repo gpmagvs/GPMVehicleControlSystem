@@ -26,9 +26,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             DOWN_SEARCHING_FIND_HOME,
             START_UP_SEARCH_WAIT_LEAVE_HOME,
             START_UP_SEARCH_FIND_HOME,
+            START_UP_SEARCH_WAIT_UNDER_PRESS_SENSOR_RELEASE,
             UP_SEARCHING_LEAVE_HOME,
             UP_SEARCHING_FIND_HOME,
             MOVE_STEP_TO_FIND_HOME,
+            WAIT_UNDER_PRESS_SENSOR_RELEASE,
             COMPLETE
         }
 
@@ -60,7 +62,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         }
 
         protected abstract FORK_LOCATIONS CurrentLocation { get; }
-
+        protected abstract bool IsUnderPressingSensorOn { get; }
         protected abstract bool IsHomePoseSensorOn { get; }
         protected abstract bool IsDownLimitSensorOn { get; }
         protected abstract bool IsUpLimitSensorOn { get; }
@@ -99,6 +101,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             _initText = $"尋原點方向:{_searchStatus}";
                             _searchStatus = await GetSearchDirectionAsync();
 
+                            break;
+
+                        case SEARCH_STATUS.START_UP_SEARCH_WAIT_UNDER_PRESS_SENSOR_RELEASE:
+                            await UpSearchAsync(0.1);
+                            _searchStatus = SEARCH_STATUS.WAIT_UNDER_PRESS_SENSOR_RELEASE;
+                            break;
+                        case SEARCH_STATUS.WAIT_UNDER_PRESS_SENSOR_RELEASE:
+                            if (!IsUnderPressingSensorOn)
+                            {
+                                _initText = $"Under Pressing 狀態已解除,停止上升";
+                                await StopAsync();
+                                _searchStatus = SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION;
+                                break;
+                            }
+                            _initText = $"牙叉移動中|等待 Under Pressing Sensor 解除狀態...";
                             break;
                         case SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME:
                             await DownSearchAsync(downSearchSpeed);
@@ -246,6 +263,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         private async Task<SEARCH_STATUS> GetSearchDirectionAsync()
         {
+
+            if (IsUnderPressingSensorOn)
+            {
+                //壓到東西了
+                await BypassUnderPressingSensor();
+                return SEARCH_STATUS.START_UP_SEARCH_WAIT_UNDER_PRESS_SENSOR_RELEASE;
+            }
+
             //僅有上極限ON 
             if (!IsHomePoseSensorOn && !IsDownLimitSensorOn && IsUpLimitSensorOn)
             {
@@ -276,6 +301,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
             else
                 return SEARCH_STATUS.START_DOWN_SEARCH_FIND_HOME;
+        }
+
+        private async Task BypassUnderPressingSensor()
+        {
+
+            await DOModule.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, true);
+            _ = Task.Delay(100).ContinueWith(async t =>
+            {
+                //等待壓力感測器解除
+                while (IsUnderPressingSensorOn)
+                {
+                    await Task.Delay(10);
+                }
+                await DOModule.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
+            });
         }
 
         protected abstract Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1);
