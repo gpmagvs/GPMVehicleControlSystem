@@ -380,7 +380,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             SetSub_Status(SUB_STATUS.RUN);
 
-            if (ExecutingTaskEntity.action == ACTION_TYPE.None)
+            if (ExecutingTaskEntity?.action == ACTION_TYPE.None)
                 BuzzerPlayer.SoundPlaying = SOUNDS.Move;
 
             AlarmManager.ClearAlarm(AlarmCodes.Can_not_Pass_Task_to_Motion_Control);
