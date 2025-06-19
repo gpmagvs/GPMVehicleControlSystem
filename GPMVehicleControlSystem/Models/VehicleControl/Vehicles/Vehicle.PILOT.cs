@@ -214,6 +214,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     else
                     {
+                        if (action == ACTION_TYPE.None && TaskCycleStopStatus == TASK_CANCEL_STATUS.EXECUTING_CYCLE_STOP_REQUEST)
+                        {
+                            LogDebugMessage($"Cycle Stop 執行中且移動任務完成:清空 action goal", true);
+                            AGVC.SendGoal(new AGVSystemCommonNet6.GPMRosMessageNet.Actions.TaskCommandGoal());
+                        }
                         AlarmManager.ClearAlarm();
                         await SetSub_Status(action == ACTION_TYPE.Charge ? SUB_STATUS.Charging : SUB_STATUS.IDLE);
                         BuzzerPlayer.SoundPlaying = SOUNDS.Stop;

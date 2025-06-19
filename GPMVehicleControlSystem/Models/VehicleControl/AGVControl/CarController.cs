@@ -592,7 +592,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
             if (isEmptyPathPlan)
             {
-                logger.Warn("Empty Action Goal To AGVC To Emergency Stop AGV");
+                logger.Warn("Empty Action Goal To AGVC To Emergency Stop AGV or just clear action goal");
                 actionClient.goal = rosGoal;
                 actionClient?.SendGoal();
                 return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
