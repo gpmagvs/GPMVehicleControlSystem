@@ -600,6 +600,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             else
                 _IsEmergencyStopFlag = false;
 
+            if (!checkTaskConfirmed)
+            {
+                await CycleStop();
+
+                while (_ActionStatus == ActionStatus.PENDING || _ActionStatus == ActionStatus.ACTIVE)
+                {
+                    await Task.Delay(100);
+                }
+                actionClient.goal = new TaskCommandGoal();
+                actionClient?.SendGoal();
+
+                int indexOfCurrentTag = rosGoal.pathInfo.Select(p => p.tagid).ToList().FindIndex(p => p == this.lastVisitedNode); // 0 , 1 
+                goalModified.pathInfo = rosGoal.pathInfo.Skip(indexOfCurrentTag).ToArray();
+                goalModified.planPath.poses = rosGoal.planPath.poses.Skip(indexOfCurrentTag).ToArray();
+            }
+
             CycleStopActionExecuting = false;
 
             if (_ActionStatus != ActionStatus.PENDING && _ActionStatus != ActionStatus.ACTIVE)
@@ -631,22 +647,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             OnAGVCActionActive?.Invoke(this, EventArgs.Empty);
             logger.Info($"AGVC Accept Task and Start Executing：Current_Status= {ActionStatus},Path Tracking = {new_path}(Destine={rosGoal.finalGoalID})");
-
-            if (!checkTaskConfirmed)
-            {
-                logger.Trace($"Wait AGVC ActionStatus Success");
-
-                while (_ActionStatus != ActionStatus.SUCCEEDED && _ActionStatus != ActionStatus.NO_GOAL)
-                {
-                    await Task.Delay(1);
-                }
-                logger.Trace($"Wait AGVC ActionStatus now is Success,Resend Task");
-
-                int indexOfCurrentTag = rosGoal.pathInfo.Select(p => p.tagid).ToList().FindIndex(p => p == this.lastVisitedNode); // 0 , 1 
-                rosGoal.pathInfo = rosGoal.pathInfo.Skip(indexOfCurrentTag).ToArray();
-                rosGoal.planPath.poses = rosGoal.planPath.poses.Skip(indexOfCurrentTag).ToArray();
-                return await SendGoal(rosGoal, timeout);
-            }
 
             return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
         }
@@ -688,7 +688,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         logger.Warn($"[CheckTaskCommandGoal] The first point of the new goal is not the same as the last point of the previous goal.");
                         logger.Warn($"[CheckTaskCommandGoal] Cycle Stop Action is not executing, start cycle stop action first.");
 
-                        return (false, new TaskCommandGoal());
+                        return (false, newGoal);
                     }
                     else
                     {

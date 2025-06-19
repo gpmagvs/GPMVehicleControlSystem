@@ -265,7 +265,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     return;
                 }
-                logger.LogTrace($"Try Write AGV Status to Database \n{status_data.ToJson()}", false);
+                logger.LogTrace($"Try Write AGV Status to Database \n{status_data.ToJson()}");
                 status_data_store = status_data;
                 DBhelper.AddAgvStatusData(status_data);
             }
