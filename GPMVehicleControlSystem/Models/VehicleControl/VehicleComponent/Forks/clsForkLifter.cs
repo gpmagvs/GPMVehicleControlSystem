@@ -92,7 +92,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
         }
 
-        private SUB_STATUS Sub_Status = SUB_STATUS.IDLE;
+        public bool IsForkDriverStateUnknown => Driver.Data.state == 0;
+
         /// <summary>
         /// 是否以初始化
         /// </summary>

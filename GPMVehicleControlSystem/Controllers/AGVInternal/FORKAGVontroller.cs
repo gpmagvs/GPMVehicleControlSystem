@@ -7,7 +7,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class FORKAGVontroller : ControllerBase
+    public class FORKAGVController : ControllerBase
     {
 
         private ForkAGV agv => StaStored.CurrentVechicle as ForkAGV;
@@ -23,6 +23,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         public async Task HorizonInit()
         {
             agv.HorizonForkInitProcess(new CancellationToken());
+        }
+
+        [HttpPost("ForkVerticalInitActionResume")]
+        public async Task ForkVerticalInitActionResume(bool resume)
+        {
+            agv.AcceptResumeForkInitWhenActionDriverStateUnknown(resume);
         }
 
     }

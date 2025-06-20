@@ -46,7 +46,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override bool IsUpLimitSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Vertical_Up_Hardware_limit);
 
-        protected override bool IsUnderPressingSensorOn => !vehicle.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
+        protected override bool IsUnderPressingSensorOn
+        {
+            get
+            {
+                bool isNotDefine = !vehicle.WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Under_Pressing_Sensor);
+                if (isNotDefine)
+                    return false;
+                return !vehicle.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
+            }
+        }
 
         public VerticalForkHomeSearchHelper(Vehicle vehicle, string name) : base(vehicle, name)
         {

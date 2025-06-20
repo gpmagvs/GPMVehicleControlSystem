@@ -427,12 +427,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             List<Task> _actions = new List<Task>();
 
+            _resumeForkInitProcessWhenDriverStateIsKnown = false;
+            _forkVerticalInitWaitUserConfirm.Reset();
+
+            if (ForkLifter.IsForkDriverStateUnknown)
+            {
+                InitializingStatusText = "垂直牙叉驅動器狀態未知-等待使用者確認牙叉初始化動作";
+                SendNotifyierToFrontend("Fork Vertical Driver Unkonwn, Initialize Action Confirm", (int)AlarmCodes.Fork_Initialize_Process_Interupt);
+                bool confirmed = _forkVerticalInitWaitUserConfirm.WaitOne(10000); //等待10秒鐘,如果沒有收到確認則取消初始化
+                if (!confirmed)
+                {
+                    LogDebugMessage("等待使用者確認牙叉初始化動作超時,取消初始化動作");
+                    return (false, "等待使用者確認牙叉初始化動作超時,取消初始化動作");
+                }
+                SendCloseSpeficDialogToFrontend((int)AlarmCodes.Fork_Initialize_Process_Interupt);
+                if (!_resumeForkInitProcessWhenDriverStateIsKnown)
+                {
+                    return (false, "使用者取消牙叉初始化動作");
+                }
+            }
+
+
             Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token);
-            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token);
+            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token, ForkLifter.IsForkDriverStateUnknown && _resumeForkInitProcessWhenDriverStateIsKnown);
             Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token);
 
             _actions.Add(forkFloatHarwarePinInitTask);
+
             _actions.Add(forkVerticalInitTask);
+
             _actions.Add(forkHorizonInitTask);
 
             Task.WaitAll(_actions.ToArray());
@@ -508,12 +531,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        internal async Task<(bool, string)> VerticalForkInitProcess(CancellationToken token)
+        private bool _resumeForkInitProcessWhenDriverStateIsKnown = false;
+        private ManualResetEvent _forkVerticalInitWaitUserConfirm = new ManualResetEvent(false);
+
+        internal async Task<(bool, string)> VerticalForkInitProcess(CancellationToken token, bool bypass = false)
         {
+            if (bypass)
+                return (true, "bypass");
+
             if (GetSub_Status() != SUB_STATUS.Initializing)
                 SetSub_Status(SUB_STATUS.Initializing);
             return await Task.Run(async () =>
             {
+
                 (bool forklifer_init_done, string message) _forklift_init_result = (false, "");
                 await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
                 await Laser.SideLasersEnable(true);
@@ -772,6 +802,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return agvcActionStatus != ActionStatus.SUCCEEDED && lastVisitedMapPoint.StationType == STATION_TYPE.Normal;
             }
             return true;
+        }
+
+        internal void AcceptResumeForkInitWhenActionDriverStateUnknown(bool resume)
+        {
+            _resumeForkInitProcessWhenDriverStateIsKnown = resume;
+            _forkVerticalInitWaitUserConfirm.Set();
         }
     }
 }
