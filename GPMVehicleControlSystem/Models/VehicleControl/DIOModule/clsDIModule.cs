@@ -6,6 +6,7 @@ using NLog;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
@@ -204,6 +205,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
             clsIOSignal di = VCSInputs.FirstOrDefault(k => k.Name == signal + "");
             return di == null ? false : di.State;
+        }
+        public bool[] GetStates(DI_ITEM signal, int number)
+        {
+            if (Indexs.TryGetValue(signal, out int index))
+            {
+                if (index < 0 || index + number > VCSInputs.Count)
+                {
+                    logger.Warn($"GetStates failed for {signal}, index out of range.");
+                    return new bool[0];
+                }
+                return VCSInputs.Skip(index).Take(number).Select(i => i.State).ToArray();
+            }
+            else
+            {
+                logger.Warn($"{signal} not defined in INPUT map.");
+            }
+            return new bool[0];
         }
 
 

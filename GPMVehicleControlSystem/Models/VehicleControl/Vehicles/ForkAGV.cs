@@ -195,7 +195,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             Laser.SideLasersEnable(lastVisitedMapPoint.StationType != STATION_TYPE.Charge).ContinueWith(async t =>
             {
-                if (Laser.Mode == clsLaser.LASER_MODE.Bypass || Laser.Mode == clsLaser.LASER_MODE.Bypass16)
+                if (Laser.currentMode == clsLaser.LASER_MODE.Bypass || Laser.currentMode == clsLaser.LASER_MODE.Bypass16)
                     await Laser.ModeSwitch(clsLaser.LASER_MODE.Turning);
 
                 _forkVerticalMoveObsProcessCancellationTokenSource?.Dispose();

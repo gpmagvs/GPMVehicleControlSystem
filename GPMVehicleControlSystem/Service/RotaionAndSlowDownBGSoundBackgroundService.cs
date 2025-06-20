@@ -64,7 +64,7 @@ namespace GPMVehicleControlSystem.Service
                             if (AgvInstance == null || !AgvInstance.Parameters.SoundsParams.slowDownAndRotatinSoundPlay.Enable || AgvInstance.AGVC.ActionStatus != ActionStatus.ACTIVE)
                                 break;
 
-                            if (AgvInstance.Laser.CurrentLaserModeOfSick == 5 && currentSubState != SUB_STATUS.ALARM)
+                            if (AgvInstance.Laser.currentMode == Models.VehicleControl.VehicleComponent.clsLaser.LASER_MODE.Turning && currentSubState != SUB_STATUS.ALARM)
                             {
                                 RotateStatus = ROTATION_STATUS.ROTATATE_START;
                                 break;
@@ -83,7 +83,7 @@ namespace GPMVehicleControlSystem.Service
                             break;
                         case ROTATION_STATUS.ROTATING:
 
-                            if (AgvInstance.Laser.CurrentLaserModeOfSick != 5)
+                            if (AgvInstance.Laser.currentMode != Models.VehicleControl.VehicleComponent.clsLaser.LASER_MODE.Turning)
                             {
                                 RotateStatus = ROTATION_STATUS.NO_ROTATION;
                                 BuzzerPlayer.BackgroundStop();

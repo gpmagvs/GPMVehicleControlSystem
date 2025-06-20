@@ -695,7 +695,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LsrInputState += $"\r\nBack_3={WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_3)}";
             LsrInputState += $"\r\nBack_4={WagoDI.GetState(DI_ITEM.BackProtection_Area_Sensor_4)}";
 
-            logger.LogTrace($"{alarm_code} 雷射觸發_當前雷射組數={Laser.Mode}," +
+            logger.LogTrace($"{alarm_code} 雷射觸發_當前雷射組數={Laser.currentMode}," +
                 $"當前位置={lastVisitedMapPoint.Name}," +
                 $"當前座標=({Navigation.Data.robotPose.pose.position.x},{Navigation.Data.robotPose.pose.position.y})" +
                 $"當前角度={Navigation.Angle}" +

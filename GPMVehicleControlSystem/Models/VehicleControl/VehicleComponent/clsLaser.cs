@@ -79,8 +79,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 if (_CurrentLaserModeOfSick != value)
                 {
                     _CurrentLaserModeOfSick = value;
-                    logger.Info($"[From Sick Topic] Laser Mode Chaged To : {value}({Mode})", true);
-                    OnLaserModeChanged?.Invoke(this, Mode);
+                    logger.Info($"[From Sick Topic] Laser Mode Chaged To : {value}({GetLaserModeEnum(value)})", true);
                 }
             }
         }
@@ -143,13 +142,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public virtual LASER_MODE Mode
+        private LASER_MODE _currentMode = LASER_MODE.Bypass;
+        public LASER_MODE currentMode
+        {
+            get => _currentMode;
+            private set
+            {
+                if (_currentMode != value)
+                {
+                    _currentMode = value;
+                    OnLaserModeChanged?.Invoke(this, _currentMode);
+                }
+            }
+        }
+
+
+        public virtual LASER_MODE LaserModeOfDigitalOutput
         {
             get
             {
                 try
                 {
-                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().FirstOrDefault(mo => (int)mo == CurrentLaserModeOfSick);
+                    //從目前輸出給 wago 的 output 轉換成 LASER_MODE
+                    DO_ITEM lsrOutputStartDO = IsFrontBackLaserIOShare ? DO_ITEM.FrontBack_Protection_Sensor_IN_1 : DO_ITEM.Front_Protection_Sensor_IN_1;
+
+                    bool[] bools = DOModule.GetStates(lsrOutputStartDO, 8);
+                    //取出奇數 index
+                    //bool[] bits = new bool[4] { bools[0], bools[2], bools[4], bools[6] };
+                    bool[] bits = new bool[4] { bools[6], bools[4], bools[2], bools[0] };
+                    int currentModeInt = 0;
+                    for (int i = 0; i < bits.Length; i++)
+                    {
+                        if (bits[i])
+                        {
+                            currentModeInt |= (1 << i); // i 是 bit 的位置，從最低位開始
+                        }
+                    }
+
+                    return Enum.GetValues(typeof(LASER_MODE)).Cast<LASER_MODE>().FirstOrDefault(mo => (int)mo == currentModeInt);
                 }
                 catch (Exception)
                 {
@@ -357,11 +387,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 await modeSwitchSemaphoresSlim.WaitAsync();
-                bool isModeAllowSetting = mode_int == (int)LASER_MODE.Turning || mode_int == (int)LASER_MODE.Bypass;
-                if (!isSettingByResetButtonLongPressed && (agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT) && !isModeAllowSetting)
+
+                LASER_MODE requestMode = GetLaserModeEnum(mode_int);
+
+                if (!isSettingByResetButtonLongPressed && (agvDirection == clsNavigation.AGV_DIRECTION.RIGHT || agvDirection == clsNavigation.AGV_DIRECTION.LEFT))
                 {
-                    logger.Warn($"AGV旋轉中,雷射切換為 =>{mode_int} 請求已被Bypass");
-                    return true;
+                    bool _isReuestNeedReject = requestMode != LASER_MODE.Turning && requestMode != LASER_MODE.Bypass;
+                    if (_isReuestNeedReject)
+                    {
+
+                        logger.Warn($"AGV旋轉中,雷射切換為 =>{requestMode} 請求已被Bypass");
+                        return true;
+                    }
                 }
                 if (isSettingByAGVS)
                     AgvsLsrSetting = mode_int;
@@ -371,13 +408,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 bool[] writeBools_SideLaser = IsSideLaserModeChangable ? mode_int.ToSideLaserDOSettingBits() : new bool[0];
                 while (true)
                 {
+                    logger.Info($"Try Laser Output Setting  as {requestMode} --(Try-{try_count})");
                     await Task.Delay(10);
-                    bool success = !IsLaserModeNeedChange(mode_int);
-                    if (success)
+                    bool isNeedChange = IsLaserModeNeedChange(mode_int) || currentMode != requestMode;
+                    if (!isNeedChange)
                     {
+                        logger.Info($"Laser Mode Now is Already Setting  as {requestMode} -- Not Need Modify Digital Ouput");
                         break;
                     }
-                    logger.Warn($"Try Laser Output Setting  as {mode_int} --({try_count})");
                     if (try_count > retry_times_limit)
                         return false;
                     bool writeSuccess = false;
@@ -386,21 +424,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         writeSuccess = await DOModule.SetState(DO_ITEM.Front_Protection_Sensor_IN_1, writeBools);
                     else
                         writeSuccess = await DOModule.SetState(DO_ITEM.FrontBack_Protection_Sensor_IN_1, writeBools.Take(8).ToArray());
-                    bool sideLaserWriteSuccess = !writeBools_SideLaser.Any() ? true : false;
-                    if (writeBools_SideLaser.Any())
+
+                    bool sideLaserWriteSuccess = false;
+                    if (IsSideLaserModeChangable)
                         sideLaserWriteSuccess = await DOModule.SetState(DO_ITEM.Side_Protection_Sensor_IN_1, writeBools_SideLaser);
-                    if (isSickOutputPathDataNotUpdate && writeSuccess && sideLaserWriteSuccess)
+                    else
+                        sideLaserWriteSuccess = true;
+
+                    if (writeSuccess && sideLaserWriteSuccess)
                     {
-                        _CurrentLaserModeOfSick = mode_int;
                         break;
                     }
 
                     try_count++;
                 }
                 if (isSickOutputPathDataNotUpdate)
-                    AlarmManager.AddWarning(AlarmCodes.Laser_Mode_Switch_But_SICK_OUPUT_NOT_UPDATE);
-                logger.Info($"[雷射組數設定結果] Laser Output Setting as {mode_int} Success({try_count})");
-
+                    logger.Warn("AlarmCodes.Laser_Mode_Switch_But_SICK_OUPUT_NOT_UPDATE");
+                logger.Info($"[雷射組數設定結果] Laser Output Setting as {requestMode}({mode_int}) Success.({try_count})");
+                currentMode = requestMode;
                 return true;
             }
             catch (Exception ex)
@@ -415,21 +456,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         }
 
-        private bool IsLaserModeNeedChange(int toSetMode)
+        private LASER_MODE GetLaserModeEnum(int mode_int)
         {
-            if (isSickOutputPathDataNotUpdate)
-                return true;
-            if (toSetMode == 0 || toSetMode == 16)
+            if (Enum.IsDefined(typeof(LASER_MODE), mode_int))
             {
-                return CurrentLaserModeOfSick != 16 && CurrentLaserModeOfSick != 0;
+                return (LASER_MODE)mode_int;
             }
             else
             {
-                return toSetMode != CurrentLaserModeOfSick;
+                return LASER_MODE.Unknow;
             }
         }
 
-
-
+        private bool IsLaserModeNeedChange(int toSetMode)
+        {
+            var currentModeOfIO = LaserModeOfDigitalOutput;
+            if (toSetMode == 0 || toSetMode == 16)
+            {
+                return currentModeOfIO != LASER_MODE.Bypass && currentModeOfIO != LASER_MODE.Bypass16;
+            }
+            else
+            {
+                return toSetMode != (int)currentModeOfIO;
+            }
+        }
     }
 }

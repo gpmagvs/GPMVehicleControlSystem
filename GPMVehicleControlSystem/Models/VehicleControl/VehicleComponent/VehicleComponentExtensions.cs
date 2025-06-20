@@ -21,7 +21,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             bool IN_4 = lsSet[3];
             bool[] bits_bool_state = new bool[]
             {
-                IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
+                IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
+                IN_1,!IN_1,  IN_2,!IN_2,  IN_3,!IN_3,  IN_4,!IN_4,
             };
             return bits_bool_state;
         }

@@ -738,7 +738,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await Task.Run(async () =>
                     {
                         IsLaserMonitoring = true;
-                        LaserStateDebouncer debouncer = Laser.Mode == LASER_MODE.Secondary ? new LaserStateDebouncer(1, 1) : new LaserStateDebouncer(250, 100); // 例如要持續500ms才認定有效
+                        LaserStateDebouncer debouncer = Laser.currentMode == LASER_MODE.Secondary ? new LaserStateDebouncer(1, 1) : new LaserStateDebouncer(250, 100); // 例如要持續500ms才認定有效
 
                         Laser.OnLaserModeChanged += (sender, mode) =>
                         {

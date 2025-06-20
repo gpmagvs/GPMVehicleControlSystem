@@ -459,6 +459,21 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
+
+        public new bool[] GetStates(DO_ITEM signal, int number)
+        {
+            try
+            {
+                int startIndex = VCSOutputs.FirstOrDefault(k => k.Name == signal + "").index;
+                return VCSOutputs.Skip(startIndex).Take(number).Select(v => v.State).ToArray();
+            }
+            catch (Exception)
+            {
+                return new bool[0];
+            }
+
+        }
+
         private bool Disconnect(TcpClient tcpclient, ModbusIpMaster? modbusMaster)
         {
             try

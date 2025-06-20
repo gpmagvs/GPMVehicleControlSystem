@@ -64,7 +64,7 @@ namespace GPMVehicleControlSystem.ViewModels
                     LocStatus = AGV.SickData.Data.loc_status,
                     AGV_Direct = AGV.Navigation.Direction.ToString().ToUpper(),
                     DriversStates = driverStates.ToArray(),
-                    Laser_Mode = (int)AGV.Laser.Mode,
+                    Laser_Mode = (int)AGV.Laser.currentMode,
                     NavInfo = new NavStateVM
                     {
                         Destination = AGV.ExecutingTaskEntity == null && !AGV.IsWaitForkNextSegmentTask ? "" : AGV._RunTaskData.Destination + "",
@@ -165,8 +165,8 @@ namespace GPMVehicleControlSystem.ViewModels
 
             static string GetLaserModeDescription()
             {
-                string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.Mode.ToString();
-                return $"{laserModeText}({(int)AGV.Laser.CurrentLaserModeOfSick})";
+                string laserModeText = AGV.Laser.GetType().Name == typeof(clsAMCLaser).Name ? (AGV.Laser as clsAMCLaser).Mode.ToString() : AGV.Laser.currentMode.ToString();
+                return $"{laserModeText}({(int)AGV.Laser.currentMode})";
             }
 
             static bool IsForkHeightAboveSaftyHeightSetting()
