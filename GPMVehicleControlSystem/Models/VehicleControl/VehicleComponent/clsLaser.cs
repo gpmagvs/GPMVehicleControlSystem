@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using NLog;
 using RosSharp.RosBridgeClient;
@@ -96,6 +97,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public clsDOModule DOModule { get; set; }
         public clsDIModule DIModule { get; set; }
 
+
+        LinuxTools.ROS_VERSION rosVersion = LinuxTools.ROS_VERSION.ROS1;
+
         protected Logger logger;
         public int AgvsLsrSetting
         {
@@ -109,11 +113,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-        public clsLaser(clsDOModule DOModule, clsDIModule DIModule)
+        public clsLaser(clsDOModule DOModule, clsDIModule DIModule, LinuxTools.ROS_VERSION rosVersion = LinuxTools.ROS_VERSION.ROS1)
         {
             logger = LogManager.GetCurrentClassLogger();
             this.DOModule = DOModule;
             this.DIModule = DIModule;
+            this.rosVersion = rosVersion;
         }
         /// <summary>
         /// 側邊雷射是否可切段數
@@ -176,8 +181,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         internal string SubscribeSickSaftyScannerOuputPathsTopic()
         {
-            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>("/sick_safetyscanners2/output_paths", SickSaftyScannerOutputDataCallback);
-            logger.Trace($"Subscribe /sick_safetyscanners2/output_paths ({_output_paths_subscribe_id})");
+            string topic = rosVersion == LinuxTools.ROS_VERSION.ROS1 ? "/sick_safetyscanners/output_paths" : "/sick_safetyscanners2/output_paths";
+
+            var _output_paths_subscribe_id = _rosSocket.Subscribe<OutputPathsMsg>(topic, SickSaftyScannerOutputDataCallback);
+            logger.Trace($"Subscribe {topic}. topic id= ({_output_paths_subscribe_id})");
             this._output_paths_subscribe_id = _output_paths_subscribe_id;
             return this._output_paths_subscribe_id;
         }

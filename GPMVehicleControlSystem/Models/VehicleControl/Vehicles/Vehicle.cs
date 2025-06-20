@@ -97,6 +97,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool IsWaitForkNextSegmentTask = false;
         internal bool IsHandshaking = false;
         public MaintainModeDto maintainModeData = new MaintainModeDto();
+
+        public LinuxTools.ROS_VERSION RosVersion { get; private set; } = LinuxTools.ROS_VERSION.ROS1;
+
         public class MaintainModeDto
         {
             public bool IsMaintainMode { get; set; } = false;
@@ -302,6 +305,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal virtual async Task CreateAsync()
         {
+            RosVersion = LinuxTools.GetRosVersion();
+            logger.LogTrace($"ROS Version Detected: {RosVersion}");
+
             IMU.Options = Parameters.ImpactDetection;
             CIMConnectionInitialize();
             LoadWorkStationConfigs();
@@ -410,7 +416,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal virtual void CreateLaserInstance()
         {
-            Laser = new clsLaser(WagoDO, WagoDI)
+            Laser = new clsLaser(WagoDO, WagoDI, RosVersion)
             {
                 Spin_Laser_Mode = Parameters.Spin_Laser_Mode
             };

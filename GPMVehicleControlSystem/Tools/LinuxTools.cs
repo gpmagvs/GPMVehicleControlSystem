@@ -5,9 +5,41 @@ namespace GPMVehicleControlSystem.Tools
 {
     public class LinuxTools
     {
+        public enum ROS_VERSION
+        {
+            ROS1, ROS2
+        }
+
         internal static double Memory = 0;
 
         static Logger Logger = LogManager.GetCurrentClassLogger();
+
+        public static ROS_VERSION GetRosVersion()
+        {
+            string errorMsg;
+            string ouput;
+            try
+            {
+                RunShellCommand("printenv | grep ROS", out ouput, out errorMsg);
+            }
+            catch (Exception)
+            {
+                return ROS_VERSION.ROS1; // Default to ROS1 if any error occurs
+            }
+
+            if (string.IsNullOrEmpty(ouput))
+            {
+                Logger.Error($"Get ROS Version Error: {errorMsg}");
+                return ROS_VERSION.ROS1; // Default to ROS1 if no environment variable found
+            }
+
+            if (ouput.Contains("ROS_VERSION=1"))
+            {
+                Logger.Info("Detected ROS Version: ROS1");
+                return ROS_VERSION.ROS1;
+            }
+            return ROS_VERSION.ROS2;
+        }
 
         public static void FindTerminals()
         {
