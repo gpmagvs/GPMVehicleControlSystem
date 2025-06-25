@@ -79,10 +79,10 @@ if ($existingItems.Count -eq 0) {
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 
 if ($includeswwwrootBool){
-    $zipFileName = "vcs_patch_with_wwwroot_v"+$version+"_$timestamp.zip"
+    $zipFileName = "車載更新_www_"+$timestamp+"_v$version.zip"
 }
 else{
-    $zipFileName = "vcs_patch_v"+$version+"_$timestamp.zip"
+    $zipFileName = "車載更新_"+$timestamp+"_v$version.zip"
 }
 
 $zipFilePath = Join-Path -Path $outputPath -ChildPath $zipFileName
