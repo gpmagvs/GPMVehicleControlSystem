@@ -46,9 +46,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 result = await base.CstExistCheckAfterEQActionFinishInEQAsync();
                 //將牙叉位置調整到低位 方便脫出
 
-                if (!result.confirm)
+                if (!result.confirm && Agv.WorkStations.Stations.TryGetValue(destineTag, out clsWorkStationData? data) && data.CargoTransferMode == CARGO_TRANSFER_MODE.AGV_Pick_and_Place)
                     await _GoLowPoseAsync();
-
             }
 
             return result;

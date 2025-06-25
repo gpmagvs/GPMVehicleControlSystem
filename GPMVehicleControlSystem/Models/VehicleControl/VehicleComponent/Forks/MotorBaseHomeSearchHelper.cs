@@ -264,12 +264,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         private async Task<SEARCH_STATUS> GetSearchDirectionAsync()
         {
 
-            if (IsUnderPressingSensorOn)
-            {
-                //壓到東西了
-                await BypassUnderPressingSensor();
-                return SEARCH_STATUS.START_UP_SEARCH_WAIT_UNDER_PRESS_SENSOR_RELEASE;
-            }
+            //if (IsUnderPressingSensorOn)
+            //{
+            //    //壓到東西了
+            //    await BypassUnderPressingSensor();
+            //    return SEARCH_STATUS.START_UP_SEARCH_WAIT_UNDER_PRESS_SENSOR_RELEASE;
+            //}
 
             //僅有上極限ON 
             if (!IsHomePoseSensorOn && !IsDownLimitSensorOn && IsUpLimitSensorOn)

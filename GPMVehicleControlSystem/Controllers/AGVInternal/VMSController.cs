@@ -250,15 +250,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpPost("RemoveCassette")]
-        [ApiExplorerSettings(IgnoreApi = true)]
+        [ApiExplorerSettings(IgnoreApi = false)]
         public async Task<IActionResult> RemoveCassette()
         {
             await Task.Delay(1);
             if (agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
-                return Ok(false);
+                return Ok(RETURN_CODE.OK);
 
             var retcode = await (agv as SubmarinAGV).RemoveCstData();
-            return Ok(retcode == RETURN_CODE.OK);
+            return Ok(retcode);
         }
 
 

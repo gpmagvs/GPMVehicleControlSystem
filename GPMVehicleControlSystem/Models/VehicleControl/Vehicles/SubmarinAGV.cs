@@ -71,6 +71,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //向AGVS請求移除卡匣
             logger.LogTrace($"使用者進行'移除卡匣'操作");
+
+            if (!string.IsNullOrEmpty(CSTReader.ValidCSTID) && CargoStateStorer.HasAnyCargoOnAGV(false))
+            {
+                logger.LogWarning($"移除卡匣失敗, 車上有貨物, 請先卸貨");
+                return RETURN_CODE.AGV_HasCargo;
+            }
+
             CSTReader.ValidCSTID = "";
             CargoStateStorer.simulation_cargo_status = CARGO_STATUS.NO_CARGO;
             return RETURN_CODE.OK;

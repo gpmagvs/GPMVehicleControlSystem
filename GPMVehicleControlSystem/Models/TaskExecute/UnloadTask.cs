@@ -79,8 +79,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             //貨物在席狀態檢查
             if (!await _IsCargoPlacedNormal())
             {
-                Agv.CSTReader.ValidCSTID = "";
-                //
                 if (Agv.Parameters.LDULDParams.MaunalCheckAndResumableWhenUnloadButCargoBias)
                 {
                     bool manualCheckDone = await WaitOperatorCheckCargoStatusProcess(destineTag);
@@ -104,7 +102,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             async Task<bool> _IsCargoPlacedNormal()
             {
-                sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(1000), TimeSpan.FromSeconds(5));
+                sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(2000), TimeSpan.FromSeconds(5));
                 (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
 
                 if (IsTimeout)
