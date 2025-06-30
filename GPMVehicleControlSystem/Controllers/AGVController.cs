@@ -128,5 +128,11 @@ namespace GPMVehicleControlSystem.Controllers
         {
             agv.HandleAGVSTrafficControllingNotify();
         }
+
+        [HttpGet("UpdateCarrierID")]
+        public async Task UpdateCarrierID(string carrierID)
+        {
+            agv.CSTReader.ValidCSTID = carrierID;
+        }
     }
 }
