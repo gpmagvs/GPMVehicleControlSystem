@@ -161,10 +161,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
             bool isBumperTrigger = !WagoDI.GetState(DI_ITEM.Bumper_Sensor);
-
-            if (isEmoTrigger || isBumperTrigger)
+            bool isInitMode = driverEntity.isInitMode;
+            if (isInitMode ||isEmoTrigger || isBumperTrigger)
             {
-                LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 {(isEmoTrigger ? "EMO觸發" : "")},{(isBumperTrigger ? "BUMPER 觸發" : "")}", true);
+                if (isInitMode)
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為當前是初始化模式", true);
+                else
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 {(isEmoTrigger ? "EMO觸發" : "")},{(isBumperTrigger ? "BUMPER 觸發" : "")}", true);
                 return (false, false);
             }
             else

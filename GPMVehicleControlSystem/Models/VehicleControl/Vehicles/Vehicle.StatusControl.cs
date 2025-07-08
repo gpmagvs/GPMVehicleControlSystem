@@ -42,13 +42,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 #if UseDebunce
 
+            UpdateMainStatus(value);
             subStatusChangeDebouncer.Debounce(() =>
             {
                 try
                 {
                     _Sub_Status = value;
-
-                    UpdateMainStatus(_Sub_Status);
 
                     if (_Sub_Status != SUB_STATUS.IDLE)
                     {

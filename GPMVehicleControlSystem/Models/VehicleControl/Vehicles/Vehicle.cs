@@ -730,7 +730,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     try
                     {
                         IsMotorReseting = false;
-                        await ResetMotor(false);
+
+                        bool _isMotorHasErrorCode()
+                        {
+                            return driverList.Any(driver =>
+                                                (driver.Data.state == 0 || driver.Data.state == 5) ||
+                                                driver.Data.errorCode != 0x00);
+                        }
+
+                        Stopwatch stopwatch = Stopwatch.StartNew();
+                        while (_isMotorHasErrorCode())
+                        {
+                            if (stopwatch.Elapsed.TotalSeconds > 10)
+                            {
+                                break;
+                            }
+                            await ResetMotor(false);
+                            await Task.Delay(1000);
+                        }
+
+
                         SetAllDriversComponentAsNormalMode();
                         await Task.Delay(500, InitializeCancelTokenResourece.Token);
                         List<clsAlarmCode> motorAlarms = AlarmManager.CurrentAlarms.Values.Where(alObj => alObj.IsMotorAlarm()).ToList();
@@ -1285,7 +1304,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     IsResetAlarmWorking = true;
                     IsMotorReseting = false;
-                    await ResetMotor(IsTriggerByButton);
+
+                    bool _isMotorHasErrorCode()
+                    {
+                        return driverList.Any(driver =>
+                                            (driver.Data.state == 0 || driver.Data.state == 5) ||
+                                            driver.Data.errorCode != 0x00);
+                    }
+
+                    Stopwatch sw = Stopwatch.StartNew();
+                    while (_isMotorHasErrorCode())
+                    {
+                        if (sw.Elapsed.TotalSeconds > 10)
+                            break;
+                        await ResetMotor(IsTriggerByButton);
+                        await Task.Delay(1000);
+                    }
+
                     await Task.Delay(300);
                     SetAllDriversComponentAsNormalMode();
                     _ = Task.Factory.StartNew(async () =>
