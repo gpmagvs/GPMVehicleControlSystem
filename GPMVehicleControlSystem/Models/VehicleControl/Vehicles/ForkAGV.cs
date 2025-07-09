@@ -47,6 +47,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 
         }
+
+        protected override List<clsDriver> driverList
+        {
+            get
+            {
+                var list=base.driverList;
+                list.Add(VerticalDriverState);
+                return list;
+            }
+        }
         internal override async Task CreateAsync()
         {
             await base.CreateAsync();

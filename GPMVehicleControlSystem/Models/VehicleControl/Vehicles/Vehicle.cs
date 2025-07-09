@@ -745,6 +745,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                                 driver.Data.errorCode != 0x00);
                         }
 
+                        await ResetMotor(false);
+                        await Task.Delay(300);
+
                         Stopwatch stopwatch = Stopwatch.StartNew();
                         while (_isMotorHasErrorCode())
                         {
@@ -1286,7 +1289,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             get
             {
                 List<clsDriver> drivers = new List<clsDriver>();
-                drivers.Add(VerticalDriverState);
                 if (WheelDrivers != null && WheelDrivers.Length > 0)
                     drivers.AddRange(WheelDrivers);
                 return drivers;
