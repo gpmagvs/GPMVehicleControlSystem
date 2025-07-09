@@ -451,6 +451,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 CargoStateStorer.HandleCargoExistSensorStateChanged(this, EventArgs.Empty);
 
+                Task.Delay(1000).ContinueWith(t =>
+                {
+                    var beginStatus = CargoStateStorer.GetCargoStatus(Parameters.LDULD_Task_No_Entry, out CST_TYPE cargoType);
+                    if (beginStatus != CARGO_STATUS.NO_CARGO)
+                        CSTReader.ValidCSTID = "TrayUnknow";
+                });
+
                 IsSystemInitialized = true;
 
                 _ = Task.Run(async () =>

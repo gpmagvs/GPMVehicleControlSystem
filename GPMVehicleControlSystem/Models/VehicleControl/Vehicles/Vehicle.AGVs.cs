@@ -142,6 +142,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     returnCode = TASK_DOWNLOAD_RETURN_CODES.Homing_Trajectory_Error;
             }
 
+            bool _isChargeOrder = taskDownloadData.OrderInfo.ActionName == ACTION_TYPE.Charge;
+
+            if (_isChargeOrder && CargoStateStorer.GetCargoStatus(Parameters.LDULD_Task_No_Entry) != CARGO_STATUS.NO_CARGO)
+            {
+                returnCode = TASK_DOWNLOAD_RETURN_CODES.AGV_CANNOT_EXECUTE_CHARGE_ORDER_WHEN_HAS_CARGO;
+            }
+
             logger.LogInformation($"Check Status When AGVS Taskdownload, Return Code:{returnCode}({(int)returnCode})");
             if (returnCode != TASK_DOWNLOAD_RETURN_CODES.OK)
             {
