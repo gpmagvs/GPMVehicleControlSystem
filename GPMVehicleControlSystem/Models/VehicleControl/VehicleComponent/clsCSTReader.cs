@@ -6,6 +6,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public partial class clsCSTReader : CarComponent
     {
+        string carrierIDStoreFileName => Path.Combine(Environment.CurrentDirectory, "CarrierID.json");
         public override COMPOENT_NAME component_name => COMPOENT_NAME.CST_READER;
         public event EventHandler<int> onCSTReaderStateChanged;
 
@@ -57,6 +58,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     logger.Info($"CST ID CHANGED TO {_DataToStore} (Old= {_ValidCSTID})");
                     SaveCSTIDToLocalStorage(_DataToStore);
                     _ValidCSTID = _DataToStore;
+                    StoreCarrierIDToDiskAsync(_DataToStore);
                 }
             }
         }
@@ -127,6 +129,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 logger.Error(ex);
             }
 
+        }
+
+        internal async Task StoreCarrierIDToDiskAsync(string id)
+        {
+            try
+            {
+                await File.WriteAllTextAsync(carrierIDStoreFileName, id);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
+        }
+
+        internal async Task TryRestoreCarrierIDRecordAsync()
+        {
+            try
+            {
+                if (!File.Exists(carrierIDStoreFileName))
+                    return;
+                string id = await File.ReadAllTextAsync(carrierIDStoreFileName);
+                _ValidCSTID = id;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
         }
     }
 

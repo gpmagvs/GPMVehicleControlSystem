@@ -451,10 +451,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 CargoStateStorer.HandleCargoExistSensorStateChanged(this, EventArgs.Empty);
 
-                Task.Delay(1000).ContinueWith(t =>
+                Task.Delay(1000).ContinueWith(async t =>
                 {
+                    await CSTReader.TryRestoreCarrierIDRecordAsync();
+
                     var beginStatus = CargoStateStorer.GetCargoStatus(Parameters.LDULD_Task_No_Entry, out CST_TYPE cargoType);
-                    if (beginStatus != CARGO_STATUS.NO_CARGO)
+                    if (beginStatus != CARGO_STATUS.NO_CARGO && string.IsNullOrEmpty(CSTReader.ValidCSTID))
                         CSTReader.ValidCSTID = "TrayUnknow";
                 });
 
@@ -1321,6 +1323,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                             driver.Data.errorCode != 0x00);
                     }
 
+                    await ResetMotor(IsTriggerByButton);
+                    await Task.Delay(300);
                     Stopwatch sw = Stopwatch.StartNew();
                     while (_isMotorHasErrorCode())
                     {
