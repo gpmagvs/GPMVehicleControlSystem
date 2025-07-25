@@ -168,6 +168,22 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
+
+                #region I/O 設置確認
+                clsIOSignal verticaMotorStopSignal = forkAgv.WagoDO.VCSOutputs.FirstOrDefault(pt => pt.Output == DO_ITEM.Vertical_Motor_Stop);
+                if (verticaMotorStopSignal == null)
+                    return Ok(new { confirm = false, message = "未找到 [Vertical_Motor_Stop] 輸出訊號，請確認 I/O-OUTPUT 設定" });
+
+                clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.FirstOrDefault(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
+                if (underPressedSensorBypassSignal == null)
+                    return Ok(new { confirm = false, message = "未找到 [Fork_Under_Pressing_SensorBypass] 輸出訊號，請確認 I/O-OUTPUT 設定" });
+
+                clsIOSignal underPressedSensorInputSignal = forkAgv.WagoDI.VCSInputs.FirstOrDefault(pt => pt.Input == DI_ITEM.Fork_Under_Pressing_Sensor);
+                if (underPressedSensorInputSignal == null)
+                    return Ok(new { confirm = false, message = "未找到 [Fork_Under_Pressing_Sensor] 輸入訊號，請確認 I/O-INPUT 設定" });
+                #endregion
+
+
                 forkAgv.ForkLifter.IsManualOperation = true;
                 if (speed == 0)
                     speed = 1;
@@ -175,8 +191,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 bool _isStop = action == "stop";
                 bool _isMoveToPoseOperation = action != "home" && action != "orig";
                 bool _isSearchOperation = action == "up_search" || action == "down_search";
-                clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.First(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
-
 
                 if (_isMoveToPoseOperation)
                     speed = speed > MoveToPoseSpeedOfManualMode ? MoveToPoseSpeedOfManualMode : speed;
