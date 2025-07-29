@@ -404,8 +404,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + ex.StackTrace);
-                Environment.Exit(0);
+                logger.LogError(ex, "Exception when ResetMotor");
                 AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
                 return false;
             }

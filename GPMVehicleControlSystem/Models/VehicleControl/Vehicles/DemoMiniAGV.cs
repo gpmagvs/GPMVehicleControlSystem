@@ -114,11 +114,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (SocketException ex)
             {
+                logger.LogError(ex, "SocketException occurred");
                 AlarmManager.AddAlarm(AlarmCodes.Wago_IO_Write_Fail, false);
                 return false;
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Exception occurred while resetting motor");
                 AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
                 return false;
             }

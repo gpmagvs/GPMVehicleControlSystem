@@ -359,7 +359,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (Exception ex)
             {
-                logger.Error(ex.Message, ex);
+                logger.Error(ex, "AGV任務執行發生錯誤");
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
 
