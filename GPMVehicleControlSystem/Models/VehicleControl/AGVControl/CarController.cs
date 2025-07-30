@@ -551,6 +551,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         {
             SendActionCheckResult result = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVC_CANNOT_EXECUTE_ACTION);
             RunningTaskData = taskDownloadData;
+
+            logger.Info("RunningTaskData:" + RunningTaskData.ToJson());
             var rosCommandGoal = clsTaskDownloadData.GetTaskDataToRosCommandGoal(taskDownloadData, IsApprilTagLocateSupport);
 
             var retryPolicy = Policy.Handle<Exception>()
@@ -587,6 +589,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task<SendActionCheckResult> SendGoal(TaskCommandGoal rosGoal, double timeout = 5)
         {
+            if (rosGoal == null)
+            {
+                throw new ArgumentNullException(nameof(rosGoal));
+            }
             (bool checkTaskConfirmed, TaskCommandGoal goalModified) = await CheckTaskCommandGoal(rosGoal);
             bool isEmptyPathPlan = rosGoal.planPath.poses.Length == 0;
             string new_path = isEmptyPathPlan ? "" : string.Join("->", rosGoal.planPath.poses.Select(p => p.header.seq));
@@ -702,7 +708,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             catch (Exception ex)
             {
-                logger.Error(ex);
+                logger.Error(ex, ex.StackTrace);
                 throw ex;
             }
 
