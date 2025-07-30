@@ -123,6 +123,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
+                SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.LogError(ex, ex.Message);
                 SoftwareEMO(AlarmCodes.Code_Error_In_System);
                 TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;

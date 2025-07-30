@@ -120,6 +120,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (Exception ex)
             {
+                SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.LogError(ex, "Exception occurred while resetting motor");
                 AlarmManager.AddAlarm(AlarmCodes.Code_Error_In_System, false);
                 return false;

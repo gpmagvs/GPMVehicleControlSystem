@@ -140,6 +140,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (Exception ex)
             {
+                Agv.SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.Error(ex);
                 return (false, AlarmCodes.Code_Error_In_System);
             }

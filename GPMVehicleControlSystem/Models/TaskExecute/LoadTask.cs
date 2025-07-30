@@ -544,6 +544,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             catch (Exception ex)
             {
                 logger.Error(ex);
+                Agv.SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
                 return (false, AlarmCodes.Code_Error_In_System);
             }
 
@@ -647,6 +648,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (Exception ex)
             {
+                Agv.SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.Error(ex);
                 return (false, AlarmCodes.Code_Error_In_System);
             }

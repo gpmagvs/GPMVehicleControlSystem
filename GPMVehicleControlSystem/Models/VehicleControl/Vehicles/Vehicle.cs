@@ -1659,6 +1659,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return await SaveParameters(Parameters, this.frontendHubContext);
         }
 
+        internal async Task SendExceptionMessageToFrontendAsync(string message, string stacktrace)
+        {
+            await Task.Delay(1).ContinueWith(async t =>
+            {
+                try
+                {
+                    await frontendHubContext.Clients.All.SendAsync("BackendExceptionMessage", new
+                    {
+                        message = message,
+                        stacktrace = stacktrace
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "SendExceptionMessageToFrontend Error");
+                }
+            });
+        }
+
         internal async Task LogDebugMessage(string message, bool signalRPub = false)
         {
             if (signalRPub)

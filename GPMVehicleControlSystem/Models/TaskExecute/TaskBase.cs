@@ -359,6 +359,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
             catch (Exception ex)
             {
+                Agv.SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.Error(ex, "AGV任務執行發生錯誤");
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }

@@ -615,6 +615,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             }
             catch (Exception ex)
             {
+                forkAGV.SendExceptionMessageToFrontendAsync(ex.Message, ex.StackTrace);
+
                 logger.Fatal(ex);
                 return (target, false, AlarmCodes.Code_Error_In_System);
             }
