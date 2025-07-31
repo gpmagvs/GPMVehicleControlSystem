@@ -141,6 +141,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return Ok(new { confirm = confirm, message = message });
         }
 
+        [HttpDelete("Version")]
+        public async Task<IActionResult> DeleteVersionBackup(string version)
+        {
+            (bool confirm, string message) = await _sysUpdateService.DeleteVersionBackup(version);
+            return Ok(new { confirm = confirm, message = message });
+        }
         [HttpGet("GetBackupedVersion")]
         public async Task<List<VersionInfoViewModel>> GetBackupedVersion()
         {

@@ -391,5 +391,30 @@ namespace GPMVehicleControlSystem.Service
 
             return versionList;
         }
+
+        internal async Task<(bool confirm, string message)> DeleteVersionBackup(string version)
+        {
+            try
+            {
+                string currentDirectory = AppContext.BaseDirectory;
+                string backupFolder = Path.Combine(currentDirectory, "backup");
+
+                if (!Directory.Exists(backupFolder))
+                    return (false, "Backup folder not exist");
+
+                string fileName = Path.Combine(backupFolder, $"backup_{version}.zip");
+
+                if (!File.Exists(fileName))
+                    return (false, "File not exist");
+
+                File.Delete(fileName);
+                return (true, "");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+
+        }
     }
 }
