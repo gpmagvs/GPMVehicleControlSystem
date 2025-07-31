@@ -17,7 +17,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 上報給派車系統的主狀態
         /// </summary>
-        public MAIN_STATUS Main_Status { get; private set; } = MAIN_STATUS.DOWN;
+        public MAIN_STATUS Main_Status
+        {
+            get
+            {
+                if (!ModuleInformationUpdatedInitState)
+                    return MAIN_STATUS.DOWN;
+
+                Dictionary<SUB_STATUS, MAIN_STATUS> statusConvertMap = new Dictionary<SUB_STATUS, MAIN_STATUS>()
+                {
+                    { SUB_STATUS.Initializing , MAIN_STATUS.Initializing },
+                    { SUB_STATUS.RUN, MAIN_STATUS.RUN},
+                    { SUB_STATUS.WARNING, MAIN_STATUS.RUN},
+                    { SUB_STATUS.ALARM, MAIN_STATUS.RUN},
+                    { SUB_STATUS.DOWN, MAIN_STATUS.DOWN},
+                    { SUB_STATUS.IDLE, MAIN_STATUS.IDLE},
+                    { SUB_STATUS.Charging, MAIN_STATUS.Charging},
+                    { SUB_STATUS.UNKNOWN, MAIN_STATUS.Unknown},
+                };
+
+                return statusConvertMap[_Sub_Status];
+            }
+        }
 
         private Debouncer subStatusChangeDebouncer = new Debouncer();
 
@@ -42,7 +63,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
 #if UseDebunce
 
-            UpdateMainStatus(value);
             subStatusChangeDebouncer.Debounce(() =>
             {
                 try
@@ -174,31 +194,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
             DirectionLighter.TrafficControllingLightsFlash();
-        }
-
-        private void UpdateMainStatus(SUB_STATUS sub_Status)
-        {
-
-            if (!ModuleInformationUpdatedInitState)
-                Main_Status = MAIN_STATUS.DOWN;
-
-            SUB_STATUS[] _ignoreChangeSubStatus = new SUB_STATUS[] { SUB_STATUS.ALARM, SUB_STATUS.WARNING, SUB_STATUS.STOP };
-
-            Dictionary<SUB_STATUS, MAIN_STATUS> statusConvertMap = new Dictionary<SUB_STATUS, MAIN_STATUS>()
-            {
-                { SUB_STATUS.Initializing , MAIN_STATUS.Initializing },
-                { SUB_STATUS.RUN, MAIN_STATUS.RUN},
-                { SUB_STATUS.DOWN, MAIN_STATUS.DOWN},
-                { SUB_STATUS.IDLE, MAIN_STATUS.IDLE},
-                { SUB_STATUS.Charging, MAIN_STATUS.Charging},
-                { SUB_STATUS.UNKNOWN, MAIN_STATUS.Unknown},
-            };
-
-            if (_ignoreChangeSubStatus.Contains(sub_Status))
-                return;
-
-            Main_Status = statusConvertMap[sub_Status];
-
         }
 
         /// <summary>

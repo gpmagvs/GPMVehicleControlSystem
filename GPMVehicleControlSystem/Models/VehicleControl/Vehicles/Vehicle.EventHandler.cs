@@ -162,7 +162,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
             bool isBumperTrigger = !WagoDI.GetState(DI_ITEM.Bumper_Sensor);
             bool isInitMode = driverEntity.isInitMode;
-            if (isInitMode ||isEmoTrigger || isBumperTrigger)
+            if (isInitMode || isEmoTrigger || isBumperTrigger)
             {
                 if (isInitMode)
                     LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為當前是初始化模式", true);
@@ -777,12 +777,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
             });
-        }
-        protected void AGVStatusChangeToAlarmWhenLaserTrigger()
-        {
-            _Sub_Status = SUB_STATUS.ALARM;
-            BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
-            StatusLighter.DOWN();
         }
         public REMOTE_MODE RemoteModeWhenHorizonMotorAlarm { get; protected set; } = REMOTE_MODE.OFFLINE;
         protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)

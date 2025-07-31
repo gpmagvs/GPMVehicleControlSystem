@@ -168,7 +168,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         return;
                     }
 
-                    await WaitLaserMonitorEnd();
+                    await WaitLaserMonitorEnd(TimeSpan.FromSeconds(3));
 
                     IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                     bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
@@ -258,17 +258,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         }
 
-        private async Task WaitLaserMonitorEnd()
+        private async Task WaitLaserMonitorEnd(TimeSpan timeout = default)
         {
             try
             {
-                await Task.Delay(1000, LaserObsMonitorCancel.Token); //因為有可能雷射還在偵測中，導致後續狀態會被改成 RUN 或 WARNING或 ALARM,因此等待一段時間 
+                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(timeout);
+                while (IsLaserMonitoring)
+                {
+                    await Task.Delay(100, cancellationTokenSource.Token);
+                }
             }
             catch (TaskCanceledException ex)
             {
-                logger.LogTrace($"Laser OBS Monitor Process end. |{ex.Message}");
+                logger.LogTrace($"等待雷射偵測結束已超時");
             }
-
         }
 
         private void CancelSwitchToTrafficLightsCase()
@@ -708,7 +711,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     LogDebugMessage("EndLaserObsMonitorAsync Method called.");
                     LaserObsMonitorCancel?.Cancel();
-                    await WaitLaserMonitorEnd();
+                    await WaitLaserMonitorEnd(TimeSpan.FromSeconds(3));
                     Laser.ModeSwitch(LASER_MODE.Bypass, true);
 
                 }, debounceTime);
@@ -787,12 +790,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     bool isSpeedReconveryToSlow = _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP && cmdGet == ROBOT_CONTROL_CMD.DECELERATE;
                                     bool isSpeedRecoveryToNormal = (_CurrentRobotControlCmd == ROBOT_CONTROL_CMD.DECELERATE || _CurrentRobotControlCmd == ROBOT_CONTROL_CMD.STOP) && cmdGet == ROBOT_CONTROL_CMD.SPEED_Reconvery;
 
-                                    if (isSpeedNeedToStop)
+                                    bool isAgvStatusRunning = (_Sub_Status != SUB_STATUS.IDLE && _Sub_Status != SUB_STATUS.Charging);
+
+                                    if (isAgvStatusRunning && isSpeedNeedToStop)
                                     {
                                         ActionWhenObsDetectTrigger();
                                     }
 
-                                    if (isSpeedNeedToDecelerate || isSpeedReconveryToSlow)
+                                    if (isAgvStatusRunning && (isSpeedNeedToDecelerate || isSpeedReconveryToSlow))
                                     {
                                         ActionWhenObsDetectSlowDown();
                                     }
