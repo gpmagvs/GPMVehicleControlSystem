@@ -115,11 +115,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
             GetCargoStatus(false, out CST_TYPE cargoType);
             return cargoType;
         }
+
+        internal CARGO_STATUS GetCargoStatus(bool isLDULDNoEntryNow, CST_TYPE cstTypeFromAGVSOrder)
+        {
+            return GetCargoStatus(isLDULDNoEntryNow, out _, cstTypeFromAGVSOrder);
+        }
+
         internal CARGO_STATUS GetCargoStatus(bool isLDULDNoEntryNow)
         {
             return GetCargoStatus(isLDULDNoEntryNow, out _);
         }
-        internal virtual CARGO_STATUS GetCargoStatus(bool isLDULDNoEntryNow, out CST_TYPE cargoType)
+        internal virtual CARGO_STATUS GetCargoStatus(bool isLDULDNoEntryNow, out CST_TYPE cargoType, CST_TYPE cstTypeFromAGVSOrder = CST_TYPE.Unknown)
         {
             cargoType = CST_TYPE.None;
 
@@ -143,6 +149,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
                 return simulation_cargo_status;
             }
 
+            bool isRackShouldBeMounted = cstTypeFromAGVSOrder == CST_TYPE.Rack;
+
+            //這是特殊情況處理, 當派車命令指定Rack時, 只要 Rack有貨就視為有貨
+            if (isRackShouldBeMounted && RackCargoStatus == CARGO_STATUS.HAS_CARGO_NORMAL)
+            {
+                cargoType = CST_TYPE.Rack;
+                return CARGO_STATUS.HAS_CARGO_NORMAL;
+            }
             if (TrayCargoStatus != CARGO_STATUS.NO_CARGO && RackCargoStatus != CARGO_STATUS.NO_CARGO)
             {
                 cargoType = CST_TYPE.Unknown;

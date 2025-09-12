@@ -102,8 +102,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             async Task<bool> _IsCargoPlacedNormal()
             {
+                CST_TYPE cstTypeFromAGVSOrder = CST_TYPE.Unknown;
+                var cstInfo = RunningTaskData.CST.FirstOrDefault();
+                if (cstInfo != null)
+                    cstTypeFromAGVSOrder = cstInfo.CST_Type;
+
                 sensorStateChecker = new Tools.StateDebouncer<CARGO_STATUS>(TimeSpan.FromMilliseconds(2000), TimeSpan.FromSeconds(5));
-                (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
+                (bool successCheck, bool IsTimeout) = await sensorStateChecker.StartAsync(() => Agv.CargoStateStorer.GetCargoStatus(Agv.Parameters.LDULD_Task_No_Entry, cstTypeFromAGVSOrder), expectedValue: CARGO_STATUS.HAS_CARGO_NORMAL);
 
                 if (IsTimeout)
                     logger.Error($"確認車上應該有貨但在席狀態持續抖動無法穩定");
