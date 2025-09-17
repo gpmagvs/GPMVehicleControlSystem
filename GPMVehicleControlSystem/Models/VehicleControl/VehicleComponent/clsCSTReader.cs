@@ -49,7 +49,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 if (_ValidCSTID != value)
                 {
-                    bool isDataError = value.ToLower().Trim() == "error";
+                    string loweredString = value.ToLower().Trim();
+
+                    bool isDataError = loweredString == "error" || loweredString == "connectionfail";
                     string _DataToStore = isDataError ? "ERROR" : value;
                     if (isDataError)
                     {
