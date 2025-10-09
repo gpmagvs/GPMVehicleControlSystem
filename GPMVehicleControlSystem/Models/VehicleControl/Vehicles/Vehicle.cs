@@ -27,6 +27,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using System.Diagnostics;
 using System.Net.Sockets;
+using WebSocketSharp;
 using static AGVSystemCommonNet6.AGVDispatch.Messages.clsVirtualIDQu;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
@@ -433,7 +434,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 SyncHandshakeSignalStates();
-                WagoDI.RegistSignalEvents();
+                WagoDI.RegistSignalEvents(out string _digitalInputRegistResultNotifyText);
                 await DOSignalDefaultSetting();
                 await ResetMotor(false);
                 DIOStatusChangedEventRegist();
@@ -459,7 +460,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (beginStatus != CARGO_STATUS.NO_CARGO && string.IsNullOrEmpty(CSTReader.ValidCSTID))
                         CSTReader.ValidCSTID = "TrayUnknow";
                 });
-
+                if (!_digitalInputRegistResultNotifyText.IsNullOrEmpty())
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(5000);
+                        SendNotifyierToFrontend(_digitalInputRegistResultNotifyText, "DI Event Regist Fail Notify");
+                    });
+                }
                 IsSystemInitialized = true;
 
                 _ = Task.Run(async () =>

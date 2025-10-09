@@ -69,8 +69,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
 
 
-        internal override void RegistSignalEvents()
+        internal override void RegistSignalEvents(out string _notifyText)
         {
+            _notifyText = "";
         }
         public override void ReadIOSettingsFromIniFile()
         {

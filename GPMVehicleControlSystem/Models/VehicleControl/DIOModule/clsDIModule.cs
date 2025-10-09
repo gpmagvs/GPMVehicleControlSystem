@@ -248,9 +248,9 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        internal virtual void RegistSignalEvents()
+        internal virtual void RegistSignalEvents(out string _notifyText)
         {
-
+            _notifyText = "";
             VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
 
             if (AgvType != AGV_TYPE.INSPECTION_AGV)
@@ -276,18 +276,23 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
             if (AgvType == AGV_TYPE.SUBMERGED_SHIELD)
             {
-                VCSInputs[Indexs[DI_ITEM.FrontProtection_Obstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                bool isIODefined = Indexs.TryGetValue(DI_ITEM.FrontProtection_Obstacle_Sensor, out int val);
+                if (isIODefined)
+                    VCSInputs[val].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                else
+                {
+                    _notifyText += $"FrontProtection_Obstacle_Sensor 未定義;";
+                }
             }
-            else if (AgvType == AGV_TYPE.FORK)
+            if (AgvType == AGV_TYPE.FORK)
             {
-                try
-                {
-                    VCSInputs[Indexs[DI_ITEM.Fork_Frontend_Abstacle_Sensor]].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
-                }
-                catch (Exception ex)
-                {
-                }
+                bool isIODefined = Indexs.TryGetValue(DI_ITEM.Fork_Frontend_Abstacle_Sensor, out int val);
+                if (isIODefined)
+                    VCSInputs[val].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+                else
+                    _notifyText += $"Fork_Frontend_Abstacle_Sensor 未定義;";
             }
+
         }
 
         private bool IsTimeout = false;

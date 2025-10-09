@@ -255,9 +255,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
                 await Task.Delay(10);
 
-                if (ForkLifter != null && !Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer)
+                if (ForkLifter != null && (!Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer))
                 {
                     await Agv.SetSub_Status(SUB_STATUS.RUN);
+
                     (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(height, action);
                     if (!forkActionsResult.success)
                         return forkActionsResult.alarm_codes;
