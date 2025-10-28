@@ -338,7 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     logger.LogTrace($"[TryTemporaryStopWhenReachTag] Wait AGV Reach in to Decrease Speed Region..{distance} m");
                 }
                 logger.LogTrace($"[TryTemporaryStopWhenReachTag] AGV Reach in to Decrease Speed Region, Send DECELERATE request to AGVC.");
-                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.DECELERATE, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
+                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.DECELERATE, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST);
 
                 logger.LogTrace($"[TryTemporaryStopWhenReachTag] Wait AGV Reach Tag {stopPoint.Point_ID}");
                 while (Navigation.Data.lastVisitedNode.data != stopPoint.Point_ID)
@@ -347,7 +347,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
                 logger.LogTrace($"[TryTemporaryStopWhenReachTag] AGV Reach Stop Tag {stopTag}, Send STOP request to AGVC.");
-                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.STOP, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
+                await AGVC.CarSpeedControl(AGVControl.CarController.ROBOT_CONTROL_CMD.STOP, AGVControl.CarController.SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST);
 
                 double _calculateDistance(double x1, double y1, double x2, double y2)
                 {

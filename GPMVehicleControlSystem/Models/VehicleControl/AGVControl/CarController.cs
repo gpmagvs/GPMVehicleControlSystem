@@ -72,6 +72,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             UltrasoundSensor,
             UltrasoundSensorRecovery,
             AGVS_REQUEST,
+            /// <summary>
+            /// 導航數據更新 Timeout
+            /// </summary>
+            NAVIGATION_DATA_UPDATE_TIMEOUT,
+            /// <summary>
+            /// 導航數據更新恢復
+            /// </summary>
+            NAVIGATION_DATA_UPDATE_RECOVERY,
         }
         public enum ROBOT_CONTROL_CMD : byte
         {
@@ -458,11 +466,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
 
         internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd)
         {
-            await CarSpeedControl(cmd, RunningTaskData.Task_Name, SPEED_CONTROL_REQ_MOMENT.UNKNOWN, true);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name, SPEED_CONTROL_REQ_MOMENT.UNKNOWN);
         }
-        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
+        internal async Task CarSpeedControl(ROBOT_CONTROL_CMD cmd, SPEED_CONTROL_REQ_MOMENT moment)
         {
-            await CarSpeedControl(cmd, RunningTaskData.Task_Name, moment, CheckLaserStatus);
+            await CarSpeedControl(cmd, RunningTaskData.Task_Name, moment);
         }
 
         public static ROBOT_CONTROL_CMD AGVS_SPEED_CONTROL_REQUEST = ROBOT_CONTROL_CMD.NONE;
@@ -480,7 +488,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 }
             }
         }
-        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment, bool CheckLaserStatus = true)
+        public async Task<bool> CarSpeedControl(ROBOT_CONTROL_CMD cmd, string task_id, SPEED_CONTROL_REQ_MOMENT moment)
         {
             bool _confirmed = false;
             ManualResetEvent mre = new ManualResetEvent(false);

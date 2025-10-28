@@ -183,12 +183,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (state)
             {
                 logger.LogTrace($"{input} Trigger! AGV STOP");
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor, false);
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor);
             }
             else
             {
                 logger.LogTrace($"{input} Recovery! AGV Speed Recovery");
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery, true);
+                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery);
 
             }
 

@@ -14,7 +14,7 @@ namespace GPMVehicleControlSystem.Controllers
     {
 
         private Vehicle _Vehicle => StaStored.CurrentVechicle;
-        Logger logger= LogManager.GetCurrentClassLogger();
+        Logger logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// 接收派車系統上報之多車動態
         /// </summary>
@@ -36,14 +36,14 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("SpeedDown")]
         public async Task<IActionResult> SpeedDown()
         {
-            await _Vehicle.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, false);
+            await _Vehicle.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST);
             return Ok(true);
         }
 
         [HttpGet("SpeedRecovery")]
         public async Task<IActionResult> SpeedRecovery()
         {
-            await _Vehicle.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST, true);
+            await _Vehicle.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.AGVS_REQUEST);
             return Ok(true);
         }
 

@@ -617,7 +617,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         Agv.CargoStateStorer.watchCargoExistStateCts?.Cancel();
                         StartWatchCargoState();
 
-                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT, false);
+                        await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT);
 
                         logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) ms");
 

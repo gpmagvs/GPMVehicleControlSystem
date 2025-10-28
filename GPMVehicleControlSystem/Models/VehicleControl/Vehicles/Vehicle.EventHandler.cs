@@ -205,9 +205,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private void Navigation_OnRoboPoseUpdateTimeout(object? sender, EventArgs e)
         {
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
             {
-                SoftwareEMO(AlarmCodes.Motion_control_Disconnected);
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                {
+                    logger.LogWarning($"Navigation RoboPose Update Timeout when AGV is moving, try decelerate AGV First!");
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.DECELERATE, SPEED_CONTROL_REQ_MOMENT.NAVIGATION_DATA_UPDATE_TIMEOUT);
+                }
+
+                logger.LogWarning($"Waiting for Navigation RoboPose Update Recovered...");
+                //wait until Update RoboPose recovered
+                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                while (Navigation.IsCommunicationError)
+                {
+                    await Task.Delay(100);
+                    if (cancellationTokenSource.IsCancellationRequested)
+                    {
+                        SoftwareEMO(AlarmCodes.Motion_control_Disconnected);
+                        break;
+                    }
+                }
+
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && IsAllLaserNoTrigger())
+                {
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NAVIGATION_DATA_UPDATE_RECOVERY);
+                    logger.LogInformation("Speed Recovery after Navigation RoboPose Update Recovered!(No obstacle detected is checked)");
+                }
+                logger.LogInformation($"Navigation RoboPose Update Recovered! 恭喜發財 ");
             });
         }
 

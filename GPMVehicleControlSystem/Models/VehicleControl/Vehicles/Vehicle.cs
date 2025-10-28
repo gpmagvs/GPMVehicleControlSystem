@@ -310,6 +310,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogTrace($"ROS Version Detected: {RosVersion}");
 
             IMU.Options = Parameters.ImpactDetection;
+            Navigation.navigationUpdateTimeoutSec = Parameters.Advance.NavigationInfoUpdateTimeoutSec; // 設定導航資訊更新逾時秒數
+
             CIMConnectionInitialize();
             LoadWorkStationConfigs();
             logger.LogTrace($"{GetType().Name} Start create instance...");

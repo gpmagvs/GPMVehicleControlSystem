@@ -345,7 +345,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             StartCargoStatusWatchProcessAsync();
 
-                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING, false);
+                            await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING);
                         }
                         await WaitTaskDoneAsync();
 

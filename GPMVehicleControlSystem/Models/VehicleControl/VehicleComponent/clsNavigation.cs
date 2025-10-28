@@ -9,7 +9,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsNavigation : CarComponent
     {
+        public override bool IsCommunicationError { get => base.IsCommunicationError; set => base.IsCommunicationError = value; }
+        public bool NavStateUpdateTimeoutSimulation { get; internal set; }
 
+        public double navigationUpdateTimeoutSec = 5;
         public enum AGV_DIRECTION : ushort
         {
             /// <summary>
@@ -209,10 +212,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         protected override void _CommunicationErrorJudge()
         {
+            if (NavStateUpdateTimeoutSimulation)
+            {
+                IsCommunicationError = true;
+                return;
+            }
             double timeDiff = (DateTime.Now - lastUpdateTime).TotalSeconds;
-            IsCommunicationError = timeDiff > 5;
+            IsCommunicationError = timeDiff > navigationUpdateTimeoutSec;
         }
-        public override bool IsCommunicationError { get => base.IsCommunicationError; set => base.IsCommunicationError = value; }
     }
 
 

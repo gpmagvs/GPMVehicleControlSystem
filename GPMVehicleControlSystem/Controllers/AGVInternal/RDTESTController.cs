@@ -53,5 +53,12 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             agv.AGVS.disConnectedSimulation = simulationOn;
         }
+
+
+        [HttpGet("NavStateUpdateTimeoutSimulation")]
+        public async Task NavStateUpdateTimeoutSimulation(bool simulationOn)
+        {
+            agv.Navigation.NavStateUpdateTimeoutSimulation = simulationOn;
+        }
     }
 }
