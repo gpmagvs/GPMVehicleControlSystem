@@ -48,6 +48,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     string param_json = File.ReadAllText(param_file);
                     Parameters = JsonConvert.DeserializeObject<clsVehicelParam>(param_json);
+                    Parameters.Descrption = new clsVehicelParam().Descrption; //確保 Descrption 欄位不會因為版本不同而遺失
                     if (Parameters != null)
                         await SaveParameters(Parameters);
                     else
