@@ -46,7 +46,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             AGVS.OnTcpIPProtocolGetRunningStatus += HandleTcpIPProtocolGetRunningStatus;
             AGVS.OnRemoteModeChanged += HandleRemoteModeChangeReq;
             AGVS.OnTaskDownload += AGVSTaskDownloadConfirm;
-            AGVS.OnTaskResetReq = HandleAGVSTaskCancelRequest;
+            AGVS.OnTaskResetReq = HandleTaskCancelRequest;
             AGVS.OnTaskDownloadFeekbackDone += AGVS_OnTaskDownloadFeekbackDone;
             AGVS.OnConnectionRestored += AGVS_OnConnectionRestored;
             AGVS.OnDisconnected += AGVS_OnDisconnected;
@@ -240,13 +240,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="mode">取消模式</param>
         /// <param name="normal_state"></param>
         /// <returns></returns>
-        internal async Task<bool> HandleAGVSTaskCancelRequest(RESET_MODE mode, bool normal_state = false)
+        internal async Task<bool> HandleTaskCancelRequest(RESET_MODE mode, bool normal_state = false, string requester = "AGVS派車系統請求任務取消")
         {
 
             TaskCycleStopTask = Task.Run(async () =>
             {
                 TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
-                logger.LogInformation($"[任務取消] AGVS TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
+                logger.LogInformation($"[任務取消] {requester}. TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
 
                 if (mode == RESET_MODE.ABORT)
@@ -270,7 +270,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (isNoTaskRunning)
                     {
                         AGV_Reset_Flag = false;
-                        logger.LogWarning($"[任務取消] AGVS TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
+                        logger.LogWarning($"[任務取消] {requester} TASK Cancel Request ({mode}),But AGV is stopped.(IDLE)");
                         await AGVC.SendGoal(new TaskCommandGoal());//下空任務清空
                         FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
                         AGVC._ActionStatus = ActionStatus.NO_GOAL;

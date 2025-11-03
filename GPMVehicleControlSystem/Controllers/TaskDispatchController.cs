@@ -59,7 +59,7 @@ namespace GPMVehicleControlSystem.Controllers
             try
             {
                 Agv.AGVS.logger.LogTrace($"[任務取消] 從派車系統接收到任務取消請求(API)");
-                Agv.HandleAGVSTaskCancelRequest(cancelCmd.ResetMode);
+                Agv.HandleTaskCancelRequest(cancelCmd.ResetMode);
             }
             catch (Exception ex)
             {

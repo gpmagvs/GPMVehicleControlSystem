@@ -598,7 +598,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     await WaitAlarmCodeReported(alarms_tracking);
                 }
                 bool feedback_success = await AGVS.TryTaskFeedBackAsync(_task_namae, _task_simplex, _task_sequence, currentPosIndexInTrajectory, status, Navigation.LastVisitedTag, Navigation.CurrentCoordination, taskfeedbackCanceTokenSoruce.Token, IsTaskCancel);
-
+                if (status == TASK_RUN_STATUS.NAVIGATING && !feedback_success)
+                {
+                    HandleTaskCancelRequest(RESET_MODE.CYCLE_STOP, true, "導航中任務回報但 AGVS 回覆 NG::車載自行 Cycle Stop");
+                }
                 if (status == TASK_RUN_STATUS.ACTION_FINISH)
                 {
                     _RunTaskData.IsActionFinishReported = feedback_success;
