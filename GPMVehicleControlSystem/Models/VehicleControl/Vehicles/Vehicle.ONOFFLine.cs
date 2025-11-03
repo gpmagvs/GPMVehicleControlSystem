@@ -31,6 +31,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
+        public bool TaskFeedBackAGVSRejectSimulation { get; internal set; }
+
         private async Task HandleOnlineModeChanged(REMOTE_MODE currentOnlineMode)
         {
             if (currentOnlineMode == REMOTE_MODE.ONLINE)

@@ -60,5 +60,11 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             agv.Navigation.NavStateUpdateTimeoutSimulation = simulationOn;
         }
+
+        [HttpGet("TaskFeedBackAGVSRejectSimulation")]
+        public async Task TaskFeedBackAGVSRejectSimulation(bool simulationOn)
+        {
+            agv.TaskFeedBackAGVSRejectSimulation = simulationOn;
+        }
     }
 }
