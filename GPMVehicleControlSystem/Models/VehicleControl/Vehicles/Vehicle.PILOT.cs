@@ -1066,6 +1066,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
 
+                    bool _isTagNotAllowLiftUpWithRotaion = Parameters.ForkAGV.NonRotatableWhenLiftingTags.Contains(currentTagNumber);
+
+                    if (_isTagNotAllowLiftUpWithRotaion)
+                    {
+                        logger.LogWarning($"Tag-{currentTagNumber} 已被設置為當 AGV抵達時不可同時旋轉 + 牙叉上升");
+                        return;
+                    }
+
                     if (AGVC.CycleStopActionExecuting)
                     {
                         logger.LogTrace($"因 Cycle Stop, 抵達進入點後不提前上升牙叉動作");

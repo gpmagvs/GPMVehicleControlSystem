@@ -52,6 +52,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public double DownSearchSpeedWhenInitialize { get; set; } = 0.8;
         public double START_DONW_STEP_FIND_HOME_POSE { get; set; } = 0.2;
 
+        public List<double> NonRotatableWhenLiftingTags { get; set; } = new List<double>();
+
     }
     public class clsForkInit
     {
