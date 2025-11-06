@@ -234,6 +234,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 AGVS_CANCEL_TASK_REQ_RAISED,
                 AGVC_CANNOT_EXECUTE_ACTION,
                 LD_ULD_SIMULATION,
+                AGV_STATUS_DOWN,
                 Confirming = 499,
                 Others = 999,
             }

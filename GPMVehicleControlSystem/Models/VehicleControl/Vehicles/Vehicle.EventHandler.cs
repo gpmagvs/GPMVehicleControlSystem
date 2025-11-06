@@ -631,6 +631,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private SendActionCheckResult HandleSendActionGoalToAGVCRaised()
         {
             SendActionCheckResult _confirmResult = new(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.Accept);
+            if (GetSub_Status() == SUB_STATUS.DOWN)
+            {
+                _confirmResult = new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGV_STATUS_DOWN);
+                return _confirmResult;
+            }
             if (TaskCycleStopStatus == TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST)
             {
                 logger.LogWarning($"Before Action Goal Send to AGVC Check Fail => Cycle Stop Request is Raising Now!");

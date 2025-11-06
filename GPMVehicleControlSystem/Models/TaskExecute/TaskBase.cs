@@ -245,6 +245,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     await Agv.SetSub_Status(SUB_STATUS.RUN);
                     BuzzerPlayMusic(action);
                 }
+
+                if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                    return GetAlarmCodesWhenStatusCheckDown();
+
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
@@ -312,6 +316,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     if (!agvc_response.Accept)
                     {
                         bool _is_agvs_task_cancel_req_raised = agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGVS_CANCEL_TASK_REQ_RAISED;
+                        bool _is_agv_status_down = agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.AGV_STATUS_DOWN;
+                        if (_is_agv_status_down)
+                            return new List<AlarmCodes>() { AlarmCodes.AGV_State_Cant_Move };
+
                         return _is_agvs_task_cancel_req_raised ? new List<AlarmCodes>() { AlarmCodes.Send_Goal_to_AGV_But_AGVS_Cancel_Req_Raised } : new List<AlarmCodes> { AlarmCodes.Can_not_Pass_Task_to_Motion_Control };
                     }
                     else
@@ -368,6 +376,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         }
 
+        private List<AlarmCodes> GetAlarmCodesWhenStatusCheckDown()
+        {
+            var currentAlarms = AlarmManager.CurrentVCSAlarmCodes;
+            if (currentAlarms.Any())
+                return currentAlarms;
+
+            List<AlarmCodes> alarms = new List<AlarmCodes>() { AlarmCodes.AGV_State_Cant_do_this_Action };
+            if (Agv.WagoDI.GetState(DI_ITEM.EMO) == false)
+                alarms.Add(AlarmCodes.EMS);
+
+            return alarms;
+        }
         private async Task StartCargoStatusWatchProcessAsync()
         {
             if (!Agv.Parameters.CargoBiasDetectionWhenNormalMoving)

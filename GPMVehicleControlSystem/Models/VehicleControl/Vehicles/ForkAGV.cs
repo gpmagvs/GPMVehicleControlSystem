@@ -52,7 +52,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             get
             {
-                var list=base.driverList;
+                var list = base.driverList;
                 list.Add(VerticalDriverState);
                 return list;
             }
@@ -660,6 +660,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Task.Run(async () =>
             {
                 logger.LogWarning($"SW EMS Trigger, Fork Action STOP!!!!!!(LIFER AND ARM)");
+                _forkVerticalMoveObsProcessCancellationTokenSource?.Cancel();
                 Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();

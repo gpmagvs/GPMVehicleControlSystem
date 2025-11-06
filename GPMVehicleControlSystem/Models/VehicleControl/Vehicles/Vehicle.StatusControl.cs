@@ -67,6 +67,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 try
                 {
+                    if (_Sub_Status == SUB_STATUS.DOWN && value == SUB_STATUS.RUN)
+                    {
+                        logger.LogWarning("狀態機異常:嘗試於狀態為 DOWN 時切換為 RUN");
+                        return;
+                    }
                     _Sub_Status = value;
 
                     if (_Sub_Status != SUB_STATUS.IDLE)
