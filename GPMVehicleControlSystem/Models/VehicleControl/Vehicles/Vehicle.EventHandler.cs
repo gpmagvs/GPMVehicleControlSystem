@@ -573,8 +573,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool isTriggered = Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.A && input_status || Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.B && !input_status;
             bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && _RunTaskData.Action_Type != ACTION_TYPE.Charge && AGVC.ActionStatus == ActionStatus.ACTIVE;
             bool isBackToSecondaryPtIng = _ExecutingTask != null && _ExecutingTask.IsBackToSecondaryPt;
-            if (!isTriggered || !isNonNormalMoving || isBackToSecondaryPtIng)
+            bool isNavigatingAndReachWorkStationTag = AGVC.IsRunning && BarcodeReader.Data.tagID == _RunTaskData?.Destination;
+
+            if (!isTriggered || !isNonNormalMoving)
                 return;
+
+            if (isBackToSecondaryPtIng || isNavigatingAndReachWorkStationTag)
+            {
+                string _logMsg = string.Empty;
+                if (isNavigatingAndReachWorkStationTag)
+                    _logMsg = $"AGV已抵達工作站點({_RunTaskData.Destination})，忽略牙叉前端障礙物檢知Sensor觸發事件({sensorName})";
+
+                if (isBackToSecondaryPtIng)
+                    _logMsg = $"AGV從工位退出中，忽略牙叉前端障礙物檢知Sensor觸發事件({sensorName})";
+
+                SendNotifyierToFrontend(_logMsg);
+                logger.LogInformation(_logMsg);
+                return;
+            }
 
             logger.LogWarning($"AGV進站過程中牙叉前端障礙物檢知Sensor觸發!({sensorName})");
             bool isRecoverable = Parameters.SensorBypass.ForkFrontendObsSensorBypass;
