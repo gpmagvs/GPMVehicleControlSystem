@@ -1449,6 +1449,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await Laser.FrontBackLasersEnable(true, true);
                 await Laser.SideLasersEnable(false);
+
+                //如果有設備牙叉前端障礙物檢知input, 但牙叉前端障礙物bypass 需發出提示
+                bool _isForkFrontendObsInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+                if (_isForkFrontendObsInputDefined && Parameters.SensorBypass.ForkFrontendObsSensorBypass)
+                {
+                    SendNotifyierToFrontend("注意! 牙叉前端障礙物檢知現在是 Bypass 狀態!");
+                }
             }
             else
             {

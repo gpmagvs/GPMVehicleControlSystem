@@ -342,9 +342,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             {
                                 #region 前方障礙物預檢
                                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
-                                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
+                                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected, out bool forceAlarm);
                                 if (!isNoObstacle)
-                                    if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
+                                    if (forceAlarm || _triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
                                         return new List<AlarmCodes> { FrontendSecondarSensorTriggerAlarmCode };
                                     else
                                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
@@ -854,8 +854,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <summary>
         /// 車頭二次檢Sensor檢察功能
         /// </summary>
-        protected virtual bool StartFrontendObstcleDetection(ALARM_LEVEL alarmLevel)
+        protected virtual bool StartFrontendObstcleDetection(ALARM_LEVEL alarmLevel, out bool isForkFrontendObsforceAlarm)
         {
+            bool _isForkFrontendObsInputDefined = Agv.WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+
+            isForkFrontendObsforceAlarm = false;
+            if (_isForkFrontendObsInputDefined && !Agv.Parameters.SensorBypass.ForkFrontendObsSensorBypass && !Agv.WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor))
+            {
+                isForkFrontendObsforceAlarm = true;
+                logger.Error($"牙叉前方障礙物預檢知觸發");
+                return false;
+            }
+
             var options = Agv.Parameters.LOAD_OBS_DETECTION;
             bool Enable = action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad;
             if (!Enable)

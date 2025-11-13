@@ -174,11 +174,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 #region 前方障礙物預檢
 
                 var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
-                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected);
+                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected, out bool isForkFrontendObsforceAlarm);
 
                 if (!isNoObstacle)
-                    if (_triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
-                        return (false, FrontendSecondarSensorTriggerAlarmCode);
+                    if (isForkFrontendObsforceAlarm || _triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
+                        return (false, isForkFrontendObsforceAlarm ? AlarmCodes.Fork_Frontend_has_Obstacle : FrontendSecondarSensorTriggerAlarmCode);
                     else
                         AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
                 #endregion
