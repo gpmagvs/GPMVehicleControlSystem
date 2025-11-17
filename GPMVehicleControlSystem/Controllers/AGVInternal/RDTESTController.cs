@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.Models.RDTEST;
 using GPMVehicleControlSystem.Models.TaskExecute;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels.RDTEST;
 using Microsoft.AspNetCore.Http;
@@ -66,5 +67,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             agv.TaskFeedBackAGVSRejectSimulation = simulationOn;
         }
+
+        [HttpPost("ForkHorizonFindHome")]
+        public async Task ForkHorizonFindHome()
+        {
+            ForkAGV forkAGV = (ForkAGV)agv;
+            clsForkLifterWithDriverBaseExtener forkLifter = (clsForkLifterWithDriverBaseExtener)forkAGV.ForkLifter;
+            forkLifter.HorizonForkInitialize(bypassSubStatusCheck: true);
+        }
+
     }
 }

@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         private SEARCH_DIRECTION currentSearchDirection;
         private bool disposedValue;
 
-        public async Task<(bool done, AlarmCodes alarm_code)> StartSearchAsync(CancellationToken token)
+        public async Task<(bool done, AlarmCodes alarm_code)> StartSearchAsync(CancellationToken token, bool bypassSubStatusCheck = false)
         {
             cancelToken = token;
             bool _isInitializeDone = false;
@@ -88,7 +88,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 StartUpdateInitTextProcess(token);
                 while (!_isInitializeDone)
                 {
-                    if (vehicle.GetSub_Status() == SUB_STATUS.DOWN)
+                    if (!bypassSubStatusCheck && vehicle.GetSub_Status() == SUB_STATUS.DOWN)
                     {
                         await StopAsync();
                         logger.Fatal($"Status Down Fork initialize action interupted.!");
