@@ -38,6 +38,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         private ManualResetEvent _WaitBackToHomeDonePause = new ManualResetEvent(false);
         private ManualResetEvent _waitMoveToPortDonePause = new ManualResetEvent(false);
         private ActionStatus _BackHomeActionDoneStatus = ActionStatus.PENDING;
+        protected virtual bool isParkingAfterLoad { get; set; } = false;
 
         public delegate bool CheckCargotatusDelegate(CheckPointModel checkPointData);
         public static event CheckCargotatusDelegate OnManualCheckCargoStatusTrigger;
@@ -531,6 +532,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 (bool confirm, AlarmCodes alarmCode) CstExistCheckResult = await CstExistCheckAfterEQActionFinishInEQAsync();
                 if (!CstExistCheckResult.confirm)
                     return (false, CstExistCheckResult.alarmCode);
+
+                if (isParkingAfterLoad)
+                {
+                    Agv.IsHandshaking = false;
+                    return (true, AlarmCodes.None);
+                }
 
                 if (ForkLifter != null && isNeedArmExtend)
                     ForkLifter.ForkShortenInAsync();

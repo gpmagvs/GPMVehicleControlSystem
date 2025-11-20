@@ -356,9 +356,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     _ExecutingTaskEntity = new ChargeTask(this, taskDownloadData);
                 else if (action == ACTION_TYPE.Discharge)
                     _ExecutingTaskEntity = new DischargeTask(this, taskDownloadData);
-                else if (action == ACTION_TYPE.Load)
+                else if (action == ACTION_TYPE.Load || action == ACTION_TYPE.LoadAndPark)
                 {
-                    _ExecutingTaskEntity = new LoadTask(this, taskDownloadData);
+                    _ExecutingTaskEntity = action == ACTION_TYPE.LoadAndPark ? new LoadAndParkTask(this, taskDownloadData) : new LoadTask(this, taskDownloadData);
                     (_ExecutingTaskEntity as LoadTask).lduld_record.TaskName = _RunTaskData.Task_Name;
 
                     if (_RunTaskData.CST.Length > 0)
