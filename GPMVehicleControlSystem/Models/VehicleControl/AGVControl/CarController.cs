@@ -236,6 +236,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 LD_ULD_SIMULATION,
                 AGV_STATUS_DOWN,
                 Confirming = 499,
+                RepeatTrajectoryCheckOut = 500,
                 Others = 999,
             }
             public bool Accept => IsAcceptCase();
@@ -248,7 +249,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
             private bool IsAcceptCase()
             {
-                return ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.Accept || ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION;
+                return ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.Accept ||
+                        ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.LD_ULD_SIMULATION ||
+                        ResultCode == SEND_ACTION_GOAL_CONFIRM_RESULT.RepeatTrajectoryCheckOut;
             }
         }
         public CarController()

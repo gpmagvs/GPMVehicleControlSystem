@@ -327,6 +327,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         if (task_abort_alarmcode != AlarmCodes.None)
                             return new List<AlarmCodes> { task_abort_alarmcode };
 
+
+                        if (agvc_response.ResultCode == SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.RepeatTrajectoryCheckOut)
+                            return new List<AlarmCodes>();
+
                         await Task.Delay(100);
                         await LaserSettingBeforeTaskExecute();
                         Agv.StartLaserObstacleMonitor();
@@ -546,6 +550,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             if (Agv.Parameters.AgvType == AGV_TYPE.FORK && IsForkAction())
             {
                 _ = ForkPositionSaftyMonitor();
+            }
+            var newRunningTaskData = RunningTaskData.Clone();
+            // 
+            string existTagsStr = string.Join("-", Agv.AGVC.RunningTaskData.Trajectory.Select(tr => tr.Point_ID));
+            string newTagsStr = string.Join("-", newRunningTaskData.Trajectory.Select(tr => tr.Point_ID));
+            if (Agv.AGVC.IsRunning && existTagsStr == newTagsStr && Agv.AGVC.RunningTaskData.Destination == newRunningTaskData.Destination)
+            {
+                return new SendActionCheckResult(SendActionCheckResult.SEND_ACTION_GOAL_CONFIRM_RESULT.RepeatTrajectoryCheckOut);
             }
             return await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData, Agv.Parameters.ActionTimeout);
         }
