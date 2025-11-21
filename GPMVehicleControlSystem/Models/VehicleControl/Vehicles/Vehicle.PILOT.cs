@@ -92,6 +92,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             ACTION_TYPE action = taskDownloadData.Action_Type;
             LoadTask LoadUnloadTask = null;
+            bool isAGVSTask = !taskDownloadData.IsLocalTask;
             try
             {
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
@@ -106,7 +107,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 AlarmManager.ClearAlarm();
                 await Task.Delay(10);
-                if (AGV_Reset_Flag)
+                if (isAGVSTask && AGV_Reset_Flag)
                     return;
                 IsWaitForkNextSegmentTask = false;
                 ExecutingTaskEntity = CreateTaskBasedOnDownloadedData(taskDownloadData);
@@ -144,7 +145,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (DirectionLighter.IsWaitingTaskLightsFlashing)
                         await DirectionLighter.CloseAll();
 
-                    if (AGV_Reset_Flag)
+                    if (isAGVSTask && AGV_Reset_Flag)
                         return;
                     //LDULDRecord
                     IsLaserRecoveryHandled = false;
