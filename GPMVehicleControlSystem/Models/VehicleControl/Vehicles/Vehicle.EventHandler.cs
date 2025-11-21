@@ -571,7 +571,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             string sensorName = signalObj.Name;
 
             bool isTriggered = Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.A && input_status || Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.B && !input_status;
-            bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && _RunTaskData.Action_Type != ACTION_TYPE.Charge && AGVC.ActionStatus == ActionStatus.ACTIVE;
+            bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && AGVC.ActionStatus == ActionStatus.ACTIVE;
             bool isBackToSecondaryPtIng = _ExecutingTask != null && _ExecutingTask.IsBackToSecondaryPt;
             bool isNavigatingAndReachWorkStationTag = AGVC.IsRunning && BarcodeReader.Data.tagID == _RunTaskData?.Destination;
 

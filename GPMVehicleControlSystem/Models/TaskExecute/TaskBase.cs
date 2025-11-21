@@ -295,6 +295,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     BuzzerPlayMusic(action);
                     if (IsNeedHandshake)
                         await Agv.Handshake_AGV_BUSY_ON(isBackToHome: false);
+
+                    if (action != ACTION_TYPE.None && action != ACTION_TYPE.Discharge && Agv.IsFrontendSideHasObstacle)
+                    {
+                        if (Agv.FronentObsDetectedAlarmLevel == ALARM_LEVEL.WARNING)
+                            AlarmManager.AddWarning(Agv.FrontendSecondarSensorTriggerAlarmCode);
+                        else
+                        {
+                            return new List<AlarmCodes>() { Agv.FrontendSecondarSensorTriggerAlarmCode };
+                        }
+
+                    }
+
                     agvc_response = await TransferTaskToAGVC();
                     if (!agvc_response.Accept)
                     {
@@ -935,7 +947,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
             }
         }
-
 
         protected async virtual Task<(bool success, AlarmCodes alarmCode)> ExitPortRequest()
         {
