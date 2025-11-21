@@ -913,7 +913,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+                TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
             }
         }
 

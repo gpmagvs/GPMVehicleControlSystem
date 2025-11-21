@@ -264,7 +264,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 AGVSResetCmdFlag = true;
                 IsWaitForkNextSegmentTask = false;
 
-                bool isNoTaskRunning = AGVC.ActionStatus != ActionStatus.ACTIVE && (Main_Status == MAIN_STATUS.IDLE || Main_Status == MAIN_STATUS.DOWN);
+                bool isNoTaskRunning = TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE && AGVC.ActionStatus != ActionStatus.ACTIVE && (Main_Status == MAIN_STATUS.IDLE || Main_Status == MAIN_STATUS.DOWN);
                 try
                 {
                     if (isNoTaskRunning)
@@ -282,15 +282,21 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     else
                     {
                         if (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
+                        {
+                            logger.LogWarning($"收到派車取消任務請求但當前任務狀態為 Pending. 等待當前任務開始或結束後將發送 cycle stop 命令給車控系統");
                             while (TaskDispatchStatus == TASK_DISPATCH_STATUS.Pending)
                             {
                                 await Task.Delay(1);
                             }
+                        }
                         TaskCycleStopStatus = TASK_CANCEL_STATUS.EXECUTING_CYCLE_STOP_REQUEST;
                         bool result = await AGVC.ResetTask(mode);
 
                         if (TaskDispatchStatus == TASK_DISPATCH_STATUS.IDLE)
+                        {
+                            logger.LogWarning($"");
                             FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, IsTaskCancel: true);
+                        }
 
                         return result;
                     }
