@@ -2,6 +2,7 @@ using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.MAP;
@@ -151,7 +152,44 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return ls;
             }
         }
+        public virtual ALARM_LEVEL FronentObsDetectedAlarmLevel
+        {
+            get
+            {
+                bool _isForkFrontendObsInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+                if (_isForkFrontendObsInputDefined)
+                    return Parameters.SensorBypass.ForkFrontendObsSensorBypass ? ALARM_LEVEL.WARNING : ALARM_LEVEL.ALARM;
 
+                bool _isAGVHeadObjSensorDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.FrontProtection_Obstacle_Sensor);
+                if (_isAGVHeadObjSensorDefined)
+                {
+                    return Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
+                }
+                return ALARM_LEVEL.WARNING;
+            }
+        }
+        public virtual AlarmCodes FrontendSecondarSensorTriggerAlarmCode
+        {
+            get
+            {
+                bool _isForkFrontendObsInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+                if (_isForkFrontendObsInputDefined)
+                    return AlarmCodes.Fork_Frontend_has_Obstacle;
+
+                bool _isAGVHeadObjSensorDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.FrontProtection_Obstacle_Sensor);
+
+                if (_isAGVHeadObjSensorDefined)
+                {
+                    if (ExecutingTaskEntity?.action == ACTION_TYPE.Load)
+                        return AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
+                    else
+                        return AlarmCodes.EQP_UNLOAD_BUT_EQP_HAS_NO_CARGO;
+
+                }
+
+                return AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
+            }
+        }
         /// <summary>
         /// 手動/自動模式
         /// </summary>
@@ -190,7 +228,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         protected bool IsMotorReseting = false;
         public MapPoint lastVisitedMapPoint { get; private set; } = new MapPoint();
         public bool _IsCharging = false;
-        public virtual bool IsFrontendSideHasObstacle => !WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
+        public virtual bool IsFrontendSideHasObstacle
+        {
+            get
+            {
+                bool _isForkFrontendObsInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+                if (_isForkFrontendObsInputDefined)
+                {
+                    bool inputState = WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+                    return this.Parameters.ForkAGV.ObsSensorPointType == IO_CONEECTION_POINT_TYPE.A ? inputState : !inputState;
+                }
+                bool _isAGVHeadObjSensorDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.FrontProtection_Obstacle_Sensor);
+                if (_isAGVHeadObjSensorDefined)
+                    return !WagoDI.GetState(DI_ITEM.FrontProtection_Obstacle_Sensor);
+
+                return false;
+            }
+        }
         public MapPoint DestinationMapPoint
         {
             get

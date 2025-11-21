@@ -30,6 +30,7 @@ using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
+using AGVSystemCommonNet6.Notify;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {
@@ -134,24 +135,6 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         public MapPoint? lastPt => Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == RunningTaskData.Destination);
         public bool IsNeedHandshake = false;
         protected Task? forkGoHomeTask = null;
-        protected AlarmCodes FrontendSecondarSensorTriggerAlarmCode
-        {
-            get
-            {
-                if (Agv.Parameters.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
-                {
-                    if (action == ACTION_TYPE.Load)
-                        return AlarmCodes.EQP_LOAD_BUT_EQP_HAS_OBSTACLE;
-                    else
-                        return AlarmCodes.EQP_UNLOAD_BUT_EQP_HAS_NO_CARGO;
-                }
-                else
-                {
-                    return AlarmCodes.Fork_Frontend_has_Obstacle;
-                }
-
-            }
-        }
 
         public TaskBase()
         {
@@ -342,21 +325,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         }
                         else if (Agv.AGVC.IsRunning)
                         {
-                            if (action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload)
-                            {
-                                #region 前方障礙物預檢
-                                var _triggerLevelOfOBSDetected = Agv.Parameters.LOAD_OBS_DETECTION.AlarmLevelWhenTrigger;
-                                bool isNoObstacle = StartFrontendObstcleDetection(_triggerLevelOfOBSDetected, out bool forceAlarm);
-                                if (!isNoObstacle)
-                                    if (forceAlarm || _triggerLevelOfOBSDetected == ALARM_LEVEL.ALARM)
-                                        return new List<AlarmCodes> { FrontendSecondarSensorTriggerAlarmCode };
-                                    else
-                                        AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
-                                #endregion
-                            }
                             AGVCActionStatusChaged += HandleAGVActionChanged;
                             StartCargoStatusWatchProcessAsync();
-
                             await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.NEW_TASK_START_EXECUTING);
                         }
                         await WaitTaskDoneAsync();
@@ -869,9 +839,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         protected virtual bool StartFrontendObstcleDetection(ALARM_LEVEL alarmLevel, out bool isForkFrontendObsforceAlarm)
         {
             bool _isForkFrontendObsInputDefined = Agv.WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Frontend_Abstacle_Sensor);
+            bool _isAGVHeadObjSensorDefined = Agv.WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.FrontProtection_Obstacle_Sensor);
 
             isForkFrontendObsforceAlarm = false;
-            if (_isForkFrontendObsInputDefined && !Agv.Parameters.SensorBypass.ForkFrontendObsSensorBypass && !Agv.WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor))
+            if (_isForkFrontendObsInputDefined && alarmLevel != ALARM_LEVEL.WARNING && Agv.IsFrontendSideHasObstacle)
             {
                 isForkFrontendObsforceAlarm = true;
                 logger.Error($"牙叉前方障礙物預檢知觸發");
@@ -879,7 +850,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
 
             var options = Agv.Parameters.LOAD_OBS_DETECTION;
-            bool Enable = action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad;
+            bool Enable = _isAGVHeadObjSensorDefined ? (action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad) : true;
             if (!Enable)
                 return true;
             if (Agv.IsFrontendSideHasObstacle)
@@ -887,17 +858,68 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 logger.Error($"前方障礙物預檢知觸發[等級={alarmLevel}]");
                 return false;
             }
-            if (options.Detection_Method == FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION)
+            if (_isAGVHeadObjSensorDefined && options.Detection_Method == FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION)
             {
                 logger.Info($"前方障礙物預檢知Sensor Pass , No Obstacle");
                 return true;
             }
             int DetectionTime = options.Duration;
             logger.Warn($"前方障礙物預檢知偵側開始[{options.Detection_Method}]==> 偵測持續時間={DetectionTime} 秒)");
-            CancellationTokenSource cancelDetectCTS = new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime));
+            CancellationTokenSource cancelDetectCTS = _isAGVHeadObjSensorDefined ? new CancellationTokenSource(TimeSpan.FromSeconds(DetectionTime)) : new CancellationTokenSource();
             Stopwatch stopwatch = Stopwatch.StartNew();
             bool detected = false;
 
+            Agv.BarcodeReader.OnAGVReachingTag += BarcodeReader_OnAGVReachingTag;
+            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
+
+            Task.Run(async () =>
+            {
+                while (!cancelDetectCTS.IsCancellationRequested)
+                {
+                    if (Agv.GetSub_Status() != SUB_STATUS.RUN)
+                    {
+                        Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
+                        Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+                        break;
+                    }
+                    await Task.Delay(1);
+                }
+
+                if (!detected)
+                {
+                    logger.Info($"前方障礙物預檢知Sensor Pass , No Obstacle");
+                }
+                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
+                Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+            });
+            void EMO_STOP_AGV()
+            {
+                try
+                {
+                    Agv.AGVC.EmergencyStop();
+                    Agv.ExecutingTaskEntity.Abort();
+                    Agv.SetSub_Status(SUB_STATUS.DOWN);
+                    AlarmManager.AddAlarm(Agv.FrontendSecondarSensorTriggerAlarmCode, false);
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+            }
+            return true;
+
+
+
+            void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+            {
+                Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
+                bool isReachWorkStation = Agv.BarcodeReader.CurrentTag == this.RunningTaskData.Destination;
+                if (isReachWorkStation)
+                {
+                    Agv.LogDebugMessage($"已抵達工作站點 Tag {this.RunningTaskData.Destination}，結束前方障礙物偵測(Sensor)", true);
+                    cancelDetectCTS.Cancel();
+                }
+            }
             void FrontendObsSensorDetectAction(object sender, EventArgs e)
             {
                 detected = true;
@@ -909,39 +931,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     if (alarmLevel == ALARM_LEVEL.ALARM)
                         EMO_STOP_AGV();
                     else
-                        AlarmManager.AddWarning(FrontendSecondarSensorTriggerAlarmCode);
+                        AlarmManager.AddWarning(Agv.FrontendSecondarSensorTriggerAlarmCode);
                 }
             }
-            Agv.WagoDI.OnFrontSecondObstacleSensorDetected += FrontendObsSensorDetectAction;
-
-            Task.Run(async () =>
-            {
-                while (!cancelDetectCTS.IsCancellationRequested)
-                {
-                    await Task.Delay(1);
-                }
-                if (!detected)
-                {
-                    logger.Info($"前方障礙物預檢知Sensor Pass , No Obstacle");
-                }
-                Agv.WagoDI.OnFrontSecondObstacleSensorDetected -= FrontendObsSensorDetectAction;
-            });
-            void EMO_STOP_AGV()
-            {
-                try
-                {
-                    Agv.AGVC.EmergencyStop();
-                    Agv.ExecutingTaskEntity.Abort();
-                    Agv.SetSub_Status(SUB_STATUS.DOWN);
-                    AlarmManager.AddAlarm(FrontendSecondarSensorTriggerAlarmCode, false);
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }
-            return true;
         }
+
 
         protected async virtual Task<(bool success, AlarmCodes alarmCode)> ExitPortRequest()
         {

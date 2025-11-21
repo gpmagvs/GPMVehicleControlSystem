@@ -587,7 +587,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (isBackToSecondaryPtIng)
                     _logMsg = $"AGV從工位退出中，忽略牙叉前端障礙物檢知Sensor觸發事件({sensorName})";
 
-                SendNotifyierToFrontend(_logMsg);
+                LogDebugMessage(_logMsg, true);
                 logger.LogInformation(_logMsg);
                 return;
             }

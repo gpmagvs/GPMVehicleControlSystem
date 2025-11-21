@@ -61,7 +61,7 @@ namespace GPMVehicleControlSystem.Service
 
 
                     //要先提高權限 _temp資料夾
-                    Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                    Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
                     //2 unzip to current folder
                     Tools.LinuxTools.RunShellCommand($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"", out _, out _);
 
@@ -148,9 +148,9 @@ namespace GPMVehicleControlSystem.Service
                 Console.WriteLine($"Create temp folder : {zipFileTempFolder} done");
 
 
-                Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
                 Tools.LinuxTools.RunShellCommand($"unzip \"{zipPath}\" -d \"{zipFileTempFolder}\"", out _, out _);
-                Tools.LinuxTools.RunShellCommand($"sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
 
 
                 string scriptFile = Path.Combine(currentDirectory, "update.sh");
