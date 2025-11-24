@@ -467,48 +467,75 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         internal async Task<(bool eqready_off, AlarmCodes alarmCode)> WaitEQReadyOFF(ACTION_TYPE action)
         {
-            StopE84EQGOSignal();
-
-            if (Parameters.LDULD_Task_No_Entry)
-                return (true, AlarmCodes.None);
-            EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
-            AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Timeout_TA5_EQ_L_REQ_Not_OFF : AlarmCodes.Handshake_Timeout_TA5_EQ_U_REQ_Not_OFF;
-            await SetAGVBUSY(false, false);
-            await Task.Delay(200);
-            await SetAGV_COMPT(true);
-
             try
             {
+                StopE84EQGOSignal();
 
-                bool isAGVComptSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_COMPT); }
-                bool isAGVValidSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_VALID); }
+                if (Parameters.LDULD_Task_No_Entry)
+                    return (true, AlarmCodes.None);
+                waitAGVCOMPTReportedResetEvent.Reset();
 
-                (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, _TimeoutAlarmCode);
-                if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
-                    return _result;
-
-                _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF);
-                if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
-                    return _result;
-
-                await SetAGV_COMPT(false);
-                await SetAGV_TR_REQ(false);
-                await SetAGVVALID(false);
-                HandShakeLogger.Info("EQ READY OFF=>Handshake Done");
-                _ = Task.Run(async () =>
+                bool isExecuteAfterActionFinishReported = Parameters.LDULDParams.IsActionFinishReportBeforeCOMPTSignalON;
+                if (isExecuteAfterActionFinishReported)
                 {
-                    HandshakeStatusText = "Finish!";
-                    await Task.Delay(1000);
-                    HandshakeStatusText = "";
-                });
+                    _isWaitingActionFinishReportedInDelayAGVCCOMPTOnProcessing = true;
+                    waitActionFinishReportedResetEvent.Reset();
+                    _isWaitingActionFinishReportedInDelayAGVCCOMPTOnProcessing = false;
+                    logger.LogInformation($"AGV COMPT ON 時機已設置為 'ACTION FINISH' 上報後執行，等待 ACTION FINISH 上報完成中... ");
+                    bool inTime = waitActionFinishReportedResetEvent.WaitOne(TimeSpan.FromSeconds(10));
+                    if (!inTime)
+                        logger.LogWarning($" (AGV COMPT ON 延遲執行流程)等待 ACTION FINISH Reported 超時");
+                    else
+                        logger.LogInformation($" (AGV COMPT ON 延遲執行流程) ACTION FINISH 上報完成，繼續執行 AGV COMPT ON 流程");
+
+                }
+                EQ_HSSIGNAL _LU_SIGNAL = action == ACTION_TYPE.Load ? EQ_HSSIGNAL.EQ_L_REQ : EQ_HSSIGNAL.EQ_U_REQ;
+                AlarmCodes _TimeoutAlarmCode = _LU_SIGNAL == EQ_HSSIGNAL.EQ_L_REQ ? AlarmCodes.Handshake_Timeout_TA5_EQ_L_REQ_Not_OFF : AlarmCodes.Handshake_Timeout_TA5_EQ_U_REQ_Not_OFF;
+                await SetAGVBUSY(false, false);
+                await Task.Delay(200);
+                await SetAGV_COMPT(true);
+
+                try
+                {
+
+                    bool isAGVComptSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_COMPT); }
+                    bool isAGVValidSignalOnNow() { return WagoDO.GetState(DO_ITEM.AGV_VALID); }
+
+                    (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, _TimeoutAlarmCode);
+                    if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
+                        return _result;
+
+                    _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.OFF, HANDSHAKE_EQ_TIMEOUT.TA5_Wait_L_U_REQ_OFF, AlarmCodes.Handshake_Timeout_TA5_EQ_READY_Not_OFF);
+                    if (!isAGVComptSignalOnNow() && isAGVValidSignalOnNow() && !_result.success)
+                        return _result;
+
+                    await SetAGV_COMPT(false);
+                    await SetAGV_TR_REQ(false);
+                    await SetAGVVALID(false);
+                    HandShakeLogger.Info("EQ READY OFF=>Handshake Done");
+                    _ = Task.Run(async () =>
+                    {
+                        HandshakeStatusText = "Finish!";
+                        await Task.Delay(1000);
+                        HandshakeStatusText = "";
+                    });
+                }
+                catch (Exception ex)
+                {
+                    HandShakeLogger.Error(ex, "WaitEQReadyOFF Exception");
+                    return (false, AlarmCodes.Handshake_Fail);
+                }
+                return (true, AlarmCodes.None);
+
             }
             catch (Exception ex)
             {
-                HandShakeLogger.Error(ex, "WaitEQReadyOFF Exception");
-                return (false, AlarmCodes.Handshake_Fail);
+                return (false, AlarmCodes.Code_Error_In_System);
             }
-            return (true, AlarmCodes.None);
-
+            finally
+            {
+                waitAGVCOMPTReportedResetEvent.Set();
+            }
 
         }
 
@@ -530,6 +557,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             bool isAGVComptSignalOnNow = WagoDO.GetState(DO_ITEM.AGV_COMPT);
             bool isAGVValidSignalOnNow = WagoDO.GetState(DO_ITEM.AGV_VALID);
+
+            if (_isWaitingActionFinishReportedInDelayAGVCCOMPTOnProcessing)
+            {
+                HandShakeLogger.Info($"EQ GO 訊號 OFF但目前交握流程為 '延遲 AGV COMPT ON-先等待 ACTION FINISH 上報' ");
+                return;
+            }
             if (isAGVComptSignalOnNow)
             {
                 HandShakeLogger.Info($"EQ GO OFF when AGV COMPT ON => Task continue, NO ABORT");

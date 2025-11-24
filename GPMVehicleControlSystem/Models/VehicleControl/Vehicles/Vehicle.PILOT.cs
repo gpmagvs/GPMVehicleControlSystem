@@ -24,6 +24,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool AutoOnlineRaising = false;
         internal clsParkingAccuracy lastParkingAccuracy;
         private bool _IsCargoBiasDetecting = false;
+        ManualResetEvent waitActionFinishReportedResetEvent = new ManualResetEvent(false);
+        ManualResetEvent waitAGVCOMPTReportedResetEvent = new ManualResetEvent(false);
+        bool _isWaitingActionFinishReportedInDelayAGVCCOMPTOnProcessing = false;
+
         internal bool IsCargoBiasDetecting
         {
             get => _IsCargoBiasDetecting;
@@ -90,6 +94,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            bool inTime = waitAGVCOMPTReportedResetEvent.WaitOne(TimeSpan.FromSeconds(5));
+            if (!inTime)
+                logger.LogWarning("準備執行任務但等待 AGV COMPT 交握完成 timeout (5 sec)");
+
             ACTION_TYPE action = taskDownloadData.Action_Type;
             LoadTask LoadUnloadTask = null;
             bool isAGVSTask = !taskDownloadData.IsLocalTask;
@@ -231,6 +239,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGVC.OnAGVCActionChanged = null;
                     LogDebugMessage("Action Finish Report To AGVS Process Start!");
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
+                    waitActionFinishReportedResetEvent.Set();
+
                     if (BarcodeReader.CurrentTag != 0 && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal &&
                         (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
