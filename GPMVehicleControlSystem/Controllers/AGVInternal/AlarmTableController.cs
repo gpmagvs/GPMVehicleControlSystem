@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
 {
@@ -39,11 +40,27 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             AlarmManager.RemoveOldAlarmFromDB(timeEarlyTo);
         }
-
+        [HttpGet("GetDefaultAlarmCodeTable")]
+        public async Task<List<clsAlarmCode>> GetDefaultAlarmCodeTable()
+        {
+            string defaultAlarmCodeTableFilePath = Path.Combine(Environment.CurrentDirectory, "src", "AlarmList.json");
+            var AlarmList = JsonConvert.DeserializeObject<List<clsAlarmCode>>(System.IO.File.ReadAllText(defaultAlarmCodeTableFilePath));
+            return AlarmList;
+        }
         [HttpGet("GetAlarmCodesTable")]
         public async Task<List<clsAlarmCode>> GetAlarmCodesTable()
         {
             return AlarmManager.AlarmList.OrderBy(al => al.Code).ToList();
+        }
+
+        [HttpPost("SaveAlarmCodesTable")]
+        public async Task<IActionResult> SaveAlarmCodesTable([FromBody] List<clsAlarmCode> alarmCodesTable)
+        {
+            AlarmManager.UpdateAlarmCodesTable(alarmCodesTable);
+            return Ok(new
+            {
+                success = true
+            });
         }
     }
 }
