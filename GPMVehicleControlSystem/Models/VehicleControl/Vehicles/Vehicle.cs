@@ -913,7 +913,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             finally
             {
-
+                TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+                TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
             }
         }
 
@@ -1495,12 +1496,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="mode"></param>
         /// <returns></returns>
-        internal async Task<bool> Auto_Mode_Siwtch(OPERATOR_MODE mode)
+        internal async Task<(bool success, bool isNavMotorSwitchStateError, bool isVertialMotorSwitchStateError)> Auto_Mode_Siwtch(OPERATOR_MODE mode)
         {
-            Operation_Mode = mode;
-            logger.LogTrace($"手/自動模式已切換為:{mode}");
+            bool isNavMotorSwitchStateError = false;
+            bool isVertialMotorSwitchStateError = false;
             if (mode == OPERATOR_MODE.AUTO)
             {
+                CheckSwitchesStates(out isNavMotorSwitchStateError, out isVertialMotorSwitchStateError);
+
+                if (isNavMotorSwitchStateError || isVertialMotorSwitchStateError)
+                    return (false, isNavMotorSwitchStateError, isVertialMotorSwitchStateError);
+
                 await Laser.FrontBackLasersEnable(true, true);
                 await Laser.SideLasersEnable(false);
 
@@ -1515,7 +1521,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 await Laser.AllLaserDisable();
             }
-            return true;
+
+            Operation_Mode = mode;
+            logger.LogTrace($"手/自動模式已切換為:{mode}");
+            return (true, true, true);
         }
         internal async Task QueryVirtualID(VIRTUAL_ID_QUERY_TYPE QueryType, CST_TYPE CstType)
         {

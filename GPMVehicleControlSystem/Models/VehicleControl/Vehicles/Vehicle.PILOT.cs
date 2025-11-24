@@ -24,6 +24,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool AutoOnlineRaising = false;
         internal clsParkingAccuracy lastParkingAccuracy;
         private bool _IsCargoBiasDetecting = false;
+        ManualResetEvent waitActionFinishReportedResetEvent = new ManualResetEvent(false);
+        ManualResetEvent waitAGVCOMPTReportedResetEvent = new ManualResetEvent(true);
+        bool _isWaitingActionFinishReportedInDelayAGVCCOMPTOnProcessing = false;
+
         internal bool IsCargoBiasDetecting
         {
             get => _IsCargoBiasDetecting;
@@ -81,8 +85,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             EXECUTING_CYCLE_STOP_REQUEST,
             FINISH_CYCLE_STOP_REQUEST,
         }
-        public TASK_DISPATCH_STATUS TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
-        public TASK_CANCEL_STATUS TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
+
+        private TASK_DISPATCH_STATUS _TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
+        private TASK_CANCEL_STATUS _TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
+
+        public TASK_DISPATCH_STATUS TaskDispatchStatus
+        {
+            get => _TaskDispatchStatus;
+            set
+            {
+                if (_TaskDispatchStatus != value)
+                {
+                    logger.LogInformation($"TaskDispatchStatus changed. From {_TaskDispatchStatus} to {value}");
+                    _TaskDispatchStatus = value;
+                }
+            }
+        }
+        public TASK_CANCEL_STATUS TaskCycleStopStatus
+        {
+            get => _TaskCycleStopStatus;
+            set
+            {
+                if (_TaskCycleStopStatus != value)
+                {
+                    logger.LogInformation($"TaskCycleStopStatus changed. From {_TaskCycleStopStatus} to {value}");
+                    _TaskCycleStopStatus = value;
+                }
+            }
+        }
         /// <summary>
         /// 執行派車系統任務
         /// </summary>
@@ -90,8 +120,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            LogTaskAndCancleStatus("ExecuteAGVSTask");
+            Stopwatch sw = Stopwatch.StartNew();
+            bool inTime = waitAGVCOMPTReportedResetEvent.WaitOne(TimeSpan.FromSeconds(5));
+            if (!inTime)
+                logger.LogWarning("準備執行任務但等待 AGV COMPT 交握完成 timeout (5 sec)");
+            sw.Stop();
+
+            logger.LogInformation($"Wait waitAGVCOMPTReportedResetEvent when ExecuteAGVSTask TIME SPEND: {sw.Elapsed.TotalSeconds} sec");
+
             ACTION_TYPE action = taskDownloadData.Action_Type;
             LoadTask LoadUnloadTask = null;
+            bool isAGVSTask = !taskDownloadData.IsLocalTask;
             try
             {
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
@@ -106,7 +146,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 AlarmManager.ClearAlarm();
                 await Task.Delay(10);
-                if (AGV_Reset_Flag)
+                if (isAGVSTask && AGV_Reset_Flag)
                     return;
                 IsWaitForkNextSegmentTask = false;
                 ExecutingTaskEntity = CreateTaskBasedOnDownloadedData(taskDownloadData);
@@ -144,7 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (DirectionLighter.IsWaitingTaskLightsFlashing)
                         await DirectionLighter.CloseAll();
 
-                    if (AGV_Reset_Flag)
+                    if (isAGVSTask && AGV_Reset_Flag)
                         return;
                     //LDULDRecord
                     IsLaserRecoveryHandled = false;
@@ -230,6 +270,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     AGVC.OnAGVCActionChanged = null;
                     LogDebugMessage("Action Finish Report To AGVS Process Start!");
                     await FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_FINISH, alarms_tracking: IsAlarmHappedWhenTaskExecuting ? _current_alarm_codes?.ToList() : null);
+                    waitActionFinishReportedResetEvent.Set();
+
                     if (BarcodeReader.CurrentTag != 0 && lastVisitedMapPoint.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Normal &&
                         (IsHandShakeFailByEQPIOStatusErrorBeforeAGVBusy || IsAutoInitWhenExecuteMoveAction) && !_RunTaskData.IsLocalTask)
                     {
@@ -250,6 +292,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 finally
                 {
+                    TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                     TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
                 }
 
@@ -447,7 +490,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             });
         }
-
+        private void LogTaskAndCancleStatus(string moment)
+        {
+            logger.LogInformation($"[{moment}] Current Status of _TaskDispatchStatus and _TaskCycleStopStatus= {_TaskDispatchStatus}/{_TaskCycleStopStatus}");
+        }
         internal void TryControlAutoDoor(int newVisitedNodeTag)
         {
             if (ExecutingTaskEntity == null)

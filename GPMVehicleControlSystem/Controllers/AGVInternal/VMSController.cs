@@ -96,8 +96,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("AutoMode")]
         public async Task<IActionResult> AutoModeSwitch(OPERATOR_MODE mode)
         {
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
             if (mode == OPERATOR_MODE.MANUAL && agv.GetSub_Status() == SUB_STATUS.RUN)
             {
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return Ok(new
                 {
                     Success = false,
@@ -106,6 +108,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             if (mode == OPERATOR_MODE.MANUAL && agv.Remote_Mode == REMOTE_MODE.ONLINE)
             {
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return Ok(new
                 {
                     Success = false,
@@ -113,11 +116,23 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 });
             }
             logger.LogTrace($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
-            bool confirm = await agv.Auto_Mode_Siwtch(mode);
+            (bool success, bool isNavMotorSwitchStateError, bool isVertialMotorSwitchStateError) = await agv.Auto_Mode_Siwtch(mode);
+            string errorMsg = "";
+            if (isNavMotorSwitchStateError)
+                errorMsg += "走行馬達解煞車旋鈕異常;";
+
+            if (isVertialMotorSwitchStateError)
+                errorMsg += "Z軸馬達解煞車旋鈕異常";
+
+            if (!success)
+            {
+                BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
+            }
+
             return Ok(new
             {
-                Success = confirm,
-                Message = ""
+                Success = success,
+                Message = errorMsg
             });
         }
 
@@ -126,6 +141,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
+                BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
+
                 logger.LogTrace($"車載用戶請求AGV {mode}");
                 (bool success, RETURN_CODE return_code) result = await agv.Online_Mode_Switch(mode);
                 string _message = "";
@@ -144,8 +161,15 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     _message = "AGV尚未完成初始化時不可上線";
                 else if (result.return_code == RETURN_CODE.AGV_HasIDBut_No_Cargo)
                     _message = "有帳無料!請先進行'移除卡匣'";
+                else if (result.return_code == RETURN_CODE.Horizon_Motor_Switch_State_Error)
+                    _message = "走行馬達解煞車旋鈕異常";
+                else if (result.return_code == RETURN_CODE.Vertical_Motor_Switch_State_Error)
+                    _message = "Z軸馬達解煞車旋鈕異常";
                 else
                     _message = result.return_code.ToString();
+                if (!result.success)
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
+
                 return Ok(new
                 {
                     Success = result.success,

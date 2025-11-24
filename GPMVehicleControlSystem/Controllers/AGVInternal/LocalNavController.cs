@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
         [HttpGet("Action")]
-        public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "")
+        public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "", int slot = 0)
         {
 
             //重新下載圖資
@@ -137,9 +137,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 SourceName = fromStationFound?.Graph.Display,
                 DestineName = toStationFound?.Graph.Display,
                 SourceTag = fromStationFound.TagNumber,
-                DestineTag = toStationFound.TagNumber
+                DestineTag = toStationFound.TagNumber,
+                DestineSlot = slot
             };
-            clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag);
+            clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag, slot);
 
             bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 || pt.Y > 100));
             if (isPointCoordinationNotDefined)
@@ -152,7 +153,24 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             }
             //LOG.INFO($"Local Task Dispath, Task Link Count: {taskLinkList.Length},({string.Join("->", taskLinkList.Select(act => act.Action_Type))})");
             if (agv.Operation_Mode != clsEnums.OPERATOR_MODE.AUTO)
-                await agv.Auto_Mode_Siwtch(clsEnums.OPERATOR_MODE.AUTO);
+            {
+                (bool success, bool isNavMotorSwitchStateError, bool isVertialMotorSwitchStateError) = await agv.Auto_Mode_Siwtch(clsEnums.OPERATOR_MODE.AUTO);
+                if (!success)
+                {
+                    string errorMsg = "";
+                    if (isNavMotorSwitchStateError)
+                        errorMsg += "走行馬達解煞車旋鈕異常;";
+
+                    if (isVertialMotorSwitchStateError)
+                        errorMsg += "Z軸馬達解煞車旋鈕異常";
+
+                    return Ok(new TaskActionResult
+                    {
+                        accpet = false,
+                        error_message = $"Auto Mode 切換失敗-{errorMsg}"
+                    });
+                }
+            }
 
             if (taskLinkList.Length >= 1)
             {
@@ -304,7 +322,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             return actionData;
         }
 
-        private clsTaskDownloadData[] CreateActionLinksTaskJobs(Map mapData, ACTION_TYPE actionType, int fromTag, int toTag)
+        private clsTaskDownloadData[] CreateActionLinksTaskJobs(Map mapData, ACTION_TYPE actionType, int fromTag, int toTag, int toSlot)
         {
             string Task_Name = $"UI_{DateTime.Now.ToString("yyyyMMddHHmmssff")}";
             int seq = 1;
@@ -331,6 +349,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
                     Station_Type = secondaryLocStation_of_chargeStateion.StationType,
+                    Height = toSlot,
                     Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion }),
                 };
                 taskList.Add(homing_move_task);

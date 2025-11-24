@@ -133,7 +133,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
 
             if (mode == REMOTE_MODE.ONLINE)
+            {
+                CheckSwitchesStates(out bool isNavMotorSwitchStateError, out bool isVertialMotorSwitchStateError);
+                if (isNavMotorSwitchStateError)
+                    return (false, RETURN_CODE.Horizon_Motor_Switch_State_Error);
+                if (isVertialMotorSwitchStateError)
+                    return (false, RETURN_CODE.Vertical_Motor_Switch_State_Error);
+
                 await Auto_Mode_Siwtch(OPERATOR_MODE.AUTO);
+            }
 
             var _oriMode = Remote_Mode;
             (bool success, RETURN_CODE return_code) result = await AGVS.TrySendOnlineModeChangeRequest(currentTag, mode);
@@ -162,6 +170,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
 
             return result;
+        }
+
+        private void CheckSwitchesStates(out bool isNavMotorSwitchStateError, out bool isVertialMotorSwitchStateError)
+        {
+            isNavMotorSwitchStateError = isVertialMotorSwitchStateError = false;
+
+            var horizonMotorDIState = WagoDI.VCSInputs.FirstOrDefault(di => di.Input == DI_ITEM.Horizon_Motor_Switch);
+            var verticalMotorDIState = WagoDI.VCSInputs.FirstOrDefault(di => di.Input == DI_ITEM.Vertical_Motor_Switch);
+
+            isNavMotorSwitchStateError = horizonMotorDIState != null && !horizonMotorDIState.State;
+            isVertialMotorSwitchStateError = verticalMotorDIState != null && !verticalMotorDIState.State;
         }
 
     }

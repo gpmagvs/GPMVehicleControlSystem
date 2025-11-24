@@ -875,12 +875,18 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 asyncCSTReadCancellationTokenSource.Cancel();
                 isForkReachStandyHeight = true;
 
-                var HSResult = await AGVCOMPTHandshake(statusDownWhenErr: false);
-                if (!HSResult.confirm)
+
+                if (!Agv.Parameters.LDULDParams.IsActionFinishReportBeforeCOMPTSignalON)
                 {
-                    logger.Warn($"設備外交握失敗(Alarm Code={HSResult.alarmCode})，新增異常但流程可繼續");
-                    AlarmManager.AddAlarm(HSResult.alarmCode, true);
-                    await Agv.ResetHandshakeSignals();
+                    // 前景執行：需要等待
+                    var result = await AGVCOMPTHandshake(statusDownWhenErr: false);
+                    await HandleHandshakeResult(result);
+                }
+                else
+                {
+                    // 背景執行：不需等待
+                    logger.Warn("設備外交握啟動(背景執行)...");
+                    _ = RunAGVCOMPTHandshakeAsync();
                 }
 
                 (bool success, AlarmCodes alarmCode) CstBarcodeCheckResult = AsyncCSTReadSuccess ? (true, AlarmCodes.None) : CSTBarcodeReadAfterAction(new CancellationToken()).Result;
@@ -950,6 +956,24 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                 return IsNeedHandshake ? AlarmCodes.Handshake_Fail_AGV_DOWN : _task_abort_alarmcode;
             }
+        }
+        private async Task HandleHandshakeResult((bool confirm, AlarmCodes alarmCode) result)
+        {
+            if (!result.confirm)
+            {
+                logger.Warn($"設備外交握失敗(Alarm Code={result.alarmCode})，新增異常但流程可繼續");
+                AlarmManager.AddAlarm(result.alarmCode, true);
+                await Agv.ResetHandshakeSignals();
+            }
+        }
+
+        private Task RunAGVCOMPTHandshakeAsync()
+        {
+            return Task.Run(async () =>
+            {
+                var result = await AGVCOMPTHandshake(statusDownWhenErr: false);
+                await HandleHandshakeResult(result);
+            });
         }
 
         private void RecordParkLoction()

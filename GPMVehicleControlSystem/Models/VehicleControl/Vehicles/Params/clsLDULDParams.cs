@@ -27,5 +27,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 取貨時是否要檢查貨物 [類型](Tray or Rack match assigned type from AGVS)
         /// </summary>
         public bool CheckCargoTypeMatchWhenUnload { get; set; } = false;
+
+        /// <summary>
+        /// 取放貨AGV COMPT 訊號 ON之前是否要先向AGVS上報動作完成。
+        /// </summary>
+        public bool IsActionFinishReportBeforeCOMPTSignalON { get; set; } = false;
     }
 }
