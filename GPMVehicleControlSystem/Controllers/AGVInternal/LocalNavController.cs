@@ -29,7 +29,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
 
         [HttpGet("Action")]
-        public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "", int slot = 0)
+        public async Task<IActionResult> Action(ACTION_TYPE action, string? from, string? to = "", string? cst_id = "", int floor = 0)
         {
 
             //重新下載圖資
@@ -138,9 +138,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 DestineName = toStationFound?.Graph.Display,
                 SourceTag = fromStationFound.TagNumber,
                 DestineTag = toStationFound.TagNumber,
-                DestineSlot = slot
+                DestineSlot = floor
             };
-            clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag, slot);
+            clsTaskDownloadData[]? taskLinkList = CreateActionLinksTaskJobs(agv.NavingMap, action, fromtag, totag, floor);
 
             bool isPointCoordinationNotDefined = taskLinkList.Any(task => task.ExecutingTrajecory.Any(pt => pt.X > 100 || pt.Y > 100));
             if (isPointCoordinationNotDefined)
@@ -349,7 +349,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Action_Type = ACTION_TYPE.Discharge,
                     Destination = secondaryLocStation_of_chargeStateion.TagNumber,
                     Station_Type = secondaryLocStation_of_chargeStateion.StationType,
-                    Height = toSlot,
                     Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { currentStation, secondaryLocStation_of_chargeStateion }),
                 };
                 taskList.Add(homing_move_task);
@@ -378,6 +377,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 Destination = normal_move_final_tag,
                 Station_Type = STATION_TYPE.Normal,
                 Trajectory = PathFinder.GetTrajectory(mapData.Name, planPath.stations),
+                Height = toSlot,
             };
 
             if (actionType != ACTION_TYPE.None)
@@ -400,6 +400,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                     Destination = destineStation.TagNumber,
                     Station_Type = destineStation.StationType,
                     Homing_Trajectory = PathFinder.GetTrajectory(mapData.Name, new List<MapPoint> { secondaryLocStation, destineStation }),
+                    Height = toSlot,
                 };
                 taskList.Add(homing_move_task);
             }

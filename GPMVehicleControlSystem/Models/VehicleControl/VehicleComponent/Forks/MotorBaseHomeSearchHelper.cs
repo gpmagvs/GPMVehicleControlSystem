@@ -86,6 +86,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             {
                 SEARCH_STATUS _searchStatus = SEARCH_STATUS.DETERMINE_SEARCH_DIRECTION;
                 StartUpdateInitTextProcess(token);
+                await ResetMotor();
                 while (!_isInitializeDone)
                 {
                     if (!bypassSubStatusCheck && vehicle.GetSub_Status() == SUB_STATUS.DOWN)
@@ -317,7 +318,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 await DOModule.SetState(DO_ITEM.Fork_Under_Pressing_SensorBypass, false);
             });
         }
-
+        protected abstract Task<bool> ResetMotor();
         protected abstract Task<(bool confirm, string message)> UpSearchAsync(double speed = 0.1);
         protected abstract Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1);
         protected abstract Task<(bool confirm, string message)> StopAsync();

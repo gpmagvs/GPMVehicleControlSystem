@@ -42,6 +42,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         protected override bool IsUnderPressingSensorOn => vehicle.WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Fork_Under_Pressing_Sensor) && !vehicle.WagoDI.GetState(DI_ITEM.Fork_Under_Pressing_Sensor);
 
+        protected override async Task<bool> ResetMotor()
+        {
+            return false;
+        }
+
         protected override async Task<(bool confirm, string message)> DownSearchAsync(double speed = 0.1)
         {
             return await AGVC.HorizonActionService.DownSearch(speed);

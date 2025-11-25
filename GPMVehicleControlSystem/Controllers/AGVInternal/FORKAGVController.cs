@@ -42,7 +42,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 ForkAGV forkAGV = (ForkAGV)agv;
                 (bool done, AlarmCodes alarm_code) result = (false, AlarmCodes.None);
                 if (name == "Vertical")
-                    result = await forkAGV.ForkLifter.VerticalForkInitialize();
+                    result = await forkAGV.ForkLifter.VerticalForkInitialize(bypassStatusCheck: true);
 
                 if (name == "Horizon")
                 {
