@@ -76,13 +76,13 @@ if ($existingItems.Count -eq 0) {
 }
 
 # 建立壓縮檔名與路徑
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$timestamp = Get-Date -Format "yyMMdd_HHmmss"
 
 if ($includeswwwrootBool){
-    $zipFileName = "車載更新_www_"+$timestamp+"_v$version.zip"
+    $zipFileName = "車載系統更新_"+"v$version"+"_"+$timestamp+".zip"
 }
 else{
-    $zipFileName = "車載更新_"+$timestamp+"_v$version.zip"
+    $zipFileName = "車載系統更新_patches_"+"v$version"+"_"+$timestamp+".zip"
 }
 
 $zipFilePath = Join-Path -Path $outputPath -ChildPath $zipFileName

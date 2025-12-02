@@ -898,7 +898,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _vehicleDirectionChangedDebouncer.Debounce(() =>
             {
                 if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
-                    Laser.LaserChangeByAGVDirection(sender, direction);
+                    Laser.LaserChangeByAGVDirection(Navigation.LastVisitedTag, direction);
                 DirectionLighter.LightSwitchByAGVDirection(sender, direction);
             }, _debunceDelay);
         }

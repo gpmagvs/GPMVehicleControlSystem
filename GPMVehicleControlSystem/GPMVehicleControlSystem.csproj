@@ -6,8 +6,8 @@
 
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.4.16</AssemblyVersion>
-		<FileVersion>3.4.16</FileVersion>
+		<AssemblyVersion>3.4.17</AssemblyVersion>
+		<FileVersion>3.4.17</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -118,9 +118,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="create_update_file_zip.bat">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="create_update_file_zip_with_wwwroot.bat">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="restart_agvc.sh">

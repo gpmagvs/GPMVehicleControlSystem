@@ -55,15 +55,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             { clsNavigation.AGV_DIRECTION.RIGHT,AMC_LASER_MODE.Turning6 },
             { clsNavigation.AGV_DIRECTION.BACKWARD_OBSTACLE,AMC_LASER_MODE.ObstacleGoBack },
         };
-        internal override async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
+        internal override async void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
         {
 
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
-                await ModeSwitch(AgvsLsrSetting);
-                await SideLaserModeSwitch(AgvsLsrSetting);
-                logger.Info($"[AMC]雷射設定組 = {AgvsLsrSetting}", true);
-                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
+                (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
+                logger.Info($"[AMC]雷射設定組 = {currentModeInt}", true);
+                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {currentModeInt}");
             }
             else
             {
@@ -81,7 +80,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-
+        public override async Task<(bool succeess, int currentModeInt)> ModeSwitchAGVSMapSettingOfCurrentTag(int tag)
+        {
+            (bool success, int mode) = await base.ModeSwitchAGVSMapSettingOfCurrentTag(tag);
+            success = await SideLaserModeSwitch(mode);
+            return (success, mode);
+        }
         public async Task<bool> SideLaserModeSwitch(int mode_int)
         {
             try

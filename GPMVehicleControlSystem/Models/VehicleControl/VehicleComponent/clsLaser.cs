@@ -1,4 +1,5 @@
 ﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.SickSafetyscanners;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
@@ -83,7 +84,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 }
             }
         }
-        private int _AgvsLsrSetting = 1;
         public delegate void LsrModeSwitchDelegate(int mode);
         public LsrModeSwitchDelegate OnLsrModeSwitchRequest;
         public delegate (bool leftBypass, bool rightBypass) SideLaserBypassSettingDelagete();
@@ -100,18 +100,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         LinuxTools.ROS_VERSION rosVersion = LinuxTools.ROS_VERSION.ROS1;
 
         protected Logger logger;
-        public int AgvsLsrSetting
+
+        private Dictionary<int, int> _agvsTrajectoryLaserSettingStore = new Dictionary<int, int>();
+
+        public Dictionary<int, int> agvsTrajectoryLaserSettingStore
         {
-            get => _AgvsLsrSetting;
+            get => _agvsTrajectoryLaserSettingStore;
             set
             {
-                if (_AgvsLsrSetting != value)
-                {
-                    _AgvsLsrSetting = value;
-                    Console.WriteLine($"變更雷射預設組[AGVS 設定]");
-                }
+                _agvsTrajectoryLaserSettingStore = value;
+                logger.Info($"更新雷射組數 Map: {string.Join(", ", value.Select(kvp => $"Tag: {kvp.Key}, 雷射設定: {kvp.Value}"))}");
             }
         }
+
         public clsLaser(clsDOModule DOModule, clsDIModule DIModule, LinuxTools.ROS_VERSION rosVersion = LinuxTools.ROS_VERSION.ROS1)
         {
             logger = LogManager.GetCurrentClassLogger();
@@ -156,7 +157,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-
+        public void UpdateAGVSTrajectoryLaser(clsTaskDownloadData orderData)
+        {
+            lock (agvsTrajectoryLaserSettingStore)
+            {
+                agvsTrajectoryLaserSettingStore = orderData.ExecutingTrajecory.ToDictionary(pt => pt.Point_ID, pt => pt.Laser);
+            }
+        }
         public virtual LASER_MODE LaserModeOfDigitalOutput
         {
             get
@@ -353,7 +360,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         public clsNavigation.AGV_DIRECTION agvDirection { get; internal set; } = clsNavigation.AGV_DIRECTION.FORWARD;
-        internal virtual async void LaserChangeByAGVDirection(object? sender, clsNavigation.AGV_DIRECTION direction)
+        internal virtual async void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
         {
             if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
             {
@@ -366,9 +373,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
             {
                 await FrontBackLasersEnable(true);
-                await ModeSwitch(AgvsLsrSetting);
-                logger.Info($"雷射設定組 = {AgvsLsrSetting}", true);
-                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {AgvsLsrSetting}");
+                (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
+                if (succeess)
+                    logger.Info($"AGV走行方向為前進，雷射設定組切換回任務軌跡設定值 = {currentModeInt}", true);
+                else
+                    logger.Warn($"AGV走行方向為前進，但無法得知目前 TAG 的雷射設定組數，因此將雷射設定組切換為, {currentModeInt}", true);
 
             }
             else // 左.右轉
@@ -378,11 +387,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
             }
         }
-        public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByAGVS = false, bool isSettingByResetButtonLongPressed = false)
+        public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByResetButtonLongPressed = false)
         {
-            return await ModeSwitch((int)mode, isSettingByAGVS, isSettingByResetButtonLongPressed);
+            return await ModeSwitch((int)mode, isSettingByResetButtonLongPressed);
         }
-        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByAGVS = false, bool isSettingByResetButtonLongPressed = false)
+
+        public virtual async Task<(bool succeess, int currentModeInt)> ModeSwitchAGVSMapSettingOfCurrentTag(int tag)
+        {
+            if (agvsTrajectoryLaserSettingStore.TryGetValue(tag, out int _laserModeInt))
+            {
+                logger.Info($"依AGVS圖資設定雷射組數,目前位置Tag:{tag},組數 {_laserModeInt}");
+                bool _sucess = await ModeSwitch(_laserModeInt);
+                return (_sucess, _laserModeInt);
+            }
+            else
+            {
+                logger.Warn($"依AGVS圖資設定雷射組數,目前位置Tag:{tag}. 找不到 Tag {tag} 需要哪一個組數，切換為第 1 組");
+                bool _sucess = await ModeSwitch(1);
+                return (_sucess, 1);
+            }
+        }
+
+        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByResetButtonLongPressed = false)
         {
             try
             {
@@ -400,8 +426,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                         return true;
                     }
                 }
-                if (isSettingByAGVS)
-                    AgvsLsrSetting = mode_int;
                 int retry_times_limit = 300;
                 int try_count = 0;
                 bool[] writeBools = mode_int.ToLaserDOSettingBits();

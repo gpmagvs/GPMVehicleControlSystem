@@ -181,7 +181,8 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             var _agvcActionStatus = Agv.AGVC.ActionStatus;
             if (_agvcActionStatus == ActionStatus.ACTIVE || _agvcActionStatus == ActionStatus.PENDING)
                 return true;
-            return await Agv.Laser.ModeSwitch(RunningTaskData.ExecutingTrajecory.First().Laser, true);
+            (bool success, int _mode) = await Agv.Laser.ModeSwitchAGVSMapSettingOfCurrentTag(Agv.Navigation.LastVisitedTag);
+            return success;
         }
 
     }

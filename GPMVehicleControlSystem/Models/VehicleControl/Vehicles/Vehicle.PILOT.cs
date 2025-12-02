@@ -134,6 +134,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool isAGVSTask = !taskDownloadData.IsLocalTask;
             try
             {
+                Laser.UpdateAGVSTrajectoryLaser(taskDownloadData);
                 Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
                 await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
@@ -456,7 +457,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (File.Exists("task_name.txt"))
                 TaskName = File.ReadAllText("task_name.txt");
         }
-
         internal virtual void HandleLastVisitedTagChanged(object? sender, int newVisitedNodeTag)
         {
             Task.Run(async () =>
@@ -479,9 +479,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     {
                         TryControlAutoDoor(newVisitedNodeTag);
                     }
-
-                    var laser_mode = _newTagPoint.Laser;
-                    await Laser.ModeSwitch(laser_mode, true);
+                    await Laser.ModeSwitchAGVSMapSettingOfCurrentTag(newVisitedNodeTag);
                 }
 
                 if (_RunTaskData.TagsOfTrajectory.Last() != Navigation.LastVisitedTag)
