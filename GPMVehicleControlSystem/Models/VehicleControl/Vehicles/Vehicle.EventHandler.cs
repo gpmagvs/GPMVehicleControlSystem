@@ -149,9 +149,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SendNotifyierToFrontend("車控系統重啟完成!");
             };
 
+            Laser.BeforeLaserModeBypassSwitch += Laser_BeforeLaserModeBypassSwitch; ;
+
         }
 
+        private void Laser_BeforeLaserModeBypassSwitch(object? sender, LaserModeSwitchCheckArgs e)
+        {
+            if (AGVC.IsRunning && Navigation.Direction != AGV_DIRECTION.BYPASS)
+            {
+                e.accept = false;
+                e.message = "車控移動中且當前 Direction 非 BYPASS(11) ,禁止將雷射 Bypass";
+                LogDebugMessage($"嘗試將雷射 Bypass 但系統自檢失敗-{e.message}", true);
+                return;
+            }
 
+            e.accept = true;
+            e.message = "OK";
+        }
 
         protected (bool needAdd, bool isRecoverable) DetermineDriverAlarmNeedAddOrNot(clsDriver driverEntity, AlarmCodes alarmCode)
         {

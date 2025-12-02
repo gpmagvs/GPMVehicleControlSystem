@@ -44,6 +44,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             BYPASS,
             NORMAL,
         }
+
+        public class LaserModeSwitchCheckArgs : EventArgs
+        {
+            public bool accept;
+            public string message;
+        }
+
         public GeneralSystemStateMsg SickSsystemState { get; set; } = new GeneralSystemStateMsg();
         public LASER_MODE Spin_Laser_Mode = LASER_MODE.Turning;
         protected SemaphoreSlim modeSwitchSemaphoresSlim = new SemaphoreSlim(1, 1);
@@ -53,8 +60,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         private DiagnosticArray diagnosticArray = new DiagnosticArray();
 
         public event EventHandler OnSickApplicationError;
-
+        public event EventHandler<LaserModeSwitchCheckArgs> BeforeLaserModeBypassSwitch;
         public event EventHandler<LASER_MODE> OnLaserModeChanged;
+
         private bool _IsSickApplicationError = false;
         public bool IsSickApplicationError
         {
@@ -413,6 +421,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             try
             {
                 await modeSwitchSemaphoresSlim.WaitAsync();
+
+
+                if (mode_int == 0 || mode_int == 16)
+                {
+                    LaserModeSwitchCheckArgs checkArgs = new LaserModeSwitchCheckArgs()
+                    {
+                        accept = true,
+                        message = ""
+                    };
+
+                    BeforeLaserModeBypassSwitch?.Invoke(this, checkArgs);
+                    if (!checkArgs.accept)
+                    {
+                        logger.Warn($"嘗試將雷射組數切換為 Bypass 組數已遭自檢流程拒絕:{checkArgs.message}");
+                        return false;
+                    }
+                }
 
                 LASER_MODE requestMode = GetLaserModeEnum(mode_int);
 

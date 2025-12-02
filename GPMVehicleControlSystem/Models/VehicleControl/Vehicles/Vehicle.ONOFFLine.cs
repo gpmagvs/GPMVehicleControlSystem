@@ -134,6 +134,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             if (mode == REMOTE_MODE.ONLINE)
             {
+                RestoreBypassedSettings();
                 CheckSwitchesStates(out bool isNavMotorSwitchStateError, out bool isVertialMotorSwitchStateError);
                 if (isNavMotorSwitchStateError)
                     return (false, RETURN_CODE.Horizon_Motor_Switch_State_Error);

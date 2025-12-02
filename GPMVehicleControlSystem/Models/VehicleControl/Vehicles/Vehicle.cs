@@ -775,6 +775,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
                 //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                 //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
+
+
+                RestoreBypassedSettings();
+
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 SetAllDriversComponentAsInitMode();
                 await Task.Delay(500, InitializeCancelTokenResourece.Token);
@@ -915,6 +919,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.IDLE;
                 TaskCycleStopStatus = TASK_CANCEL_STATUS.FINISH_CYCLE_STOP_REQUEST;
+            }
+        }
+
+        private void RestoreBypassedSettings()
+        {
+            if (Parameters.SensorBypass.LeftSideLaserBypass || Parameters.SensorBypass.RightSideLaserBypass)
+            {
+                Parameters.SensorBypass.LeftSideLaserBypass = false;
+                Parameters.SensorBypass.RightSideLaserBypass = false;
+                LogDebugMessage("偵測到側邊雷射被設置為 Bypass,將其恢復 NO-Bypass 狀態!", true);
+                SaveParameters(Parameters);
             }
         }
 
