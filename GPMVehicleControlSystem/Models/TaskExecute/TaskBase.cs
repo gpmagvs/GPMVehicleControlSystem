@@ -865,9 +865,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             bool Enable = _isAGVHeadObjSensorDefined ? (action == ACTION_TYPE.Load ? options.Enable_Load : options.Enable_UnLoad) : true;
             if (!Enable)
                 return true;
-            if (Agv.IsFrontendSideHasObstacle)
+            if (_isAGVHeadObjSensorDefined && action == ACTION_TYPE.Load && Agv.IsFrontendSideHasObstacle)
             {
                 logger.Error($"前方障礙物預檢知觸發[等級={alarmLevel}]");
+                return false;
+            }
+            if (_isAGVHeadObjSensorDefined && action == ACTION_TYPE.Unload && !Agv.IsFrontendSideHasObstacle)
+            {
                 return false;
             }
             if (_isAGVHeadObjSensorDefined && options.Detection_Method == FRONTEND_OBS_DETECTION_METHOD.BEGIN_ACTION)
