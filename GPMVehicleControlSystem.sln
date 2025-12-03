@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AGVSystemCommonNet6", "..\A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RosBridgeClient", "..\RosBridgeClient\RosBridgeClient.csproj", "{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OTAUpdateService", "OTAUpdateService\OTAUpdateService.csproj", "{CBCB02EC-12B3-48DC-984C-80AD28F3F14D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPMVehicleControlSystem", "GPMVehicleControlSystem\GPMVehicleControlSystem.csproj", "{3192004D-ABC7-4544-AA23-9D3933A9CE3E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EquipmentManagment", "..\EquipmentManagment\EquipmentManagment.csproj", "{F7A7F4BC-3776-4A34-A0EB-31A428931C83}"
@@ -31,10 +29,6 @@ Global
 		{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FF2136F4-0EDE-44F4-A321-78A4F61ABB7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CBCB02EC-12B3-48DC-984C-80AD28F3F14D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CBCB02EC-12B3-48DC-984C-80AD28F3F14D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CBCB02EC-12B3-48DC-984C-80AD28F3F14D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CBCB02EC-12B3-48DC-984C-80AD28F3F14D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
