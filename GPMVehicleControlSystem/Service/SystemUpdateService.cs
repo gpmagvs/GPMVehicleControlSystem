@@ -76,7 +76,7 @@ namespace GPMVehicleControlSystem.Service
                         File.WriteAllText(scriptFile, $"sleep 5 && killall -9 GPM_VCS>/dev/null || true && sleep 2 &&  cp -r {zipFileTempFolder}/* {currentDirectory}/" +
                             $"&& cd {currentDirectory} && ./GPM_VCS");
 
-                    Process.Start("chmod", $"777 {scriptFile}").WaitForExit();
+                    Process.Start("chmod", $"echo 12345678 | sudo +x {scriptFile} && 777 {scriptFile}").WaitForExit();
                     ProcessStartInfo startInfo = new ProcessStartInfo
                     {
                         FileName = "/bin/bash",
