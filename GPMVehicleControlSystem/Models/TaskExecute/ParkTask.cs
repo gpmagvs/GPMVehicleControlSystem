@@ -23,7 +23,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected override void BuzzerPlayMusic(ACTION_TYPE action)
         {
-            BuzzerPlayer.SoundPlaying = SOUNDS.Action;
+            BuzzerPlayer.SoundPlaying = SOUNDS.GoToChargeStation;
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {

@@ -1078,7 +1078,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             if (ExecutingTaskEntity?.action != ACTION_TYPE.None)
             {
-                if (ExecutingTaskEntity?.action == ACTION_TYPE.Charge)
+                if (ExecutingTaskEntity?.action == ACTION_TYPE.Charge || ExecutingTaskEntity?.action == ACTION_TYPE.Park)
                     BuzzerPlayer.SoundPlaying = SOUNDS.GoToChargeStation;
                 else
                     BuzzerPlayer.SoundPlaying = SOUNDS.Action;
