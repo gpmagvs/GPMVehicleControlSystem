@@ -625,6 +625,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
                         await Agv.AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.BACK_TO_SECONDARY_POINT);
 
+                        //如果是取貨且是取框，觸發拍照
+                        _ = RACKCstIDReadTriggerEarlyAsync(CancellationToken.None);
+
                         logger.Trace($"等待二次定位回HOME位置任務完成...(Timeout:{MoveActionTimeout}) ms");
 
                         (bool _inTime, long _timeSpend) = await WaitVehicleArriveEntryPoint(MoveActionTimeout);
@@ -664,6 +667,17 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 if (Agv.GetSub_Status() != SUB_STATUS.DOWN)
                     Agv.IsHandshaking = false;
             }
+        }
+        public CstIDReadTriggerEarlyResult cstIDReadStatusInBackToHomePt { get; protected set; } = new CstIDReadTriggerEarlyResult() { CurrentState = CstIDReadTriggerEarlyResult.STATE.NO_NEEDED };
+        /// <summary>
+        /// 觸發拍照讀取框的 CST ID (提前觸發)
+        /// </summary>
+        /// <returns></returns>
+        protected virtual async Task<CstIDReadTriggerEarlyResult> RACKCstIDReadTriggerEarlyAsync(CancellationToken cancellationToken)
+        {
+            //放貨不需要讀取CST ID
+            cstIDReadStatusInBackToHomePt = new CstIDReadTriggerEarlyResult() { CurrentState = CstIDReadTriggerEarlyResult.STATE.NO_NEEDED };
+            return cstIDReadStatusInBackToHomePt;
         }
 
         private async Task StartWatchCargoState()
@@ -785,7 +799,24 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         }
 
+        /// <summary>
+        /// 拍照結果
+        /// </summary>
+        public class CstIDReadTriggerEarlyResult
+        {
+            public enum STATE
+            {
+                NO_NEEDED,
+                READING,
+                SUCCESS,
+                FAIL
+            }
 
+            public STATE CurrentState { get; set; } = STATE.NO_NEEDED;
+            public string CstIDReadValue { get; set; } = string.Empty;
+        }
+
+        private CstIDReadTriggerEarlyResult _cstIDReadTriggerEarlyResult = new CstIDReadTriggerEarlyResult();
 
         private void BackToHomeActionDoneCallback(ActionStatus status)
         {

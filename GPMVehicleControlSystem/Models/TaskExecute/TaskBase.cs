@@ -736,8 +736,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 (bool confirm, AlarmCodes alarm_code) ForkGoHomeActionResult = (Agv.ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME, AlarmCodes.None);
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
-                bool _needWaitPoseReach = action == ACTION_TYPE.Unload && Agv.Parameters.CST_READER_TRIGGER;
-
+                var _currentCargoType = Agv.CargoStateStorer.GetCargoType();
+                bool _noNeededWaitPoseReach = action == ACTION_TYPE.Load;
+                if (_noNeededWaitPoseReach)
+                {
+                    Agv.LogDebugMessage($"[{action}]-$[拍照?{Agv.Parameters.CST_READER_TRIGGER}]-$[貨物類型?{_currentCargoType}]=>不須等待牙叉到位", true);
+                }
                 Task goHomeTask = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Task.Run(async () =>
                 {
                     Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Standby Pose", false);
@@ -753,7 +757,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     Agv.LogDebugMessage($"Start wait fork position reach target", false);
                     CancellationTokenSource cancel = new CancellationTokenSource(TimeSpan.FromSeconds(180));
-                    while (_needWaitForkActionDone())
+
+                    if (_noNeededWaitPoseReach) //放完貨之後也不用等待牙叉是不是到位了
+                        return;
+
+                    while (!_isForkSafty())
                     {
                         await Task.Delay(1);
                         if (cancel.IsCancellationRequested)
@@ -767,23 +775,21 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                         }
                     }
 
-                    bool _needWaitForkActionDone()
+                    bool _isForkSafty()
                     {
-                        if (_needWaitPoseReach)
+                        var currentCargoType = Agv.CargoStateStorer.GetCargoType();
+                        if (currentCargoType == CST_TYPE.Rack) //取RACK只要高度低於安全高度即可
+                            return Agv.ForkLifter.CurrentHeightPosition <= Agv.Parameters.ForkAGV.SaftyPositionHeight;
+
+
+                        if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
                         {
-                            if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
-                            {
-                                double diff = Math.Abs(Agv.ForkLifter.CurrentHeightPosition - Agv.Parameters.ForkAGV.StandbyPose);
-                                return diff > 0.1;
-                            }
-                            else
-                            {
-                                return !Agv.WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
-                            }
+                            double diff = Math.Abs(Agv.ForkLifter.CurrentHeightPosition - Agv.Parameters.ForkAGV.StandbyPose);
+                            return diff <= 0.1;
                         }
                         else
                         {
-                            return Agv.ForkLifter.CurrentHeightPosition > _safty_height;
+                            return Agv.WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
                         }
                     }
                 });

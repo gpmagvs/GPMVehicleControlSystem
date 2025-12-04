@@ -9,6 +9,7 @@ using GPMVehicleControlSystem.Tools;
 using Microsoft.AspNetCore.SignalR;
 using RosSharp.RosBridgeClient.MessageTypes.Std;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsManualCheckCargoStatusParams;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -22,9 +23,51 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         public UnloadTask(Vehicle Agv, clsTaskDownloadData taskDownloadData) : base(Agv, taskDownloadData)
         {
         }
+        protected override async Task<CstIDReadTriggerEarlyResult> RACKCstIDReadTriggerEarlyAsync(CancellationToken cancellationToken)
+        {
+            bool isForkTypeAgv = Agv.Parameters.AgvType == AGVSystemCommonNet6.clsEnums.AGV_TYPE.FORK || Agv.Parameters.AgvType == AGVSystemCommonNet6.clsEnums.AGV_TYPE.FORK_XL;
+            bool isCstIDReadEnabled = Agv.Parameters.CST_READER_TRIGGER;
+            bool isCargoTypeRack = Agv.CargoStateStorer.GetCargoType() == CST_TYPE.Rack;
 
+            if (!isForkTypeAgv || !isCstIDReadEnabled || !isCargoTypeRack)
+            {
+                return new CstIDReadTriggerEarlyResult { CurrentState = CstIDReadTriggerEarlyResult.STATE.NO_NEEDED };
+            }
+            cstIDReadStatusInBackToHomePt.CurrentState = CstIDReadTriggerEarlyResult.STATE.READING;
+            (bool confirm, AlarmCodes alarmCode) = await CSTBarcodeRead(cancellationToken);
+
+            cstIDReadStatusInBackToHomePt.CurrentState = confirm ? CstIDReadTriggerEarlyResult.STATE.SUCCESS : CstIDReadTriggerEarlyResult.STATE.FAIL;
+            cstIDReadStatusInBackToHomePt.CstIDReadValue = confirm ? Agv.CSTReader.ValidCSTID : string.Empty;
+
+            if (cstIDReadStatusInBackToHomePt.CurrentState == CstIDReadTriggerEarlyResult.STATE.FAIL)
+            {
+                Agv.LogDebugMessage($"在退出至主幹道階段進行貨物ID讀取動作失敗...", true);
+            }
+
+            return cstIDReadStatusInBackToHomePt;
+        }
         internal override async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeReadAfterAction(CancellationToken cancellationToken)
         {
+
+            while (cstIDReadStatusInBackToHomePt.CurrentState == CstIDReadTriggerEarlyResult.STATE.READING)
+            {
+                if (cancellationToken.IsCancellationRequested || Agv.GetSub_Status() == AGVSystemCommonNet6.clsEnums.SUB_STATUS.DOWN)
+                    return (false, AlarmCodes.Read_Cst_ID_Interupted);
+
+                Agv.LogDebugMessage("在退出至主幹道階段進行貨物ID讀取動作尚未完成,等待中", true);
+                await Task.Delay(1000);
+            }
+
+            if (cstIDReadStatusInBackToHomePt.CurrentState == CstIDReadTriggerEarlyResult.STATE.SUCCESS)
+            {
+                Agv.LogDebugMessage("已在退出至主幹道階段完成貨物 ID 讀取! Bypass 拍照流程", true);
+                return (true, AlarmCodes.None);
+            }
+            else if (cstIDReadStatusInBackToHomePt.CurrentState == CstIDReadTriggerEarlyResult.STATE.FAIL)
+            {
+                Agv.LogDebugMessage($"[CSTBarcodeReadAfterAction] 在退出至主幹道階段進行貨物ID讀取動作失敗...", true);
+            }
+
             Agv.HandshakeStatusText = "Cargo ID Reading...";
             string cstIDFromAGVS = RunningTaskData.CST == null || !RunningTaskData.CST.Any() ? "" : RunningTaskData.CST.First().CST_ID;
             bool isCstIDFromAGVSUnknown = string.IsNullOrEmpty(cstIDFromAGVS) || cstIDFromAGVS.ToLower().Contains("un");
