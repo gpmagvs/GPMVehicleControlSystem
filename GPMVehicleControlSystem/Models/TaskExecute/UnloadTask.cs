@@ -70,8 +70,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             Agv.HandshakeStatusText = "Cargo ID Reading...";
             string cstIDFromAGVS = RunningTaskData.CST == null || !RunningTaskData.CST.Any() ? "" : RunningTaskData.CST.First().CST_ID;
-            bool isCstIDFromAGVSUnknown = string.IsNullOrEmpty(cstIDFromAGVS) || cstIDFromAGVS.ToLower().Contains("un");
-            if (!CSTTrigger || isCstIDFromAGVSUnknown)
+            if (!CSTTrigger)
             {
                 Agv.CSTReader.ValidCSTID = cstIDFromAGVS;
                 return (true, AlarmCodes.None);

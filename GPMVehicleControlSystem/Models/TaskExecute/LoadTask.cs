@@ -951,7 +951,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                             break;
                     }
 
-                    if (Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
+                    if (query_cause == clsVirtualIDQu.VIRTUAL_ID_QUERY_TYPE.READ_FAIL && Agv.Parameters.CstReadFailAction == EQ_INTERACTION_FAIL_ACTION.SET_AGV_DOWN_STATUS)
                         Agv.SetSub_Status(SUB_STATUS.DOWN);
 
                     if (action == ACTION_TYPE.Unload && Agv.Remote_Mode == REMOTE_MODE.ONLINE)
