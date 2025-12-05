@@ -738,6 +738,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+
                 if (!ModuleInformationUpdatedInitState)
                 {
                     throw new VehicleInitializeException($"與車控系統通訊異常，不可進行初始化", true);
@@ -775,10 +776,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //    throw new VehicleInitializeException("偵測到Tray放置異常，請確認貨物是否放置妥當", true);
                 //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                 //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
-
+                IsHandshaking = false;
+                if (!WagoDI.GetState(DI_ITEM.EMO))
+                {
+                    SetAllDriversComponentAsInitMode();
+                    await WagoDO.ResetSaftyRelay();
+                    await Task.Delay(500);
+                }
+                (bool confirm, string message) hardware_status_check_reuslt = CheckHardwareStatus();
+                if (!hardware_status_check_reuslt.confirm)
+                    return (false, hardware_status_check_reuslt.message);
 
                 RestoreBypassedSettings();
-
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 SetAllDriversComponentAsInitMode();
                 await Task.Delay(500, InitializeCancelTokenResourece.Token);
@@ -1029,55 +1038,69 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             AlarmCodes alarmo_code = AlarmCodes.None;
             string error_message = "";
-            if (CheckMotorIOError())
+            try
             {
-                error_message = "走行軸馬達IO異常";
-                alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
-            }
 
-            if (CheckEMOButtonNoRelease())
-            {
-                error_message = "EMO 按鈕尚未復歸";
-                alarmo_code = AlarmCodes.EMO_Button;
-            }
+                if (CheckEMOButtonNoRelease())
+                {
+                    error_message = "EMO 按鈕尚未復歸";
+                    alarmo_code = AlarmCodes.EMO_Button;
+                    throw new Exception(error_message);
+                }
 
-            if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
-            {
-                error_message = "解煞車旋鈕尚未復歸";
-                alarmo_code = AlarmCodes.Switch_Type_Error;
-            }
-            if (IMU.PitchState != clsIMU.PITCH_STATES.NORMAL && Parameters.ImpactDetection.PitchErrorDetection)
-            {
-                error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})";
-                alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
-            }
+                if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
+                {
+                    error_message = "解煞車旋鈕尚未復歸";
+                    alarmo_code = AlarmCodes.Switch_Type_Error;
+                    throw new Exception(error_message);
+                }
+                Stopwatch _sw = Stopwatch.StartNew();
+                while (CheckMotorIOError())
+                {
+                    if (_sw.Elapsed.TotalSeconds > 3)
+                    {
+                        error_message = "走行軸馬達IO異常";
+                        alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
+                        throw new Exception(error_message);
+                    }
+                    Task.Delay(10).Wait();
+                }
+                if (IMU.PitchState != clsIMU.PITCH_STATES.NORMAL && Parameters.ImpactDetection.PitchErrorDetection)
+                {
+                    error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})";
+                    alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
+                    throw new Exception(error_message);
+                }
 
-            if (Navigation.IsCommunicationError)
-            {
-                error_message = $"車控異常，AGV位置數據上報逾時，請確認車控系統";
-                alarmo_code = AlarmCodes.Motion_control_Disconnected;
-            }
+                if (Navigation.IsCommunicationError)
+                {
+                    error_message = $"車控異常，AGV位置數據上報逾時，請確認車控系統";
+                    alarmo_code = AlarmCodes.Motion_control_Disconnected;
+                    throw new Exception(error_message);
+                }
 
-            if (CheckSideLaserAbn(out string msg))
-            {
-                error_message = msg;
-                alarmo_code = AlarmCodes.Side_Laser_Abnormal;
-            }
+                if (CheckSideLaserAbn(out string msg))
+                {
+                    error_message = msg;
+                    alarmo_code = AlarmCodes.Side_Laser_Abnormal;
+                    throw new Exception(error_message);
+                }
 
 
-            if (Laser.IsSickApplicationError)
-            {
-                error_message = "雷射錯誤，請確認前後雷射是否有N3 Fatal異常";
-                alarmo_code = AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail;
+                if (Laser.IsSickApplicationError)
+                {
+                    error_message = "雷射錯誤，請確認前後雷射是否有N3 Fatal異常";
+                    alarmo_code = AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail;
+                    throw new Exception(error_message);
+                }
             }
-            if (alarmo_code == AlarmCodes.None)
-                return (true, "");
-            else
+            catch (Exception)
             {
                 AlarmManager.AddAlarm(alarmo_code, true);
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                 return (false, error_message);
             }
+            return (true, "");
         }
 
         protected virtual bool CheckEMOButtonNoRelease()
@@ -1225,9 +1248,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     IsAGVAbnormal_when_handshaking = ExecutingTaskEntity.IsNeedHandshake;
                     ExecutingTaskEntity.Abort(alarmCode);
                 }
-                else
-                    AlarmManager.RecordAlarm(alarmCode);
 
+                AlarmManager.AddAlarm(alarmCode, false);
                 TryFeedbackActionFinisInEmoMoment();
 
                 StoreStatusToDataBase();

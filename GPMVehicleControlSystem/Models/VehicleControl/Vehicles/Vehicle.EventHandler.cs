@@ -179,9 +179,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (isInitMode || isEmoTrigger || isBumperTrigger)
             {
                 if (isInitMode)
-                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為當前是初始化模式", true);
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為當前是初始化模式", false);
                 else
-                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 {(isEmoTrigger ? "EMO觸發" : "")},{(isBumperTrigger ? "BUMPER 觸發" : "")}", true);
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 {(isEmoTrigger ? "EMO觸發" : "")},{(isBumperTrigger ? "BUMPER 觸發" : "")}", false);
                 return (false, false);
             }
             else
@@ -191,7 +191,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (isAtChargeStation && isIdleOrCharging)
                 {
-                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 AGV 目前在充電站中閒置或充電中=> 可嘗試自動賦歸異常", true);
+                    LogDebugMessage($"{driverEntity.component_name}-異常:{alarmCode}-不用新增至當前異常,因為 AGV 目前在充電站中閒置或充電中=> 可嘗試自動賦歸異常", false);
                     return (false, true);
                 }
             }
