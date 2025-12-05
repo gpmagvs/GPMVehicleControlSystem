@@ -233,7 +233,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpPost("Initialize")]
-        public async Task<IActionResult> Initialize()
+        public async Task<IActionResult> Initialize(bool isForkInitBypass = false)
         {
             logger.LogTrace($"User raise Initialize request.");
 
@@ -248,6 +248,13 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 logger.LogTrace($"User raise Initialize");
             }
+
+            if (agv.Parameters.AgvType == AGV_TYPE.FORK || agv.Parameters.AgvType == AGV_TYPE.FORK_XL)
+            {
+                var initResult = await (agv as ForkAGV).Initialize(isForkInitBypass);
+                return Ok(new { confirm = initResult.confirm, message = initResult.message });
+            }
+
             var result = await agv.Initialize();
             logger.LogTrace($"User raise Initialize request. Result:{result}");
             return Ok(new { confirm = result.confirm, message = result.message });

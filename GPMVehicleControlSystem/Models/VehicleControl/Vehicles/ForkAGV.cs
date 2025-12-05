@@ -57,6 +57,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return list;
             }
         }
+        private bool _isForkInitBypass = false;
+        public async Task<(bool confirm, string message)> Initialize(bool isForkInitBypass)
+        {
+            _isForkInitBypass = isForkInitBypass;
+            return await base.Initialize();
+        }
+
         internal override async Task CreateAsync()
         {
             await base.CreateAsync();
@@ -177,6 +184,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             var _fork_car_controller = (AGVC as ForkAGVController);
             LogDebugMessage($"Fork Start Move Event Invoked Handling(command:{request.command}). {request.ToJson(Formatting.None)}", true);
+
             bool isForkMoveInWorkStationByLduld = GetSub_Status() == SUB_STATUS.RUN && lastVisitedMapPoint.StationType != STATION_TYPE.Normal;
             if (isForkMoveInWorkStationByLduld)
             {
@@ -230,7 +238,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             bool lastLsrTriggerState = false;
             await Task.Delay(500);
             Stopwatch triggerTimer = new Stopwatch();
-            const int durationMs = 250;
+            const int debounceTimeMs = 250;
+            const int resumeActionDebounceTimeMs = 1000;
 
             while (!_forkVerticalMoveObsProcessCancellationTokenSource.IsCancellationRequested)
             {
@@ -279,7 +288,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             triggerTimer.Restart();
                         }
-                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        else if (triggerTimer.ElapsedMilliseconds >= debounceTimeMs)
                         {
 
                             lastVerticalForkActionCmd = _fork_car_controller.verticalActionService.CurrentForkActionRequesting.Clone();
@@ -311,7 +320,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             triggerTimer.Restart();
                         }
-                        else if (triggerTimer.ElapsedMilliseconds >= durationMs)
+                        else if (triggerTimer.ElapsedMilliseconds >= resumeActionDebounceTimeMs)
                         {
                             _isStopCmdCalled = false;
                             //_fork_car_controller.verticalActionService.OnActionDone += _fork_car_controller_OnForkStopMove;
@@ -325,8 +334,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                                 const int MAX_RETRY = 3;
                                 int retry = 0;
-                                while (!(await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd)).confirm)
+                                bool isResumeActionSuccess = false;
+                                while (!isResumeActionSuccess)
                                 {
+
+                                    if (_Sub_Status == SUB_STATUS.DOWN || _forkVerticalMoveObsProcessCancellationTokenSource.IsCancellationRequested)
+                                        throw new TaskCanceledException();
+
+                                    isResumeActionSuccess = (await ForkLifter.ForkResumeAction(lastVerticalForkActionCmd)).confirm;
+                                    if (isResumeActionSuccess)
+                                        break;
+
                                     if (retry >= MAX_RETRY)
                                     {
                                         logger.LogWarning($"嘗試恢復牙叉動作嘗試次數已達{MAX_RETRY}次.");
@@ -335,7 +353,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                     }
                                     logger.LogWarning($"嘗試恢復牙叉動作失敗,一秒後將重新嘗試...");
                                     retry += 1;
-                                    await Task.Delay(1000);
+                                    await Task.Delay(1000, _forkVerticalMoveObsProcessCancellationTokenSource.Token);
                                 }
                                 ForkLifter.IsStopByObstacleDetected = false;
                                 LogDebugMessage($"雷射復原，牙叉恢復動作!", false);
@@ -349,12 +367,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 catch (TaskCanceledException ex)
                 {
-                    LogDebugMessage($"牙叉安全偵測任務取消!!", false);
+                    if (_Sub_Status == SUB_STATUS.DOWN)
+                        LogDebugMessage($"牙叉安全偵測任務取消且 AGV 狀態為 DOWN!!", true);
+                    else
+                        LogDebugMessage($"牙叉安全偵測任務取消!!", false);
                     break;
                 }
             }
-
-            LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", false);
+            if (_Sub_Status == SUB_STATUS.DOWN)
+                LogDebugMessage("牙叉升降動作監視側邊雷射狀態且 AGV 狀態為 DOWN!!---[結束]", true);
+            else
+                LogDebugMessage("牙叉升降動作監視側邊雷射狀態---[結束]", false);
             _fork_car_controller.verticalActionService.OnActionDone -= _fork_car_controller_OnForkStopMove;
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
 
@@ -457,7 +480,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
 
-
             Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token);
             Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token, ForkLifter.IsForkDriverStateUnknown && _resumeForkInitProcessWhenDriverStateIsKnown);
             Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token);
@@ -507,12 +529,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 SendNotifyierToFrontend($"注意! 浮動牙叉暫時被禁用中");
                 return (true, "浮動牙叉定位PIN裝置已暫時禁用");
             }
-
+            if (_isForkInitBypass)
+            {
+                LogDebugMessage("Fork Init Bypass Enabled, Skip Pin Initialize Action", true);
+                return (true, "Fork Init Bypass Enabled, Skip Pin Initialize Action");
+            }
             return await Task.Run(async () =>
             {
                 using var initMsgUpdater = CreateInitMsgUpdater();
                 (bool pin_init_done, string message) _pin_init_result = (false, "");
                 await initMsgUpdater.Update("PIN-模組初始化中...");
+
                 try
                 {
                     await PinHardware.Init(token);
@@ -569,22 +596,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     bool isForkAllowNoDoInitializeAction = Parameters.ForkNoInitializeWhenPoseIsHome && ForkLifter.CurrentForkLocation == FORK_LOCATIONS.HOME;
 
                     (bool done, AlarmCodes alarm_code) forkInitizeResult = (false, AlarmCodes.None);
-                    if (isForkAllowNoDoInitializeAction)
+
+                    if (_isForkInitBypass)
                     {
-                        (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
-                        forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
+                        LogDebugMessage("Fork Init Bypass Enabled, Skip Fork Search Home Initialize Action", true);
+                        forkInitizeResult = (true, AlarmCodes.None);
                         ForkLifter.IsVerticalForkInitialized = true;
+
                     }
                     else
                     {
-                        double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
-                        forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init, token);
+                        if (isForkAllowNoDoInitializeAction)
+                        {
+                            (bool confirm, string message) ret = await ForkLifter.ForkPositionInit();
+                            forkInitizeResult = (ret.confirm, AlarmCodes.Fork_Initialized_But_Driver_Position_Not_ZERO);
+                            ForkLifter.IsVerticalForkInitialized = true;
+                        }
+                        else
+                        {
+                            double _speed_of_init = CargoStateStorer.HasAnyCargoOnAGV(Parameters.LDULD_Task_No_Entry) ? Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithCargo : Parameters.ForkAGV.InitParams.ForkInitActionSpeedWithoutCargo;
+                            forkInitizeResult = await ForkLifter.VerticalForkInitialize(_speed_of_init, token);
+                        }
                     }
+
                     if (forkInitizeResult.done)
                     {
                         (bool confirm, AlarmCodes alarm_code) home_action_response = (false, AlarmCodes.None);
                         //self test Home action 
-                        if (Parameters.ForkAGV.HomePoseUseStandyPose)
+                        if (!_isForkInitBypass && Parameters.ForkAGV.HomePoseUseStandyPose)
                         {
                             InitializingStatusText = $"Fork Height Go To Standby Pose..";
                             (bool confirm, string message) = await ForkLifter.ForkPose(Parameters.ForkAGV.StandbyPose, 1, true);
@@ -598,6 +637,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         if (!home_action_response.confirm)
                         {
                             _forklift_init_result = (false, home_action_response.alarm_code.ToString());
+                        }
+                        else
+                        {
+                            await Task.Delay(200);
+                            bool isHome = WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
+                            forkInitizeResult = (isHome, isHome ? AlarmCodes.None : AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON);
                         }
                     }
 
