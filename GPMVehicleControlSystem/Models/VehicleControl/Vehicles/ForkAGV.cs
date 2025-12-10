@@ -634,15 +634,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             home_action_response = await ForkLifter.ForkGoHome();
                         }
+
                         if (!home_action_response.confirm)
                         {
                             _forklift_init_result = (false, home_action_response.alarm_code.ToString());
                         }
                         else
                         {
-                            await Task.Delay(200);
-                            bool isHome = WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
-                            forkInitizeResult = (isHome, isHome ? AlarmCodes.None : AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON);
+                            if (!Parameters.ForkAGV.HomePoseUseStandyPose)
+                            {
+
+                                await Task.Delay(200);
+                                bool isHome = WagoDI.GetState(DI_ITEM.Vertical_Home_Pos);
+                                forkInitizeResult = (isHome, isHome ? AlarmCodes.None : AlarmCodes.Fork_Initialized_But_Home_Input_Not_ON);
+                            }
                         }
                     }
 
