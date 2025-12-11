@@ -202,6 +202,11 @@ static void StaticFileProviderInit(WebApplication app)
              folder =  Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "GPM_AGV_LOG"),
              routePath = "/log"
         },
+        new clsStaticFileProvider()
+        {
+             folder =  Path.Combine(Environment.CurrentDirectory, "backup"),
+             routePath = "/Versions"
+        },
     };
 
 

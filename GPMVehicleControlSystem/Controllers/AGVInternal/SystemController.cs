@@ -127,7 +127,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("BackupSystem")]
         public async Task<IActionResult> BackupSystem()
         {
-            bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg);
+            bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg,force:true);
             if (backupSuccess)
                 return Ok(new { confirm = true, message = errMsg });
             else

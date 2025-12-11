@@ -1,16 +1,21 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.AGVDispatch.Model;
+using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.NaviMap;
 using GPMVehicleControlSystem.Models.TaskExecute;
 using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.Extensions.Caching.Memory;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using System.Media;
+using static AGVSystemCommonNet6.AGVDispatch.Messages.clsTaskDownloadData;
 using static AGVSystemCommonNet6.clsEnums;
+using static EquipmentManagment.ChargeStation.IOLocation;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -120,6 +125,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            TryDefineOrderInfoOfTaskDownloaded(ref taskDownloadData);
+
             LogTaskAndCancleStatus("ExecuteAGVSTask");
             Stopwatch sw = Stopwatch.StartNew();
             bool inTime = waitAGVCOMPTReportedResetEvent.WaitOne(TimeSpan.FromSeconds(5));
@@ -299,6 +306,173 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             });
 
+
+        }
+        public class OrderInfoAPIResponse
+        {
+            public string taskName { get; set; } = string.Empty;
+            public int fromStationID { get; set; } = -1;
+            public int toStationID { get; set; } = -1;
+
+            public string fromStationPortNo { get; set; } = string.Empty;
+            public string toStationPortNo { get; set; } = string.Empty;
+            public ACTION_TYPE actionType { get; set; } = ACTION_TYPE.Unknown;
+
+        }
+
+        protected virtual void TryDefineOrderInfoOfTaskDownloaded(ref clsTaskDownloadData taskDownloadData)
+        {
+            if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS)
+                return;
+            if (!Parameters.VMSParam.UseAPIToFetchOrderInfo)
+                return;
+
+            string taskID = taskDownloadData.Task_Name;
+            ACTION_TYPE currentExecutingAction = taskDownloadData.Action_Type;
+            string cacheKey = $"OrderInfo_{taskID}";
+
+            // ---------- Main Flow ----------
+
+            // 1. 先從 Cache 取得
+            var cached = memoryCache.Get<clsTaskDownloadData.clsOrderInfo>(cacheKey);
+            if (cached != null)
+            {
+                taskDownloadData.OrderInfo = cached.Clone();
+                taskDownloadData.OrderInfo.NextAction = DefineNextAction(cached.ActionName);
+                //存回快取
+                memoryCache.Set(cacheKey, taskDownloadData.OrderInfo.Clone(), TimeSpan.FromMinutes(20));
+                LogDebugMessage($"Next action (cache): {taskDownloadData.OrderInfo.NextAction}", true);
+                return;
+            }
+
+            // 2. 呼叫 API
+            try
+            {
+                string hostIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
+                int port = Parameters.VMSParam.OrderInfoAPIPort;
+                string apiPath = $"{Parameters.VMSParam.OrderInfoAPIRoute}?taskID={taskID}";
+
+                using HttpClient http = new HttpClient() { BaseAddress = new Uri($"http://{hostIP}:{port}"), Timeout = TimeSpan.FromSeconds(3) };
+                var response = http.GetAsync(apiPath).GetAwaiter().GetResult();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    LogDebugMessage($"Fetch Order Info API fail. TaskID:{taskID}, Status:{response.StatusCode}", true);
+                    return;
+                }
+
+                string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                logger.LogInformation($"JSON response of order info GET From API={json}");
+
+                var apiData = Newtonsoft.Json.JsonConvert.DeserializeObject<OrderInfoAPIResponse>(json);
+
+                if (apiData == null)
+                {
+                    LogDebugMessage($"Fetch Order Info deserialize fail. TaskID:{taskID}", true);
+                    return;
+                }
+                if (apiData.taskName != taskID)
+                {
+                    LogDebugMessage($"訂單查詢 API 回傳結果異常:任務 ID 與當前任務 ID 不匹配(要求:{taskID}, API 回傳:{apiData.taskName})", true);
+                    return;
+                }
+
+                LogDebugMessage($"Fetch Order Info Success.", true);
+
+                FillOrderInfoFromAPI(taskDownloadData.OrderInfo, apiData);
+
+                memoryCache.Set(cacheKey, taskDownloadData.OrderInfo.Clone(), TimeSpan.FromMinutes(20));
+            }
+            catch (Exception ex)
+            {
+                LogDebugMessage($"嘗試使用API獲取訂單資訊時發生錯誤 {ex.Message}", true);
+                logger.LogError(ex, $"嘗試使用API獲取訂單資訊時發生錯誤 {ex.Message}");
+            }
+
+
+
+            // ---------- Local Methods ----------
+
+            ACTION_TYPE DefineNextAction(ACTION_TYPE orderActionType)
+            {
+                // 若處於 Discharge / Unpark，下一步一定是移動
+                if (currentExecutingAction == ACTION_TYPE.Discharge ||
+                    currentExecutingAction == ACTION_TYPE.Unpark)
+                {
+                    return ACTION_TYPE.None;
+                }
+
+                // 若目前 AGV 處於移動狀態 (None)
+                if (currentExecutingAction == ACTION_TYPE.None)
+                {
+                    return _GetActionWhenMoving(orderActionType);
+                }
+
+                // 若已經在該動作中，不需下一步
+                if (currentExecutingAction == orderActionType)
+                {
+                    return ACTION_TYPE.NoAction;
+                }
+
+                // 其它狀況 → 在此需求下不會有下一步
+                return ACTION_TYPE.NoAction;
+
+                // Local Methods
+                ACTION_TYPE _GetActionWhenMoving(ACTION_TYPE orderActionType)
+                {
+                    switch (orderActionType)
+                    {
+                        case ACTION_TYPE.Carry:
+                            return CargoStateStorer.HasAnyCargoOnAGV(false)
+                                ? ACTION_TYPE.Load
+                                : ACTION_TYPE.Unload;
+
+                        case ACTION_TYPE.Charge:
+                        case ACTION_TYPE.DeepCharge:
+                        case ACTION_TYPE.Park:
+                        case ACTION_TYPE.Unload:
+                        case ACTION_TYPE.Load:
+                        case ACTION_TYPE.LoadAndPark:
+                            return orderActionType;
+
+                        default:
+                            return ACTION_TYPE.NoAction;
+                    }
+                }
+            }
+
+            int ParseSlotIndex(MapPoint pt, string portNo)
+            {
+                var tail = pt.Name[(pt.Name.LastIndexOf('_') + 1)..];
+                var slots = tail.Split('|');
+                return Array.IndexOf(slots, portNo);
+            }
+
+            MapPoint? TryGetMapPoint(int id) =>
+                NavingMap.Points.TryGetValue(id, out var pt) ? pt : null;
+
+            void FillOrderInfoFromAPI(clsTaskDownloadData.clsOrderInfo orderInfoOfTaskDowned, OrderInfoAPIResponse orderInfoOfApiResponse)
+            {
+                orderInfoOfTaskDowned.ActionName = orderInfoOfApiResponse.actionType;
+                orderInfoOfTaskDowned.IsTransferTask = orderInfoOfApiResponse.actionType == ACTION_TYPE.Carry;
+
+                var fromPt = TryGetMapPoint(orderInfoOfApiResponse.fromStationID);
+                var toPt = TryGetMapPoint(orderInfoOfApiResponse.toStationID);
+
+                if (fromPt != null)
+                {
+                    orderInfoOfTaskDowned.SourceTag = fromPt.TagNumber;
+                    orderInfoOfTaskDowned.SourceSlot = ParseSlotIndex(fromPt, orderInfoOfApiResponse.fromStationPortNo);
+                }
+
+                if (toPt != null)
+                {
+                    orderInfoOfTaskDowned.DestineTag = toPt.TagNumber;
+                    orderInfoOfTaskDowned.DestineSlot = ParseSlotIndex(toPt, orderInfoOfApiResponse.toStationPortNo);
+                }
+
+                orderInfoOfTaskDowned.NextAction = DefineNextAction(orderInfoOfApiResponse.actionType);
+            }
 
         }
 

@@ -172,10 +172,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 await TaskCycleStopTask;
 
             await Task.Delay(1);
+            var taskData = taskDownloadData.Clone();
 
             _ = Task.Run(() =>
              {
-                 TaskDownloadAction(taskDownloadData);
+                 TaskDownloadAction(taskData);
              });
 
             async Task TaskDownloadAction(clsTaskDownloadData taskDownloadData)

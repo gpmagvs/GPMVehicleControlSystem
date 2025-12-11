@@ -1,6 +1,7 @@
 ﻿
 using GPMVehicleControlSystem.Models;
 using GPMVehicleControlSystem.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -181,7 +182,7 @@ namespace GPMVehicleControlSystem.Service
         }
 
         // create a function : backup current work directory files and folders (use command just like cvf)
-        internal bool BackupCurrentProgram(out string ErrorMessage)
+        internal bool BackupCurrentProgram(out string ErrorMessage, bool force = false)
         {
             ErrorMessage = "";
             try
@@ -198,9 +199,17 @@ namespace GPMVehicleControlSystem.Service
                 // 若已有同名檔案，先刪除以避免例外
                 if (File.Exists(zipPath))
                 {
-                    ErrorMessage = $"Version {version} 此版本已經有備份檔";
-                    return true;
+                    if (!force)
+                    {
+                        ErrorMessage = $"Version {version} 此版本已經有備份檔";
+                        return true;
+                    }
+                    else
+                    {
+                        File.Delete(zipPath);
+                    }
                 }
+
 
                 // 建立暫存資料夾來放要壓縮的檔案
                 string tempDir = Path.Combine(Path.GetTempPath(), "vms_backup_temp");

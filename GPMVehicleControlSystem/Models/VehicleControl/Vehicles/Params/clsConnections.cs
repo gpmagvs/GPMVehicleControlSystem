@@ -22,6 +22,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public string MapUrl { get; set; } = "http://127.0.0.1:5216/api/Map";//
 
         public int MsgHsDuration { get; set; } = 200;
+
+        public int OrderInfoAPIPort { get; set; } = 5333;
+        public string OrderInfoAPIRoute { get; set; } = "/api/Task/OrderInfo";
+        public bool UseAPIToFetchOrderInfo { get; set; } = false;
     }
 
 }
