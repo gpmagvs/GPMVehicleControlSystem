@@ -51,6 +51,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Back_LsrBypass, true);
             await WagoDO.SetState(DO_ITEM.Left_Protection_Sensor_IN_1, new bool[] { true, true, false, true });
             await WagoDO.SetState(DO_ITEM.Instrument_Servo_On, true);
+            await WagoDO.SetState(DO_ITEM.AGV_L_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_U_REQ, false);
+            await WagoDO.SetState(DO_ITEM.AGV_CS_0, false);
+            await WagoDO.SetState(DO_ITEM.AGV_CS_1, false);
+            await WagoDO.SetState(DO_ITEM.AGV_Check_REQ, false);
             await Laser.ModeSwitch(1);
         }
         protected override void SyncHandshakeSignalStates()
