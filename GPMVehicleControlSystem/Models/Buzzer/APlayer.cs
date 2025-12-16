@@ -109,6 +109,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     return AudioPathes.rotating;
                 case SOUNDS.Backward:
                     return AudioPathes.backward;
+                case SOUNDS.WaitingPartsSysAcceptAreaRegist:
+                    return AudioPathes.waitingPartsSysAcceptAreaRegist;
                 default:
                     return "";
             }

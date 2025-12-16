@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using GPMVehicleControlSystem.Models;
+using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -133,6 +134,18 @@ namespace GPMVehicleControlSystem.Controllers
         public async Task UpdateCarrierID(string carrierID)
         {
             agv.CSTReader.ValidCSTID = carrierID;
+        }
+
+        [HttpPost("WaitingPartsAreaRegistNotify")]
+        public async Task WaitingPartsAreaRegistNotify()
+        {
+            BuzzerPlayer.SoundPlaying = SOUNDS.WaitingPartsSysAcceptAreaRegist;
+        }
+
+        [HttpPost("WaitingPartsAreaRegistFinishNotify")]
+        public async Task WaitingPartsAreaRegistFinishNotify()
+        {
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
         }
     }
 }

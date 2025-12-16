@@ -15,6 +15,7 @@
         SlowDownMusic,
         RotatingVoice,
         RotatingMusic,
-        Backward
+        Backward,
+        WaitingPartsSysAcceptAreaRegist
     }
 }

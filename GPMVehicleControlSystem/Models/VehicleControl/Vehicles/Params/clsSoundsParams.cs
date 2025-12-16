@@ -27,6 +27,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             public string slowDown_voice { get; set; } = "/home/gpm/param/sounds/slow_down.wav";
             public string waitingCargoStatusCheck { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
             public string backward { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
+            public string waitingPartsSysAcceptAreaRegist { get; set; } = "/home/gpm/param/sounds/waiting_parts_accept_area_regist.wav";
         }
 
         public class SlowDownAndRotatinSoundPlay

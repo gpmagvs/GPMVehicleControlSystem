@@ -2,6 +2,7 @@
 using AGVSystemCommonNet6.AGVDispatch;
 using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
+using AGVSystemCommonNet6.MAP;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
@@ -57,6 +58,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
              };
             await base.CreateAsync();
 
+            Task.Delay(5000).ContinueWith(async t =>
+            {
+                int lastVisitedTag = Parameters.LastVisitedTag;
+                MapPoint lastVisitedPoint = NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == lastVisitedTag);
+                if (lastVisitedPoint == null)
+                    return;
+                (bool confirm, string message) = await Localization((ushort)lastVisitedPoint.TagNumber, lastVisitedPoint.X, lastVisitedPoint.Y, -1);
+                if (!confirm)
+                {
+                    SendNotifyierToFrontend("車輛定位失敗", alarmCode: AlarmCodes.Localization_Fail);
+                }
+            });
         }
 
         protected InspectorAGVCarController? MiniAgvAGVC = new InspectorAGVCarController();
