@@ -111,6 +111,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     return AudioPathes.backward;
                 case SOUNDS.WaitingPartsSysAcceptAreaRegist:
                     return AudioPathes.waitingPartsSysAcceptAreaRegist;
+                case SOUNDS.WaitingElevetorArrive:
+                    return AudioPathes.WaitingElevatorArriveNotify;
                 default:
                     return "";
             }

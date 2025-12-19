@@ -147,5 +147,18 @@ namespace GPMVehicleControlSystem.Controllers
         {
             BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
         }
+
+
+        [HttpPost("WaitingElevatorArriveNotify")]
+        public async Task WaitingElevatorArriveNotify()
+        {
+            BuzzerPlayer.SoundPlaying = SOUNDS.WaitingElevetorArrive;
+        }
+
+        [HttpPost("ElevatorArrivedNotify")]
+        public async Task ElevatorArrivedNotify()
+        {
+            BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
+        }
     }
 }

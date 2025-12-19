@@ -28,6 +28,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
             public string waitingCargoStatusCheck { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
             public string backward { get; set; } = "/home/gpm/param/sounds/waiting_cargo_status_check.wav";
             public string waitingPartsSysAcceptAreaRegist { get; set; } = "/home/gpm/param/sounds/waiting_parts_accept_area_regist.wav";
+            public string WaitingElevatorArriveNotify { get; set; } = "/home/gpm/param/sounds/waitingElevatorArrive.wav";
         }
 
         public class SlowDownAndRotatinSoundPlay

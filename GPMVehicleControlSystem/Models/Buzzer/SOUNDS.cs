@@ -16,6 +16,7 @@
         RotatingVoice,
         RotatingMusic,
         Backward,
-        WaitingPartsSysAcceptAreaRegist
+        WaitingPartsSysAcceptAreaRegist,
+        WaitingElevetorArrive
     }
 }
