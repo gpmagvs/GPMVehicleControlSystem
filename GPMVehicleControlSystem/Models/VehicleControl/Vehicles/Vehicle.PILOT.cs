@@ -125,7 +125,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
-            TryDefineOrderInfoOfTaskDownloaded(ref taskDownloadData);
+            await TryDefineOrderInfoOfTaskDownloaded(taskDownloadData);
 
             LogTaskAndCancleStatus("ExecuteAGVSTask");
             Stopwatch sw = Stopwatch.StartNew();
@@ -319,8 +319,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             public ACTION_TYPE actionType { get; set; } = ACTION_TYPE.Unknown;
 
         }
+        public static class ApiClient
+        {
+            // 單例 HttpClient
+            public static readonly HttpClient Http = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(3)
+            };
+        }
 
-        protected virtual void TryDefineOrderInfoOfTaskDownloaded(ref clsTaskDownloadData taskDownloadData)
+        protected virtual async Task TryDefineOrderInfoOfTaskDownloaded(clsTaskDownloadData taskDownloadData)
         {
             if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS)
                 return;
@@ -351,9 +359,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 string hostIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
                 int port = Parameters.VMSParam.OrderInfoAPIPort;
                 string apiPath = $"{Parameters.VMSParam.OrderInfoAPIRoute}?taskID={taskID}";
+                ApiClient.Http.BaseAddress = new Uri($"http://{hostIP}:{port}");
+                ApiClient.Http.Timeout = TimeSpan.FromSeconds(3);
 
-                using HttpClient http = new HttpClient() { BaseAddress = new Uri($"http://{hostIP}:{port}"), Timeout = TimeSpan.FromSeconds(3) };
-                var response = http.GetAsync(apiPath).GetAwaiter().GetResult();
+                var response = await ApiClient.Http.GetAsync(apiPath);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -361,7 +370,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return;
                 }
 
-                string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string json = await response.Content.ReadAsStringAsync();
                 logger.LogInformation($"JSON response of order info GET From API={json}");
 
                 var apiData = Newtonsoft.Json.JsonConvert.DeserializeObject<OrderInfoAPIResponse>(json);
