@@ -226,7 +226,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             }
         }
 
-        public override Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
+        public override Task<(string readCommand, bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
             throw new NotImplementedException();
         }

@@ -61,8 +61,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         CSTReaderCommandResponse? cst_reader_confirm_ack = null;
         ManualResetEvent wait_cst_ack_MRE = new ManualResetEvent(false);
 
-        public override async Task<(bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
+        public override async Task<(string readCommand, bool request_success, bool action_done)> TriggerCSTReader(CST_TYPE cst_type)
         {
+            var cst_reader_command = "read_try";
             bool _request_success = false;
             bool _action_done = false;
             try
@@ -71,7 +72,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 await AbortCSTReader();
                 wait_cst_ack_MRE = new ManualResetEvent(false);
                 cst_reader_confirm_ack = null;
-                var cst_reader_command = "read_try";
                 int retry_cnt = 0;
                 if (cst_type == CST_TYPE.None || (int)cst_type == -1)
                 {
@@ -83,6 +83,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         cst_type = OnCstTriggerButTypeUnknown();
                     }
                 }
+
+                bool isUnknownCstTypeOnAGV = cst_type == CST_TYPE.Unknown;
+
+                //Local Method
+
+
+
                 cst_reader_command = cst_type == CST_TYPE.Tray ? "read_try" : "read";//read_try=>上方reader(讀取tray stack 最上方2的barcode), read=>中下方reader
                 logger.Warn($"CST TYPE={cst_type}({(int)cst_type})|Use {cst_reader_command} command to trigger reader");
                 WaitCSTReadActionDone.Reset();
@@ -118,13 +125,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                 {
                     logger.Info("Trigger CST Reader fail. CSTReader no reply");
                     OnCSTReaderActionDone?.Invoke(this, "");
-                    return (false, false);
+                    return (cst_reader_command, false, false);
                 }
                 if (!cst_reader_confirm_ack.confirm)
                 {
                     logger.Info("Trigger CST Reader fail. Confirm=False");
                     OnCSTReaderActionDone?.Invoke(this, "");
-                    return (false, false);
+                    return (cst_reader_command, false, false);
                 }
                 else
                 {
@@ -142,7 +149,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                             AbortCSTReader();
                             logger.Error($"Wait CST Action  Fail  Return Result Done:{ActionDoneReturn}, In-Time:{isActionDoneInTime}");
                             OnCSTReaderActionDone?.Invoke(this, "ERROR");
-                            return (true, false);
+                            return (cst_reader_command, true, false);
                         }
 
                         await Task.Delay(800);
@@ -158,7 +165,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                             {
                                 AbortCSTReader();
                                 OnCSTReaderActionDone?.Invoke(this, "ERROR");
-                                return (false, false);
+                                return (cst_reader_command, false, false);
                             }
                         }
 
@@ -172,7 +179,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         }
 
                         OnCSTReaderActionDone?.Invoke(this, cst_id);
-                        return (true, true);
+                        return (cst_reader_command, true, true);
                     }
                     catch (OperationCanceledException)
                     {
@@ -180,7 +187,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
                         logger.Warn("Trigger CST Reader Timeout");
                         AbortCSTReader();
                         OnCSTReaderActionDone?.Invoke(this, "");
-                        return (true, false);
+                        return (cst_reader_command, true, false);
                     }
 
                 }
@@ -189,7 +196,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
             catch (Exception ex)
             {
                 logger.Error(ex);
-                return (false, false);
+                return (cst_reader_command, false, false);
             }
             finally
             {
@@ -203,7 +210,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl
         /// <returns></returns>
         public override async Task<(bool request_success, bool action_done)> TriggerCSTReader()
         {
-            return await TriggerCSTReader(CST_TYPE.Tray);
+            (string readCommand, bool request_success, bool action_done) = await TriggerCSTReader(CST_TYPE.Tray);
+            return (request_success, action_done);
         }
 
         private void CstReaderConfirmedAckHandler(CSTReaderCommandResponse ack)

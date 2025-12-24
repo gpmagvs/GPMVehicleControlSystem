@@ -317,7 +317,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("TriggerCSTReaderWithCargoType")]
         public async Task<IActionResult> TriggerCSTReaderWithCargoType(CST_TYPE cargo_type)
         {
-            (bool request_success, bool action_done) ret = await agv.AGVC.TriggerCSTReader(cargo_type);
+            (string readCommand, bool request_success, bool action_done) ret = await agv.AGVC.TriggerCSTReader(cargo_type);
             try
             {
                 await agv.AGVC.CSTReadServiceSemaphoreSlim.WaitAsync();

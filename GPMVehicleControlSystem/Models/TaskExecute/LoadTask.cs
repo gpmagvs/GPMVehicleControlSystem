@@ -1224,12 +1224,31 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         protected async Task<(bool confirm, AlarmCodes alarmCode)> CSTBarcodeRead(CancellationToken cancellationToken)
         {
-
             var cstType = Agv.CargoStateStorer.GetCargoType();
-            (bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(cstType);
+            bool isUnknown = cstType == CST_TYPE.Unknown;
+
+            (string readCommand, bool request_success, bool action_done) result = await Agv.AGVC.TriggerCSTReader(cstType);
+
+
             if (!result.request_success || !result.action_done)
             {
-                return (false, AlarmCodes.Read_Cst_ID_Fail);
+                if (isUnknown)
+                {
+                    //用另外
+                    CST_TYPE _tryCstType = result.readCommand == "read_try" ? CST_TYPE.Rack : CST_TYPE.Tray; //上一次用 read_try 這次拍 RACK;上一次用 read 這次拍 Tray
+                    result = await Agv.AGVC.TriggerCSTReader(_tryCstType);
+                    if (!result.request_success || !result.action_done)
+                    {
+                        logger.Info($"嘗試用 {_tryCstType} Reader 再拍一次也失敗了");
+                        return (false, AlarmCodes.Read_Cst_ID_Fail);
+                    }
+                    else
+                    {
+                        logger.Info($"嘗試用 {_tryCstType} Reader 再拍一次成功!");
+                    }
+                }
+                else
+                    return (false, AlarmCodes.Read_Cst_ID_Fail);
             }
             try
             {
