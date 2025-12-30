@@ -706,7 +706,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             IEnumerable<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt));
             IEnumerable<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID);
             logger.LogTrace($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
-            bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2 && autoDoorPoints.Any(pt => autoDoorStationTags.Contains(pt.Point_ID));
+
+
+            bool _isAutoDoorInRemainTraj = autoDoorPoints.Any();
+            //bool _isAutoDoorInRemainTraj = autoDoorPoints.Count() >= 2 && autoDoorPoints.Any(pt => autoDoorStationTags.Contains(pt.Point_ID));
             if (_isAutoDoorInRemainTraj)
             {
                 int index_of_first_auto_door_pt = trajectory.ToList().FindIndex(pt => pt.Point_ID == autoDoorPoints.First().Point_ID);
@@ -718,6 +721,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             bool _IsAutoDoor(clsMapPoint traj_point)
             {
+                //KG Base
+                if (traj_point.Auto_Door != null && !string.IsNullOrEmpty(traj_point.Auto_Door.Key_Name))
+                    return true;
+
                 KeyValuePair<int, AGVSystemCommonNet6.MAP.MapPoint> mapPt = NavingMap.Points.FirstOrDefault(p => p.Value.TagNumber == traj_point.Point_ID);
                 if (mapPt.Value == null)
                     return false;
@@ -729,6 +736,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual async Task OpenAutoDoor()
         {
+            clsIOSignal autoDoorOutput = WagoDO.VCSOutputs.FirstOrDefault(ot => ot.Output == DO_ITEM.Infrared_Door_1);
+            if (autoDoorOutput == null)
+            {
+                logger.LogError($"自動門輸出點未定義，無法開啟自動門");
+                return;
+            }
+            if (autoDoorOutput.State)
+            {
+                logger.LogInformation($"自動門輸出點已經開啟，無需重複開啟");
+                return;
+            }
+
+            LogDebugMessage("嘗試開啟自動門", true);
             logger.LogInformation($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
             bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, true);
             if (!success)
@@ -738,10 +758,25 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected virtual async Task CloseAutoDoor()
         {
-            logger.LogInformation($"Open Auto Door OUPUT OFF(Tag:{lastVisitedMapPoint.TagNumber})");
+            clsIOSignal autoDoorOutput = WagoDO.VCSOutputs.FirstOrDefault(ot => ot.Output == DO_ITEM.Infrared_Door_1);
+            if (autoDoorOutput == null)
+            {
+                logger.LogError($"自動門輸出點未定義，無法關閉自動門");
+                return;
+            }
+            if (!autoDoorOutput.State)
+            {
+                logger.LogInformation($"自動門輸出點已經關閉，無需重複關閉");
+                return;
+            }
+
+            LogDebugMessage("嘗試關閉自動門", true);
+            logger.LogInformation($"Open Auto Door OUPUT ON(Tag:{lastVisitedMapPoint.TagNumber})");
             bool success = await WagoDO.SetState(DO_ITEM.Infrared_Door_1, false);
-            //if (!success)
-            //    AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
+            if (!success)
+            {
+                AlarmManager.AddWarning(AlarmCodes.Auto_Door_Ouput_Not_Defined);
+            }
         }
 
         private void UpdateLastVisitedTagOfParam(int newVisitedNodeTag)
@@ -989,7 +1024,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                                 await Task.Delay(10, LaserObsMonitorCancel.Token);
 
-                                var cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
+                                ROBOT_CONTROL_CMD cmdGet = GetSpeedControlCmdByLaserState(out AlarmCodes[] alarmCodeCollection);
 
                                 if (!debouncer.IsStable(cmdGet))
                                 {
@@ -1130,6 +1165,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             public bool IsStable(ROBOT_CONTROL_CMD currentState)
             {
+                if (currentState != ROBOT_CONTROL_CMD.SPEED_Reconvery)
+                {
+                    _lastSpeedControlCmd = currentState;
+                    return true;
+                }
                 if (currentState != _lastSpeedControlCmd)
                 {
                     _lastSpeedControlCmd = currentState;
