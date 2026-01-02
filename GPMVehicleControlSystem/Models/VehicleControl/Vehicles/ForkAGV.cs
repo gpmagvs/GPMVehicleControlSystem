@@ -714,7 +714,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
                 await Task.Delay(1);
                 ForkLifter.ForkARMStop();
-                ForkLifter.ForkStopAsync(true);
+                ForkLifter.ForkStopAsync(IsEMS: true);
             });
             base.SoftwareEMO(alarmCode);
         }

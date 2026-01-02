@@ -696,7 +696,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
 
-        private void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+        private void BarcodeReader_OnAGVReachingTag(object? sender, uint tag)
         {
             if (IsAutoControlRechargeCircuitSuitabtion && Parameters.BatteryModule.Recharge_Circuit_Auto_Control_In_ManualMode)
             {
@@ -902,19 +902,48 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }, 1000);
             });
         }
-
+        clsNavigation.AGV_DIRECTION _lastDirection = AGV_DIRECTION.FORWARD;
+        bool _isBypassDirectionHandling = false;
+        Task _bypassHandleTask = Task.CompletedTask;
         protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
+            _lastDirection = direction;
             Laser.agvDirection = direction;
-            int _debunceDelay = direction == AGV_DIRECTION.BYPASS ? 10 : 100;
+
+            DirectionLighter.LightSwitchByAGVDirection(sender, direction); //方向燈一率處理切換
+
             if (direction == AGV_DIRECTION.FORWARD)
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery);
-            _vehicleDirectionChangedDebouncer.Debounce(() =>
+                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery); //前進時嘗試恢復速度
+
+            if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
             {
-                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
+                bool _isBypassRequested = direction == AGV_DIRECTION.BYPASS;
+
+                if (_isBypassRequested && !_isBypassDirectionHandling)
+                {
+                    _isBypassDirectionHandling = true;
+                    LogDebugMessage($"車控 Direction 發布 bypass, 處理中", true);
+                    _bypassHandleTask = Task.Run(async () =>
+                    {
+                        await Laser.ModeSwitch(0, isManualSwitch: true);
+                        await Laser.SideLasersEnable(false);
+                        await Task.Delay(3000);
+                        await Laser.SideLasersEnable(true);
+                        _isBypassDirectionHandling = false;
+                        _bypassHandleTask = Task.CompletedTask;
+                        LogDebugMessage($"車控 Direction bypass 處理完成!", true);
+                    });
+                }
+                _vehicleDirectionChangedDebouncer.Debounce(async () =>
+                {
+                    if (_isBypassDirectionHandling && !_bypassHandleTask.IsCompleted)
+                    {
+                        await _bypassHandleTask;
+                        LogDebugMessage($"車控 Direction bypass 處理處理中, {direction} 將在稍後繼續處理", true);
+                    }
                     Laser.LaserChangeByAGVDirection(Navigation.LastVisitedTag, direction);
-                DirectionLighter.LightSwitchByAGVDirection(sender, direction);
-            }, _debunceDelay);
+                }, 100);
+            }
         }
 
 

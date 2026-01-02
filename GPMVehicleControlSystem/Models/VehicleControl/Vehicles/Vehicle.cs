@@ -1216,6 +1216,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         private SemaphoreSlim _softwareEmoSemaphoreSlim = new SemaphoreSlim(1, 1);
+
+        private REMOTE_MODE _remoteModeBeforeSoftwareEmo = REMOTE_MODE.OFFLINE;
+
         protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
         {
             Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
@@ -1224,7 +1227,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 return;
             }
-
+            _remoteModeBeforeSoftwareEmo = Remote_Mode;
             if (alarmCode == AlarmCodes.Fork_Slot_Teach_Data_ERROR)
             {
                 SendNotifyierToFrontend("因牙叉某一層高度教點數據皆為0，因安全考量禁止動作。\r\n若確定牙叉位置須為0，請將Up_Pose設定為0.01即可。", "牙叉高度設備確認", alarmCode);

@@ -7,7 +7,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     {
         public override COMPOENT_NAME component_name => COMPOENT_NAME.BARCODE_READER;
 
-        public event EventHandler OnAGVReachingTag;
+        public event EventHandler<uint> OnAGVReachingTag;
         public event EventHandler<uint> OnAGVLeavingTag;
 
         public new BarcodeReaderState Data => _StateData == null ? new BarcodeReaderState() : (BarcodeReaderState)_StateData;
@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                 else
                 {
                     logger.Info($"Reach Tag {currentTag}", true);
-                    OnAGVReachingTag?.Invoke(this, EventArgs.Empty);
+                    OnAGVReachingTag?.Invoke(this, currentTag);
                 }
 
             }

@@ -225,29 +225,48 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <returns></returns>
         public async Task<(bool confirm, string message)> ForkStopAsync(bool IsEMS = false, bool waitSpeedZero = false)
         {
-            if (IsEMS)
+            try
             {
-                fork_ros_controller.verticalActionService.BeforeStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
-                fork_ros_controller.verticalActionService.wait_action_down_cts.Cancel();
-                logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
-            }
-            if (!waitSpeedZero)
-                return await fork_ros_controller.verticalActionService.Stop();
-            else
-            {
-                var _result = await fork_ros_controller.verticalActionService.Stop();
-                if (!_result.confirm)
-                    return _result;
-
-                CancellationTokenSource _cancel = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-                while (fork_ros_controller.verticalActionService.driverState.speed != 0)
+                if (!waitSpeedZero)
+                    return await fork_ros_controller.verticalActionService.Stop();
+                else
                 {
-                    if (_cancel.IsCancellationRequested)
-                        return (false, "Wait Fork Vertical Stop->Speed Zero Timeout!");
-                    await Task.Delay(100);
+                    var _result = await fork_ros_controller.verticalActionService.Stop();
+                    if (!_result.confirm)
+                        return _result;
+
+                    CancellationTokenSource _cancel = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                    while (fork_ros_controller.verticalActionService.driverState.speed != 0)
+                    {
+                        if (_cancel.IsCancellationRequested)
+                            return (false, "Wait Fork Vertical Stop->Speed Zero Timeout!");
+                        await Task.Delay(100);
+                    }
+                    return (true, "");
                 }
-                return (true, "");
             }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+                return (false, ex.Message);
+            }
+            finally
+            {
+                if (IsEMS)
+                {
+                    try
+                    {
+                        fork_ros_controller.verticalActionService.BeforeStopActionRequesting = new AGVSystemCommonNet6.GPMRosMessageNet.Services.VerticalCommandRequest();
+                        fork_ros_controller.verticalActionService.wait_action_down_cts.Cancel();
+                        logger.Trace("Call fork_ros_controller.wait_action_down_cts.Cancel()");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Exception happen when ForkStopAsync method called with 'IsEMS' input equal 'true'");
+                    }
+                }
+            }
+
         }
 
         /// <summary>

@@ -548,16 +548,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (confirm)
             {
                 logger.LogInformation($"嘗試自動初始化完成");
-                (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
-                if (success)
+
+                if (_remoteModeBeforeSoftwareEmo == REMOTE_MODE.ONLINE)
                 {
-                    SendNotifyierToFrontend($"AGV自動初始化完成且上線成功!");
-                    logger.LogInformation($"AGV自動初始化完成且上線成功");
-                }
-                else
-                {
-                    SendNotifyierToFrontend($"AGV自動初始化完成但上線失敗({return_code})");
-                    logger.LogError($"AGV自動初始化完成但上線失敗({return_code})");
+                    (bool success, RETURN_CODE return_code) = await Online_Mode_Switch(REMOTE_MODE.ONLINE);
+                    if (success)
+                    {
+                        SendNotifyierToFrontend($"AGV自動初始化完成且上線成功!");
+                        logger.LogInformation($"AGV自動初始化完成且上線成功");
+                    }
+                    else
+                    {
+                        SendNotifyierToFrontend($"AGV自動初始化完成但上線失敗({return_code})");
+                        logger.LogError($"AGV自動初始化完成但上線失敗({return_code})");
+                    }
                 }
             }
             else
@@ -1317,21 +1321,27 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
         }
 
-        internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)
+
+        internal void WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler(object? sender, uint currentTagNumber)
         {
             if (GetSub_Status() == SUB_STATUS.DOWN)
             {
-                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
                 return;
             }
             Task.Run(async () =>
             {
                 int NextSecondartPointTag = NormalMoveTask.NextSecondartPointTag;
                 int NextWorkStationPointTag = NormalMoveTask.NextWorkStationPointTag;
-
+                //新增 Barcode Reader 讀值不可為 0 且要跟 NextSecondaryPointTag 相同
                 if (NextSecondartPointTag == currentTagNumber)
                 {
-                    Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                    BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
+                    //需等一下 並判斷 AGV 是不是當機
+                    await Task.Delay(300);
+
+                    if (GetSub_Status() == SUB_STATUS.DOWN)
+                        return;
 
                     bool _isTagNotAllowLiftUpWithRotaion = Parameters.ForkAGV.NonRotatableWhenLiftingTags.Contains(currentTagNumber);
 
@@ -1422,6 +1432,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
 
             });
+        }
+        internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)
+        {
+
         }
 
 

@@ -300,10 +300,10 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             await Task.Delay(1);
             if (agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV)
-                await agv.Laser.ModeSwitch(mode);
+                await agv.Laser.ModeSwitch(mode, isManualSwitch: true);
             else
             {
-                await agv.Laser.ModeSwitch(mode);
+                await agv.Laser.ModeSwitch(mode, isManualSwitch: true);
                 await (agv.Laser as clsAMCLaser).SideLaserModeSwitch(mode);
             }
             return Ok();

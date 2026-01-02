@@ -48,14 +48,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 bool _isCurrentTagIsNextSecondaryPoint = Agv.Navigation.LastVisitedTag == NextSecondartPointTag;
 
                 if (ForkActionStartWhenReachSecondartPTFlag && !_isCurrentTagIsNextSecondaryPoint)
-                {
-                    Agv.Navigation.OnLastVisitedTagUpdate += Agv.WatchReachNextWorkStationSecondaryPtHandler;
-                    //StartTrackingSecondaryPointReach(ExecutingTaskNameRecord);
-                }
+                    Agv.BarcodeReader.OnAGVReachingTag += Agv.WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
                 else if (ForkActionStartWhenReachSecondartPTFlag && _isCurrentTagIsNextSecondaryPoint)
-                {
                     logger.Info($"當前位置已在工作站進入點,不需監視是否已到達工作站進入點");
-                }
             }
             return base.TransferTaskToAGVC();
         }

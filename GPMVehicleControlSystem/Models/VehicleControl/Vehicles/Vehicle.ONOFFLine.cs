@@ -3,6 +3,7 @@ using AGVSystemCommonNet6.AGVDispatch.Model;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.TaskExecute;
 using RosSharp.RosBridgeClient.Actionlib;
+using System;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
@@ -183,6 +184,5 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             isNavMotorSwitchStateError = horizonMotorDIState != null && !horizonMotorDIState.State;
             isVertialMotorSwitchStateError = verticalMotorDIState != null && !verticalMotorDIState.State;
         }
-
     }
 }

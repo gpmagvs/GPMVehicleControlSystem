@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new
                 {
                     accpet = false,
-                    error_message = $"AGV當前狀態無法執行任務({agv.GetSub_Status()})"
+                    error_message = $"本地任務無法於AGV狀態為 {agv.GetSub_Status()} 下執行"
                 });
             }
 

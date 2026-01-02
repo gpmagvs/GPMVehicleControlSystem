@@ -416,19 +416,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
-        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByResetButtonLongPressed = false)
+        public async Task<bool> ModeSwitch(int mode_int, bool isSettingByResetButtonLongPressed = false, bool isManualSwitch = false)
         {
             try
             {
                 await modeSwitchSemaphoresSlim.WaitAsync();
 
-
-                if (mode_int == 0 || mode_int == 16)
+                if (!isManualSwitch && (mode_int == 0 || mode_int == 16))
                 {
                     LaserModeSwitchCheckArgs checkArgs = new LaserModeSwitchCheckArgs()
                     {
                         accept = true,
-                        message = ""
+                        message = "",
                     };
 
                     BeforeLaserModeBypassSwitch?.Invoke(this, checkArgs);

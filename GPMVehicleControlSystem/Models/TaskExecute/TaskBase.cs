@@ -932,7 +932,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
 
 
-            void BarcodeReader_OnAGVReachingTag(object? sender, EventArgs e)
+            void BarcodeReader_OnAGVReachingTag(object? sender, uint tag)
             {
                 Agv.BarcodeReader.OnAGVReachingTag -= BarcodeReader_OnAGVReachingTag;
                 bool isReachWorkStation = Agv.BarcodeReader.CurrentTag == this.RunningTaskData.Destination;
