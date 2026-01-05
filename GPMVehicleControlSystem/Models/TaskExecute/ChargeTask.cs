@@ -50,7 +50,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         }
         public override void DirectionLighterSwitchBeforeTaskExecute()
         {
-            Agv.DirectionLighter.Forward();
+            Agv.DirectionLighter.ForwardAndBackward();
         }
         protected override async Task<CarController.SendActionCheckResult> TransferTaskToAGVC()
         {

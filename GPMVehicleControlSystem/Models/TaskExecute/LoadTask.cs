@@ -592,7 +592,12 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 {
                     return (false, alarmCode);
                 }
-                Agv.DirectionLighter.Backward(delay: 800);
+
+                if (Agv.lastVisitedMapPoint.DodgeMode == 13)
+                    Agv.DirectionLighter.ForwardAndBackward(delay: 800);
+                else
+                    Agv.DirectionLighter.Backward(delay: 800);
+
                 RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
                 logger.Info("Back To Home Task Created:" + RunningTaskData.ToJson());
                 await Agv.Laser.ModeSwitch(LASER_MODE.Secondary);

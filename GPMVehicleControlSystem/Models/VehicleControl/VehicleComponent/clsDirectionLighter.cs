@@ -85,6 +85,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             }
         }
 
+
+        public async virtual void ForwardAndBackward(bool opened = true, int delay = 200)
+        {
+            await CloseAll();
+            await Task.Delay(delay);
+
+            DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
+                    {
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(), false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(),  false),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(),  true),
+                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(),  true),
+                    });
+            await DOModule.SetState(request);
+        }
+
         public async virtual void Forward(bool opened = true)
         {
             await CloseAll();

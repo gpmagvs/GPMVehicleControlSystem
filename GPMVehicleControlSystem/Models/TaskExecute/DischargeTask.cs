@@ -42,7 +42,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             Task.Factory.StartNew(async () =>
             {
                 await Task.Delay(1000);
-                Agv.DirectionLighter.Backward();
+                if (Agv.lastVisitedMapPoint.DodgeMode == 13)
+                    Agv.DirectionLighter.ForwardAndBackward();
+                else
+                    Agv.DirectionLighter.Backward();
             });
         }
 
