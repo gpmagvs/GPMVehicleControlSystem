@@ -66,7 +66,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 if (param.IsUIDefault)
                     throw new Exception("無效參數!將可能會造成系統異常");
                 //派車HOST同步 MapUrl
-                param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:5216/api/Map";
+                string apiPath = param.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS ? "5216/api/Map" : "6600/Map/Get";
+                param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:{apiPath}";
                 StaStored.CurrentVechicle.Parameters = param;
                 (bool confirm, string errorMsg) = await Vehicle.SaveParameters(param, this.hubContext);
                 return Ok(new { confirm = confirm, errorMsg = errorMsg });
@@ -127,7 +128,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("BackupSystem")]
         public async Task<IActionResult> BackupSystem()
         {
-            bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg,force:true);
+            bool backupSuccess = _sysUpdateService.BackupCurrentProgram(out string errMsg, force: true);
             if (backupSuccess)
                 return Ok(new { confirm = true, message = errMsg });
             else

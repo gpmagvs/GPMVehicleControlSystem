@@ -58,6 +58,22 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new VehicleInstanceInitializeFailException($"Load Param Fail! File not found({param_file})");
 
                 logger.Trace("Parameters Load done");
+
+                //參數檢查
+                var agvsConnection = Parameters.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS];
+                if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.KGS && !Parameters.VMSParam.MapUrl.ToLower().Contains(":6600/map/get"))
+                {
+                    logger.Warn($"檢查到圖資 API Url 不正確:對應 KGS 派車系統但 Url 未包含 '6600/map/get'");
+                    Parameters.VMSParam.MapUrl = $"http://{agvsConnection.IP}:6600/Map/Get";
+                    logger.Info($"圖資 API Url 修正結果:{Parameters.VMSParam.MapUrl}");
+                }
+                if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS && !Parameters.VMSParam.MapUrl.ToLower().Contains(":5216/api/Map"))
+                {
+                    logger.Warn($"檢查到圖資 API Url 不正確:對應 GPM 派車系統但 Url 未包含 ':5216/api/Map'");
+                    Parameters.VMSParam.MapUrl = $"http://{agvsConnection.IP}:5216/api/Map";
+                    logger.Info($"圖資 API Url 修正結果:{Parameters.VMSParam.MapUrl}");
+                }
+
                 return Parameters;
             }
             catch (JsonReaderException ex)
