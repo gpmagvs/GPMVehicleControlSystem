@@ -321,11 +321,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         public static class ApiClient
         {
+            public static bool isFirstUse = true;
             // 單例 HttpClient
-            public static readonly HttpClient Http = new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(3)
-            };
+            public static readonly HttpClient Http = new HttpClient();
         }
 
         protected virtual async Task TryDefineOrderInfoOfTaskDownloaded(clsTaskDownloadData taskDownloadData)
@@ -356,11 +354,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             // 2. 呼叫 API
             try
             {
-                string hostIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
-                int port = Parameters.VMSParam.OrderInfoAPIPort;
+
                 string apiPath = $"{Parameters.VMSParam.OrderInfoAPIRoute}?taskID={taskID}";
-                ApiClient.Http.BaseAddress = new Uri($"http://{hostIP}:{port}");
-                ApiClient.Http.Timeout = TimeSpan.FromSeconds(3);
+
+                if (ApiClient.isFirstUse)
+                {
+                    string hostIP = Parameters.Connections[Params.clsConnectionParam.CONNECTION_ITEM.AGVS].IP;
+                    int port = Parameters.VMSParam.OrderInfoAPIPort;
+                    ApiClient.isFirstUse = false;
+                    ApiClient.Http.BaseAddress = new Uri($"http://{hostIP}:{port}");
+                    ApiClient.Http.Timeout = TimeSpan.FromSeconds(1);
+                }
 
                 var response = await ApiClient.Http.GetAsync(apiPath);
 
@@ -402,6 +406,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             // ---------- Local Methods ----------
 
+            ///
+            /// orderActionType-> 指的是訂單的任務類型
+            /// currentExecutingAction -> 當下收到的動作類型
             ACTION_TYPE DefineNextAction(ACTION_TYPE orderActionType)
             {
                 // 若處於 Discharge / Unpark，下一步一定是移動

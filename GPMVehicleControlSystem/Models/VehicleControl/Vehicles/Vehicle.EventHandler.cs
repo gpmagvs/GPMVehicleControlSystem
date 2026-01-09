@@ -611,7 +611,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (isRecoverable)
                 AlarmManager.AddWarning(AlarmCodes.Fork_Frontend_has_Obstacle);
             else
+            {
+                SetSub_Status(SUB_STATUS.DOWN);
+                ExecutingTaskEntity.Abort(AlarmCodes.Fork_Frontend_has_Obstacle);
                 AlarmManager.AddAlarm(AlarmCodes.Fork_Frontend_has_Obstacle, false);
+            }
         }
 
         private bool HandleChargeTaskTryOpenChargeCircuit()
