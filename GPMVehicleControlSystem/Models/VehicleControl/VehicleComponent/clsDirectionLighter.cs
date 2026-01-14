@@ -25,9 +25,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             {
                 await Task.Delay(delay_ms);
                 AbortFlash();
-                if (IsWaitingTaskLightsFlashing)
-                    await Task.Delay(200);
-
                 DOWriteRequest writeRequest = new DOWriteRequest(new List<DOModifyWrapper>()
                                                     {
                                                          new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(), false),
@@ -93,7 +90,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
             DOWriteRequest request = new DOWriteRequest(new List<DOModifyWrapper>()
                     {
-                        new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Back.GetIOSignalOfModule(), false),
                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Right.GetIOSignalOfModule(),  false),
                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Left.GetIOSignalOfModule(),  false),
                         new DOModifyWrapper(DO_ITEM.AGV_DiractionLight_Front.GetIOSignalOfModule(),  true),
@@ -166,5 +162,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         }
 
+        internal async Task WaiLightsOff(DO_ITEM[] items, double timeoutMs = 1000)
+        {
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
+            try
+            {
+                while (!_isAllOff())
+                {
+                    await Task.Delay(100, cts.Token);
+                }
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            bool _isAllOff()
+            {
+                return items.Select(item =>
+                {
+                    var _state = DOModule.VCSOutputs.FirstOrDefault(i => i.Output == item);
+                    if (_state == null)
+                        return false;
+                    return _state.State;
+
+                }).ToList().All(i => i == false);
+            }
+        }
     }
 }

@@ -190,7 +190,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     CancelSwitchToTrafficLightsCase();
                     if (DirectionLighter.IsWaitingTaskLightsFlashing)
-                        await DirectionLighter.CloseAll();
+                    {
+                        DirectionLighter.CloseAll();
+                        await DirectionLighter.WaiLightsOff(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Left, DO_ITEM.AGV_DiractionLight_Right }, timeoutMs: 500);
+                    }
 
                     if (isAGVSTask && AGV_Reset_Flag)
                         return;

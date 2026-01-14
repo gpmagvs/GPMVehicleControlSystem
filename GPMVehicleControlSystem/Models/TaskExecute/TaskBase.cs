@@ -359,6 +359,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 logger.Error(ex, "AGV任務執行發生錯誤");
                 return new List<AlarmCodes>() { AlarmCodes.Code_Error_In_System };
             }
+            finally
+            {
+
+            }
 
         }
 

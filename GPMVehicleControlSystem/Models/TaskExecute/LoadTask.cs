@@ -451,6 +451,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 logger.Info($"等待AGV完成設備內所有動作+退出致設備進入點[{action}]");
                 _wait_agvc_action_done_pause.WaitOne();
                 logger.Trace($"AGV退出至進入點完成 [{action}] 任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
+
+                Agv.DirectionLighter.CloseAll(delay_ms: 1); //方向燈全關
+                await Agv.DirectionLighter.WaiLightsOff(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Back, DO_ITEM.AGV_DiractionLight_Front }, timeoutMs: 500);
+
             }
             else
             {

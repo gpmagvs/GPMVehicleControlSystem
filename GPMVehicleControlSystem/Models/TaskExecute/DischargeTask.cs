@@ -79,6 +79,13 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             return (true, AlarmCodes.None);
         }
 
+        protected override async Task WaitTaskDoneAsync()
+        {
+            await base.WaitTaskDoneAsync();
+            Agv.DirectionLighter.CloseAll();
+            await Agv.DirectionLighter.WaiLightsOff(new DO_ITEM[] { DO_ITEM.AGV_DiractionLight_Back, DO_ITEM.AGV_DiractionLight_Front }, timeoutMs: 500);
+
+        }
 
     }
 }

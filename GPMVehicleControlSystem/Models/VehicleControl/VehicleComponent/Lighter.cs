@@ -27,6 +27,10 @@ namespace AGVSystemCommonNet6.Abstracts
                 flash_cts?.Cancel();
                 flash_cts?.Dispose();
             }
+            catch (ObjectDisposedException ex)
+            {
+                logger.Warn($"{this.GetType().Name} [AbortFlash] flash_cts 已經被 Disposed 了-> 已終止 flash 狀態");
+            }
             catch (Exception ex)
             {
                 logger.Error(ex);
