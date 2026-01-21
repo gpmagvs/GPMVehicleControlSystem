@@ -121,6 +121,10 @@
             /// 牙叉電動肛縮回
             /// </summary>
             Fork_Shortend,
+            /// <summary>
+            /// 2026/01/15 新增, 對應 YM 3F ABF 皮帶型叉車
+            /// </summary>
+            Fork_Floating
         }
 
     }

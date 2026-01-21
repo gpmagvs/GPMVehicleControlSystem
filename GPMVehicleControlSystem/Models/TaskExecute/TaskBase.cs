@@ -373,7 +373,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return currentAlarms;
 
             List<AlarmCodes> alarms = new List<AlarmCodes>() { AlarmCodes.AGV_State_Cant_do_this_Action };
-            if (Agv.WagoDI.GetState(DI_ITEM.EMO) == false)
+            if (Agv.IsEmoTrigger)
                 alarms.Add(AlarmCodes.EMS);
 
             return alarms;

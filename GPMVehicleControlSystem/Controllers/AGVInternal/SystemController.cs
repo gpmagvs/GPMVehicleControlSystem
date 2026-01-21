@@ -68,7 +68,6 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 //派車HOST同步 MapUrl
                 string apiPath = param.VMSParam.Protocol == Vehicle.VMS_PROTOCOL.GPM_VMS ? "5216/api/Map" : "6600/Map/Get";
                 param.VMSParam.MapUrl = $"http://{param.Connections[clsConnectionParam.CONNECTION_ITEM.AGVS].IP}:{apiPath}";
-                StaStored.CurrentVechicle.Parameters = param;
                 (bool confirm, string errorMsg) = await Vehicle.SaveParameters(param, this.hubContext);
                 return Ok(new { confirm = confirm, errorMsg = errorMsg });
             }
@@ -172,7 +171,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("RunShellCommand")]
         public async Task<IActionResult> RunShellCommand(string command)
         {
-            Tools.LinuxTools.RunShellCommand(command, out string output, out string error);
+            (string output, string error) = await Tools.LinuxTools.RunShellCommandAsync(command);
             return Ok(new { output, error });
         }
 

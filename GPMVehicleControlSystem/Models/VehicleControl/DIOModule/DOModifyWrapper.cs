@@ -32,14 +32,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.DIOModule
     {
         public DOWriteRequest(IEnumerable<DOModifyWrapper> toModifyItems)
         {
-            this.toModifyItems = toModifyItems;
+            this.toModifyItems = toModifyItems.Where(item => item.signal != null).ToList();
         }
         public IEnumerable<DOModifyWrapper> toModifyItems = new List<DOModifyWrapper>();
         public List<DOModifyWrapper> sortedByAddress
         {
             get
             {
-                return toModifyItems.ToList().OrderBy(item => item.signal.index).ToList();
+                return toModifyItems.Where(item => item.signal != null)
+                                    .OrderBy(item => item.signal.index)
+                                    .ToList();
             }
         }
 

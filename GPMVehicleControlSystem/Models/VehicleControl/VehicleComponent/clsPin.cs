@@ -14,12 +14,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         private RosSocket _rosSocket;
 
+        public virtual bool isRosBase { get; } = true;
+
         public PinCommandRequest pin_command = new PinCommandRequest()
         {
             model = "FORK",
         };
 
-        public RosSocket rosSocket
+        public virtual RosSocket rosSocket
         {
             get => _rosSocket;
             set
@@ -42,19 +44,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         /// 清除異常初始化回到原點
         /// </summary>
         /// <returns></returns>
-        public async Task Init(CancellationToken token = default)
+        public virtual async Task Init(CancellationToken token = default)
         {
             pin_command.command = "init";
             await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
 
         }
 
-        public async Task Lock(CancellationToken token = default)
+        public virtual async Task Lock(CancellationToken token = default)
         {
             pin_command.command = "lock";
             await _CallPinCommandActionService(pin_command, cancelToken: token);
         }
-        public async Task Release(CancellationToken token = default)
+        public virtual async Task Release(CancellationToken token = default)
         {
             pin_command.command = "release";
             await _CallPinCommandActionService(pin_command, cancelToken: token);

@@ -1,17 +1,22 @@
 ﻿using AGVSystemCommonNet6.Abstracts;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Tools;
 using Modbus.Device;
 using NLog;
 using System.Net.Sockets;
 using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.DATABASE.DatabaseCaches;
 using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
+using Vehicle = GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 
 namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 {
     public partial class clsDIModule : Connection
     {
+        protected Vehicle vehicle;
         protected IniHelper iniHelper = new IniHelper(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), $"param/IO_Wago.ini"));
 
         TcpClient client;
@@ -97,14 +102,20 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
         }
 
-        public clsDIModule(string IP, int Port, int IO_Interval_ms = 5)
+        public clsDIModule(Vehicle vehicle, string IP, int Port, int IO_Interval_ms = 5)
         {
+            this.vehicle = vehicle;
             this.IP = IP;
             this.VMSPort = Port;
             this.IO_Interval_ms = IO_Interval_ms;
             logger = LogManager.GetLogger("DIModule");
             logger.Trace($"Wago IO_ IP={IP},Port={Port},Inputs Read Interval={IO_Interval_ms} ms");
+
+            AgvType = vehicle.Parameters.AgvType;
+            Version = vehicle.Parameters.Version;
+
             ReadIOSettingsFromIniFile();
+
         }
 
         virtual public void ReadIOSettingsFromIniFile()
@@ -251,43 +262,95 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         internal virtual void RegistSignalEvents(out string _notifyText)
         {
             _notifyText = "";
-            VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += (s, e) => OnResetButtonPressed?.Invoke(s, e);
+
+            VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON -= HandlePanelResetPBStatusON;
+            VCSInputs[Indexs[DI_ITEM.Panel_Reset_PB]].OnSignalON += HandlePanelResetPBStatusON;
 
             if (AgvType != AGV_TYPE.INSPECTION_AGV)
             {
-                VCSInputs[Indexs[DI_ITEM.EMO]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
-                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalOFF += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
+                VCSInputs[Indexs[DI_ITEM.EMO]].OnStateChanged -= HandleEMOBStatusChanged;
+                VCSInputs[Indexs[DI_ITEM.EMO]].OnStateChanged += HandleEMOBStatusChanged;
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnStateChanged -= HandleBumpSensorChanged;
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnStateChanged += HandleBumpSensorChanged;
             }
             else
             {
-                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON += (s, e) => OnBumpSensorPressed?.Invoke(s, e);
-                VCSInputs[Indexs[DI_ITEM.EMO_Button]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON -= HandleBumperSensorOnOfInspectionAGV;
+                VCSInputs[Indexs[DI_ITEM.Bumper_Sensor]].OnSignalON += HandleBumperSensorOnOfInspectionAGV;
+                VCSInputs[Indexs[DI_ITEM.EMO_Button]].OnSignalON -= HandleEMOButtonStatusOnOfInspectionAGV;
+                VCSInputs[Indexs[DI_ITEM.EMO_Button]].OnSignalON += HandleEMOButtonStatusOnOfInspectionAGV;
 
                 if (Version == 2)
                 {
-                    VCSInputs[Indexs[DI_ITEM.EMO_Button_2]].OnSignalON += (s, e) => OnEMOButtonPressed?.Invoke(s, e);
-                    //VCSInputs[Indexs[DI_ITEM.Safty_PLC_Output]].OnSignalOFF += (s, e) => OnEMO?.Invoke(s, e);
-                }
-                else
-                {
-
+                    VCSInputs[Indexs[DI_ITEM.EMO_Button_2]].OnSignalON -= HandleEMOButton2OfInspectionAGV;
+                    VCSInputs[Indexs[DI_ITEM.EMO_Button_2]].OnSignalON += HandleEMOButton2OfInspectionAGV;
                 }
             }
 
 
             bool isIODefined = Indexs.TryGetValue(DI_ITEM.FrontProtection_Obstacle_Sensor, out int val);
             if (isIODefined)
-                VCSInputs[val].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            {
+                VCSInputs[val].OnSignalOFF -= HandleFrontProtection_ObstacleSensorOFF;
+                VCSInputs[val].OnSignalOFF += HandleFrontProtection_ObstacleSensorOFF;
+            }
             else if (this.AgvType == AGV_TYPE.SUBMERGED_SHIELD)
                 _notifyText += $"FrontProtection_Obstacle_Sensor 未定義;";
 
             isIODefined = Indexs.TryGetValue(DI_ITEM.Fork_Frontend_Abstacle_Sensor, out val);
             if (isIODefined)
-                VCSInputs[val].OnSignalOFF += (s, e) => OnFrontSecondObstacleSensorDetected?.Invoke(s, e);
+            {
+                VCSInputs[val].OnSignalOFF -= HandleForkFrontendAbstacleOFF;
+                VCSInputs[val].OnSignalOFF += HandleForkFrontendAbstacleOFF;
+            }
             else if (this.AgvType == AGV_TYPE.FORK || this.AgvType == AGV_TYPE.FORK_XL)
                 _notifyText += $"Fork_Frontend_Abstacle_Sensor 未定義;";
 
 
+        }
+
+        private void HandleForkFrontendAbstacleOFF(object? sender, EventArgs e)
+        {
+            OnFrontSecondObstacleSensorDetected?.Invoke(sender, e);
+        }
+
+        private void HandleFrontProtection_ObstacleSensorOFF(object? sender, EventArgs e)
+        {
+            OnFrontSecondObstacleSensorDetected?.Invoke(sender, e);
+        }
+
+        private void HandleEMOButton2OfInspectionAGV(object? sender, EventArgs e)
+        {
+            OnEMOButtonPressed?.Invoke(sender, e);
+        }
+
+        private void HandleEMOButtonStatusOnOfInspectionAGV(object? sender, EventArgs e)
+        {
+            OnEMOButtonPressed?.Invoke(sender, e);
+        }
+
+        private void HandleBumperSensorOnOfInspectionAGV(object? sender, EventArgs e)
+        {
+            OnBumpSensorPressed?.Invoke(sender, e);
+        }
+
+        private void HandlePanelResetPBStatusON(object? sender, EventArgs e)
+        {
+            OnResetButtonPressed?.Invoke(sender, EventArgs.Empty);
+        }
+
+        private void HandleEMOBStatusChanged(object? sender, bool e)
+        {
+            IO_CONTACT_TYPE emoContactType = vehicle.Parameters.GetContactType(DI_ITEM.EMO);
+            if (emoContactType == IO_CONTACT_TYPE.A && e || emoContactType == IO_CONTACT_TYPE.B && !e)
+                OnEMO?.Invoke(sender, EventArgs.Empty);
+        }
+
+        private void HandleBumpSensorChanged(object? sender, bool e)
+        {
+            IO_CONTACT_TYPE bumperSensorContactType = vehicle.Parameters.GetContactType(DI_ITEM.Bumper_Sensor);
+            if (bumperSensorContactType == IO_CONTACT_TYPE.A && e || bumperSensorContactType == IO_CONTACT_TYPE.B && !e)
+                OnBumpSensorPressed?.Invoke(sender, EventArgs.Empty);
         }
 
         private bool IsTimeout = false;

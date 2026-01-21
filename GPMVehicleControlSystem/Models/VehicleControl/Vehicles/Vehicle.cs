@@ -195,6 +195,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         public OPERATOR_MODE Operation_Mode { get; internal set; } = OPERATOR_MODE.MANUAL;
 
+        public virtual bool IsEmoTrigger
+        {
+            get
+            {
+                bool _isEMOInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.EMO);
+                if (_isEMOInputDefined)
+                {
+                    bool inputState = WagoDI.GetState(DI_ITEM.EMO);
+                    return Parameters.GetContactType(DI_ITEM.EMO) == IO_CONTACT_TYPE.A ? inputState : !inputState;
+                }
+                return false;
+            }
+        }
+
+        public bool IsBumperTrigger
+        {
+            get
+            {
+                bool _isBumperInputDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.Bumper_Sensor);
+                if (_isBumperInputDefined)
+                {
+                    bool inputState = WagoDI.GetState(DI_ITEM.Bumper_Sensor);
+                    return Parameters.GetContactType(DI_ITEM.Bumper_Sensor) == IO_CONTACT_TYPE.A ? inputState : !inputState;
+                }
+                return false;
+            }
+        }
 
         /// <summary>
         /// 與 AGVS Reset Command 相關，若收到 AGVS 下 AGVS Reset
@@ -236,7 +263,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 if (_isForkFrontendObsInputDefined)
                 {
                     bool inputState = WagoDI.GetState(DI_ITEM.Fork_Frontend_Abstacle_Sensor);
-                    return this.Parameters.ForkAGV.ObsSensorPointType == IO_CONEECTION_POINT_TYPE.A ? inputState : !inputState;
+                    return this.Parameters.ForkAGV.ObsSensorPointType == IO_CONTACT_TYPE.A ? inputState : !inputState;
                 }
                 bool _isAGVHeadObjSensorDefined = WagoDI.VCSInputs.Any(inp => inp.Input == DI_ITEM.FrontProtection_Obstacle_Sensor);
                 if (_isAGVHeadObjSensorDefined)
@@ -360,7 +387,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         internal virtual async Task CreateAsync()
         {
-            RosVersion = LinuxTools.GetRosVersion();
+            RosVersion = await LinuxTools.GetRosVersionAsync();
             logger.LogTrace($"ROS Version Detected: {RosVersion}");
 
             IMU.Options = Parameters.ImpactDetection;
@@ -379,18 +406,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             int LastVisitedTag = Parameters.LastVisitedTag;
             string RosBridge_IP = rosbridge_connection_params.IP;
             int RosBridge_Port = rosbridge_connection_params.Port;
-            WagoDO = new clsDOModule(Wago_IP, Wago_Port)
-            {
-                AgvType = Parameters.AgvType,
-                Version = Parameters.Version,
-            };
-            WagoDI = new clsDIModule(Wago_IP, Wago_Port, Wago_Protocol_Interval_ms)
-            {
-                AgvType = Parameters.AgvType,
-                Version = Parameters.Version
-            };
+            WagoDO = new clsDOModule(this, Wago_IP, Wago_Port);
+            WagoDI = new clsDIModule(this, Wago_IP, Wago_Port, Wago_Protocol_Interval_ms);
             DirectionLighter.DOModule = WagoDO;
-            CargoStateStorer = new CargoStateStore(WagoDI.VCSInputs, hubContext: this.frontendHubContext, CSTReader);
+            CargoStateStorer = new CargoStateStore(this, WagoDI.VCSInputs, hubContext: this.frontendHubContext, CSTReader);
             CargoStateStorer.OnUseCarrierIdExistToSimulationCargoExistInvoked += () =>
             {
                 return Parameters.CargoExistSensorParams.ExistSensorSimulation;
@@ -777,7 +796,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 //if (CargoStateStorer.RackCargoStatus == CARGO_STATUS.HAS_CARGO_BUT_BIAS)
                 //    throw new VehicleInitializeException("偵測到Rack放置異常，請確認貨物是否放置妥當", true);
                 IsHandshaking = false;
-                if (!WagoDI.GetState(DI_ITEM.EMO))
+                if (IsEmoTrigger)
                 {
                     SetAllDriversComponentAsInitMode();
                     await WagoDO.ResetSaftyRelay();
@@ -1048,6 +1067,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     throw new Exception(error_message);
                 }
 
+                //if (IsBumperTrigger)
+                //{
+                //    error_message = "Bumper 觸發，請確認 Bumper 狀態";
+                //    alarmo_code = AlarmCodes.Bumper;
+                //    throw new Exception(error_message);
+                //}
+
                 if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
                 {
                     error_message = "解煞車旋鈕尚未復歸";
@@ -1105,7 +1131,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected virtual bool CheckEMOButtonNoRelease()
         {
-            return !WagoDI.GetState(DI_ITEM.EMO);
+            return IsEmoTrigger;
         }
 
         protected virtual bool CheckMotorIOError()
@@ -1427,13 +1453,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                                             (driver.Data.state == 0 || driver.Data.state == 5) ||
                                             driver.Data.errorCode != 0x00);
                     }
-
                     await ResetMotor(IsTriggerByButton);
                     await Task.Delay(300);
                     Stopwatch sw = Stopwatch.StartNew();
-                    while (_isMotorHasErrorCode())
+
+                    for (int i = 0; i < 2; i++)
                     {
-                        if (sw.Elapsed.TotalSeconds > 10)
+                        if (!_isMotorHasErrorCode())
                             break;
                         await ResetMotor(IsTriggerByButton);
                         await Task.Delay(1000);

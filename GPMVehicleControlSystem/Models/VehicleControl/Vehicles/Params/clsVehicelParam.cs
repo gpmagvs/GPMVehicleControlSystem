@@ -4,13 +4,14 @@ using static AGVSystemCommonNet6.clsEnums;
 using static GPMVehicleControlSystem.Models.TaskExecute.LoadTask;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
 {
-    public enum IO_CONEECTION_POINT_TYPE
+    public enum IO_CONTACT_TYPE
     {
-        A,
-        B
+        A = 1,
+        B = 0
     }
     public class clsVehicelParam
     {
@@ -174,5 +175,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public clsLogParams Log { get; set; } = new clsLogParams();
 
         public clsUIDisplay UI { get; set; } = new clsUIDisplay();
+
+
+        public Dictionary<string, string> InputContactTypeDefines { get; set; } = new Dictionary<string, string>() {
+             { "TRAY_Exist_Sensor_1", "B" },
+             { "TRAY_Exist_Sensor_2", "B" },
+             { "TRAY_Exist_Sensor_3", "B" },
+             { "TRAY_Exist_Sensor_4", "B" },
+             { "RACK_Exist_Sensor_1", "B" },
+             { "RACK_Exist_Sensor_2", "B" },
+             { "Fork_Frontend_Abstacle_Sensor", "B" },
+             { "Vertical_Belt_Sensor", "B" },
+             { "Vertical_Belt_Sensor_2","B" },
+             { "Bumper_Sensor", "B" },
+             { "EMO", "B" },
+             { "Carrier_Exist_Interupt_Sensor", "B" },
+        };
+
+        internal IO_CONTACT_TYPE GetContactType(DI_ITEM item)
+        {
+            string key = item.ToString();
+            if (InputContactTypeDefines == null || !InputContactTypeDefines.ContainsKey(key))
+                return IO_CONTACT_TYPE.B;
+            if (Enum.TryParse<IO_CONTACT_TYPE>(InputContactTypeDefines[key], out IO_CONTACT_TYPE type))
+                return type;
+            else
+                return IO_CONTACT_TYPE.B;
+        }
     }
 }

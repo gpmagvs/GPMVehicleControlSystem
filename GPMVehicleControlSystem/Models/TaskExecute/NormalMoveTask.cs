@@ -8,6 +8,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Memory;
 using RosSharp.RosBridgeClient.Actionlib;
 using SQLitePCL;
 using System.Diagnostics;
@@ -44,13 +45,34 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 Agv.Navigation.OnLastVisitedTagUpdate -= Agv.WatchReachNextWorkStationSecondaryPtHandler;
                 Agv.ForkLifter.EarlyMoveUpState.Reset();
                 ForkActionStartWhenReachSecondartPTFlag = DetermineIsNeedDoForkAction(RunningTaskData, out NextSecondartPointTag, out NextWorkStationPointTag);
+
                 logger.Info($"抵達終點後 Fork 動作:{ForkActionStartWhenReachSecondartPTFlag}(二次定位點{NextSecondartPointTag},取放貨站點 {NextWorkStationPointTag})");
+
                 bool _isCurrentTagIsNextSecondaryPoint = Agv.Navigation.LastVisitedTag == NextSecondartPointTag;
 
-                if (ForkActionStartWhenReachSecondartPTFlag && !_isCurrentTagIsNextSecondaryPoint)
-                    Agv.BarcodeReader.OnAGVReachingTag += Agv.WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
-                else if (ForkActionStartWhenReachSecondartPTFlag && _isCurrentTagIsNextSecondaryPoint)
-                    logger.Info($"當前位置已在工作站進入點,不需監視是否已到達工作站進入點");
+                if (ForkActionStartWhenReachSecondartPTFlag)
+                {
+                    if (_isCurrentTagIsNextSecondaryPoint)
+                        logger.Info($"當前位置已在工作站進入點,不需監視是否已到達工作站進入點");
+                    else
+                    {
+                        string forkEarlyUpKey = $"ForkEarlyUp-{ExecutingTaskNameRecord}-{NextSecondartPointTag}";
+
+                        bool _isReachTagEventRegisted = Agv.memoryCache.TryGetValue(forkEarlyUpKey, out string _);
+                        if (_isReachTagEventRegisted)
+                        {
+                            logger.Warn($"Fork 提前上升 監視事件已註冊,不重複註冊. Cache key-> {forkEarlyUpKey}");
+                        }
+                        else
+                        {
+                            Agv.BarcodeReader.OnAGVReachingTag -= Agv.WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler; //首先解除事件註冊 ，避免重複註冊
+                            Agv.BarcodeReader.OnAGVReachingTag += Agv.WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
+                            Agv.memoryCache.Set(forkEarlyUpKey, NextSecondartPointTag, TimeSpan.FromMinutes(20));
+                        }
+                    }
+                }
+                else
+                    logger.Info($"抵達終點後 Fork 不需同步上升");
             }
             return base.TransferTaskToAGVC();
         }

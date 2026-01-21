@@ -74,7 +74,7 @@ namespace GPMVehicleControlSystem.Models
             {
                 _logger.Warn($"AGVC will restart after 1 sec...");
                 await Task.Delay(1000);
-                LinuxTools.RunShellCommand("cd /home/gpm/gpm_vms && ./restart_agvc.sh", out string output, out string error);
+                (string output, string error) = await LinuxTools.RunShellCommandAsync("cd /home/gpm/gpm_vms && ./restart_agvc.sh");
                 await Task.Delay(8000);
                 agv.AGVC.ResumeModuleInfoCallBackkInvoe();
             });

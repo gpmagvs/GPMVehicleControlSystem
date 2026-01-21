@@ -168,14 +168,14 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             try
             {
-
+                bool _hasForkUnderPressSensor = forkAgv.WagoDI.VCSInputs.Any(pt => pt.Input == DI_ITEM.Fork_Under_Pressing_Sensor);
                 #region I/O 設置確認
                 clsIOSignal verticaMotorStopSignal = forkAgv.WagoDO.VCSOutputs.FirstOrDefault(pt => pt.Output == DO_ITEM.Vertical_Motor_Stop);
                 if (verticaMotorStopSignal == null)
                     return Ok(new { confirm = false, message = "未找到 [Vertical_Motor_Stop] 輸出訊號，請確認 I/O-OUTPUT 設定" });
 
                 clsIOSignal underPressedSensorBypassSignal = forkAgv.WagoDO.VCSOutputs.FirstOrDefault(pt => pt.Output == DO_ITEM.Fork_Under_Pressing_SensorBypass);
-                if (underPressedSensorBypassSignal == null)
+                if (_hasForkUnderPressSensor && underPressedSensorBypassSignal == null)
                     return Ok(new { confirm = false, message = "未找到 [Fork_Under_Pressing_SensorBypass] 輸出訊號，請確認 I/O-OUTPUT 設定" });
 
                 clsIOSignal underPressedSensorInputSignal = forkAgv.WagoDI.VCSInputs.FirstOrDefault(pt => pt.Input == DI_ITEM.Fork_Under_Pressing_Sensor);

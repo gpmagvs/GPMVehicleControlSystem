@@ -574,7 +574,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!status)
                 return;
             await Task.Delay(1000);
-            if (!WagoDI.GetState(DI_ITEM.EMO) || IsResetAlarmWorking)
+            if (IsEmoTrigger || IsResetAlarmWorking)
                 return;
 
             clsIOSignal signal = (clsIOSignal)sender;

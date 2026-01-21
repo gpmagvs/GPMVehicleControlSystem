@@ -120,8 +120,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected virtual async void AutoResetHorizonMotor(object? sender, bool alarm)
         {
-            bool isEMO = !WagoDI.GetState(DI_ITEM.EMO);
-            if (!alarm || isEMO || !IsMotorAutoRecoverable())
+            if (!alarm || IsEmoTrigger || !IsMotorAutoRecoverable())
                 return;
             clsIOSignal input = sender as clsIOSignal;
             AutoReset();

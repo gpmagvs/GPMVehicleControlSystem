@@ -80,6 +80,10 @@
             /// 升降軸皮帶檢知
             /// </summary>
             Vertical_Belt_Sensor,
+            /// <summary>
+            /// 第二顆升降軸皮帶檢知(3F ABF 舊車才有的)
+            /// </summary>
+            Vertical_Belt_Sensor_2,
             EQ_L_REQ,
             EQ_U_REQ,
             EQ_READY,

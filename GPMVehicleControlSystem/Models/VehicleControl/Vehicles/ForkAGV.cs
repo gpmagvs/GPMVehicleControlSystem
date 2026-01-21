@@ -72,7 +72,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             ForkLifter.DIModule = WagoDI;
             ForkLifter.DOModule = WagoDO;
             if (Parameters.ForkAGV.IsPinMounted)
-                PinHardware = new clsPin();
+            {
+                bool _isIOBase = WagoDO.VCSOutputs.FirstOrDefault(o => o.Output == DO_ITEM.Fork_Floating) != null;
+                PinHardware = _isIOBase ? new clsPinIOBase(WagoDO) : new clsPin();
+            }
 
             logger.LogInformation($"FORK AGV 搭載Pin模組?{PinHardware != null}");
         }
@@ -135,8 +138,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Task<bool> state = await Task.Factory.StartNew(async () =>
                     {
                         await Task.Delay(1000);
-                        bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
-                        if (isEMOING)
+                        if (IsEmoTrigger)
                             return false;
                         bool isResetAlarmProcessing = IsResetAlarmWorking;
                         return !isResetAlarmProcessing;
@@ -740,6 +742,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
+            if (!status)
+                return;
+
             var signal = (sender as clsIOSignal);
 
             if (signal.Input == DI_ITEM.Vertical_Motor_Alarm)
@@ -792,7 +797,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         public override (bool confirm, string message) CheckHardwareStatus()
         {
-            if (!WagoDI.GetState(DI_ITEM.Vertical_Motor_Switch))
+            bool _hasVerticalBrakeSwitch = WagoDI.VCSInputs.Any(i => i.Input == DI_ITEM.Vertical_Motor_Switch);
+            if (_hasVerticalBrakeSwitch && !WagoDI.GetState(DI_ITEM.Vertical_Motor_Switch))
             {
                 AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error_Vertical, false);
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;

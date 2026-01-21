@@ -109,7 +109,8 @@ namespace GPMVehicleControlSystem.ViewModels
                         isPlaying = BuzzerPlayer.IsPlaying,
                         player = BuzzerPlayer.APLAYER != null ? "linux-aplay" : "ros-sound-play",
                         playingAudio = BuzzerPlayer.PlayingAudio
-                    }
+                    },
+                    IsPinMoudleRosBase = GetIsAGVPinModuleROSBase()
 
 
                 };
@@ -175,6 +176,18 @@ namespace GPMVehicleControlSystem.ViewModels
                     return false;
                 return AGV.ForkLifter.fork_ros_controller.verticalActionService.CurrentPosition > AGV.Parameters.ForkAGV.SaftyPositionHeight;
             }
+        }
+
+        private static bool GetIsAGVPinModuleROSBase()
+        {
+            if (AGV.Parameters.AgvType != clsEnums.AGV_TYPE.FORK)
+                return false;
+
+            clsPin pinModule = (AGV as ForkAGV).PinHardware;
+            if (pinModule == null)
+                return false;
+
+            return pinModule.isRosBase;
         }
 
         private static DriverState GetForkHorizonDriverState()

@@ -135,8 +135,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Short_Exist_Sensor, OnForkLifterSensorsStateChange);
                 _DIModule.SubsSignalStateChange(DI_ITEM.Fork_Extend_Exist_Sensor, OnForkLifterSensorsStateChange);
 
-                if (!forkAGV.Parameters.SensorBypass.BeltSensorBypass)
-                    _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor, OnForkLifterSensorsStateChange);
+                _DIModule.SubsSignalStateChange(DI_ITEM.Vertical_Belt_Sensor_2, OnForkLifterSensorsStateChange);
             }
         }
 
@@ -167,9 +167,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                             Current_Alarm_Code = AlarmCodes.Zaxis_Up_Limit;
                         }
                     }
-                    else if (!state && DI?.Input == DI_ITEM.Vertical_Belt_Sensor)
+                    else if (!state && (DI?.Input == DI_ITEM.Vertical_Belt_Sensor || DI?.Input == DI_ITEM.Vertical_Belt_Sensor_2))
                     {
-                        if (!DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass))
+                        bool _isBypassOuputActive = DOModule.GetState(DO_ITEM.Vertical_Belt_SensorBypass); //透過將DO輸出打開來 Bypass 皮帶異常
+                        bool _isBypassFunctionActive = forkAGV.Parameters.SensorBypass.BeltSensorBypass;   //透過軟體設定來 Bypass 皮帶異常
+
+                        if (!_isBypassFunctionActive && !_isBypassOuputActive)
                         {
                             fork_ros_controller?.verticalActionService.Stop();
                             Current_Alarm_Code = AlarmCodes.Belt_Sensor_Error;

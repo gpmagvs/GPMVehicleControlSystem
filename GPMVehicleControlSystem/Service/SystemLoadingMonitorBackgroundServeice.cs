@@ -43,11 +43,6 @@ namespace GPMVehicleControlSystem.Service
                 double ram = LinuxTools.GetMemUsedMB();
                 logger.Info($"CPU:{cpu} % / RAM:{ram} MB");
                 logger.Info(top10Output);
-                //if (ram > 500)
-                //{
-                //    GC.Collect();
-                //    LOG.WARN($"RAM:{ram} MB > 500MB , Run GC.Collect()");
-                //}
                 CurrentCPU = Math.Round(cpu, 1);
                 CurrentRAM = ram;
             }

@@ -1,5 +1,6 @@
 ﻿using NLog;
 using System.Diagnostics;
+using System.Text;
 
 namespace GPMVehicleControlSystem.Tools
 {
@@ -14,26 +15,25 @@ namespace GPMVehicleControlSystem.Tools
 
         static Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public static ROS_VERSION GetRosVersion()
+        public static async Task<ROS_VERSION> GetRosVersionAsync()
         {
-            string errorMsg;
-            string ouput;
+            (string output, string error) result = ("", "");
             try
             {
-                RunShellCommand("printenv | grep ROS", out ouput, out errorMsg);
+                result = await RunShellCommandAsync("printenv | grep ROS");
             }
             catch (Exception)
             {
                 return ROS_VERSION.ROS1; // Default to ROS1 if any error occurs
             }
-
-            if (string.IsNullOrEmpty(ouput))
+            Logger.Info($"printenv | grep ROS::RESULT = {result.output}");
+            if (string.IsNullOrEmpty(result.output))
             {
-                Logger.Error($"Get ROS Version Error: {errorMsg}");
+                Logger.Error($"Get ROS Version Error: {result.error}");
                 return ROS_VERSION.ROS1; // Default to ROS1 if no environment variable found
             }
 
-            if (ouput.Contains("ROS_VERSION=1"))
+            if (result.output.Contains("ROS_VERSION=1"))
             {
                 Logger.Info("Detected ROS Version: ROS1");
                 return ROS_VERSION.ROS1;
@@ -94,43 +94,45 @@ namespace GPMVehicleControlSystem.Tools
         /// 創建 Process 來執行 shell 命令
         /// </summary>
         /// <param name="command"></param>
-        public static void RunShellCommand(string command, out string output, out string error)
+        public static async Task<(string output, string error)> RunShellCommandAsync(string command)
         {
-            output = "";
-            error = "";
-            Logger.Info($"Run Shell Command-> {command}");
-            Process process = new Process
+            try
             {
-                StartInfo = new ProcessStartInfo
+
+                var output = new StringBuilder();
+                var error = new StringBuilder();
+
+                using var process = new Process
                 {
-                    FileName = "/bin/bash", // 使用 Bash 作為 shell
-                    Arguments = $"-c \"{command}\"", // 使用 -c 執行命令
-                    RedirectStandardOutput = true, // 導向標準輸出
-                    RedirectStandardError = true,  // 導向錯誤輸出
-                    UseShellExecute = false, // 不使用 shell 執行
-                    CreateNoWindow = true // 不創建窗口
-                }
-            };
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = $"-c \"{command}\"",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    },
+                    EnableRaisingEvents = true
+                };
 
-            // 開始執行命令
-            process.Start();
+                var tcs = new TaskCompletionSource<int>();
 
-            // 讀取標準輸出與錯誤
-            output = process.StandardOutput.ReadToEnd();
-            error = process.StandardError.ReadToEnd();
-            // 等待進程完成
-            process.WaitForExit();
+                process.OutputDataReceived += (s, e) => { if (e.Data != null) output.AppendLine(e.Data); };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) error.AppendLine(e.Data); };
+                process.Exited += (s, e) => tcs.SetResult(process.ExitCode);
 
-            // 顯示命令執行的輸出結果
-            if (!string.IsNullOrEmpty(output))
-            {
-                Logger.Info("輸出: " + output);
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await tcs.Task; // 等待非同步完成
+                return (output.ToString(), error.ToString());
             }
-
-            // 顯示錯誤（如果有）
-            if (!string.IsNullOrEmpty(error))
+            catch (Exception ex)
             {
-                Logger.Error("錯誤: " + error);
+                Logger.Error(ex);
+                return ("", "");
             }
         }
     }

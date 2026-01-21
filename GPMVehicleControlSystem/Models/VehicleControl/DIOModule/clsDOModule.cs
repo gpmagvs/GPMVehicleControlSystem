@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.DIOModule;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Modbus.Device;
 using NLog;
 using System.Collections.Concurrent;
@@ -16,7 +17,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
         {
 
         }
-        public clsDOModule(string IP, int Port) : base(IP, Port)
+        public clsDOModule(Vehicle vehicle, string IP, int Port) : base(vehicle, IP, Port)
         {
             logger = LogManager.GetLogger("DOModule");
             //ReadCurrentDOStatus();
@@ -530,7 +531,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             //安全迴路RELAY
             bool RelayON = false;
             var do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, true);
-            await Task.Delay(200);
+            await Task.Delay(400);
             do_writen_confirm = await SetState(DO_ITEM.Safety_Relays_Reset, false);
             return true;
         }

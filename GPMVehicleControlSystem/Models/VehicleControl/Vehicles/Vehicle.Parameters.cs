@@ -1,4 +1,5 @@
-﻿using AGVSystemCommonNet6.AGVDispatch;
+﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6.AGVDispatch;
 using GPMVehicleControlSystem.Models.Exceptions;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params;
 using GPMVehicleControlSystem.Service;
@@ -67,7 +68,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     Parameters.VMSParam.MapUrl = $"http://{agvsConnection.IP}:6600/Map/Get";
                     logger.Info($"圖資 API Url 修正結果:{Parameters.VMSParam.MapUrl}");
                 }
-                if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS && !Parameters.VMSParam.MapUrl.ToLower().Contains(":5216/api/Map"))
+                if (Parameters.VMSParam.Protocol == VMS_PROTOCOL.GPM_VMS && !Parameters.VMSParam.MapUrl.ToLower().Contains(":5216/api/map"))
                 {
                     logger.Warn($"檢查到圖資 API Url 不正確:對應 GPM 派車系統但 Url 未包含 ':5216/api/Map'");
                     Parameters.VMSParam.MapUrl = $"http://{agvsConnection.IP}:5216/api/Map";
@@ -96,8 +97,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 await writeParamsToFileSemaphoreSlim.WaitAsync();
+
+                var _originalInputContactTypeDefinesJson = StaStored.CurrentVechicle.Parameters.InputContactTypeDefines.ToJsonWithNewtonsoft(Formatting.None);
+                var _newInputContactTypeDefinesJson = Parameters.InputContactTypeDefines.ToJsonWithNewtonsoft(Formatting.None);
+
+                if (_originalInputContactTypeDefinesJson != _newInputContactTypeDefinesJson)
+                {
+                    StaStored.CurrentVechicle.WagoDI.RegistSignalEvents(out string _msg);
+                    StaStored.CurrentVechicle.LogDebugMessage($"INPUT CONTACT TPE 有變更 -> 重新註冊 INPUT 事件", true);
+                }
+
                 string param_json = JsonConvert.SerializeObject(Parameters, Formatting.Indented);
                 File.WriteAllText(ParametersFilePath, param_json);
+                StaStored.CurrentVechicle.Parameters = Parameters;
 
                 if (hubContext != null)
                 {

@@ -38,6 +38,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         internal bool WaitingForChargeStatusChangeFlag = false;
         private Debouncer _vehicleDirectionChangedDebouncer = new Debouncer();
         private Debouncer _videoRecordDebuncer = new Debouncer();
+        private Debouncer _existSensorOnHandleDebouncer = new Debouncer();
         GuardVideoService guardVideoService = new GuardVideoService();
         private bool IsAutoControlRechargeCircuitSuitabtion
         {
@@ -114,8 +115,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         Task<bool> state = await Task.Factory.StartNew(async () =>
                         {
                             await Task.Delay(10);
-                            bool isEMOING = WagoDI.GetState(DI_ITEM.EMO) == false;
-                            if (isEMOING)
+                            if (IsEmoTrigger)
                                 return false;
                             bool isResetAlarmProcessing = IsResetAlarmWorking;
                             return !isResetAlarmProcessing;
@@ -151,6 +151,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             Laser.BeforeLaserModeBypassSwitch += Laser_BeforeLaserModeBypassSwitch; ;
 
+            //2026/01/14 - 在席 sensor 觸發變化事件
+
+            ExistSensorEventRegist();
+
+        }
+
+        protected virtual void ExistSensorEventRegist()
+        {
+            //所有已定義的在席 sensor
+            List<DI_ITEM> existSensorInputItems = new() { DI_ITEM.TRAY_Exist_Sensor_1, DI_ITEM.TRAY_Exist_Sensor_2,
+                                                          DI_ITEM.TRAY_Exist_Sensor_3, DI_ITEM.TRAY_Exist_Sensor_4,
+                                                          DI_ITEM.RACK_Exist_Sensor_1, DI_ITEM.RACK_Exist_Sensor_2,
+                                                        };
+
+            foreach (var sensor in existSensorInputItems)
+            {
+                WagoDI.SubsSignalStateChange(sensor, _HandleExistSensorStateChanged);
+            }
+        }
+
+        private void _HandleExistSensorStateChanged(object? sender, bool e)
+        {
+            bool _isSensorTrigger = !e;
+            if (_isSensorTrigger)
+            {
+                _existSensorOnHandleDebouncer.Debounce(() =>
+                {
+                    clsIOSignal inputRecord = (clsIOSignal)sender;
+                    LogDebugMessage($"{inputRecord.Input} - Exist Sensor Trigger, 無料 -> 有料 建立 UnknownTray 帳籍");
+                    CSTReader.ValidCSTID = "TrayUnknow";
+                }, 500);
+            }
         }
 
         private void Laser_BeforeLaserModeBypassSwitch(object? sender, LaserModeSwitchCheckArgs e)
@@ -173,7 +205,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (!alarmCode.IsMotorAlarm())
                 return (true, false);
 
-            bool isEmoTrigger = !WagoDI.GetState(DI_ITEM.EMO);
+            bool isEmoTrigger = IsEmoTrigger;
             bool isBumperTrigger = !WagoDI.GetState(DI_ITEM.Bumper_Sensor);
             bool isInitMode = driverEntity.isInitMode;
             if (isInitMode || isEmoTrigger || isBumperTrigger)
@@ -526,15 +558,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-
+        Debouncer resetButtonPushDebouncer = new Debouncer();
         private async void HandleResetButtonPush(object? sender, EventArgs e)
         {
-            ResetAlarmsAsync(true);
-            //BuzzerPlayer.Stop("HandleResetButtonPush");
-            //await TryResetMotors();
-            //AlarmManager.ClearAlarm();
-            //BuzzerPlayer.Stop("HandleResetButtonPush");
-
+            resetButtonPushDebouncer.Debounce(() =>
+            {
+                bool _isSaftyRelayResetOut = WagoDO.GetState(DO_ITEM.Safety_Relays_Reset);
+                if (_isSaftyRelayResetOut)
+                {
+                    LogDebugMessage("由 Safty Relay Reset ouput 輸出觸發 HandleResetButtonPush 事件", false);
+                    return;
+                }
+                ResetAlarmsAsync(_isSaftyRelayResetOut ? false : true);
+            }, 200);
         }
 
         protected virtual async Task TryResetMotors()
@@ -584,7 +620,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             clsIOSignal signalObj = (clsIOSignal)sender;
             string sensorName = signalObj.Name;
 
-            bool isTriggered = Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.A && input_status || Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONEECTION_POINT_TYPE.B && !input_status;
+            bool isTriggered = Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONTACT_TYPE.A && input_status || Parameters.ForkAGV.ObsSensorPointType == Params.IO_CONTACT_TYPE.B && !input_status;
             bool isNonNormalMoving = _RunTaskData.Action_Type != ACTION_TYPE.None && AGVC.ActionStatus == ActionStatus.ACTIVE;
             bool isBackToSecondaryPtIng = _ExecutingTask != null && _ExecutingTask.IsBackToSecondaryPt;
             bool isNavigatingAndReachWorkStationTag = AGVC.IsRunning && BarcodeReader.Data.tagID == _RunTaskData?.Destination;

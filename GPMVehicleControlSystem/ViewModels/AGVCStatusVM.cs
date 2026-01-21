@@ -93,6 +93,7 @@ namespace GPMVehicleControlSystem.ViewModels
         public bool IsForkExtenrDriverBase { get; set; } = false;
         public bool ForkHasLoading { get; set; }
         public bool CargoExist { get; set; }
+        public bool IsPinMoudleRosBase { get; set; } = true;
         public object HandShakeSignals { get; set; } = new object();
         public object HandShakeTimers { get; set; } = new object();
         public clsSysLoading SysLoading { get; set; } = new clsSysLoading();

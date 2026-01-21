@@ -45,11 +45,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         internal IsUseCarrierIdExistToSimulationCargoExistDelegate OnUseCarrierIdExistToSimulationCargoExistInvoked;
 
         internal delegate bool IsUseCarrierIdExistToSimulationCargoExistDelegate();
-
+        Vehicle vehicle;
         private bool _IsCarrier_Exist_Interupt_SensorMounted => digitalInputState.Any(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor);
 
-        public CargoStateStore(List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, clsCSTReader reader = null)
+        public CargoStateStore(Vehicle vehicle, List<clsIOSignal> DigitalInputState, IHubContext<FrontendHub> hubContext = null, clsCSTReader reader = null)
         {
+            this.vehicle = vehicle;
             digitalInputState = DigitalInputState;
             this.hubContext = hubContext;
             this.reader = reader;
@@ -104,7 +105,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
         }
         private bool IsCargoDetectedByInteruptSensor()
         {
-            return !digitalInputState.First(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor).State;
+            var contactType = vehicle.Parameters.GetContactType(DI_ITEM.Carrier_Exist_Interupt_Sensor);
+            var sensorState = digitalInputState.First(item => item.Input == DI_ITEM.Carrier_Exist_Interupt_Sensor).State;
+            return contactType == Params.IO_CONTACT_TYPE.A ? sensorState : !sensorState;
         }
         /// <summary>
         /// 取得載物的類型 0:tray, 1:rack , 200:tray
@@ -196,8 +199,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates
 
         private CARGO_STATUS GetStatus(CARGO_TYPE _type)
         {
-
-
             List<clsIOSignal> sensorStates = new List<clsIOSignal>();
             if (_type == CARGO_TYPE.TRAY)
             {

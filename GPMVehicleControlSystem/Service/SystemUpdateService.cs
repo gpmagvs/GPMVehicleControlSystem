@@ -35,6 +35,9 @@ namespace GPMVehicleControlSystem.Service
                 try
                 {
                     string currentDirectory = Directory.GetCurrentDirectory();
+
+                    await Tools.LinuxTools.RunShellCommandAsync($"echo 12345678 | sudo chmod -R 777 {currentDirectory}");
+
                     string zipFileTempFolder = Path.Combine(currentDirectory, "_temp");
                     try
                     {
@@ -44,8 +47,9 @@ namespace GPMVehicleControlSystem.Service
                     {
                     }
                     Console.WriteLine($"Create temp folder : {zipFileTempFolder}");
+                    string wwwrootTempFolder = Path.Combine(zipFileTempFolder, "wwwroot");
                     Directory.CreateDirectory(zipFileTempFolder);
-                    Directory.CreateDirectory(Path.Combine(zipFileTempFolder, "wwwroot"));
+                    Directory.CreateDirectory(wwwrootTempFolder);
 
                     Console.WriteLine($"Create temp folder : {zipFileTempFolder} done");
                     //store zip file and unzip to current folder
@@ -59,12 +63,17 @@ namespace GPMVehicleControlSystem.Service
                     }
                     Console.WriteLine($"store zip file to : {zipFilePath} done");
 
-
-
                     //要先提高權限 _temp資料夾
-                    Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                    await Tools.LinuxTools.RunShellCommandAsync($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}");
                     //2 unzip to current folder
-                    Tools.LinuxTools.RunShellCommand($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"", out _, out _);
+                    await Tools.LinuxTools.RunShellCommandAsync($"unzip \"{zipFilePath}\" -d \"{zipFileTempFolder}\"");
+
+                    bool isWwwrootNeedUpdate = Directory.GetFiles(wwwrootTempFolder).Length > 0;
+
+                    if (isWwwrootNeedUpdate)
+                    {
+                        Directory.Delete(Path.Combine(currentDirectory, "wwwroot"), true);
+                    }
 
                     //ZipFile.ExtractToDirectory(zipFilePath, zipFileTempFolder, true);
                     File.Delete(zipFilePath);
@@ -149,9 +158,9 @@ namespace GPMVehicleControlSystem.Service
                 Console.WriteLine($"Create temp folder : {zipFileTempFolder} done");
 
 
-                Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
-                Tools.LinuxTools.RunShellCommand($"unzip \"{zipPath}\" -d \"{zipFileTempFolder}\"", out _, out _);
-                Tools.LinuxTools.RunShellCommand($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}", out _, out _);
+                await Tools.LinuxTools.RunShellCommandAsync($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}");
+                await Tools.LinuxTools.RunShellCommandAsync($"unzip \"{zipPath}\" -d \"{zipFileTempFolder}\"");
+                await Tools.LinuxTools.RunShellCommandAsync($"echo 12345678 | sudo chmod -R 777 {zipFileTempFolder}");
 
 
                 string scriptFile = Path.Combine(currentDirectory, "update.sh");

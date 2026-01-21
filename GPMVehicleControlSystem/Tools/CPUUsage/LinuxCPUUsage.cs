@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Tools.CPUUsage
 
         public override async Task<string> GetTop10CupUseProcess()
         {
-            LinuxTools.RunShellCommand("ps -eo pid,comm,%mem,%cpu --sort=-%cpu | head -n 11 | awk 'NR==1 {print} NR>1 {print $1\",\"$2\",\"$3\",\"$4}'", out string output, out string error);
+            (string output, string errmsg) = await LinuxTools.RunShellCommandAsync("ps -eo pid,comm,%mem,%cpu --sort=-%cpu | head -n 11 | awk 'NR==1 {print} NR>1 {print $1\",\"$2\",\"$3\",\"$4}'");
             return output;
         }
     }
