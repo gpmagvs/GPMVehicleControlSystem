@@ -740,7 +740,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
+        protected override void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
             if (!status)
                 return;

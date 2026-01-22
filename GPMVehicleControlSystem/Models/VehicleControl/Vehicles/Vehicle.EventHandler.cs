@@ -430,7 +430,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        private async void HandleAGVCActionSuccess(object? sender, EventArgs e)
+        private void HandleAGVCActionSuccess(object? sender, EventArgs e)
         {
             if (AGVC.CycleStopActionExecuting)
             {
@@ -449,7 +449,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        private async void HandleAGVCActionActive(object? sender, EventArgs e)
+        private void HandleAGVCActionActive(object? sender, EventArgs e)
         {
             SetSub_Status(SUB_STATUS.RUN);
 
@@ -531,7 +531,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private CancellationTokenSource _ResetButtonOnPressingCts = new CancellationTokenSource();
 
-        private async void Panel_Reset_Button_Input_State_Handler(object? sender, bool pushed)
+        private void Panel_Reset_Button_Input_State_Handler(object? sender, bool pushed)
         {
             if (pushed)
             {
@@ -559,7 +559,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
         }
         Debouncer resetButtonPushDebouncer = new Debouncer();
-        private async void HandleResetButtonPush(object? sender, EventArgs e)
+        private void HandleResetButtonPush(object? sender, EventArgs e)
         {
             resetButtonPushDebouncer.Debounce(() =>
             {
@@ -750,17 +750,20 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
-        internal async void AutomaticChargeStationActions()
+        internal void AutomaticChargeStationActions()
         {
-            if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
+            _ = Task.Run(async () =>
             {
-                logger.LogWarning($"AGV位於充電站且偵測到AGV有帳無料=>自動清帳");
-                CSTReader.ValidCSTID = "";
-            }
-            if (!IsChargeCircuitOpened)
-            {
-                await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
-            }
+                if (Parameters.Auto_Cleaer_CST_ID_Data_When_Has_Data_But_NO_Cargo && IsNoCargoButIDExist)
+                {
+                    logger.LogWarning($"AGV位於充電站且偵測到AGV有帳無料=>自動清帳");
+                    CSTReader.ValidCSTID = "";
+                }
+                if (!IsChargeCircuitOpened)
+                {
+                    await WagoDO.SetState(DO_ITEM.Recharge_Circuit, true);
+                }
+            });
         }
         private void WagoDI_OnReConnected(object? sender, EventArgs e)
         {
@@ -807,7 +810,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 $"\r\n 雷射輸入=> \r\n{LsrInputState}");
 
         }
-        public async void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
+        public void AGVStatusChangeToRunWhenLaserRecovery(ROBOT_CONTROL_CMD speed_control, SPEED_CONTROL_REQ_MOMENT sPEED_CONTROL_REQ_MOMENT)
         {
             _ = Task.Run(async () =>
             {
@@ -878,7 +881,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
         public REMOTE_MODE RemoteModeWhenHorizonMotorAlarm { get; protected set; } = REMOTE_MODE.OFFLINE;
-        protected async virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
+        protected virtual void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
 
             if (!status || StaSysControl.isAGVCRestarting)
@@ -919,7 +922,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
         protected DateTime previousSoftEmoTime = DateTime.MinValue;
-        protected virtual async void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
+        protected virtual void AlarmManager_OnUnRecoverableAlarmOccur(object? sender, AlarmCodes alarm_code)
         {
             _ = Task.Run(async () =>
             {
@@ -945,45 +948,48 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         clsNavigation.AGV_DIRECTION _lastDirection = AGV_DIRECTION.FORWARD;
         bool _isBypassDirectionHandling = false;
         Task _bypassHandleTask = Task.CompletedTask;
-        protected virtual async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        protected virtual void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-            _lastDirection = direction;
-            Laser.agvDirection = direction;
-
-            DirectionLighter.LightSwitchByAGVDirection(sender, direction); //方向燈一率處理切換
-
-            if (direction == AGV_DIRECTION.FORWARD)
-                AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery); //前進時嘗試恢復速度
-
-            if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
+            _ = Task.Run(async () =>
             {
-                bool _isBypassRequested = direction == AGV_DIRECTION.BYPASS;
+                _lastDirection = direction;
+                Laser.agvDirection = direction;
 
-                if (_isBypassRequested && !_isBypassDirectionHandling)
+                DirectionLighter.LightSwitchByAGVDirection(sender, direction); //方向燈一率處理切換
+
+                if (direction == AGV_DIRECTION.FORWARD)
+                    AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery); //前進時嘗試恢復速度
+
+                if (AGVC.ActionStatus == ActionStatus.ACTIVE && direction != clsNavigation.AGV_DIRECTION.REACH_GOAL)
                 {
-                    _isBypassDirectionHandling = true;
-                    LogDebugMessage($"車控 Direction 發布 bypass, 處理中", true);
-                    _bypassHandleTask = Task.Run(async () =>
+                    bool _isBypassRequested = direction == AGV_DIRECTION.BYPASS;
+
+                    if (_isBypassRequested && !_isBypassDirectionHandling)
                     {
-                        await Laser.ModeSwitch(0, isManualSwitch: true);
-                        await Laser.SideLasersEnable(false);
-                        await Task.Delay(3000);
-                        await Laser.SideLasersEnable(true);
-                        _isBypassDirectionHandling = false;
-                        _bypassHandleTask = Task.CompletedTask;
-                        LogDebugMessage($"車控 Direction bypass 處理完成!", true);
-                    });
-                }
-                _vehicleDirectionChangedDebouncer.Debounce(async () =>
-                {
-                    if (_isBypassDirectionHandling && !_bypassHandleTask.IsCompleted)
-                    {
-                        await _bypassHandleTask;
-                        LogDebugMessage($"車控 Direction bypass 處理處理中, {direction} 將在稍後繼續處理", true);
+                        _isBypassDirectionHandling = true;
+                        LogDebugMessage($"車控 Direction 發布 bypass, 處理中", true);
+                        _bypassHandleTask = Task.Run(async () =>
+                        {
+                            await Laser.ModeSwitch(0, isManualSwitch: true);
+                            await Laser.SideLasersEnable(false);
+                            await Task.Delay(3000);
+                            await Laser.SideLasersEnable(true);
+                            _isBypassDirectionHandling = false;
+                            _bypassHandleTask = Task.CompletedTask;
+                            LogDebugMessage($"車控 Direction bypass 處理完成!", true);
+                        });
                     }
-                    Laser.LaserChangeByAGVDirection(Navigation.LastVisitedTag, direction);
-                }, 100);
-            }
+                    _vehicleDirectionChangedDebouncer.Debounce(async () =>
+                    {
+                        if (_isBypassDirectionHandling && !_bypassHandleTask.IsCompleted)
+                        {
+                            await _bypassHandleTask;
+                            LogDebugMessage($"車控 Direction bypass 處理處理中, {direction} 將在稍後繼續處理", true);
+                        }
+                        Laser.LaserChangeByAGVDirection(Navigation.LastVisitedTag, direction);
+                    }, 100);
+                }
+            });
         }
 
 

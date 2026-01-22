@@ -368,32 +368,35 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
 
         public clsNavigation.AGV_DIRECTION agvDirection { get; internal set; } = clsNavigation.AGV_DIRECTION.FORWARD;
-        internal virtual async void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
+        internal virtual void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
         {
-            if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
+            _ = Task.Run(async () =>
             {
-                logger.Info($"雷射設定組 =Bypass , AGVC Direction 11", true);
-                //await FrontBackLasersEnable(false);
-                await ModeSwitch(LASER_MODE.Bypass);
+                if (direction == clsNavigation.AGV_DIRECTION.BYPASS)
+                {
+                    logger.Info($"雷射設定組 =Bypass , AGVC Direction 11", true);
+                    //await FrontBackLasersEnable(false);
+                    await ModeSwitch(LASER_MODE.Bypass);
 
-                return;
-            }
-            if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
-            {
-                await FrontBackLasersEnable(true);
-                (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
-                if (succeess)
-                    logger.Info($"AGV走行方向為前進，雷射設定組切換回任務軌跡設定值 = {currentModeInt}", true);
-                else
-                    logger.Warn($"AGV走行方向為前進，但無法得知目前 TAG 的雷射設定組數，因此將雷射設定組切換為, {currentModeInt}", true);
+                    return;
+                }
+                if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
+                {
+                    await FrontBackLasersEnable(true);
+                    (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
+                    if (succeess)
+                        logger.Info($"AGV走行方向為前進，雷射設定組切換回任務軌跡設定值 = {currentModeInt}", true);
+                    else
+                        logger.Warn($"AGV走行方向為前進，但無法得知目前 TAG 的雷射設定組數，因此將雷射設定組切換為, {currentModeInt}", true);
 
-            }
-            else // 左.右轉
-            {
-                await FrontBackLasersEnable(true);
-                await ModeSwitch(Spin_Laser_Mode);
-                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
-            }
+                }
+                else // 左.右轉
+                {
+                    await FrontBackLasersEnable(true);
+                    await ModeSwitch(Spin_Laser_Mode);
+                    logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {Spin_Laser_Mode}");
+                }
+            });
         }
         public virtual async Task<bool> ModeSwitch(LASER_MODE mode, bool isSettingByResetButtonLongPressed = false)
         {

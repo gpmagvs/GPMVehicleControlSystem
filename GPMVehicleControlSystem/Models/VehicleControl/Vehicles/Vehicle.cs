@@ -436,11 +436,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             });
         }
 
-        public virtual async void StartPublishIOListsMsg()
+        public virtual void StartPublishIOListsMsg()
         {
-            await Task.Delay(10);
             _ = Task.Run(async () =>
             {
+                await Task.Delay(10);
                 logger.LogTrace($"Start publish IOLists!");
 
                 IOlistsMsg payload = new IOlistsMsg();
@@ -810,7 +810,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 InitializeCancelTokenResourece = new CancellationTokenSource();
                 SetAllDriversComponentAsInitMode();
                 await Task.Delay(500, InitializeCancelTokenResourece.Token);
-                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler; //首先解除事件註冊 ，避免重複註冊
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
                 EndLaserObstacleMonitor();
                 BuzzerPlayer.SoundPlaying = SOUNDS.Stop;
@@ -1235,7 +1235,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return true;
         }
 
-        protected internal virtual async void SoftwareEMOFromUI()
+        protected internal virtual void SoftwareEMOFromUI()
         {
             logger.LogCritical($"Software EMO By User!!!");
             SoftwareEMO(AlarmCodes.SoftwareEMS);
@@ -1245,9 +1245,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
         private REMOTE_MODE _remoteModeBeforeSoftwareEmo = REMOTE_MODE.OFFLINE;
 
-        protected internal virtual async void SoftwareEMO(AlarmCodes alarmCode)
+        protected internal virtual void SoftwareEMO(AlarmCodes alarmCode)
         {
-            Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+            BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler; //首先解除事件註冊 ，避免重複註冊
             StartRecordViedo();
             if (StaSysControl.isAGVCRestarting)
             {

@@ -17,6 +17,7 @@
         RotatingMusic,
         Backward,
         WaitingPartsSysAcceptAreaRegist,
-        WaitingElevetorArrive
+        WaitingElevetorArrive,
+        Unknown = 4004,
     }
 }

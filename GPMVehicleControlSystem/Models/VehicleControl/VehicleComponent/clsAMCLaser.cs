@@ -55,30 +55,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             { clsNavigation.AGV_DIRECTION.RIGHT,AMC_LASER_MODE.Turning6 },
             { clsNavigation.AGV_DIRECTION.BACKWARD_OBSTACLE,AMC_LASER_MODE.ObstacleGoBack },
         };
-        internal override async void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
+        internal override void LaserChangeByAGVDirection(int lastVisitTag, clsNavigation.AGV_DIRECTION direction)
         {
+            _ = Task.Run(async () =>
+            {
 
-            if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
-            {
-                (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
-                logger.Info($"[AMC]雷射設定組 = {currentModeInt}", true);
-                logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {currentModeInt}");
-            }
-            else
-            {
-                if (DirectionLaserMap.TryGetValue(direction, out var laserMode))
+                if (direction == clsNavigation.AGV_DIRECTION.FORWARD)
                 {
-                    await ModeSwitch(laserMode);
-                    await SideLaserModeSwitch(laserMode);
-                    logger.Info($"[AMC]雷射設定組 = {laserMode}", true);
-                    logger.Info($"AGVC Direction = {direction}, Laser Mode Changed to {laserMode}");
+                    (bool succeess, int currentModeInt) = await ModeSwitchAGVSMapSettingOfCurrentTag(lastVisitTag);
+                    logger.Info($"[AMC]雷射設定組 = {currentModeInt}", true);
+                    logger.Warn($"AGVC Direction = {direction}, Laser Mode Changed to {currentModeInt}");
                 }
                 else
                 {
-                    logger.Warn($"AGVC Direction = {direction} But Laser Mode Not Defined!!!!");
+                    if (DirectionLaserMap.TryGetValue(direction, out var laserMode))
+                    {
+                        await ModeSwitch(laserMode);
+                        await SideLaserModeSwitch(laserMode);
+                        logger.Info($"[AMC]雷射設定組 = {laserMode}", true);
+                        logger.Info($"AGVC Direction = {direction}, Laser Mode Changed to {laserMode}");
+                    }
+                    else
+                    {
+                        logger.Warn($"AGVC Direction = {direction} But Laser Mode Not Defined!!!!");
 
+                    }
                 }
-            }
+            });
         }
         public override async Task<(bool succeess, int currentModeInt)> ModeSwitchAGVSMapSettingOfCurrentTag(int tag)
         {

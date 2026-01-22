@@ -150,7 +150,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             {
                 if (connected)
                     SyncCoilsFromModule();
-                OutputWriteWorkTask = Task.Run(() => OutputWriteWorker());
+                OutputWriteWorkTask = OutputWriteWorker();
             }
             return connected;
         }
@@ -181,7 +181,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             }
         }
 
-        private async void OutputWriteWorker()
+        private async Task OutputWriteWorker()
         {
             int reconnect_cnt = 0;
             DateTime lastWriteTime = DateTime.MinValue;
@@ -489,7 +489,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
                 return false;
             }
         }
-        internal async void AllOFF()
+        internal void AllOFF()
         {
             if (_Connected)
             {

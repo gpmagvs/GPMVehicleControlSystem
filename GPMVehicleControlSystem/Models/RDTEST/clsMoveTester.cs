@@ -28,7 +28,7 @@ namespace GPMVehicleControlSystem.Models.RDTEST
             });
         }
 
-        private async void MoveTestWorker()
+        private void MoveTestWorker()
         {
             Stopwatch sw = Stopwatch.StartNew();
             logger.Info($"旋轉測試開始!");

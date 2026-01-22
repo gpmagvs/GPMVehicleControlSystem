@@ -14,17 +14,17 @@ namespace GPMVehicleControlSystem.Controllers
     [ApiController]
     public class TaskDispatchController : ControllerBase
     {
-        private async void LogAsync(string api_name, object body = null, string method = "GET")
+        private void LogAsync(string api_name, object body = null, string method = "GET")
         {
-            await Task.Factory.StartNew(() =>
+            _ = Task.Run(() =>
             {
                 string bodyJson = body == null ? "" : body.ToJson(Formatting.None);
                 Agv.AGVS.logger.LogTrace($"({method}) api route= /api/TaskDispatch/{api_name},body={bodyJson}");
             });
         }
-        private async void LogResponseAsync(string api_name, object response = null, string method = "GET")
+        private void LogResponseAsync(string api_name, object response = null, string method = "GET")
         {
-            await Task.Factory.StartNew(() =>
+            _ = Task.Run(() =>
             {
                 string bodyJson = response == null ? "" : response.ToJson(Formatting.None);
                 Agv.AGVS.logger.LogTrace($"({method}) api route= /api/TaskDispatch/{api_name},Response={bodyJson}");
@@ -63,7 +63,7 @@ namespace GPMVehicleControlSystem.Controllers
             }
             catch (Exception ex)
             {
-                Agv.AGVS.logger.LogError(ex,ex.Message);
+                Agv.AGVS.logger.LogError(ex, ex.Message);
             }
             LogResponseAsync("Cancel", reply);
             return Ok(reply);

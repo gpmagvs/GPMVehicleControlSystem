@@ -73,8 +73,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             //向AGVS請求移除卡匣
             logger.LogTrace($"使用者進行'移除卡匣'操作");
-
-            if (!string.IsNullOrEmpty(CSTReader.ValidCSTID) && CargoStateStorer.HasAnyCargoOnAGV(false))
+            bool _isCargoSimulation = Parameters.CargoExistSensorParams.ExistSensorSimulation;
+            if (!_isCargoSimulation && !string.IsNullOrEmpty(CSTReader.ValidCSTID) && CargoStateStorer.HasAnyCargoOnAGV(false))
             {
                 logger.LogWarning($"移除卡匣失敗, 車上有貨物, 請先卸貨");
                 return RETURN_CODE.AGV_HasCargo;
@@ -118,7 +118,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             if (WagoDO.VCSOutputs.Any(v => v.Output == DO_ITEM.EMU_EQ_GO))
                 WagoDO.SubsSignalStateChange(DO_ITEM.EMU_EQ_GO, (sender, state) => { EQHsSignalStates[EQ_HSSIGNAL.EQ_GO].State = state; });
         }
-        protected virtual async void AutoResetHorizonMotor(object? sender, bool alarm)
+        protected virtual void AutoResetHorizonMotor(object? sender, bool alarm)
         {
             if (!alarm || IsEmoTrigger || !IsMotorAutoRecoverable())
                 return;

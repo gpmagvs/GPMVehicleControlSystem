@@ -73,9 +73,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             this.eqOptions = AGVs.GetEQInfo(EQTag).Result;
         }
-        private async void IOSignalExchangeProcess()
+        private void IOSignalExchangeProcess()
         {
-            await Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 HandshakingModbusTcpProcessCancel = new CancellationTokenSource();
                 logger.Warn($"Handshake Signal excahge via ModbusTcp Process START");

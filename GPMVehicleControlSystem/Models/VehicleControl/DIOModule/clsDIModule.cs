@@ -357,7 +357,7 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
 
 
         private DateTime lastReadTime = DateTime.MaxValue;
-        private async void ConnectionWatchDog()
+        private void ConnectionWatchDog()
         {
             Thread thread = new Thread(() =>
             {
@@ -377,13 +377,13 @@ namespace GPMVehicleControlSystem.VehicleControl.DIOModule
             });
             thread.Start();
         }
-        public virtual async void StartAsync()
+        public virtual void StartAsync()
         {
             ConnectionWatchDog();
             int error_cnt = 0;
-            await Task.Delay(100);
             Task.Run(async () =>
             {
+                await Task.Delay(100);
                 while (true)
                 {
                     await Task.Delay(IO_Interval_ms);

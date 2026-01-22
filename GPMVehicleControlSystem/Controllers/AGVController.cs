@@ -22,16 +22,16 @@ namespace GPMVehicleControlSystem.Controllers
             this.agv = StaStored.CurrentVechicle;
             logger = agv.AGVS.logger;
         }
-        private async void LogAsync(string api_name, string method = "GET")
+        private void LogAsync(string api_name, string method = "GET")
         {
-            await Task.Factory.StartNew(() =>
+            _ = Task.Run(() =>
             {
                 logger.LogTrace($"({method}) api route= /api/AGV/{api_name}");
             });
         }
-        private async void LogResponseAsync(string api_name, string method = "GET", object response = null)
+        private void LogResponseAsync(string api_name, string method = "GET", object response = null)
         {
-            await Task.Factory.StartNew(() =>
+            _ = Task.Run(() =>
             {
                 logger.LogTrace($"({method}) api route= /api/AGV/{api_name} {(response == null ? "" : $"Response={response.ToJson(Newtonsoft.Json.Formatting.None)}")} ");
             });

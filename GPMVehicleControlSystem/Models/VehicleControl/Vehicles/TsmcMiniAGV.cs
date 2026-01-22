@@ -91,18 +91,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             await base.InitAGVControl(RosBridge_IP, RosBridge_Port);
         }
-        protected override async void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
+        protected override void Navigation_OnDirectionChanged(object? sender, clsNavigation.AGV_DIRECTION direction)
         {
-
-            bool frontLaserActive = direction != clsNavigation.AGV_DIRECTION.BACKWARD &&
-                direction != clsNavigation.AGV_DIRECTION.BACKWARD_OBSTACLE &&
-                direction != clsNavigation.AGV_DIRECTION.AVOID_OBSTACLE;
-
-            bool backLaserActive = direction == clsNavigation.AGV_DIRECTION.BACKWARD;
-
-            await Laser.FrontBackLasersEnable(frontLaserActive, backLaserActive);
-
-            base.Navigation_OnDirectionChanged(sender, direction);
+            _ = Task.Run(async () =>
+            {
+                bool frontLaserActive = direction != clsNavigation.AGV_DIRECTION.BACKWARD &&
+                    direction != clsNavigation.AGV_DIRECTION.BACKWARD_OBSTACLE &&
+                    direction != clsNavigation.AGV_DIRECTION.AVOID_OBSTACLE;
+                bool backLaserActive = direction == clsNavigation.AGV_DIRECTION.BACKWARD;
+                await Laser.FrontBackLasersEnable(frontLaserActive, backLaserActive);
+                base.Navigation_OnDirectionChanged(sender, direction);
+            });
 
         }
 
@@ -157,151 +156,161 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        private async void HandleSaftyPLCOutputStatusChanged(object? sender, bool io_state)
+        private void HandleSaftyPLCOutputStatusChanged(object? sender, bool io_state)
         {
-            //B接點 > OFF表示異常
-            bool _SaftyPLCOuputError = !io_state;
-
-            if (!_SaftyPLCOuputError)
-                return;
-            if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING)
-                return;
-            logger.LogTrace($"Safty PLC Ouput Error [HandleSaftyPLCOutputStatusChanged]");
-            while (!_SaftyRelayResetAllow())
+            _ = Task.Run(async () =>
             {
-                await Task.Delay(100);
-            }
-            await WagoDO.ResetSaftyRelay();
+                //B接點 > OFF表示異常
+                bool _SaftyPLCOuputError = !io_state;
 
-            if (!WagoDI.GetState(DI_ITEM.Safty_PLC_Output))
-            {
-                logger.LogWarning($"Reset Safty Relay Done But Safty_PLC_Output still OFF. Recall HandleSaftyPLCOutputStatusChanged");
-                HandleSaftyPLCOutputStatusChanged(sender, false);
-                return;
-            }
-            logger.LogTrace($"No Obstacle. Reset Safty Relay.  [HandleSaftyPLCOutputStatusChanged]");
+                if (!_SaftyPLCOuputError)
+                    return;
+                if (AGVC.ActionStatus != ActionStatus.ACTIVE && AGVC.ActionStatus != ActionStatus.PENDING)
+                    return;
+                logger.LogTrace($"Safty PLC Ouput Error [HandleSaftyPLCOutputStatusChanged]");
+                while (!_SaftyRelayResetAllow())
+                {
+                    await Task.Delay(100);
+                }
+                await WagoDO.ResetSaftyRelay();
 
-            bool _SaftyRelayResetAllow()
-            {
-                return AGVC.CurrentSpeedControlCmd != ROBOT_CONTROL_CMD.STOP;
-            }
+                if (!WagoDI.GetState(DI_ITEM.Safty_PLC_Output))
+                {
+                    logger.LogWarning($"Reset Safty Relay Done But Safty_PLC_Output still OFF. Recall HandleSaftyPLCOutputStatusChanged");
+                    HandleSaftyPLCOutputStatusChanged(sender, false);
+                    return;
+                }
+                logger.LogTrace($"No Obstacle. Reset Safty Relay.  [HandleSaftyPLCOutputStatusChanged]");
+
+                bool _SaftyRelayResetAllow()
+                {
+                    return AGVC.CurrentSpeedControlCmd != ROBOT_CONTROL_CMD.STOP;
+                }
+            });
         }
 
-        private async void HandleUltrasoundSensorTrigger(object? sender, bool state)
+        private void HandleUltrasoundSensorTrigger(object? sender, bool state)
         {
-            if (!IsSaftyProtectActived)
-                return;
-            clsIOSignal signal = (clsIOSignal)sender;
-            var input = signal.Input;
-            if (state)
-            {
-                logger.LogTrace($"{input} Trigger! AGV STOP");
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor);
-            }
-            else
-            {
-                logger.LogTrace($"{input} Recovery! AGV Speed Recovery");
-                await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery);
 
-            }
+            _ = Task.Run(async () =>
+            {
+                if (!IsSaftyProtectActived)
+                    return;
+                clsIOSignal signal = (clsIOSignal)sender;
+                var input = signal.Input;
+                if (state)
+                {
+                    logger.LogTrace($"{input} Trigger! AGV STOP");
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.STOP, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensor);
+                }
+                else
+                {
+                    logger.LogTrace($"{input} Recovery! AGV Speed Recovery");
+                    await AGVC.CarSpeedControl(ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.UltrasoundSensorRecovery);
+
+                }
+            });
 
         }
 
         private SemaphoreSlim _LaserAreaHhandleslim = new SemaphoreSlim(1, 1);
 
         bool Laser3rdTriggerHandlerFlag = false;
-        private async void HandleLaserTriggerSaftyRelay(object? sender, bool state)
+        private void HandleLaserTriggerSaftyRelay(object? sender, bool state)
         {
-            await _LaserAreaHhandleslim.WaitAsync();
-            try
+            _ = Task.Run(async () =>
             {
-
-                if (!IsSaftyProtectActived)
-                    return;
-
-                clsIOSignal inputIO = (clsIOSignal)sender;
-
-                bool IsLaserBypass(clsIOSignal input)
+                await _LaserAreaHhandleslim.WaitAsync();
+                try
                 {
-                    if (input.Input == DI_ITEM.RightProtection_Area_Sensor_3)
-                        return WagoDO.GetState(DO_ITEM.Right_LsrBypass);
 
-                    else if (input.Input == DI_ITEM.LeftProtection_Area_Sensor_3)
-                        return WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+                    if (!IsSaftyProtectActived)
+                        return;
 
-                    else if (input.Input == DI_ITEM.FrontProtection_Area_Sensor_3)
-                        return WagoDO.GetState(DO_ITEM.Front_LsrBypass);
-                    else if (input.Input == DI_ITEM.BackProtection_Area_Sensor_3)
-                        return WagoDO.GetState(DO_ITEM.Back_LsrBypass);
-                    return true;
-                }
-                if (IsLaserBypass(inputIO))
-                    return;
+                    clsIOSignal inputIO = (clsIOSignal)sender;
 
-                bool LaserTrigger = !state;
-                if (LaserTrigger)
-                {
-                    Laser3rdTriggerHandlerFlag = true;
-                    while (!IsAllLaserNoTrigger())
+                    bool IsLaserBypass(clsIOSignal input)
                     {
-                        logger.LogTrace($"等待障礙物移除");
+                        if (input.Input == DI_ITEM.RightProtection_Area_Sensor_3)
+                            return WagoDO.GetState(DO_ITEM.Right_LsrBypass);
+
+                        else if (input.Input == DI_ITEM.LeftProtection_Area_Sensor_3)
+                            return WagoDO.GetState(DO_ITEM.Left_LsrBypass);
+
+                        else if (input.Input == DI_ITEM.FrontProtection_Area_Sensor_3)
+                            return WagoDO.GetState(DO_ITEM.Front_LsrBypass);
+                        else if (input.Input == DI_ITEM.BackProtection_Area_Sensor_3)
+                            return WagoDO.GetState(DO_ITEM.Back_LsrBypass);
+                        return true;
+                    }
+                    if (IsLaserBypass(inputIO))
+                        return;
+
+                    bool LaserTrigger = !state;
+                    if (LaserTrigger)
+                    {
+                        Laser3rdTriggerHandlerFlag = true;
+                        while (!IsAllLaserNoTrigger())
+                        {
+                            logger.LogTrace($"等待障礙物移除");
+
+                            if (GetSub_Status() == SUB_STATUS.DOWN)
+                                return;
+
+                            if (IsLaserBypass(inputIO) || !IsSaftyProtectActived)
+                                break;
+
+                            await Task.Delay(1000);
+                        }
+                        await Task.Delay(1000);
 
                         if (GetSub_Status() == SUB_STATUS.DOWN)
                             return;
 
-                        if (IsLaserBypass(inputIO) || !IsSaftyProtectActived)
-                            break;
-
-                        await Task.Delay(1000);
-                    }
-                    await Task.Delay(1000);
-
-                    if (GetSub_Status() == SUB_STATUS.DOWN)
-                        return;
-
-                    var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
-                    if (safty_relay_reset_result)
-                    {
-                        logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset done.");
-                        safty_relay_reset_result = await ResetMotor(false);
+                        var safty_relay_reset_result = await WagoDO.ResetSaftyRelay();
                         if (safty_relay_reset_result)
                         {
-                            logger.LogWarning($"[TSMC Inspection AGV] 馬達已Reset");
-                            AlarmManager.ClearAlarm();
-                            //BuzzerPlayer.Stop();
-                            //await Task.Delay(100);
+                            logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset done.");
+                            safty_relay_reset_result = await ResetMotor(false);
+                            if (safty_relay_reset_result)
+                            {
+                                logger.LogWarning($"[TSMC Inspection AGV] 馬達已Reset");
+                                AlarmManager.ClearAlarm();
+                                //BuzzerPlayer.Stop();
+                                //await Task.Delay(100);
 
-                            //if (AGVC.ActionStatus == ActionStatus.ACTIVE)
-                            //{
-                            //    if (_RunTaskData.Action_Type == ACTION_TYPE.None)
-                            //        BuzzerPlayer.Move();
-                            //    else
-                            //        BuzzerPlayer.Action();
+                                //if (AGVC.ActionStatus == ActionStatus.ACTIVE)
+                                //{
+                                //    if (_RunTaskData.Action_Type == ACTION_TYPE.None)
+                                //        BuzzerPlayer.Move();
+                                //    else
+                                //        BuzzerPlayer.Action();
 
-                            //    await Task.Delay(1000);
-                            //}
-                            //await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
+                                //    await Task.Delay(1000);
+                                //}
+                                //await AGVC.CarSpeedControl(CarController.ROBOT_CONTROL_CMD.SPEED_Reconvery, SPEED_CONTROL_REQ_MOMENT.LASER_RECOVERY);
 
+                            }
+                            else
+                            {
+                                logger.LogWarning($"[TSMC Inspection AGV] 馬達Reset失敗");
+                            }
                         }
                         else
-                        {
-                            logger.LogWarning($"[TSMC Inspection AGV] 馬達Reset失敗");
-                        }
-                    }
-                    else
-                        logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset 失敗");
-                    Laser3rdTriggerHandlerFlag = false;
+                            logger.LogWarning($"[TSMC Inspection AGV] Safty relay reset 失敗");
+                        Laser3rdTriggerHandlerFlag = false;
 
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, ex.Message);
-            }
-            finally
-            {
-                _LaserAreaHhandleslim.Release();
-            }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, ex.Message);
+                }
+                finally
+                {
+                    _LaserAreaHhandleslim.Release();
+                }
+            });
 
         }
 
@@ -329,7 +338,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             base.AlarmManager_OnUnRecoverableAlarmOccur(sender, alarm_code);
         }
-        protected internal async override void SoftwareEMO(AlarmCodes alarmCode)
+        protected internal override void SoftwareEMO(AlarmCodes alarmCode)
         {
             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
             if (Laser3rdTriggerHandlerFlag)
@@ -569,28 +578,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return init_result;
         }
 
-        protected override async void HandleDriversStatusErrorAsync(object? sender, bool status)
+        protected override void HandleDriversStatusErrorAsync(object? sender, bool status)
         {
-            if (!status)
-                return;
-            await Task.Delay(1000);
-            if (IsEmoTrigger || IsResetAlarmWorking)
-                return;
+            _ = Task.Run(async () =>
+            {
+                if (!status)
+                    return;
+                await Task.Delay(1000);
+                if (IsEmoTrigger || IsResetAlarmWorking)
+                    return;
 
-            clsIOSignal signal = (clsIOSignal)sender;
-            var input = signal?.Input;
-            var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_1)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_2)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Rear;
-            if (input == DI_ITEM.Horizon_Motor_Error_3)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Front;
-            if (input == DI_ITEM.Horizon_Motor_Error_4)
-                alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
-            AlarmManager.AddAlarm(alarmCode, false);
+                clsIOSignal signal = (clsIOSignal)sender;
+                var input = signal?.Input;
+                var alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+                if (input == DI_ITEM.Horizon_Motor_Error_1)
+                    alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Front;
+                if (input == DI_ITEM.Horizon_Motor_Error_2)
+                    alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Left_Rear;
+                if (input == DI_ITEM.Horizon_Motor_Error_3)
+                    alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Front;
+                if (input == DI_ITEM.Horizon_Motor_Error_4)
+                    alarmCode = AlarmCodes.Wheel_Motor_IO_Error_Right_Rear;
+                AlarmManager.AddAlarm(alarmCode, false);
+            });
         }
-        protected override async void HandshakeIOOff()
+        protected override void HandshakeIOOff()
         {
             //await WagoDO.SetState(DO_ITEM.AGV_TR_REQ, false);
         }

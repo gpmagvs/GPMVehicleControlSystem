@@ -6,7 +6,6 @@ namespace GPMVehicleControlSystem.Models.Log
 {
     public class LogQueryService
     {
-        private static string LogBaseFolder => LOG.LogFolder;
         internal static async Task<clsLogQueryResults> QueryLog(clsLogQueryOptions option)
         {
             await Task.Delay(10);
@@ -59,7 +58,8 @@ namespace GPMVehicleControlSystem.Models.Log
         }
         private static List<string> GetDateMatchFolders(DateTime from, DateTime to)
         {
-            string[] subfolders = Directory.GetDirectories(LogBaseFolder);
+            string logFolder = NLog.LogManager.Configuration?.Variables["logDirectory"]?.ToString();
+            string[] subfolders = Directory.GetDirectories(logFolder);
             var _from = new DateTime(from.Year, from.Month, from.Day, 0, 0, 0);
             var _to = new DateTime(to.Year, to.Month, to.Day, 0, 0, 0);
             var folders_matched = subfolders.Where(path => GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) >= _from && GetDateTimeFromFolderName(Path.GetFileNameWithoutExtension(path)) <= _to);

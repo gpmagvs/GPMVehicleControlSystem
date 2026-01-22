@@ -385,24 +385,28 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             return (true, AlarmCodes.None);
         }
 
-        private async void StartWatchAGVStatusAsync()
+        private void StartWatchAGVStatusAsync()
         {
-            HandShakeLogger.Trace($"Start Watch AGV Status");
-            while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
+            _ = Task.Run(async () =>
             {
-                await Task.Delay(1);
-                if (GetSub_Status() == SUB_STATUS.DOWN)
+
+                HandShakeLogger.Trace($"Start Watch AGV Status");
+                while (AGVHsSignalStates[AGV_HSSIGNAL.AGV_VALID])
                 {
-                    if (!IsEQAbnormal_when_handshaking && !IsEQBusy_when_AGV_Busy && !IsEQGoOFF_When_Handshaking && !IsEQREQOFF_when_wait_EQREADY_when_handshaking)
+                    await Task.Delay(1);
+                    if (GetSub_Status() == SUB_STATUS.DOWN)
                     {
-                        IsAGVAbnormal_when_handshaking = true;
-                        hs_abnormal_happen_cts.Cancel();
-                        HandShakeLogger.Trace($"Watch AGV Status Finish(AGV DOWN)");
+                        if (!IsEQAbnormal_when_handshaking && !IsEQBusy_when_AGV_Busy && !IsEQGoOFF_When_Handshaking && !IsEQREQOFF_when_wait_EQREADY_when_handshaking)
+                        {
+                            IsAGVAbnormal_when_handshaking = true;
+                            hs_abnormal_happen_cts.Cancel();
+                            HandShakeLogger.Trace($"Watch AGV Status Finish(AGV DOWN)");
+                        }
+                        return;
                     }
-                    return;
                 }
-            }
-            HandShakeLogger.Trace($"Watch AGV Status Finish(Handshake Finish)");
+                HandShakeLogger.Trace($"Watch AGV Status Finish(Handshake Finish)");
+            });
         }
 
         private void HandleEQReadOFF(object? sender, EventArgs e)

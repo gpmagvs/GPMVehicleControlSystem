@@ -75,6 +75,5 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             clsForkLifterWithDriverBaseExtener forkLifter = (clsForkLifterWithDriverBaseExtener)forkAGV.ForkLifter;
             forkLifter.HorizonForkInitialize(bypassSubStatusCheck: true);
         }
-
     }
 }

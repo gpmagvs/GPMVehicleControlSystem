@@ -142,7 +142,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             try
             {
                 Laser.UpdateAGVSTrajectoryLaser(taskDownloadData);
-                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
                 await TaskDispatchFlowControlSemaphoreSlim.WaitAsync();
                 TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                 logger.LogTrace($"Start Execute Task-{taskDownloadData.Task_Simplex}");
@@ -181,7 +181,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             finally
             {
                 CargoStateStorer.watchCargoExistStateCts?.Cancel();
-                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
+                BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler;
                 TaskDispatchFlowControlSemaphoreSlim.Release();
             }
             await Task.Run(async () =>
@@ -1003,7 +1003,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <summary>
         /// 雷射障礙物監控
         /// </summary>
-        public async void StartLaserObstacleMonitor()
+        public void StartLaserObstacleMonitor()
         {
             _LaserMonitorSwitchDebouncer.Debounce(async () =>
             {
@@ -1443,11 +1443,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             });
         }
-        internal void WatchReachNextWorkStationSecondaryPtHandler(object? sender, int currentTagNumber)
-        {
-
-        }
-
 
     }
 }

@@ -33,7 +33,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         /// <summary>
         /// stream-like direction lighter flash
         /// </summary>
-        private async void FlashDirectorLighter()
+        private void FlashDirectorLighter()
         {
             Agv.DirectionLighter.CloseAll();
             cancelFlashCts = new CancellationTokenSource();
@@ -44,7 +44,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 DO_ITEM.AGV_DiractionLight_Right_2,
                 DO_ITEM.AGV_DiractionLight_Left_2
             };
-            _ = Task.Factory.StartNew(async () =>
+            _ = Task.Run(async () =>
             {
                 while (!cancelFlashCts.IsCancellationRequested)
                 {
@@ -154,48 +154,50 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             }
         }
 
-        private async void TsmcMiniAGV_OnMeasureComplete(object? sender, clsMeasureResult measure_result)
+        private void TsmcMiniAGV_OnMeasureComplete(object? sender, clsMeasureResult measure_result)
         {
-
-            Agv.ReportMeasureResult(measure_result);
-            //[0,  1,2,3,4]
-            int totalMeasurePointNum = RunningTaskData.ExecutingTrajecory.Length - 1;//扣掉進入點
-            int completed_point_index_ = RunningTaskData.ExecutingTrajecory.ToList().FindIndex(pt => pt.Point_ID == measure_result.TagID);
-            logger.Info($"{completed_point_index_} / {totalMeasurePointNum}");
-            cancelFlashCts.Cancel();
-            if (completed_point_index_ == totalMeasurePointNum) //全部的測量點都量測完畢拉
+            _ = Task.Run(async () =>
             {
-                if (Agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                Agv.ReportMeasureResult(measure_result);
+                //[0,  1,2,3,4]
+                int totalMeasurePointNum = RunningTaskData.ExecutingTrajecory.Length - 1;//扣掉進入點
+                int completed_point_index_ = RunningTaskData.ExecutingTrajecory.ToList().FindIndex(pt => pt.Point_ID == measure_result.TagID);
+                logger.Info($"{completed_point_index_} / {totalMeasurePointNum}");
+                cancelFlashCts.Cancel();
+                if (completed_point_index_ == totalMeasurePointNum) //全部的測量點都量測完畢拉
                 {
-                    TsmcMiniAGV.OnMeasureComplete -= TsmcMiniAGV_OnMeasureComplete;
-                    Agv.DirectionLighter.Backward();
+                    if (Agv.Parameters.AgvType == AGV_TYPE.INSPECTION_AGV)
+                    {
+                        TsmcMiniAGV.OnMeasureComplete -= TsmcMiniAGV_OnMeasureComplete;
+                        Agv.DirectionLighter.Backward();
+                    }
+                    else
+                    {
+                        Agv.DirectionLighter.Forward();
+                    }
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
+                    logger.Info($"Bay Point 量測結束，開始離開Bay");
+                    RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
+                    //Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                    await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
+                    Agv._RunTaskData.IsActionFinishReported = false;
+                    AGVCActionStatusChaged = null;
+                    AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
                 }
-                else
+                else //移動到下一個點
                 {
-                    Agv.DirectionLighter.Forward();
-                }
-                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
-                logger.Info($"Bay Point 量測結束，開始離開Bay");
-                RunningTaskData = RunningTaskData.CreateGoHomeTaskDownloadData();
-                //Agv.ExecutingTaskEntity.RunningTaskData = RunningTaskData;
-                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
-                await Agv.AGVC.ExecuteTaskDownloaded(RunningTaskData);
-                Agv._RunTaskData.IsActionFinishReported = false;
-                AGVCActionStatusChaged = null;
-                AGVCActionStatusChaged += HandleAGVCBackToEntryPointDone;
-            }
-            else //移動到下一個點
-            {
-                clsTaskDownloadData taskData = RunningTaskData.Splice(completed_point_index_, 2, true);
-                BuzzerPlayer.SoundPlaying = SOUNDS.Move;
-                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
-                await Agv.AGVC.ExecuteTaskDownloaded(taskData);
-                AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
+                    clsTaskDownloadData taskData = RunningTaskData.Splice(completed_point_index_, 2, true);
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Move;
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.NAVIGATING);
+                    await Agv.AGVC.ExecuteTaskDownloaded(taskData);
+                    AGVCActionStatusChaged += HandleAGVCReachMeasurePoint;
 
-            }
+                }
+            });
         }
 
-        private async void HandleAGVCBackToEntryPointDone(ActionStatus status)
+        private void HandleAGVCBackToEntryPointDone(ActionStatus status)
         {
             logger.Warn($"[ {RunningTaskData.Task_Simplex} -{action}-Back To Entry  Point of Bay] AGVC Action Status Changed: {status}.");
 
@@ -212,55 +214,59 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 AGVCActionStatusChaged -= HandleAGVCBackToEntryPointDone;
             }
         }
-        private async void HandleAGVCReachMeasurePoint(ActionStatus status)
+        private void HandleAGVCReachMeasurePoint(ActionStatus status)
         {
-            logger.Warn($"[ {RunningTaskData.Task_Simplex} -{action}-Go To Measure Point] AGVC Action Status Changed: {status}.");
-            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+            _ = Task.Run(async () =>
             {
-                AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
-                return;
-            }
-            if (status == ActionStatus.SUCCEEDED)
-            {
-                AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
-                await Task.Delay(1000);
 
-                FlashDirectorLighter();
-                BuzzerPlayer.SoundPlaying = SOUNDS.Measure;
-                logger.Warn($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
-                Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
-
-                if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV || Agv.Parameters.InspectionAGV.MeasureSimulation)
+                logger.Warn($"[ {RunningTaskData.Task_Simplex} -{action}-Go To Measure Point] AGVC Action Status Changed: {status}.");
+                if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
                 {
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(5000);
-                        logger.Info($"模擬量測完成");
-                        TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
-                        {
-                            TaskName = RunningTaskData.Task_Name,
-                            result = "done",
-                            IPA = DateTime.Now.Second,
-                            StartTime = DateTime.Now,
-                            Acetone = DateTime.Now.Second,
-                            illuminance = DateTime.Now.Minute,
-                        });
-                    });
-
+                    AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
+                    return;
                 }
-                else
+                if (status == ActionStatus.SUCCEEDED)
                 {
-                    (bool confirm, string message) result = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
-                    if (!result.confirm)
+                    AGVCActionStatusChaged -= HandleAGVCReachMeasurePoint;
+                    await Task.Delay(1000);
+
+                    FlashDirectorLighter();
+                    BuzzerPlayer.SoundPlaying = SOUNDS.Measure;
+                    logger.Warn($"AGV Reach {Agv.Navigation.LastVisitedTag}, Start Measure.");
+                    Agv.FeedbackTaskStatus(TASK_RUN_STATUS.ACTION_START);
+
+                    if (Agv.Parameters.AgvType != AGV_TYPE.INSPECTION_AGV || Agv.Parameters.InspectionAGV.MeasureSimulation)
                     {
-                        logger.Error($"AGV Measure service callback fail.");
-                        TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                        _ = Task.Run(async () =>
                         {
-                            result = "error",
+                            await Task.Delay(5000);
+                            logger.Info($"模擬量測完成");
+                            TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                            {
+                                TaskName = RunningTaskData.Task_Name,
+                                result = "done",
+                                IPA = DateTime.Now.Second,
+                                StartTime = DateTime.Now,
+                                Acetone = DateTime.Now.Second,
+                                illuminance = DateTime.Now.Minute,
+                            });
                         });
+
+                    }
+                    else
+                    {
+                        (bool confirm, string message) result = await TsmcMiniAGV.StartMeasure(Agv.Navigation.LastVisitedTag);
+                        if (!result.confirm)
+                        {
+                            logger.Error($"AGV Measure service callback fail.");
+                            TsmcMiniAGV_OnMeasureComplete(this, new clsMeasureResult(Agv.Navigation.LastVisitedTag)
+                            {
+                                result = "error",
+                            });
+                        }
                     }
                 }
-            }
+            });
         }
     }
 }

@@ -28,7 +28,6 @@ namespace GPMVehicleControlSystem.Service
                 {
                     Models.VehicleControl.Vehicles.Params.clsVehicelParam param = await Vehicle.LoadParameters();
 
-                    AGVSystemCommonNet6.Log.LOG.SetLogFolderName(param.LogFolder);
                     bool alarmListLoaded = AlarmManager.LoadAlarmList(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "param", "AlarmList.json"), out string message);
                     DBhelper.Initialize();
                     //AlarmManager.RecoveryAlarmDB();

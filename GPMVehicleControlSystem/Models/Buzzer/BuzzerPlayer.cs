@@ -112,10 +112,26 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             if (!string.IsNullOrEmpty(result))
             {
                 APLAYER = new APlayer(logger);
+                APLAYER.BeforeAudioPlay += APLAYER_BeforeAudioPlay;
                 Console.WriteLine("which aplay result: " + result);
                 Console.WriteLine("Will use aplay to play audios!!");
             }
         }
+
+        private static void APLAYER_BeforeAudioPlay(object? sender, APlayer.AplayEventArgs e)
+        {
+            SOUNDS _wantToPlaySound = e.playing;
+            bool _isSoundMatched = _wantToPlaySound == SOUNDS.Unknown || _wantToPlaySound == SoundPlaying;
+            if (!_isSoundMatched)
+            {
+                e.message = $"嘗試播放的主音效({e.playing})與目前系統需求不符({SoundPlaying})";
+                e.allowed = false;
+                return;
+            }
+
+            e.allowed = true;
+        }
+
         internal static void BackgroundStop()
         {
             IsRotatingPlaying = IsSlowDownPlaying = false;

@@ -5,6 +5,15 @@ namespace GPMVehicleControlSystem.Models.Buzzer
 {
     public class APlayer
     {
+        public class AplayEventArgs : EventArgs
+        {
+            public SOUNDS playing { get; set; } = SOUNDS.Unknown;
+            public bool allowed { get; set; } = true;
+            public string message { get; internal set; } = string.Empty;
+        }
+
+        public event EventHandler<AplayEventArgs> BeforeAudioPlay;
+
         List<Process> playingProcesses = new List<Process>();
         Dictionary<SOUNDS, Process> BGPlayingProcesses = new();
         Process playingProcess = new();
@@ -72,7 +81,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             }
             Console.WriteLine($"APlay PlayAudio Method Invoked.({sound})");
             string audioPath = GetAudioPath(sound);
-            return PlayAudio(audioPath, out errorMessage);
+            return PlayAudio(audioPath, out errorMessage, sound: sound);
         }
 
         private string GetAudioPath(SOUNDS sound)
@@ -118,7 +127,7 @@ namespace GPMVehicleControlSystem.Models.Buzzer
             }
         }
 
-        internal bool PlayAudio(string audioPath, out string errorMessage)
+        internal bool PlayAudio(string audioPath, out string errorMessage, SOUNDS sound = SOUNDS.Unknown)
         {
             errorMessage = "";
             audioPath = Path.GetFullPath(audioPath);
@@ -136,11 +145,21 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     {
                         await semaphoreSlim.WaitAsync();
                         stopFlag = false;
-
+                        AplayEventArgs eventArgs = new AplayEventArgs()
+                        {
+                            playing = sound,
+                            allowed = false
+                        };
                         while (true)
                         {
                             try
                             {
+                                BeforeAudioPlay?.Invoke(this, eventArgs);
+                                if (BeforeAudioPlay != null && !eventArgs.allowed)
+                                {
+                                    logger.Warn($"{eventArgs.message}");
+                                    break;
+                                }
                                 playingProcess = Process.Start("aplay", audioPath);
                                 playingProcesses.Add(playingProcess);
                                 playingProcess.WaitForExit();

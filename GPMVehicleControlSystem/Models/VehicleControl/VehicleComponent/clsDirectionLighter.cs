@@ -59,27 +59,34 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             await DOModule.SetState(writeRequest);
         }
 
-        public virtual async void TurnRight(bool opened = true)
+        public virtual void TurnRight(bool opened = true)
         {
-            await CloseAll();
-            await Task.Delay(300);
-            if (opened)
-                FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
-            else
+            _ = Task.Run(async () =>
             {
-                this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
-            }
+                await CloseAll();
+                await Task.Delay(300);
+                if (opened)
+                    FlashAsync(DO_ITEM.AGV_DiractionLight_Right);
+                else
+                {
+                    this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Right, false);
+                }
+
+            });
         }
-        public virtual async void TurnLeft(bool opened = true)
+        public virtual void TurnLeft(bool opened = true)
         {
-            await CloseAll();
-            await Task.Delay(300);
-            if (opened)
-                FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
-            else
+            _ = Task.Run(async () =>
             {
-                this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
-            }
+                await CloseAll();
+                await Task.Delay(300);
+                if (opened)
+                    FlashAsync(DO_ITEM.AGV_DiractionLight_Left);
+                else
+                {
+                    this.DOModule.SetState(DO_ITEM.AGV_DiractionLight_Left, false);
+                }
+            });
         }
 
 

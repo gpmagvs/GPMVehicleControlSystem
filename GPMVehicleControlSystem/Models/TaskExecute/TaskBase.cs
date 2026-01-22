@@ -581,9 +581,9 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             return isNoOperate;
         }
         protected ManualResetEvent _wait_agvc_action_done_pause = new ManualResetEvent(false);
-        protected async void HandleAGVActionChanged(ActionStatus status)
+        protected void HandleAGVActionChanged(ActionStatus status)
         {
-            _ = Task.Factory.StartNew(async () =>
+            _ = Task.Run(async () =>
             {
                 logger.Warn($"[AGVC Action Status Changed-ON-Action Actived][{RunningTaskData.Task_Simplex} -{action}] AGVC Action Status Changed: {status}.");
                 if (IsAGVCActionNoOperate(status) || Agv.GetSub_Status() == SUB_STATUS.DOWN)
@@ -741,11 +741,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 await Agv.Laser.SideLasersEnable(true);
                 var _safty_height = Agv.Parameters.ForkAGV.SaftyPositionHeight;
                 var _currentCargoType = Agv.CargoStateStorer.GetCargoType();
+                bool _isUnloadAndCstReaderNoNeedTrigger = action == ACTION_TYPE.Unload && !Agv.Parameters.CST_READER_TRIGGER;
                 bool _noNeededWaitPoseReach = action == ACTION_TYPE.Load;
                 if (_noNeededWaitPoseReach)
-                {
-                    Agv.LogDebugMessage($"[{action}]-$[拍照?{Agv.Parameters.CST_READER_TRIGGER}]-$[貨物類型?{_currentCargoType}]=>不須等待牙叉到位", true);
-                }
+                    Agv.LogDebugMessage($"目前動作為放貨 [{action}] =>不須等待牙叉到位", true);
                 Task goHomeTask = Agv.Parameters.ForkAGV.HomePoseUseStandyPose ? Task.Run(async () =>
                 {
                     Agv.LogDebugMessage($"[LDULD_Fork Home ] Fork Go Standby Pose", false);
@@ -782,7 +781,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     bool _isForkSafty()
                     {
                         var currentCargoType = Agv.CargoStateStorer.GetCargoType();
-                        if (currentCargoType == CST_TYPE.Rack) //取RACK只要高度低於安全高度即可
+                        if (currentCargoType == CST_TYPE.Rack || _isUnloadAndCstReaderNoNeedTrigger) //取RACK或是沒有開拍照功能只要高度低於安全高度即可
                             return Agv.ForkLifter.CurrentHeightPosition <= Agv.Parameters.ForkAGV.SaftyPositionHeight;
 
 

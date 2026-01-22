@@ -37,6 +37,22 @@ StaSysControl.KillRunningVCSProcesses();
 StaStored.APPVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 Console.Title = $"車載系統-V{StaStored.APPVersion}";
 logger.Info($"車載系統啟動-V{StaStored.APPVersion}");
+
+AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+{
+    var ex = e.ExceptionObject as Exception;
+    Console.WriteLine(ex);
+    // 如果你有 static logger
+    logger.Fatal(ex, "AppDomain UnhandledException");
+};
+
+TaskScheduler.UnobservedTaskException += (sender, e) =>
+{
+    logger.Fatal(e.Exception, "UnobservedTaskException");
+    e.SetObserved(); // ⚠️ 非常重要
+};
+
+
 LinuxTools.SaveCurrentProcessPID();
 
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

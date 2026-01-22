@@ -87,13 +87,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             LogDebugMessage($"Action Finish上報前等待主狀態-IDLE上報完成...", signalRPub: false);
         }
 
-        private async void AGVSPingSuccessHandler()
+        private void AGVSPingSuccessHandler()
         {
             logger.LogTrace($"AGVS Network restored. ");
             AlarmManager.ClearAlarm(AlarmCodes.AGVS_PING_FAIL);
         }
 
-        private async void AGVSPingFailHandler()
+        private void AGVSPingFailHandler()
         {
             logger.LogTrace($"AGVS Network Ping Fail.... ");
             AlarmManager.AddWarning(AlarmCodes.AGVS_PING_FAIL);
@@ -164,75 +164,78 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="taskDownloadData"></param>
-        internal async void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
+        internal void AGVS_OnTaskDownloadFeekbackDone(object? sender, clsTaskDownloadData taskDownloadData)
         {
-
-            LogTaskAndCancleStatus("AGVS_OnTaskDownloadFeekbackDone");
-            if (TaskCycleStopTask != null)
-                await TaskCycleStopTask;
-
-            await Task.Delay(1);
-            var taskData = taskDownloadData.Clone();
-
-            _ = Task.Run(() =>
-             {
-                 TaskDownloadAction(taskData);
-             });
-
-            async Task TaskDownloadAction(clsTaskDownloadData taskDownloadData)
+            _ = Task.Run(async () =>
             {
-                TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
-                try
-                {
-                    if (AGV_Reset_Flag)
-                        return;
-                    logger.LogInformation($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
-                    logger.LogWarning($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
+                LogTaskAndCancleStatus("AGVS_OnTaskDownloadFeekbackDone");
+                if (TaskCycleStopTask != null)
+                    await TaskCycleStopTask;
 
-                    await CheckActionFinishFeedbackFinish();
-                    clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
-                    _TryClearExecutingTask();
-                    WriteTaskNameToFile(taskDownloadData.Task_Name);
+                await Task.Delay(1);
+                var taskData = taskDownloadData.Clone();
+
+                _ = Task.Run(() =>
+                 {
+                     TaskDownloadAction(taskData);
+                 });
+
+                async Task TaskDownloadAction(clsTaskDownloadData taskDownloadData)
+                {
+                    TaskDispatchStatus = TASK_DISPATCH_STATUS.Pending;
                     try
                     {
-                        await Task.Delay(20);
-                        ExecuteAGVSTask(taskDownloadData);
-                    }
-                    catch (NullReferenceException ex)
-                    {
-                        logger.LogError(ex.Message, ex);
-                    }
+                        if (AGV_Reset_Flag)
+                            return;
+                        logger.LogInformation($"Task Download: Task Name = {taskDownloadData.Task_Name} , Task Simple = {taskDownloadData.Task_Simplex}", false);
+                        logger.LogWarning($"{taskDownloadData.Task_Simplex},Trajectory: {string.Join("->", taskDownloadData.ExecutingTrajecory.Select(pt => pt.Point_ID))}");
 
-                    void _TryClearExecutingTask()
-                    {
-                        AGVC.OnAGVCActionChanged = null;
-
-                        if (ExecutingTaskEntity != null)
+                        await CheckActionFinishFeedbackFinish();
+                        clsEQHandshakeModbusTcp.HandshakingModbusTcpProcessCancel?.Cancel();
+                        _TryClearExecutingTask();
+                        WriteTaskNameToFile(taskDownloadData.Task_Name);
+                        try
                         {
-                            ExecutingTaskEntity.TaskCancelByReplan.Cancel();
-                            ExecutingTaskEntity.Dispose();
+                            await Task.Delay(20);
+                            ExecuteAGVSTask(taskDownloadData);
                         }
+                        catch (NullReferenceException ex)
+                        {
+                            logger.LogError(ex.Message, ex);
+                        }
+
+                        void _TryClearExecutingTask()
+                        {
+                            AGVC.OnAGVCActionChanged = null;
+
+                            if (ExecutingTaskEntity != null)
+                            {
+                                ExecutingTaskEntity.TaskCancelByReplan.Cancel();
+                                ExecutingTaskEntity.Dispose();
+                            }
+                        }
+
                     }
+                    catch (Exception)
+                    {
+                    }
+                    finally
+                    {
+                        AGV_Reset_Flag = false;
+                    }
+                }
 
-                }
-                catch (Exception)
+                void OnActionDisposed(object? sender, string newActionName)
                 {
+                    //使用前一筆任務Action類型決定要上報?
+                    TASK_RUN_STATUS _status = _RunTaskData.Action_Type == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_FINISH;
+                    _RunTaskData = taskDownloadData.Clone();
+                    FeedbackTaskStatus(_status);
+                    _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
+                    logger.LogWarning($"命令-{_RunTaskData.Task_Simplex} 已終止:因 {newActionName} 命令下達,FeedbackTaskStatus 上報 {_status}");
                 }
-                finally
-                {
-                    AGV_Reset_Flag = false;
-                }
-            }
 
-            void OnActionDisposed(object? sender, string newActionName)
-            {
-                //使用前一筆任務Action類型決定要上報?
-                TASK_RUN_STATUS _status = _RunTaskData.Action_Type == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_FINISH;
-                _RunTaskData = taskDownloadData.Clone();
-                FeedbackTaskStatus(_status);
-                _TaskDownloadHandleDebouncer.OnActionCanceled -= OnActionDisposed;
-                logger.LogWarning($"命令-{_RunTaskData.Task_Simplex} 已終止:因 {newActionName} 命令下達,FeedbackTaskStatus 上報 {_status}");
-            }
+            });
         }
 
         Task<bool> TaskCycleStopTask = null;
@@ -250,8 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 LogTaskAndCancleStatus("HandleTaskCancelRequest");
                 TaskCycleStopStatus = TASK_CANCEL_STATUS.RECEIVED_CYCLE_STOP_REQUEST;
                 logger.LogInformation($"[任務取消] {requester}. TASK Cancel Request ({mode}) Reach. Current Action Status={AGVC.ActionStatus}, AGV SubStatus = {GetSub_Status()}");
-                Navigation.OnLastVisitedTagUpdate -= WatchReachNextWorkStationSecondaryPtHandler;
-
+                BarcodeReader.OnAGVReachingTag -= WatchReachNextWorkStationSecondaryPtIsBarcodeReaderTagHandler; //首先解除事件註冊 ，避免重複註冊
                 if (mode == RESET_MODE.ABORT)
                 {
                     AGVC.EmergencyStop(true);
