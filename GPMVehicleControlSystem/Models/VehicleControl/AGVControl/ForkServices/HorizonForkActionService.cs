@@ -22,7 +22,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         protected override string modelName { get; set; } = "Extend";
         protected override string CommandActionServiceName { get; set; } = "/ForkExtend_action";
         protected override string DoneActionServiceName { get; set; } = "/ForkExtend_done_action";
-        protected override bool IsStartRunRequesting(VerticalCommandRequest request)
+        public override bool IsStartRunRequesting(VerticalCommandRequest request)
         {
             string[] startRunCmdList = { "extend", "retract" };
             if (startRunCmdList.Contains(request.command))

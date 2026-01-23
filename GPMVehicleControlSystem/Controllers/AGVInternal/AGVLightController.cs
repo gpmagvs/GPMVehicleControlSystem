@@ -81,7 +81,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         }
 
         [HttpGet("TrafficControllingLightsFlash")]
-        public async Task<IActionResult> TrafficControllingLightsFlash(int period=500)
+        public async Task<IActionResult> TrafficControllingLightsFlash(int period = 500)
         {
             agv.DirectionLighter.TrafficControllingLightsFlash(period);
             return Ok();
@@ -95,6 +95,18 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                  VehicleControl.DIOModule.clsDOModule.DO_ITEM.AGV_DiractionLight_Right
             }, 1000);
             return Ok();
+        }
+
+        [HttpPost("StatusFlow")]
+        public async Task StatusFlow(int mode = 1)
+        {
+            agv.StatusLighter.FLowAsync(mode);
+        }
+
+        [HttpPost("StopStatusFlow")]
+        public async Task StopStatusFlow()
+        {
+            agv.StatusLighter.StopFlow();
         }
     }
 }

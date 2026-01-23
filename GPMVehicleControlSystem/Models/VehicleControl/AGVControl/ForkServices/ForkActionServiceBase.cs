@@ -9,6 +9,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 {
     public abstract class ForkActionServiceBase
     {
+        public class BeforActionStartErgs : EventArgs
+        {
+            public VerticalCommandRequest currentCommandReg { get; set; } = new VerticalCommandRequest();
+            public bool isNeedWaitDriverStop { get; set; } = false;
+        }
+
         protected readonly Vehicle vehicle;
         protected readonly RosSocket rosSocket;
         protected virtual string DoneActionServiceName { get; set; } = "/done_action";
@@ -33,6 +39,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
         public CancellationTokenSource wait_action_down_cts = new CancellationTokenSource();
 
+        public event EventHandler<BeforActionStartErgs> BeforeActionStart;
         public event EventHandler<VerticalCommandRequest> OnActionStart;
         public event EventHandler OnActionDone;
 
@@ -243,7 +250,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             logger.Warn($"Fork {request.command} resume to action");
             return await CallVerticalCommandService(request);
         }
-        protected virtual bool IsStartRunRequesting(VerticalCommandRequest request)
+        public virtual bool IsStartRunRequesting(VerticalCommandRequest request)
         {
             return request.command == "pose" || request.command == "orig" || request.command == "up" || request.command == "up_search"
                                                 || request.command == "down" || request.command == "down_search";
@@ -254,9 +261,38 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
             try
             {
                 if (request.command != "stop")
+                {
                     BeforeStopActionRequesting = request.Clone();
+                    //開始動作前
+                    if (IsStartRunRequesting(request) && IsStartRunRequesting(CurrentForkActionRequesting) && BeforeActionStart != null)
+                    {
+                        BeforActionStartErgs args = new BeforActionStartErgs() { currentCommandReg = BeforeStopActionRequesting, isNeedWaitDriverStop = false };
+                        BeforeActionStart?.Invoke(this, args);
+
+                        if (args.isNeedWaitDriverStop)
+                        {
+                            logger.Info($"開始等待 Driver Speed 為 0");
+                            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                            while (driverState.speed != 0)
+                            {
+                                logger.Info($"Driver Speed : {driverState.speed}");
+                                try
+                                {
+                                    await Task.Delay(200, cts.Token);
+                                }
+                                catch (TaskCanceledException ex)
+                                {
+                                    throw new Exception("連續牙叉動作需等待牙叉停止但已逾時");
+                                }
+                            }
+                            logger.Info("連續牙叉動作等待牙叉停止 Success");
+                        }
+                    }
+                }
                 else
                     BeforeStopActionRequesting = new VerticalCommandRequest();
+
+
 
                 logger.Info($"Try rosservice call {CommandActionServiceName} : {request.ToJson(Newtonsoft.Json.Formatting.None)}");
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(CommandActionServiceName, request, 1000);

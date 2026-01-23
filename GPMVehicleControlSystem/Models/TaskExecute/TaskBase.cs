@@ -444,7 +444,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    logger.Warn($"一般走行任務-牙叉回HOME");
+                    var _currentSaftyHeightSetting = Agv.Parameters.ForkAGV.SaftyPositionHeight;
+
+                    logger.Warn($"一般走行任務執行前-牙叉需回 HOME點或是待命點!");
+                    ForkLifter.ForkStopAsync(waitSpeedZero: true);
+                    await Task.Delay(200);
 
                     (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = (false, AlarmCodes.Fork_Action_Aborted);
                     if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
@@ -460,7 +464,26 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     if (!forkGoHomeResult.confirm)
                         alarmCodes.Add(forkGoHomeResult.alarm_code);
                     else
-                        logger.Warn($"一般走行任務-牙叉回HOME-牙叉已位於安全位置({ForkLifter.CurrentHeightPosition} cm)");
+                    {
+                        CancellationTokenSource _cst = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+                        while (ForkLifter.CurrentHeightPosition >= _currentSaftyHeightSetting)
+                        {
+                            try
+                            {
+                                logger.Warn($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置..目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
+
+                                await Task.Delay(200, _cst.Token);
+                            }
+                            catch (TaskCanceledException ex)
+                            {
+                                logger.Error($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置已逾時! 目前高度 -> {ForkLifter.CurrentHeightPosition} cm");
+                                alarmCodes.Add(AlarmCodes.Action_Timeout);
+                                return;
+                            }
+                        }
+
+                        logger.Info($"一般走行任務-牙叉回HOME-牙叉已位於安全位置:: 目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
+                    }
                 }));
             }
             else if (action == ACTION_TYPE.Charge || action == ACTION_TYPE.Park || action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.LoadAndPark)

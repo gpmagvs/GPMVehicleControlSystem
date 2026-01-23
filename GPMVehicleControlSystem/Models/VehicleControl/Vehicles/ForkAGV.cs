@@ -17,6 +17,7 @@ using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
 using static AGVSystemCommonNet6.MAP.MapPoint;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices.ForkActionServiceBase;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
@@ -129,6 +130,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             var _fork_car_controller = (AGVC as ForkAGVController);
             _fork_car_controller.verticalActionService.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
+            _fork_car_controller.verticalActionService.BeforeActionStart += VerticalActionService_BeforeActionStart;
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -159,6 +161,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             }
 
+        }
+
+        private void VerticalActionService_BeforeActionStart(object? sender, BeforActionStartErgs e)
+        {
+            try
+            {
+                var actionService = (AGVC as ForkAGVController).verticalActionService;
+                if (actionService != null)
+                {
+                    bool _isForkRunning = actionService.driverState.speed != 0 || actionService.IsStartRunRequesting(actionService.CurrentForkActionRequesting);
+                    if (!_isForkRunning)
+                    {
+                        e.isNeedWaitDriverStop = false;
+                        return;
+                    }
+                    //Stop First
+                    LogDebugMessage($"牙叉動作 {e.currentCommandReg.command} 開始前但偵測到牙叉處於運動狀態-> 首先下發停止指定(stop)", true);
+                    actionService.Stop();
+
+                    e.isNeedWaitDriverStop = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "VerticalActionService_BeforeActionStart:" + ex.Message);
+            }
         }
 
         private void HandleHorizonForkLimitSensorStateChanged(object? sender, bool inputState)

@@ -113,5 +113,69 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
             DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
         }
+        CancellationTokenSource lightFlowCancellationTokenSource = new CancellationTokenSource();
+        internal async Task StopFlow()
+        {
+            try
+            {
+                lightFlowCancellationTokenSource.Cancel();
+            }
+            catch (Exception)
+            {
+            }
+        }
+        internal async Task FLowAsync(int mode = 0)
+        {
+            try
+            {
+                StopFlow();
+                await Task.Delay(100);
+
+                lightFlowCancellationTokenSource = new CancellationTokenSource();
+                //R Y G B
+                await CloseAll();
+                while (!lightFlowCancellationTokenSource.IsCancellationRequested)
+                {
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, true);
+                    await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, true);
+                    await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, true);
+                    await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                    await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, true);
+                    await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+
+                    if (mode == 0)
+                    {
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                    }
+                    else
+                    {
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_R, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_Y, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_G, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                        await DOModule.SetState(DO_ITEM.AGV_DiractionLight_B, false);
+                        await Task.Delay(300, lightFlowCancellationTokenSource.Token);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                CloseAll();
+            }
+        }
     }
 }

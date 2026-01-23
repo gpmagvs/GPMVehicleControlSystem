@@ -831,7 +831,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return await Task.Run(async () =>
                 {
                     StopAllHandshakeTimer();
-                    StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
+                    //StatusLighter.FlashAsync(DO_ITEM.AGV_DiractionLight_Y, 600);
+                    StatusLighter.FLowAsync();
                     try
                     {
                         IsMotorReseting = false;
@@ -872,7 +873,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                             IsInitialized = false;
                             SetSub_Status(SUB_STATUS.DOWN);
                             BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
-                            StatusLighter.AbortFlash();
+                            StatusLighter.StopFlow();
                             return result;
                         }
 
@@ -881,7 +882,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             SetSub_Status(SUB_STATUS.DOWN);
                             IsInitialized = false;
-                            StatusLighter.AbortFlash();
+                            StatusLighter.StopFlow();
                             return result;
                         }
                         await Task.Delay(500, InitializeCancelTokenResourece.Token);
@@ -896,7 +897,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                         await Laser.AllLaserDisable();
 
-                        StatusLighter.AbortFlash();
+                        StatusLighter.StopFlow();
                         DirectionLighter.CloseAll();
 
                         InitializingStatusText = "初始化完成!";
@@ -911,7 +912,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (TaskCanceledException ex)
                     {
-                        StatusLighter.AbortFlash();
+                        StatusLighter.StopFlow();
                         SetSub_Status(SUB_STATUS.DOWN);
                         IsInitialized = false;
                         logger.LogCritical($"AGV Initizlize Task Canceled! : \r\n{ex.Message}", ex);
@@ -919,7 +920,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     }
                     catch (Exception ex)
                     {
-                        StatusLighter.AbortFlash();
+                        StatusLighter.StopFlow();
                         SetSub_Status(SUB_STATUS.DOWN);
                         BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
                         IsInitialized = false;
@@ -931,7 +932,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             catch (TaskCanceledException)
             {
-                StatusLighter.AbortFlash();
+                StatusLighter.StopFlow();
                 SetSub_Status(SUB_STATUS.DOWN);
                 IsInitialized = false;
                 logger.LogCritical($"AGV Initizlize Task Canceled!");
