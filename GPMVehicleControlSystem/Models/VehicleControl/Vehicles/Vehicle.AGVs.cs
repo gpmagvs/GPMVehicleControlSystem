@@ -245,7 +245,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="mode">取消模式</param>
         /// <param name="normal_state"></param>
         /// <returns></returns>
-        internal async Task<bool> HandleTaskCancelRequest(RESET_MODE mode, bool normal_state = false, string requester = "AGVS派車系統請求任務取消")
+        public virtual async Task<bool> HandleTaskCancelRequest(RESET_MODE mode, bool normal_state = false, string requester = "AGVS派車系統請求任務取消")
         {
 
             TaskCycleStopTask = Task.Run(async () =>

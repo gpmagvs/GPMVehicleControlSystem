@@ -4,6 +4,7 @@ using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
+using GPMVehicleControlSystem.Models.TaskExecute;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
@@ -161,6 +162,45 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             }
 
+            TaskBase.BeforeForkGoHomeOrStandyPosWhenNormalMoveStart += HandleForkGoHomeOrStandyPosWhenNormalMoveStart;
+        }
+
+        private void HandleForkGoHomeOrStandyPosWhenNormalMoveStart(object? sender, TaskBase.BeforeForkGoHomeOrStandyPosWhenNormalMoveStartEventArgs e)
+        {
+
+            try
+            {
+                var actionService = (AGVC as ForkAGVController).verticalActionService;
+                if (actionService != null)
+                {
+                    string _messg = string.Empty;
+                    var _currentAction = actionService.CurrentForkActionRequesting;
+                    bool _isForkGoHomeOrGoStandbyNow = actionService.driverState.speed != 0 && (_IsGoHome(out _messg) || _IsGoStandby(out _messg));
+
+                    e.message = _messg;
+                    e.isCancel = _isForkGoHomeOrGoStandbyNow;
+
+                    bool _IsGoHome(out string msg)
+                    {
+                        msg = string.Empty;
+                        bool _isgoHome = _currentAction.command == "orig";
+                        msg = _isgoHome ? "牙叉動作正在執行回Home位置，取消本次移動動作!" : "";
+                        return _isgoHome;
+                    }
+
+                    bool _IsGoStandby(out string msg)
+                    {
+                        double standyPosition = Parameters.ForkAGV.StandbyPose;
+                        bool _isgoStandyPose = _currentAction.command == "pose" && (_currentAction.target == standyPosition || _currentAction.target == 0);
+                        msg = _isgoStandyPose ? "牙叉動作正在執行前往待命位置，取消本次移動動作!" : "";
+                        return _isgoStandyPose;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "VerticalActionService_BeforeActionStart:" + ex.Message);
+            }
         }
 
         private void VerticalActionService_BeforeActionStart(object? sender, BeforActionStartErgs e)
@@ -904,5 +944,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _resumeForkInitProcessWhenDriverStateIsKnown = resume;
             _forkVerticalInitWaitUserConfirm.Set();
         }
+
     }
 }

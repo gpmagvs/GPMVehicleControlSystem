@@ -1,36 +1,37 @@
 //#define YM_4FAOI
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.MAP;
+using AGVSystemCommonNet6.Notify;
 using AGVSystemCommonNet6.Vehicle_Control.Models;
-using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCSDatabase;
 using GPMVehicleControlSystem.Models.Buzzer;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent;
+using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
+using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
 using GPMVehicleControlSystem.Models.WorkStation;
+using GPMVehicleControlSystem.Tools;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using Newtonsoft.Json.Linq;
+using NLog;
 using RosSharp.RosBridgeClient.Actionlib;
-using System.Diagnostics;
-using static AGVSystemCommonNet6.clsEnums;
-using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsObstacleDetection;
-using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 using RosSharp.RosBridgeClient.MessageTypes.Geometry;
 using RosSharp.RosBridgeClient.MessageTypes.Sensor;
-using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
-using AGVSystemCommonNet6;
-using Newtonsoft.Json.Linq;
-using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using static AGVSystemCommonNet6.MAP.MapPoint;
+using System.Diagnostics;
 using WebSocketSharp;
-using NLog;
-using GPMVehicleControlSystem.Models.VehicleControl.Vehicles.CargoStates;
-using GPMVehicleControlSystem.Tools;
-using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
-using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
+using static AGVSystemCommonNet6.clsEnums;
+using static AGVSystemCommonNet6.MAP.MapPoint;
+using static GPMVehicleControlSystem.Models.VehicleControl.AGVControl.CarController;
 using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.clsLaser;
-using AGVSystemCommonNet6.Notify;
+using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks.clsForkLifter;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsObstacleDetection;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {
@@ -58,6 +59,19 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return Agv.NavingMap.Points.Values.FirstOrDefault(pt => pt.TagNumber == destineTag);
             }
         }
+        public class BeforeForkGoHomeOrStandyPosWhenNormalMoveStartEventArgs : EventArgs
+        {
+            public ACTION_TYPE actionType { get; set; }
+
+            public bool isCancel { get; set; } = false;
+
+            public string message { get; set; } = string.Empty;
+            public BeforeForkGoHomeOrStandyPosWhenNormalMoveStartEventArgs(ACTION_TYPE action_type)
+            {
+                actionType = action_type;
+            }
+        }
+        public static EventHandler<BeforeForkGoHomeOrStandyPosWhenNormalMoveStartEventArgs> BeforeForkGoHomeOrStandyPosWhenNormalMoveStart;
 
         public STATION_TYPE DestineStationType => DestineMapPoint == null ? STATION_TYPE.Unknown : DestineMapPoint.StationType;
         public bool IsDestineStationBuffer => DestineStationType == STATION_TYPE.Buffer || DestineStationType == STATION_TYPE.Charge_Buffer || DestineStationType == STATION_TYPE.Buffer_EQ && height > 0;
@@ -417,8 +431,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             _wait_agvc_action_done_pause.WaitOne();
             logger.Trace($"AGV完成 [{action}] 移動任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
         }
-
-        private async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action)
+        protected virtual async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action)
         {
             List<Task> tasks = new List<Task>();
             List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
@@ -426,7 +439,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 if (action == ACTION_TYPE.None)
                 {
-                    //走行任務,要等伸縮牙叉完全縮回後才可以開始移動
+                    //走行任務,要等伸縮牙叉完全縮回後才可以開始移動 -> 阻塞方法
                     var forkShortenRet = await ForkLifter.ForkShortenInAsync();
                     if (!forkShortenRet.confirm)
                         return (false, new List<AlarmCodes>() { AlarmCodes.Fork_Arm_Action_Error });
@@ -442,48 +455,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
             if (action == ACTION_TYPE.None) //一般走行任務
             {
-                tasks.Add(Task.Run(async () =>
+                tasks.Add(
+                Task.Run(async () =>
                 {
-                    var _currentSaftyHeightSetting = Agv.Parameters.ForkAGV.SaftyPositionHeight;
-
-                    logger.Warn($"一般走行任務執行前-牙叉需回 HOME點或是待命點!");
-                    ForkLifter.ForkStopAsync(waitSpeedZero: true);
-                    await Task.Delay(200);
-
-                    (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = (false, AlarmCodes.Fork_Action_Aborted);
-                    if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
-                    {
-                        (bool confirm, string message) = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, true);
-                        forkGoHomeResult.confirm = confirm;
-                        forkGoHomeResult.alarm_code = confirm ? AlarmCodes.None : AlarmCodes.Fork_Action_Aborted;
-                    }
-                    else
-                        forkGoHomeResult = await ForkLifter.ForkGoHome();
-
-
-                    if (!forkGoHomeResult.confirm)
-                        alarmCodes.Add(forkGoHomeResult.alarm_code);
-                    else
-                    {
-                        CancellationTokenSource _cst = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-                        while (ForkLifter.CurrentHeightPosition >= _currentSaftyHeightSetting)
-                        {
-                            try
-                            {
-                                logger.Warn($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置..目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
-
-                                await Task.Delay(200, _cst.Token);
-                            }
-                            catch (TaskCanceledException ex)
-                            {
-                                logger.Error($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置已逾時! 目前高度 -> {ForkLifter.CurrentHeightPosition} cm");
-                                alarmCodes.Add(AlarmCodes.Action_Timeout);
-                                return;
-                            }
-                        }
-
-                        logger.Info($"一般走行任務-牙叉回HOME-牙叉已位於安全位置:: 目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
-                    }
+                    alarmCodes.AddRange(await ForkPoseResumeBeforeNormalMove());
                 }));
             }
             else if (action == ACTION_TYPE.Charge || action == ACTION_TYPE.Park || action == ACTION_TYPE.Load || action == ACTION_TYPE.Unload || action == ACTION_TYPE.LoadAndPark)
@@ -523,6 +498,75 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             return (alarmCodes.Count == 0, alarmCodes);
         }
 
+        private async Task<IEnumerable<AlarmCodes>> ForkPoseResumeBeforeNormalMove()
+        {
+            List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
+            var eventArgs = new BeforeForkGoHomeOrStandyPosWhenNormalMoveStartEventArgs(action) { isCancel = false };
+            BeforeForkGoHomeOrStandyPosWhenNormalMoveStart?.Invoke(this, eventArgs);
+
+            if (eventArgs.isCancel)
+            {
+                logger.Info($"一般移動任務執行前的 Fork Action 已經被取消 : {eventArgs.message}");
+                return Array.Empty<AlarmCodes>();
+            }
+
+            var _currentSaftyHeightSetting = Agv.Parameters.ForkAGV.SaftyPositionHeight;
+            logger.Warn($"一般走行任務執行前-牙叉需回 HOME點或是待命點! 首先嘗試停止牙叉 command:stop 且須等待速度為 0");
+
+            (bool forkStopConfirm, string forkStopRetMessage) = await ForkLifter.ForkStopAsync(waitSpeedZero: true);
+            if (!forkStopConfirm)
+            {
+                logger.Error($"一般走行任務-牙叉回HOME-牙叉停止失敗:{forkStopRetMessage}");
+                alarmCodes.Add(AlarmCodes.Action_Timeout);
+                return alarmCodes;
+            }
+
+            await Task.Delay(200);
+
+            (bool confirm, AlarmCodes alarm_code) forkGoHomeResult = (false, AlarmCodes.Fork_Action_Aborted);
+            if (Agv.Parameters.ForkAGV.HomePoseUseStandyPose)
+            {
+                (bool confirm, string message) = await ForkLifter.ForkPose(Agv.Parameters.ForkAGV.StandbyPose, 1, false);
+                forkGoHomeResult.confirm = confirm;
+                forkGoHomeResult.alarm_code = confirm ? AlarmCodes.None : AlarmCodes.Fork_Action_Aborted;
+            }
+            else
+                forkGoHomeResult = await ForkLifter.ForkGoHome(wait_done: false);
+
+
+            if (!forkGoHomeResult.confirm)
+                alarmCodes.Add(forkGoHomeResult.alarm_code);
+            else
+            {
+                CancellationTokenSource _cst = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+                if (await WaitForkPositionUnderSaftyHeight() != AlarmCodes.None)
+                {
+                    alarmCodes.Add(AlarmCodes.Action_Timeout);
+                }
+
+                logger.Info($"一般走行任務-牙叉回HOME-牙叉已位於安全位置:: 目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
+            }
+            return alarmCodes;
+        }
+        private async Task<AlarmCodes> WaitForkPositionUnderSaftyHeight()
+        {
+            CancellationTokenSource _cst = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            var _currentSaftyHeightSetting = Agv.Parameters.ForkAGV.SaftyPositionHeight;
+            while (ForkLifter.CurrentHeightPosition >= _currentSaftyHeightSetting)
+            {
+                try
+                {
+                    logger.Warn($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置..目前高度 -> {ForkLifter.CurrentHeightPosition} cm. 安全高度 -> {_currentSaftyHeightSetting} cm");
+                    await Task.Delay(200, _cst.Token);
+                }
+                catch (TaskCanceledException ex)
+                {
+                    logger.Error($"一般走行任務-牙叉回HOME-等待牙叉低於於安全位置已逾時! 目前高度 -> {ForkLifter.CurrentHeightPosition} cm");
+                    return AlarmCodes.Action_Timeout;
+                }
+            }
+            return AlarmCodes.None;
+        }
         /// <summary>
         /// 取得牙叉應上升的位置
         /// </summary>

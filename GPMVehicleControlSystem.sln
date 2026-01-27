@@ -9,10 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RosBridgeClient", "..\RosBr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPMVehicleControlSystem", "GPMVehicleControlSystem\GPMVehicleControlSystem.csproj", "{3192004D-ABC7-4544-AA23-9D3933A9CE3E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EquipmentManagment", "..\EquipmentManagment\EquipmentManagment.csproj", "{F7A7F4BC-3776-4A34-A0EB-31A428931C83}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KGSWebAGVSystemAPI", "..\KGSWebAGVSystemAPI\KGSWebAGVSystemAPI.csproj", "{12A645DA-0D31-4666-88EF-A2EAE63269DB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GPMVehicleControlSystemTests", "GPMVehicleControlSystemTests\GPMVehicleControlSystemTests.csproj", "{09926B87-F168-4B34-B31C-EE2F6230AB6D}"
 EndProject
 Global
@@ -33,14 +29,6 @@ Global
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3192004D-ABC7-4544-AA23-9D3933A9CE3E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F7A7F4BC-3776-4A34-A0EB-31A428931C83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F7A7F4BC-3776-4A34-A0EB-31A428931C83}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F7A7F4BC-3776-4A34-A0EB-31A428931C83}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F7A7F4BC-3776-4A34-A0EB-31A428931C83}.Release|Any CPU.Build.0 = Release|Any CPU
-		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12A645DA-0D31-4666-88EF-A2EAE63269DB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{09926B87-F168-4B34-B31C-EE2F6230AB6D}.Release|Any CPU.ActiveCfg = Release|Any CPU

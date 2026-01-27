@@ -294,7 +294,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 
 
 
-                logger.Info($"Try rosservice call {CommandActionServiceName} : {request.ToJson(Newtonsoft.Json.Formatting.None)}");
+                logger.Info($"Try rosservice call {CommandActionServiceName} : {request.ToJson(Newtonsoft.Json.Formatting.None)} ,Current Position : {driverState.position}");
                 VerticalCommandResponse? response = await rosSocket?.CallServiceAndWait<VerticalCommandRequest, VerticalCommandResponse>(CommandActionServiceName, request, 1000);
                 if (response == null)
                     throw new TimeoutException();
