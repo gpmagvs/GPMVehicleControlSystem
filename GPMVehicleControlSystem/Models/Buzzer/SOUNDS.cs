@@ -18,6 +18,7 @@
         Backward,
         WaitingPartsSysAcceptAreaRegist,
         WaitingElevetorArrive,
+        AutoDoorOpen,
         Unknown = 4004,
     }
 }

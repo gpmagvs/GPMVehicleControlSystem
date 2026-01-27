@@ -154,5 +154,12 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 APLAYER.PlayAudioBackground(sound, out string errorMsg);
             });
         }
+
+        public static async Task<Process?> PlayAudioOnceAsync(SOUNDS sound)
+        {
+            if (APLAYER == null)
+                return null;
+            return await APLAYER.PlayAudioOnceAsync(sound);
+        }
     }
 }

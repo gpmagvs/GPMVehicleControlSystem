@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using GPMVehicleControlSystem.Models.Buzzer;
+using NLog;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -9,7 +10,7 @@ namespace GPMVehicleControlSystem.Tools
         internal static bool IsInPCShutdownProcess { get; private set; } = false;
         internal static bool CancelPCShutdownFlag { get; set; } = false;
 
-        internal static int ShutdownDelayTimeSec = 5;
+        internal static int ShutdownDelayTimeSec = 3;
 
         static NLog.Logger logger => LogManager.GetCurrentClassLogger();
 
@@ -42,6 +43,7 @@ namespace GPMVehicleControlSystem.Tools
                 }
                 _ = Task.Run(async () =>
                 {
+                    BuzzerPlayer.APLAYER.PlayAudio("/home/gpm/param/sounds/shutdown.wav", out _);
                     await Task.Delay(1000);
                     proc.Start();
                     // Read the output (if any)

@@ -122,6 +122,8 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                     return AudioPathes.waitingPartsSysAcceptAreaRegist;
                 case SOUNDS.WaitingElevetorArrive:
                     return AudioPathes.WaitingElevatorArriveNotify;
+                case SOUNDS.AutoDoorOpen:
+                    return AudioPathes.AutoDoorOpenNotify;
                 default:
                     return "";
             }
@@ -192,7 +194,17 @@ namespace GPMVehicleControlSystem.Models.Buzzer
                 return false;
             }
         }
+        internal async Task<Process?> PlayAudioOnceAsync(SOUNDS sound)
+        {
+            return await Task.Delay(1).ContinueWith(t =>
+            {
+                string audioPath = GetAudioPath(sound);
+                if (string.IsNullOrEmpty(audioPath))
+                    return null;
 
+                return Process.Start("aplay", audioPath);
+            });
+        }
         internal void PlayAudioBackground(SOUNDS sound, out string errorMsg)
         {
             errorMsg = string.Empty;

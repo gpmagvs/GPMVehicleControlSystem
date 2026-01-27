@@ -152,9 +152,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             Laser.BeforeLaserModeBypassSwitch += Laser_BeforeLaserModeBypassSwitch; ;
 
             //2026/01/14 - 在席 sensor 觸發變化事件
-
             ExistSensorEventRegist();
 
+            WagoDO.SubsSignalStateChange(DO_ITEM.Infrared_Door_1, HandleInfraredDoorOutputStateChanged);
+        }
+        Process _autoDoorSoundPlayProcess = null;
+        private void HandleInfraredDoorOutputStateChanged(object? sender, bool e)
+        {
+            Task.Run(async () =>
+            {
+                if (_autoDoorSoundPlayProcess != null)
+                {
+                    try
+                    {
+                        _autoDoorSoundPlayProcess.Kill();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, ex.Message);
+                    }
+                }
+                await Task.Delay(100);
+                if (e)
+                {
+                    _autoDoorSoundPlayProcess = await BuzzerPlayer.PlayAudioOnceAsync(SOUNDS.AutoDoorOpen);
+                }
+            });
         }
 
         protected virtual void ExistSensorEventRegist()
