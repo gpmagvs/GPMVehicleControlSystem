@@ -995,7 +995,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             await Laser.ModeSwitch(0, isManualSwitch: true);
                             await Laser.SideLasersEnable(false);
-                            await Task.Delay(3000);
+                            await Task.Delay(800);
                             await Laser.SideLasersEnable(true);
                             _isBypassDirectionHandling = false;
                             _bypassHandleTask = Task.CompletedTask;
