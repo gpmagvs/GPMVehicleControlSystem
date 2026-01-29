@@ -118,6 +118,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
             }
         }
+        private List<clsMapPoint> _lastMoveTrajectoryFromTaskOrder = new List<clsMapPoint>();
+        private List<clsMapPoint> lastMoveTrajectoryFromTaskOrder
+        {
+            get => _lastMoveTrajectoryFromTaskOrder;
+            set
+            {
+                _lastMoveTrajectoryFromTaskOrder = value;
+                TryControlAutoDoor(lastVisitedMapPoint.TagNumber);
+            }
+        }
         /// <summary>
         /// 執行派車系統任務
         /// </summary>
@@ -125,6 +135,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         /// <param name="taskDownloadData"></param>
         internal async Task ExecuteAGVSTask(clsTaskDownloadData taskDownloadData)
         {
+            lastMoveTrajectoryFromTaskOrder = taskDownloadData.ExecutingTrajecory.ToList();
             await TryDefineOrderInfoOfTaskDownloaded(taskDownloadData);
 
             LogTaskAndCancleStatus("ExecuteAGVSTask");
@@ -691,10 +702,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         internal void TryControlAutoDoor(int newVisitedNodeTag)
         {
-            if (ExecutingTaskEntity == null)
+            if (lastMoveTrajectoryFromTaskOrder == null || !lastMoveTrajectoryFromTaskOrder.Any())
+            {
+                logger.LogInformation($"嘗試控制自動門方法觸發但 lastMoveTrajectoryFromTaskOrder 為 {(lastMoveTrajectoryFromTaskOrder == null ? "null" : "空集合")}");
                 return;
+            }
 
-            clsMapPoint[] trajectory = ExecutingTaskEntity.RunningTaskData.ExecutingTrajecory;
+            clsMapPoint[] trajectory = lastMoveTrajectoryFromTaskOrder.ToArray();
 
             List<int> autoDoorStationTags = NavingMap.Points.Values.Where(pt => pt.StationType == AGVSystemCommonNet6.MAP.MapPoint.STATION_TYPE.Auto_Door)
                                                             .Select(pt => pt.TagNumber)
