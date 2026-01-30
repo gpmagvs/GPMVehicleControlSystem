@@ -103,7 +103,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new
                 {
                     Success = false,
-                    Message = "AGV執行任務中不可切為手動模式"
+                    Message = "AGV執行任務中不可切為手動模式\nCannot switch to Manual mode while AGV is executing a task"
                 });
             }
             if (mode == OPERATOR_MODE.MANUAL && agv.Remote_Mode == REMOTE_MODE.ONLINE)
@@ -112,17 +112,17 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 return Ok(new
                 {
                     Success = false,
-                    Message = "AGV在Online模式下不可切換為手動模式(Please check 'Online Mode' to [Offline] before switch 'Auto Mode' to [Manual])"
+                    Message = "AGV在Online模式下不可切換為手動模式\nPlease check 'Online Mode' to [Offline] before switch 'Auto Mode' to [Manual]"
                 });
             }
             logger.LogTrace($"使用者進行嘗試切換為手/自動模式切換為 :{mode}模式");
             (bool success, bool isNavMotorSwitchStateError, bool isVertialMotorSwitchStateError) = await agv.Auto_Mode_Siwtch(mode);
             string errorMsg = "";
             if (isNavMotorSwitchStateError)
-                errorMsg += "走行馬達解煞車旋鈕異常;";
+                errorMsg += "走行馬達解煞車旋鈕異常(Abnormal brake release switch state on travel motor)";
 
             if (isVertialMotorSwitchStateError)
-                errorMsg += "Z軸馬達解煞車旋鈕異常";
+                errorMsg += "\nZ軸馬達解煞車旋鈕異常(Abnormal brake release switch state on Z-axis motor)";
 
             if (!success)
             {
@@ -148,23 +148,23 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
                 string _message = "";
 
                 if (result.return_code == RETURN_CODE.AGV_Need_Park_Above_Tag)
-                    _message = "AGV必須停在TAG上";
+                    _message = "AGV必須停在TAG上\nAGV must be parked on a tag";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online)
-                    _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
+                    _message = $"此位置(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線\nThis tag (TAG {agv.BarcodeReader.CurrentTag}) does not allow AGV to go online";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online_In_Equipment)
-                    _message = $"AGV位於設備內(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線";
+                    _message = $"AGV位於設備內(TAG {agv.BarcodeReader.CurrentTag})禁止AGV上線\nAGV is inside equipment (TAG {agv.BarcodeReader.CurrentTag}) and cannot go online";
                 else if (result.return_code == RETURN_CODE.Cannot_Switch_Remote_Mode_When_Task_Executing)
-                    _message = "AGV執行任務中不可切換Online/Offline Mode";
+                    _message = "AGV執行任務中不可切換Online/Offline Mode\nCannot switch Online/Offline mode while task is running";
                 else if (result.return_code == RETURN_CODE.Current_Tag_Cannot_Online_At_Virtual_Point)
-                    _message = "AGV位於虛擬點上不可上線";
+                    _message = "AGV位於虛擬點上不可上線\nAGV cannot go online at a virtual point";
                 else if (result.return_code == RETURN_CODE.AGV_Not_Initialized)
-                    _message = "AGV尚未完成初始化時不可上線";
+                    _message = "AGV尚未完成初始化時不可上線\nAGV cannot go online before initialization completes";
                 else if (result.return_code == RETURN_CODE.AGV_HasIDBut_No_Cargo)
-                    _message = "有帳無料!請先進行'移除卡匣'";
+                    _message = "有帳無料!請先進行'移除卡匣'\nCargo record exists but no cargo detected. Please remove the cassette first";
                 else if (result.return_code == RETURN_CODE.Horizon_Motor_Switch_State_Error)
-                    _message = "走行馬達解煞車旋鈕異常";
+                    _message = "走行馬達解煞車旋鈕異常\nAbnormal brake release switch state on travel motor";
                 else if (result.return_code == RETURN_CODE.Vertical_Motor_Switch_State_Error)
-                    _message = "Z軸馬達解煞車旋鈕異常";
+                    _message = "Z軸馬達解煞車旋鈕異常\nAbnormal brake release switch state on Z-axis motor";
                 else
                     _message = result.return_code.ToString();
                 if (!result.success)
