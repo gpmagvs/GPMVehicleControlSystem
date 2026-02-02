@@ -26,7 +26,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
     {
         private string TaskName = "";
         public TASK_RUN_STATUS CurrentTaskRunStatus = TASK_RUN_STATUS.NO_MISSION;
-        internal bool AutoOnlineRaising = false;
         internal clsParkingAccuracy lastParkingAccuracy;
         private bool _IsCargoBiasDetecting = false;
         ManualResetEvent waitActionFinishReportedResetEvent = new ManualResetEvent(false);
@@ -232,7 +231,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                     await WaitLaserMonitorEnd(TimeSpan.FromSeconds(3));
 
-                    IEnumerable<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
+                    IReadOnlyList<AlarmCodes> _current_alarm_codes = new List<AlarmCodes>();
                     bool IsAlarmHappedWhenTaskExecuting = alarmCodes.Count != 0;
                     bool IsAGVNowIsDown = GetSub_Status() == SUB_STATUS.DOWN;
 
@@ -254,7 +253,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (_isTaskFail)
                     {
                         AGVC.EmergencyStop();
-                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode).ToList();
                         IsAutoInitWhenExecuteMoveAction = IsAGVNowIsDown && action == ACTION_TYPE.None && GetAutoInitAcceptStateWithCargoStatus(alarmCodes);
                         if (alarmCodes.Contains(AlarmCodes.AGV_State_Cant_do_this_Action))
                         {
@@ -270,7 +269,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         {
                             AlarmManager.AddAlarm(alarm, false);
                         });
-                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode);
+                        _current_alarm_codes = AlarmManager.CurrentAlarms.Values.Where(al => !al.IsRecoverable).Select(al => al.EAlarmCode).ToList();
                         logger.LogError($"{action} 任務失敗:Alarm:{string.Join(",", _current_alarm_codes)}");
                         SetSub_Status(SUB_STATUS.DOWN);
                         BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
@@ -548,7 +547,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             logger.LogWarning($"AGV當機原因:{string.Join(",", currentAlarmCodes)}");
             logger.LogWarning($"不允許自動初始化的異常:{string.Join(",", Parameters.Advance.ForbidAutoInitialzeAlarmCodes)}");
 
-            IEnumerable<AlarmCodes> intersectAlarmCodes = Parameters.Advance.ForbidAutoInitialzeAlarmCodes.Intersect(currentAlarmCodes);
+            IReadOnlyList<AlarmCodes> intersectAlarmCodes = Parameters.Advance.ForbidAutoInitialzeAlarmCodes.Intersect(currentAlarmCodes).ToList();
             if (intersectAlarmCodes.Any())
             {
                 logger.LogWarning($"AGV因為{string.Join(",", intersectAlarmCodes)}異常導致當機，不允許自動初始化");
@@ -731,8 +730,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return;
             }
 
-            IEnumerable<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt));
-            IEnumerable<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID);
+            IReadOnlyList<clsMapPoint> autoDoorPoints = trajectory.Skip(indexOfCurrentPt).Where(pt => _IsAutoDoor(pt)).ToList();
+            IReadOnlyList<int> autoDoorTags = autoDoorPoints.Select(pt => pt.Point_ID).ToList();
             logger.LogTrace($"Auto Door Points in remain trajectory? {string.Join(",", autoDoorTags)}");
 
 
@@ -859,10 +858,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
             try
             {
-                bool needReOnline = false;
+                bool needWaitReconnected = false;
                 if ((!AGVS.IsConnected() || AGVS.IsGetOnlineModeTrying))
                 {
-                    needReOnline = status == TASK_RUN_STATUS.ACTION_FINISH;
+                    needWaitReconnected = status == TASK_RUN_STATUS.ACTION_FINISH;
                 }
 
                 IsActionFinishTaskFeedbackExecuting = status == TASK_RUN_STATUS.ACTION_FINISH;
@@ -901,21 +900,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                         ExecutingTaskEntity?.Abort();
                         ExecutingTaskEntity?.Dispose();
                         ExecutingTaskEntity = null;
-                    }
-                    if (needReOnline || (!_RunTaskData.IsLocalTask && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE))
-                    {
-                        //到這AGVs連線已恢復
-                        _ = Task.Factory.StartNew(async () =>
-                        {
-                            await Task.Delay(1000);
-                            while (GetSub_Status() != SUB_STATUS.IDLE)
-                                await Task.Delay(1000);
-                            logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Action_Finish_Feedback is proccessed before.");
-                            HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
-                            AutoOnlineRaising = false;
-
-                        });
-                        AutoOnlineRaising = true;
                     }
                 }
                 IsActionFinishTaskFeedbackExecuting = false;

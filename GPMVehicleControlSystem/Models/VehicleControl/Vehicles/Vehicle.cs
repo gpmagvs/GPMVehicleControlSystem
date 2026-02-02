@@ -899,6 +899,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                         StatusLighter.StopFlow();
                         DirectionLighter.CloseAll();
+                        WagoDO.SetState(DO_ITEM.Infrared_Door_1, false); //自動門訊號關閉
 
                         InitializingStatusText = "初始化完成!";
                         await Task.Delay(500);
@@ -1288,7 +1289,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 StatusLighter.DOWN();
                 DirectionLighter.CloseAll();
                 DOSettingWhenEmoTrigger();
-                RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
                 IsWaitForkNextSegmentTask = false;
                 InitializeCancelTokenResourece.Cancel();
                 IsInitialized = false;
@@ -1301,6 +1301,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (Remote_Mode == REMOTE_MODE.ONLINE)
                     {
                         logger.LogInformation($"UnRecoveralble Alarm Happened, 自動請求OFFLINE");
+                        await Task.Delay(800);
                         await Online_Mode_Switch(REMOTE_MODE.OFFLINE);
                     }
                     await Task.Delay(100).ContinueWith(async (t) => Auto_Mode_Siwtch(OPERATOR_MODE.MANUAL));

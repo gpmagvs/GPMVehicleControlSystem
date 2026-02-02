@@ -12,7 +12,6 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 {
     public partial class Vehicle
     {
-        internal REMOTE_MODE RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
         private REMOTE_MODE _Remote_Mode = REMOTE_MODE.OFFLINE;
         /// <summary>
         /// Online/Offline 模式
@@ -64,20 +63,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 RemoteModeRequestingflag = false;
                 if (result.success)
                 {
-                    RemoteModeSettingWhenAGVsDisconnect = REMOTE_MODE.OFFLINE;
                     logger.LogWarning($"{request_user_name} 請求變更Online模式為 {mode}---成功");
-                    if (IsAGVSRequest && mode == REMOTE_MODE.OFFLINE && !IsActionFinishTaskFeedbackExecuting && RemoteModeSettingWhenAGVsDisconnect == REMOTE_MODE.ONLINE)
-                    {
-                        Task.Factory.StartNew(async () =>
-                        {
-                            await Task.Delay(1000);
-                            while (GetSub_Status() != SUB_STATUS.IDLE)
-                                await Task.Delay(1000);
-                            logger.LogWarning($"[{GetSub_Status()}] Raise ONLINE Request . Because Remote Mode Before AGVs Disconnected is {RemoteModeSettingWhenAGVsDisconnect}");
-                            HandleRemoteModeChangeReq(REMOTE_MODE.ONLINE, false);
-                            AutoOnlineRaising = false;
-                        });
-                    }
                 }
                 else
                     logger.LogError($"{request_user_name} 請求變更Online模式為{mode}---失敗 Return Code = {(int)result.return_code}-{result.return_code})");
