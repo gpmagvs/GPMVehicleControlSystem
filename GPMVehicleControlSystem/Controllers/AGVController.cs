@@ -133,6 +133,8 @@ namespace GPMVehicleControlSystem.Controllers
         [HttpGet("UpdateCarrierID")]
         public async Task UpdateCarrierID(string carrierID)
         {
+            if (!agv.CargoStateStorer.HasAnyCargoOnAGV(false))
+                return;
             agv.CSTReader.ValidCSTID = carrierID;
         }
 
