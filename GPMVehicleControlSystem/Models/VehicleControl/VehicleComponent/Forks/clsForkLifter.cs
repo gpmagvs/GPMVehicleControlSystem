@@ -297,9 +297,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             return await fork_ros_controller.verticalActionService.Init();
         }
 
-        public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true)
+        public async Task<(bool confirm, AlarmCodes alarm_code)> ForkGoHome(double speed = 1, bool wait_done = true, bool maunal = false)
         {
-            if (!forkAGV.ZAxisGoHomingCheck())
+            if (!maunal && !forkAGV.ZAxisGoHomingCheck())
             {
                 return (false, AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point);
                 AlarmManager.AddAlarm(AlarmCodes.Fork_Cannot_Go_Home_At_Non_Normal_Point, false);

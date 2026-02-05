@@ -251,7 +251,7 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
 
                 if (action == "home" || action == "orig")
                 {
-                    var result = await forkAgv.ForkLifter.ForkGoHome(speed);
+                    var result = await forkAgv.ForkLifter.ForkGoHome(speed, maunal: true);
                     return Ok(new { confirm = result.confirm, message = result.alarm_code.ToString() });
                 }
                 else if (action == "init")
