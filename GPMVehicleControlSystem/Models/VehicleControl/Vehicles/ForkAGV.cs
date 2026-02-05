@@ -870,7 +870,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 AlarmManager.AddAlarm(AlarmCodes.Switch_Type_Error_Vertical, false);
                 BuzzerPlayer.SoundPlaying = SOUNDS.Alarm;
-                return (false, "Z軸解煞車旋鈕尚未復歸");
+                return (false, "Z軸解煞車旋鈕尚未復歸\nFork Brake Button not release yet");
             }
             return base.CheckHardwareStatus();
         }

@@ -1064,7 +1064,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (CheckEMOButtonNoRelease())
                 {
-                    error_message = "EMO 按鈕尚未復歸";
+                    error_message = "EMO 按鈕尚未復歸\n EMO Button Not Release";
                     alarmo_code = AlarmCodes.EMO_Button;
                     throw new Exception(error_message);
                 }
@@ -1078,7 +1078,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (!WagoDI.GetState(DI_ITEM.Horizon_Motor_Switch))
                 {
-                    error_message = "解煞車旋鈕尚未復歸";
+                    error_message = "解煞車旋鈕尚未復歸\nBrake release switch state error";
                     alarmo_code = AlarmCodes.Switch_Type_Error;
                     throw new Exception(error_message);
                 }
@@ -1087,7 +1087,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 {
                     if (_sw.Elapsed.TotalSeconds > 3)
                     {
-                        error_message = "走行軸馬達IO異常";
+                        error_message = "走行軸馬達IO異常\nMotor I/O Error";
                         alarmo_code = AlarmCodes.Wheel_Motor_IO_Error;
                         throw new Exception(error_message);
                     }
@@ -1095,14 +1095,14 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 }
                 if (IMU.PitchState != clsIMU.PITCH_STATES.NORMAL && Parameters.ImpactDetection.PitchErrorDetection)
                 {
-                    error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})";
+                    error_message = $"AGV姿態異常({(IMU.PitchState == clsIMU.PITCH_STATES.INCLINED ? "傾斜" : "側翻")})\nAGV IMU Error";
                     alarmo_code = AlarmCodes.IMU_Pitch_State_Error;
                     throw new Exception(error_message);
                 }
 
                 if (Navigation.IsCommunicationError)
                 {
-                    error_message = $"車控異常，AGV位置數據上報逾時，請確認車控系統";
+                    error_message = $"車控異常，AGV位置數據上報逾時，請確認車控系統\nAGV Control Moduble Error";
                     alarmo_code = AlarmCodes.Motion_control_Disconnected;
                     throw new Exception(error_message);
                 }
@@ -1117,7 +1117,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
 
                 if (Laser.IsSickApplicationError)
                 {
-                    error_message = "雷射錯誤，請確認前後雷射是否有N3 Fatal異常";
+                    error_message = "雷射錯誤，請確認前後雷射是否有N3 Fatal異常\nLaser Error,please check N1 or N3 Error occur.";
                     alarmo_code = AlarmCodes.Laser_Mode_Switch_Fail_DO_Write_Fail;
                     throw new Exception(error_message);
                 }

@@ -240,9 +240,9 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             try
             {
                 if (agv.Operation_Mode != OPERATOR_MODE.MANUAL)
-                    return Ok(new { confirm = false, message = "請確認 'Auto Mode' 已切換為[Manual] 後再嘗試初始化(Please confirm that 'Auto Mode' has been switched to [Manual] before attempting initialization.)" });
+                    return Ok(new { confirm = false, message = "請確認 'Auto Mode' 已切換為[Manual] 後再嘗試初始化\nPlease confirm that 'Auto Mode' has been switched to [Manual] before attempting initialization." });
                 if (agv.Remote_Mode == REMOTE_MODE.ONLINE)
-                    return Ok(new { confirm = false, message = "請確認 'Online Mode'已切換為 [Offline] 後再嘗試初始化(Please confirm that 'Online Mode' has been switched to [Offline] before attempting initialization.)" });
+                    return Ok(new { confirm = false, message = "請確認 'Online Mode'已切換為 [Offline] 後再嘗試初始化\nPlease confirm that 'Online Mode' has been switched to [Offline] before attempting initialization." });
             }
             finally
             {
