@@ -369,12 +369,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 (bool success, AlarmCodes alarm_code) _result = await HandshakeWith(_LU_SIGNAL, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA1_Wait_L_U_REQ_ON, action == ACTION_TYPE.Load ? AlarmCodes.Handshake_Timeout_TA1_EQ_L_REQ_Not_On : AlarmCodes.Handshake_Timeout_TA1_EQ_U_REQ_Not_On);
                 if (!_result.success)
                     return _result;
+
+                LogDebugMessage($"設備 {_LU_SIGNAL} 訊號已 ON 起! AGV 將開始等待 EQ_READY!");
+
                 await SetAGV_TR_REQ(true);
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF += HandleEQ_LUREQ_OFF;
                 _result = await HandshakeWith(EQ_HSSIGNAL.EQ_READY, HS_SIGNAL_STATE.ON, HANDSHAKE_EQ_TIMEOUT.TA2_Wait_EQ_READY_ON, AlarmCodes.Handshake_Timeout_TA2_EQ_READY_Not_On);
+
                 EQHsSignalStates[_LU_SIGNAL].OnSignalOFF -= HandleEQ_LUREQ_OFF;
                 if (!_result.success)
                     return _result;
+
+                LogDebugMessage($"EQ_READY! AGV 將開始進行侵入動作");
+
                 EQHsSignalStates[EQ_HSSIGNAL.EQ_READY].OnSignalOFF += HandleEQReadOFF;
             }
             catch (Exception ex)

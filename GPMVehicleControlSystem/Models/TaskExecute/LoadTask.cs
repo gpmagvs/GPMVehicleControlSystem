@@ -114,7 +114,34 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return false;
             }
         }
+        protected override async Task WatchAGVVliadOnAndDoActionBeforeHandshaking()
+        {
+            await forkActionWhenTaskStartLock.WaitAsync();
+            try
+            {
+                Agv.LogDebugMessage("等待 AGV_VALID ON 嘗試提前進行牙叉動作", true);
+                //等待 VALID ON
+                while (!Agv.WagoDO.GetState(DO_ITEM.AGV_VALID))
+                {
+                    if (Agv._Sub_Status == SUB_STATUS.DOWN)
+                        return;
+                    await Task.Delay(10, TaskCancelCTS.Token);
+                }
 
+                Agv.LogDebugMessage($"AGV_VALID ON _ 開始進行牙叉動作(高度 {height},Action {action})", true);
+                forkActionsResultWhenTaskStart = await ForkLiftActionWhenTaskStart(height, action);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex);
+            }
+            finally
+            {
+                Agv.LogDebugMessage("WatchAGVVliadOnAndDoActionBeforeHandshaking 方法已結束", true);
+                forkActionWhenTaskStartLock.Release();
+            }
+
+        }
         public override async Task<(bool confirm, AlarmCodes alarm_code)> BeforeTaskExecuteActions()
         {
             Agv.IsHandshaking = true;

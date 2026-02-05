@@ -35,6 +35,11 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         public bool NoWaitParkingFinishAndForkGoHomeWhenBackToSecondaryAtChargeStation { get; set; } = false;
 
         public bool TriggerCstReaderWhenUnloadBackToEntryPointAndReachTag { get; set; } = false;
+
+        /// <summary>
+        /// 需交握時，在 AGV_VALID 訊號 ON 起後就開始牙叉動作
+        /// </summary>
+        public bool ForkStartActionEarlyWhenVALIDOuputON { get; set; } = false;
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
         public clsForkInit InitParams = new clsForkInit();

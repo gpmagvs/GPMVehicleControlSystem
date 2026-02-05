@@ -32,6 +32,7 @@ using static GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Fork
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params.clsObstacleDetection;
 using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Vehicle;
 using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDIModule;
+using static GPMVehicleControlSystem.VehicleControl.DIOModule.clsDOModule;
 
 namespace GPMVehicleControlSystem.Models.TaskExecute
 {
@@ -217,10 +218,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         }
 #endif
 
-
+        protected (bool success, List<AlarmCodes> alarm_codes) forkActionsResultWhenTaskStart;
+        protected SemaphoreSlim forkActionWhenTaskStartLock = new SemaphoreSlim(1, 1);
         public bool IsBackToSecondaryPt { get; internal set; } = false;
         private DateTime startTime = DateTime.MinValue;
-
+        protected CancellationTokenSource forkActionEarlyRunningBeforWorkStationCancelToskSource = new CancellationTokenSource();
         /// <summary>
         /// 執行任務
         /// </summary>
@@ -249,6 +251,20 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 TaskCancelCTS = new CancellationTokenSource();
                 DirectionLighterSwitchBeforeTaskExecute();
                 Agv.FeedbackTaskStatus(action == ACTION_TYPE.None ? TASK_RUN_STATUS.NAVIGATING : TASK_RUN_STATUS.ACTION_START);
+
+                bool _isNeedForkAction = ForkLifter != null && (!Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer);
+                bool _isForkActionEarlyActWhenLoadAction = _isNeedForkAction && IsNeedHandshake && action == ACTION_TYPE.Load && Agv.Parameters.ForkAGV.ForkStartActionEarlyWhenVALIDOuputON;
+
+                forkActionsResultWhenTaskStart = (!_isNeedForkAction, _isNeedForkAction ? new List<AlarmCodes>() { AlarmCodes.Action_Timeout } : Array.Empty<AlarmCodes>().ToList());
+
+                if (_isForkActionEarlyActWhenLoadAction)
+                {
+                    //若需要牙叉動作且需要交握時, 監視 AGV_VALID 訊號 ON起後作事情
+                    _ = WatchAGVVliadOnAndDoActionBeforeHandshaking();
+                }
+
+
+
                 (bool confirm, AlarmCodes alarm_code) checkResult = await BeforeTaskExecuteActions();
                 if (!checkResult.confirm)
                 {
@@ -256,15 +272,27 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }
                 await Task.Delay(10);
 
-                if (ForkLifter != null && (!Agv.Parameters.LDULD_Task_No_Entry || IsDestineStationBuffer))
+                if (_isNeedForkAction)
                 {
-                    await Agv.SetSub_Status(SUB_STATUS.RUN);
+                    await forkActionWhenTaskStartLock.WaitAsync();
+                    try
+                    {
+                        await Agv.SetSub_Status(SUB_STATUS.RUN);
+                        forkActionsResultWhenTaskStart = await ForkLiftActionWhenTaskStart(height, action);
+                        if (!forkActionsResultWhenTaskStart.success)
+                            return forkActionsResultWhenTaskStart.alarm_codes;
+                        if (action != ACTION_TYPE.None)
+                            await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Secondary);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                    finally
+                    {
+                        forkActionWhenTaskStartLock.Release();
+                    }
 
-                    (bool success, List<AlarmCodes> alarm_codes) forkActionsResult = await ForkLiftActionWhenTaskStart(height, action);
-                    if (!forkActionsResult.success)
-                        return forkActionsResult.alarm_codes;
-                    if (action != ACTION_TYPE.None)
-                        await Agv.Laser.ModeSwitch(clsLaser.LASER_MODE.Secondary);
                 }
 
 
@@ -380,6 +408,10 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
 
         }
 
+        protected virtual async Task WatchAGVVliadOnAndDoActionBeforeHandshaking()
+        {
+        }
+
         private List<AlarmCodes> GetAlarmCodesWhenStatusCheckDown()
         {
             var currentAlarms = AlarmManager.CurrentVCSAlarmCodes;
@@ -431,11 +463,11 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             _wait_agvc_action_done_pause.WaitOne();
             logger.Trace($"AGV完成 [{action}] 移動任務 ,Alarm Code:=>{task_abort_alarmcode}.]");
         }
-        protected virtual async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action)
+        protected virtual async Task<(bool success, List<AlarmCodes> alarm_codes)> ForkLiftActionWhenTaskStart(int Height, ACTION_TYPE action, bool onlyVertical = false)
         {
             List<Task> tasks = new List<Task>();
             List<AlarmCodes> alarmCodes = new List<AlarmCodes>();
-            if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+            if (!onlyVertical && ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
             {
                 if (action == ACTION_TYPE.None)
                 {
@@ -480,7 +512,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 }));
 
                 //Pin Release
-                if (PinHardware != null)
+                if (!onlyVertical && PinHardware != null)
                 {
                     tasks.Add(Task.Run(async () =>
                     {
