@@ -773,6 +773,15 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
             {
                 if (PinHardware != null)
                 {
+                    int currentTag = Agv.BarcodeReader.CurrentTag;
+                    while (Agv.BarcodeReader.CurrentTag != 0)
+                    {
+                        logger.Info($"[自動流程] 等待 AGV 離開 TAG {currentTag} 後 Lock 浮動枒叉");
+                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                            return;
+                        await Task.Delay(1000);
+                    }
+                    logger.Info($"[自動流程]  AGV已經離開 TAG {currentTag} 後 Lock 浮動枒叉");
                     PinHardware.Lock();
                 }
 
