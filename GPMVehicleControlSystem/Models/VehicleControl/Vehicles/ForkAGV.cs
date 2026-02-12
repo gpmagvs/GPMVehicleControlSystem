@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
@@ -132,6 +132,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _fork_car_controller.verticalActionService.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
             _fork_car_controller.verticalActionService.BeforeActionStart += VerticalActionService_BeforeActionStart;
+            ForkLifter.BeforeForkArmAction -= ForkLifter_BeforeForkArmAction;
+            ForkLifter.BeforeForkArmAction += ForkLifter_BeforeForkArmAction;
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -226,6 +228,29 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             catch (Exception ex)
             {
                 logger.LogError(ex, "VerticalActionService_BeforeActionStart:" + ex.Message);
+            }
+        }
+
+        private void ForkLifter_BeforeForkArmAction(object? sender, clsForkLifter.BeforeForkArmActionEventArgs e)
+        {
+            try
+            {
+                if (PinHardware == null || Parameters.ForkAGV.IsPinDisabledTemptary)
+                    return;
+
+                if (PinHardware.IsReleased)
+                    return;
+
+                e.isCancel = true;
+                string actionText = e.action == FORK_ARM_ACTION.EXTEND ? "extend" : "shorten";
+                e.message = $"浮動牙叉 PIN 尚未 Release，禁止執行 {actionText} 動作";
+                logger.LogWarning($"[ForkArmActionGuard] {e.message}(PinState={PinHardware.CurrentPinState})");
+            }
+            catch (Exception ex)
+            {
+                e.isCancel = true;
+                e.message = $"浮動牙叉 PIN 狀態檢查失敗:{ex.Message}";
+                logger.LogError(ex, "ForkLifter_BeforeForkArmAction");
             }
         }
 

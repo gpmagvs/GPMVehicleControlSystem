@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
@@ -32,6 +32,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             HOME,
             END,
             UNKNOWN
+        }
+        public enum FORK_ARM_ACTION
+        {
+            EXTEND,
+            SHORTEN
+        }
+
+        public class BeforeForkArmActionEventArgs : EventArgs
+        {
+            public FORK_ARM_ACTION action { get; set; }
+            public bool isCancel { get; set; } = false;
+            public string message { get; set; } = string.Empty;
         }
 
         public clsForkLifter(ForkAGV forkAGV)
@@ -93,6 +105,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         }
 
         public bool IsForkDriverStateUnknown => Driver.Data.state == 0;
+        public event EventHandler<BeforeForkArmActionEventArgs> BeforeForkArmAction;
 
         /// <summary>
         /// 是否以初始化
@@ -334,12 +347,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         {
             return await fork_ros_controller.verticalActionService.DownSearch(speed);
         }
+
+        protected bool TryInvokeBeforeForkArmAction(FORK_ARM_ACTION action, out string message)
+        {
+            message = string.Empty;
+            try
+            {
+                BeforeForkArmActionEventArgs args = new BeforeForkArmActionEventArgs
+                {
+                    action = action
+                };
+                BeforeForkArmAction?.Invoke(this, args);
+                if (!args.isCancel)
+                    return true;
+
+                message = string.IsNullOrWhiteSpace(args.message) ? $"Fork arm {action} action canceled by callback." : args.message;
+                logger.Warn($"Fork arm action canceled. action={action}, message={message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                logger.Error(ex, $"TryInvokeBeforeForkArmAction failed. action={action}");
+                return false;
+            }
+        }
         /// <summary>
         /// 牙叉伸出
         /// </summary>
         /// <returns></returns>
         public virtual async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
+            if (!TryInvokeBeforeForkArmAction(FORK_ARM_ACTION.EXTEND, out _))
+                return (false, AlarmCodes.Pin_Action_Error);
+
             bool _checked = await ForkARMStop();
             if (!_checked)
                 return (true, AlarmCodes.None);
@@ -392,6 +433,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
         /// <returns></returns>
         public virtual async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true, CancellationToken cancellationToken = default)
         {
+            if (!TryInvokeBeforeForkArmAction(FORK_ARM_ACTION.SHORTEN, out string preActionMessage))
+                return (false, preActionMessage);
+
             try
             {
 

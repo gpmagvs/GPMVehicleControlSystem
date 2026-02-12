@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient;
 
@@ -6,11 +6,19 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsPin : CarComponent, IRosSocket
     {
+        public enum PIN_STATES
+        {
+            UNKNOWN,
+            LOCKED,
+            RELEASED
+        }
 
         public string PinActionServiceName = "/pin_action";
         public string PinActionDonwServiceName = "/pin_done_action";
 
         public bool IsPinActionDone;
+        public virtual bool IsReleased => CurrentPinState == PIN_STATES.RELEASED;
+        public PIN_STATES CurrentPinState { get; protected set; } = PIN_STATES.UNKNOWN;
 
         private RosSocket _rosSocket;
 
@@ -40,26 +48,43 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
         }
 
+        protected void SetPinState(PIN_STATES state)
+        {
+            if (CurrentPinState == state)
+                return;
+
+            CurrentPinState = state;
+            logger.Trace($"[Pin] Current state changed => {CurrentPinState}");
+        }
+
         /// <summary>
         /// 清除異常初始化回到原點
         /// </summary>
         /// <returns></returns>
         public virtual async Task Init(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "init";
             await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+            SetPinState(PIN_STATES.UNKNOWN);
 
         }
 
         public virtual async Task Lock(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "lock";
-            await _CallPinCommandActionService(pin_command, cancelToken: token);
+            bool lockDone = await _CallPinCommandActionService(pin_command, cancelToken: token);
+            if (lockDone)
+                SetPinState(PIN_STATES.LOCKED);
         }
         public virtual async Task Release(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "release";
-            await _CallPinCommandActionService(pin_command, cancelToken: token);
+            bool releaseDone = await _CallPinCommandActionService(pin_command, cancelToken: token);
+            if (releaseDone)
+                SetPinState(PIN_STATES.RELEASED);
         }
 
 
