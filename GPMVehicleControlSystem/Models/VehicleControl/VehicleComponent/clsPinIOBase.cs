@@ -32,6 +32,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task Lock(CancellationToken token = default)
         {
+            if (!TryInvokeBeforePinLock(out string beforeLockCheckMessage))
+                throw new InvalidOperationException(beforeLockCheckMessage);
+
             SetPinState(PIN_STATES.UNKNOWN);
             var success = await wagoOuput.SetState(floatOutput, false);
             if (!success)
