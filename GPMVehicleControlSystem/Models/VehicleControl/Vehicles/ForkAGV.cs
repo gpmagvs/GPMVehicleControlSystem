@@ -235,6 +235,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         {
             try
             {
+                if (GetSub_Status() == SUB_STATUS.Initializing)
+                    return;
+
                 if (PinHardware == null || Parameters.ForkAGV.IsPinDisabledTemptary)
                     return;
 
