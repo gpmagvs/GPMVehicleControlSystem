@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
@@ -132,6 +132,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             _fork_car_controller.verticalActionService.OnForkStartGoHome += () => { return Parameters.ForkAGV.SaftyPositionHeight; };
             _fork_car_controller.verticalActionService.OnActionStart += _fork_car_controller_OnForkStartMove;
             _fork_car_controller.verticalActionService.BeforeActionStart += VerticalActionService_BeforeActionStart;
+            ForkLifter.BeforeForkArmAction -= ForkLifter_BeforeForkArmAction;
+            ForkLifter.BeforeForkArmAction += ForkLifter_BeforeForkArmAction;
+            if (PinHardware != null)
+            {
+                PinHardware.BeforePinLock -= PinHardware_BeforePinLock;
+                PinHardware.BeforePinLock += PinHardware_BeforePinLock;
+            }
             ForkLifter.Driver.OnAlarmHappened += async (alarm_code) =>
             {
                 if (alarm_code != AlarmCodes.None)
@@ -227,6 +234,137 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 logger.LogError(ex, "VerticalActionService_BeforeActionStart:" + ex.Message);
             }
+        }
+
+        private void ForkLifter_BeforeForkArmAction(object? sender, clsForkLifter.BeforeForkArmActionEventArgs e)
+        {
+            try
+            {
+                if (PinHardware == null || Parameters.ForkAGV.IsPinDisabledTemptary)
+                    return;
+
+                if (TryEnsurePinReleasedForForkArmAction(out string ensureReleaseMessage))
+                    return;
+
+                e.isCancel = true;
+                e.message = ensureReleaseMessage;
+                string actionText = e.action == FORK_ARM_ACTION.EXTEND ? "extend" : "shorten";
+                logger.LogWarning($"[ForkArmActionGuard] {e.message} (Action={actionText}, PinState={PinHardware.CurrentPinState})");
+            }
+            catch (Exception ex)
+            {
+                e.isCancel = true;
+                e.message = $"浮動牙叉 PIN 狀態檢查失敗:{ex.Message}";
+                logger.LogError(ex, "ForkLifter_BeforeForkArmAction");
+            }
+        }
+
+        private void PinHardware_BeforePinLock(object? sender, clsPin.BeforePinLockEventArgs e)
+        {
+            try
+            {
+                if (PinHardware == null || Parameters.ForkAGV.IsPinDisabledTemptary)
+                    return;
+
+                if (TryEnsureForkArmRetractedBeforePinLock(out string ensureRetractMessage))
+                    return;
+
+                e.isCancel = true;
+                e.message = ensureRetractMessage;
+                logger.LogWarning($"[PinLockGuard] {e.message} (ForkArmLocation={ForkLifter?.CurrentForkARMLocation})");
+            }
+            catch (Exception ex)
+            {
+                e.isCancel = true;
+                e.message = $"Pin Lock 前檢查牙叉縮回狀態失敗:{ex.Message}";
+                logger.LogError(ex, "PinHardware_BeforePinLock");
+            }
+        }
+
+        private bool TryEnsurePinReleasedForForkArmAction(out string message)
+        {
+            message = string.Empty;
+            if (PinHardware == null || PinHardware.IsReleased)
+                return true;
+
+            if (!IsAutoForkActionFlow())
+            {
+                message = $"浮動牙叉 PIN 尚未 Release，手動流程禁止執行牙叉伸縮動作";
+                return false;
+            }
+
+            using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            int retry = 0;
+            try
+            {
+                while (!PinHardware.IsReleased)
+                {
+                    retry++;
+                    logger.LogWarning($"[ForkArmActionGuard] Pin 非 Release，開始自動 Release (第{retry}次)");
+                    PinHardware.Release(cts.Token).GetAwaiter().GetResult();
+                    if (PinHardware.IsReleased)
+                        break;
+                    Task.Delay(100, cts.Token).GetAwaiter().GetResult();
+                }
+                logger.LogInformation($"[ForkArmActionGuard] Pin 已確認為 Release");
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                message = "自動釋放 Pin 逾時，禁止牙叉伸縮動作";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = $"自動釋放 Pin 失敗:{ex.Message}";
+                return false;
+            }
+        }
+
+        private bool TryEnsureForkArmRetractedBeforePinLock(out string message)
+        {
+            message = string.Empty;
+            if (ForkLifter == null || !Parameters.ForkAGV.IsForkIsExtendable)
+                return true;
+
+            if (ForkLifter.CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME)
+                return true;
+
+            if (!IsAutoForkActionFlow())
+            {
+                message = "Pin Lock 前需先確認牙叉已完全縮回";
+                return false;
+            }
+
+            try
+            {
+                logger.LogWarning($"[PinLockGuard] Pin Lock 前偵測牙叉未縮回，開始自動縮回牙叉...");
+                (bool confirm, string shortenMessage) shortenResult = ForkLifter.ForkShortenInAsync(wait_reach_home: true).GetAwaiter().GetResult();
+                if (!shortenResult.confirm)
+                {
+                    message = $"Pin Lock 前自動縮回牙叉失敗:{shortenResult.shortenMessage}";
+                    return false;
+                }
+
+                if (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                {
+                    message = "Pin Lock 前牙叉縮回確認失敗(未完全縮回)";
+                    return false;
+                }
+                logger.LogInformation($"[PinLockGuard] 牙叉已確認完全縮回，允許 Pin Lock");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                message = $"Pin Lock 前自動縮回牙叉異常:{ex.Message}";
+                return false;
+            }
+        }
+
+        private bool IsAutoForkActionFlow()
+        {
+            bool isSubStatusAutoFlow = GetSub_Status() == SUB_STATUS.RUN || GetSub_Status() == SUB_STATUS.Initializing;
+            return isSubStatusAutoFlow && !ForkLifter.IsManualOperation;
         }
 
         private void HandleHorizonForkLimitSensorStateChanged(object? sender, bool inputState)

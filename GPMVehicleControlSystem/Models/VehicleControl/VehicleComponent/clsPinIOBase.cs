@@ -1,4 +1,4 @@
-﻿using GPMVehicleControlSystem.VehicleControl.DIOModule;
+using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using RosSharp.RosBridgeClient;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +13,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public class clsPinIOBase : clsPin
     {
         public override bool isRosBase => false;
+        public override bool IsReleased => wagoOuput?.GetState(floatOutput) ?? false;
         clsDOModule wagoOuput;
         DO_ITEM floatOutput = DO_ITEM.Fork_Floating;
 
@@ -20,24 +21,33 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         public clsPinIOBase(clsDOModule wagoOuput) : base()
         {
             this.wagoOuput = wagoOuput;
+            SetPinState(IsReleased ? PIN_STATES.RELEASED : PIN_STATES.LOCKED);
         }
 
         public override Task Init(CancellationToken token = default)
         {
+            SetPinState(IsReleased ? PIN_STATES.RELEASED : PIN_STATES.LOCKED);
             return Task.CompletedTask;
         }
 
         public override async Task Lock(CancellationToken token = default)
         {
+            if (!TryInvokeBeforePinLock(out string beforeLockCheckMessage))
+                throw new InvalidOperationException(beforeLockCheckMessage);
+
+            SetPinState(PIN_STATES.UNKNOWN);
             var success = await wagoOuput.SetState(floatOutput, false);
             if (!success)
                 throw new Exception("浮動牙叉 LOCK 失敗-請確認 output 輸出控制");
+            SetPinState(PIN_STATES.LOCKED);
         }
 
         public override async Task Release(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             var success = await wagoOuput.SetState(floatOutput, true); if (!success)
                 throw new Exception("浮動牙叉 Release 失敗-請確認 output 輸出控制");
+            SetPinState(PIN_STATES.RELEASED);
         }
     }
 }

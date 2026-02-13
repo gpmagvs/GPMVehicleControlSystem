@@ -1,4 +1,4 @@
-﻿using AGVSystemCommonNet6;
+using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using RosSharp.RosBridgeClient;
 
@@ -6,11 +6,26 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 {
     public class clsPin : CarComponent, IRosSocket
     {
+        public class BeforePinLockEventArgs : EventArgs
+        {
+            public bool isCancel { get; set; } = false;
+            public string message { get; set; } = string.Empty;
+        }
+
+        public enum PIN_STATES
+        {
+            UNKNOWN,
+            LOCKED,
+            RELEASED
+        }
 
         public string PinActionServiceName = "/pin_action";
         public string PinActionDonwServiceName = "/pin_done_action";
 
         public bool IsPinActionDone;
+        public virtual bool IsReleased => CurrentPinState == PIN_STATES.RELEASED;
+        public PIN_STATES CurrentPinState { get; protected set; } = PIN_STATES.UNKNOWN;
+        public event EventHandler<BeforePinLockEventArgs> BeforePinLock;
 
         private RosSocket _rosSocket;
 
@@ -40,26 +55,68 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
         }
 
+        protected void SetPinState(PIN_STATES state)
+        {
+            if (CurrentPinState == state)
+                return;
+
+            CurrentPinState = state;
+            logger.Trace($"[Pin] Current state changed => {CurrentPinState}");
+        }
+
+        protected bool TryInvokeBeforePinLock(out string message)
+        {
+            message = string.Empty;
+            try
+            {
+                BeforePinLockEventArgs args = new BeforePinLockEventArgs();
+                BeforePinLock?.Invoke(this, args);
+                if (!args.isCancel)
+                    return true;
+
+                message = string.IsNullOrWhiteSpace(args.message) ? "Pin lock action canceled by callback." : args.message;
+                logger.Warn($"Pin lock action canceled. message={message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                logger.Error(ex, "TryInvokeBeforePinLock failed.");
+                return false;
+            }
+        }
+
         /// <summary>
         /// 清除異常初始化回到原點
         /// </summary>
         /// <returns></returns>
         public virtual async Task Init(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "init";
             await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+            SetPinState(PIN_STATES.UNKNOWN);
 
         }
 
         public virtual async Task Lock(CancellationToken token = default)
         {
+            if (!TryInvokeBeforePinLock(out string beforeLockCheckMessage))
+                throw new InvalidOperationException(beforeLockCheckMessage);
+
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "lock";
-            await _CallPinCommandActionService(pin_command, cancelToken: token);
+            bool lockDone = await _CallPinCommandActionService(pin_command, cancelToken: token);
+            if (lockDone)
+                SetPinState(PIN_STATES.LOCKED);
         }
         public virtual async Task Release(CancellationToken token = default)
         {
+            SetPinState(PIN_STATES.UNKNOWN);
             pin_command.command = "release";
-            await _CallPinCommandActionService(pin_command, cancelToken: token);
+            bool releaseDone = await _CallPinCommandActionService(pin_command, cancelToken: token);
+            if (releaseDone)
+                SetPinState(PIN_STATES.RELEASED);
         }
 
 

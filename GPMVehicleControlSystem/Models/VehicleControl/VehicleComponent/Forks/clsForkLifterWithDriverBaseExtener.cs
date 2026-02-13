@@ -1,4 +1,4 @@
-﻿
+
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
@@ -73,6 +73,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public override async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
+            if (!TryInvokeBeforeForkArmAction(FORK_ARM_ACTION.EXTEND, out _))
+                return (false, AlarmCodes.Pin_Action_Error);
+
             await horizonForkService.Stop();
             await Task.Delay(100);
             (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Extend(wait_reach_end);
@@ -85,6 +88,9 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public override async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true, CancellationToken cancellationToken = default)
         {
+            if (!TryInvokeBeforeForkArmAction(FORK_ARM_ACTION.SHORTEN, out string preActionMessage))
+                return (false, preActionMessage);
+
             await horizonForkService.Stop();
             await Task.Delay(100);
             (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Retract(wait_reach_home);
