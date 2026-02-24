@@ -6,8 +6,8 @@
 
 	<PropertyGroup>
 		<RestorePackages>false</RestorePackages>
-		<AssemblyVersion>3.4.18.3</AssemblyVersion>
-		<FileVersion>3.4.18.3</FileVersion>
+		<AssemblyVersion>3.4.18.4</AssemblyVersion>
+		<FileVersion>3.4.18.4</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
