@@ -197,7 +197,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         private void _HandleExistSensorStateChanged(object? sender, bool e)
         {
             bool _isSensorTrigger = !e;
-            if (_isSensorTrigger)
+
+            if (Parameters.CargoExistSensorParams.GenerateCarrierIdWhenSensorTriggered && _isSensorTrigger)
             {
                 _existSensorOnHandleDebouncer.Debounce(() =>
                 {

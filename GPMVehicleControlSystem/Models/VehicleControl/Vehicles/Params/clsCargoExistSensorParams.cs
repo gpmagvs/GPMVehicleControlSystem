@@ -17,5 +17,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 模擬在席
         /// </summary>
         public bool ExistSensorSimulation { get; set; } = false;
+
+        public bool GenerateCarrierIdWhenSensorTriggered { get; set; } = false;
     }
 }
