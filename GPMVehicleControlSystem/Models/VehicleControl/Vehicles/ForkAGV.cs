@@ -15,6 +15,7 @@ using GPMVehicleControlSystem.Models.WorkStation;
 using GPMVehicleControlSystem.Service;
 using GPMVehicleControlSystem.VehicleControl.DIOModule;
 using Newtonsoft.Json;
+using RosSharp.RosBridgeClient;
 using RosSharp.RosBridgeClient.Actionlib;
 using System.Diagnostics;
 using static AGVSystemCommonNet6.clsEnums;
@@ -601,73 +602,86 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
-            if (cancellation.IsCancellationRequested)
-                throw new TaskCanceledException();
-
-            ForkLifter?.EarlyMoveUpState.Reset();
-            (bool forklifer_init_done, string message) _forklift_vertical_init_result = (false, "");
-            (bool forklifer_init_done, string message) _forklift_horizon_init_result = (false, "");
-            (bool pin_init_done, string message) _pin_init_result = (false, "");
-
-            List<Task> _actions = new List<Task>();
-
-            _resumeForkInitProcessWhenDriverStateIsKnown = false;
-            _forkVerticalInitWaitUserConfirm.Reset();
-
-            if (ForkLifter.IsForkDriverStateUnknown)
+            try
             {
-                InitializingStatusText = "垂直牙叉驅動器狀態未知-等待使用者確認牙叉初始化動作";
-                SendNotifyierToFrontend("Fork Vertical Driver Unkonwn, Initialize Action Confirm", (int)AlarmCodes.Fork_Initialize_Process_Interupt);
-                bool confirmed = _forkVerticalInitWaitUserConfirm.WaitOne(10000); //等待10秒鐘,如果沒有收到確認則取消初始化
-                if (!confirmed)
+                if (cancellation.IsCancellationRequested)
+                    throw new TaskCanceledException();
+
+                ForkLifter?.EarlyMoveUpState.Reset();
+
+                _resumeForkInitProcessWhenDriverStateIsKnown = false;
+                _forkVerticalInitWaitUserConfirm.Reset();
+
+                if (ForkLifter.IsForkDriverStateUnknown)
                 {
-                    LogDebugMessage("等待使用者確認牙叉初始化動作超時,取消初始化動作");
-                    return (false, "等待使用者確認牙叉初始化動作超時,取消初始化動作");
+                    InitializingStatusText = "垂直牙叉驅動器狀態未知-等待使用者確認牙叉初始化動作";
+                    SendNotifyierToFrontend("Fork Vertical Driver Unkonwn, Initialize Action Confirm", (int)AlarmCodes.Fork_Initialize_Process_Interupt);
+                    bool confirmed = _forkVerticalInitWaitUserConfirm.WaitOne(10000); //等待10秒鐘,如果沒有收到確認則取消初始化
+                    if (!confirmed)
+                    {
+                        LogDebugMessage("等待使用者確認牙叉初始化動作超時,取消初始化動作");
+                        return (false, "等待使用者確認牙叉初始化動作超時,取消初始化動作");
+                    }
+                    SendCloseSpeficDialogToFrontend((int)AlarmCodes.Fork_Initialize_Process_Interupt);
+                    if (!_resumeForkInitProcessWhenDriverStateIsKnown)
+                    {
+                        return (false, "使用者取消牙叉初始化動作");
+                    }
                 }
-                SendCloseSpeficDialogToFrontend((int)AlarmCodes.Fork_Initialize_Process_Interupt);
-                if (!_resumeForkInitProcessWhenDriverStateIsKnown)
+                bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+
+                PinHardwareInitStatusWrapper pinHardwareInitStatus = new PinHardwareInitStatusWrapper();
+
+                Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token, pinHardwareInitStatus);
+                Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token, ForkLifter.IsForkDriverStateUnknown && _resumeForkInitProcessWhenDriverStateIsKnown);
+                Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token, _isNeedInterlock ? pinHardwareInitStatus : null);
+                List<Task<(bool success, string message)>> _actions = new List<Task<(bool success, string message)>>();
+
+                Dictionary<Task, string> taskNameIDMapping = new Dictionary<Task, string>() {
+                    { forkFloatHarwarePinInitTask,"浮動牙叉初始化"},
+                    { forkVerticalInitTask,"垂直牙叉初始化"},
+                    { forkHorizonInitTask,"伸縮牙叉初始化"},
+                };
+
+                _actions.Add(forkFloatHarwarePinInitTask);
+                _actions.Add(forkVerticalInitTask);
+                _actions.Add(forkHorizonInitTask);
+
+
+                while (_actions.Count > 0)
                 {
-                    return (false, "使用者取消牙叉初始化動作");
+                    // 等待這組任務中「任何一個」先完成
+                    Task<(bool success, string message)> completedTask = await Task.WhenAny(_actions);
+                    string taskName = taskNameIDMapping[completedTask];
+
+                    _actions.Remove(completedTask); // 從清單移除已完成的
+
+                    var result = await completedTask;
+                    if (!result.success)
+                    {
+                        cancellation?.Cancel();
+                        SoftwareEMO();
+                        LogDebugMessage($"{taskName}過程中發生異常: {result.message}", true);
+                        return (false, $"{taskName}過程中發生異常:{result.message}");
+                    }
+                    else
+                    {
+                        LogDebugMessage($"{taskName} 初始化已完成", true);
+                    }
                 }
-            }
-            bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
 
-            PinHardwareInitStatusWrapper pinHardwareInitStatus = new PinHardwareInitStatusWrapper();
-
-            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token, pinHardwareInitStatus);
-            Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token, ForkLifter.IsForkDriverStateUnknown && _resumeForkInitProcessWhenDriverStateIsKnown);
-            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token, _isNeedInterlock ? pinHardwareInitStatus : null);
-
-            _actions.Add(forkFloatHarwarePinInitTask);
-            _actions.Add(forkVerticalInitTask);
-            _actions.Add(forkHorizonInitTask);
-
-            Task.WaitAll(_actions.ToArray());
-
-            Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
-            _forkVerticalMoveObsProcessCancellationTokenSource?.Cancel();
-
-
-            _pin_init_result = forkFloatHarwarePinInitTask.Result;
-            _forklift_vertical_init_result = forkVerticalInitTask.Result;
-            _forklift_horizon_init_result = forkHorizonInitTask.Result;
-
-
-            bool pin_init_success = _pin_init_result.pin_init_done;
-            bool fork_vertical_init_success = _forklift_vertical_init_result.forklifer_init_done;
-            bool fork_horizon_init_success = _forklift_horizon_init_result.forklifer_init_done;
-
-            if (pin_init_success && fork_vertical_init_success && fork_horizon_init_success)
-            {
                 return await base.InitializeActions(cancellation);
+
             }
-
-            string errmsg = "";
-            errmsg += pin_init_success ? "" : $"[Pin Driver:{_pin_init_result.message}]";
-            errmsg += fork_vertical_init_success ? "" : $"[Fork_Vertical:{_forklift_vertical_init_result.message}]";
-            errmsg += fork_horizon_init_success ? "" : $"[Fork_Horizon :{_forklift_horizon_init_result.message}]";
-            return (false, errmsg);
-
+            catch (Exception ex)
+            {
+                return (false, $"初始化過程中發生系統例外:{ex.Message}");
+            }
+            finally
+            {
+                Laser.OnLaserModeChanged -= HandleLaserModeChangedWhenForkVerticalMoving;
+                _forkVerticalMoveObsProcessCancellationTokenSource?.Cancel();
+            }
         }
 
 
