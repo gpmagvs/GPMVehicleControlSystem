@@ -49,6 +49,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
         protected AlarmCodes task_abort_alarmcode = AlarmCodes.None;
         protected double ExpectedForkPostionWhenEntryWorkStation = 0;
         protected NLog.Logger logger;
+        protected bool isForkArmExtened = false;
         /// <summary>
         /// 等待車控完成移動的timeout時間
         /// </summary>
@@ -806,15 +807,38 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 if (PinHardware != null)
                 {
                     int currentTag = Agv.BarcodeReader.CurrentTag;
-                    while (Agv.BarcodeReader.CurrentTag != 0)
+                    bool _isNeedInterlock = Agv.Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+                    if (!_isNeedInterlock)
                     {
-                        logger.Info($"[自動流程] 等待 AGV 離開 TAG {currentTag} 後 Lock 浮動枒叉");
-                        if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
-                            return;
-                        await Task.Delay(1000);
+                        while (Agv.BarcodeReader.CurrentTag != 0)
+                        {
+                            logger.Info($"[自動流程] 等待 AGV 離開 TAG {currentTag} 後 Lock 浮動枒叉...");
+                            if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                                return;
+                            await Task.Delay(1000);
+                        }
+                        logger.Info($"[自動流程] AGV已經離開 TAG {currentTag} ，等待後Lock 浮動枒叉");
+                        PinHardware.Lock();
                     }
-                    logger.Info($"[自動流程]  AGV已經離開 TAG {currentTag} 後 Lock 浮動枒叉");
-                    PinHardware.Lock();
+                    else
+                    {
+                        if (isForkArmExtened)
+                        {
+                            Task.Run(async () =>
+                            {
+                                while (ForkLifter.CurrentForkARMLocation != FORK_ARM_LOCATIONS.HOME)
+                                {
+                                    logger.Info($"[自動流程] 等待 伸縮牙叉回原點後 Lock 浮動枒叉...");
+                                    if (Agv.GetSub_Status() == SUB_STATUS.DOWN)
+                                        return;
+                                    await Task.Delay(1000);
+                                }
+                                logger.Info($"[自動流程] 伸縮牙叉已回原點，Lock 浮動牙叉!");
+                                await PinHardware.Lock();
+                            });
+
+                        }
+                    }
                 }
 
                 Task waitForkCanDoActionTask = Task.Run(async () =>

@@ -1143,6 +1143,7 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                 return (false, AlarmCodes.Fork_Arm_Pose_Error);
             }
             logger.Info($"FORK ARM POSITION = {ForkLifter.CurrentForkARMLocation}");
+            isForkArmExtened = true;
             return (true, AlarmCodes.None);
         }
 

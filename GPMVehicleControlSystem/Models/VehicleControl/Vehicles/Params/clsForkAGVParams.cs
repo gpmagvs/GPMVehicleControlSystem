@@ -40,6 +40,10 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles.Params
         /// 需交握時，在 AGV_VALID 訊號 ON 起後就開始牙叉動作
         /// </summary>
         public bool ForkStartActionEarlyWhenVALIDOuputON { get; set; } = false;
+        /// <summary>
+        /// 浮動牙叉是否會鎖住伸縮牙叉
+        /// </summary>
+        public bool IsFloatingPinLockHorizonForkArm { get; set; } = false;
         public FORK_SAFE_STRATEGY ForkSaftyStratrgy { get; set; } = FORK_SAFE_STRATEGY.UNDER_SAFTY_POSITION;
         public double SaftyPositionHeight { get; set; } = 20;
         public clsForkInit InitParams = new clsForkInit();

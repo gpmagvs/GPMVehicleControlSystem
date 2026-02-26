@@ -1,6 +1,7 @@
 ﻿using AGVSystemCommonNet6;
 using AGVSystemCommonNet6.AGVDispatch.Messages;
 using AGVSystemCommonNet6.Alarm;
+using AGVSystemCommonNet6.GPMRosMessageNet.Messages;
 using AGVSystemCommonNet6.GPMRosMessageNet.Services;
 using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
 using GPMVehicleControlSystem.Models.Buzzer;
@@ -77,9 +78,40 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             {
                 bool _isIOBase = WagoDO.VCSOutputs.FirstOrDefault(o => o.Output == DO_ITEM.Fork_Floating) != null;
                 PinHardware = _isIOBase ? new clsPinIOBase(WagoDO) : new clsPin();
+                logger.LogInformation("PinHardware -> BeforePinActionStart 事件註冊");
+                PinHardware.BeforePinActionStart += HandlePinActionBeforeStart;
             }
 
+            logger.LogInformation("ForkLifter -> BeforeForkActionStart 事件註冊");
+            ForkLifter.BeforeForkActionStart += HandleHorizonForkActionStart;
             logger.LogInformation($"FORK AGV 搭載Pin模組?{PinHardware != null}");
+        }
+
+        private void HandlePinActionBeforeStart(object? sender, clsPin.BeforePinActionStartEventArgs e)
+        {
+            bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+
+            if (!_isNeedInterlock)
+            {
+                e.allowed = true;
+                return;
+            }
+
+            if (e.action == clsPin.PIN_STATUS.LOCK || e.action == clsPin.PIN_STATUS.INITIALIZING)
+            {
+                //牙叉位置需在端點時才允許動作
+                e.allowed = ForkLifter.CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME || ForkLifter.CurrentForkARMLocation == FORK_ARM_LOCATIONS.END;
+            }
+            else
+            {
+                e.allowed = true;
+            }
+        }
+
+        protected override void ModuleInformationHandler(object? sender, ModuleInformation _ModuleInformation)
+        {
+            base.ModuleInformationHandler(sender, _ModuleInformation);
+            PinHardware.StateData = _ModuleInformation.PinsState;
         }
         protected internal override async Task InitAGVControl(string RosBridge_IP, int RosBridge_Port)
         {
@@ -92,7 +124,36 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             forkAGVC.HorizonActionService = new HorizonForkActionService(this, AGVC.rosSocket);
             forkAGVC.verticalActionService.AdertiseRequiredService();
             forkAGVC.HorizonActionService.AdertiseRequiredService();
+        }
 
+        private async void HandleHorizonForkActionStart(object? sender, clsForkLifter.ForkActionStartEventArgs e)
+        {
+            try
+            {
+                bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+
+                if (!_isNeedInterlock || PinHardware == null)
+                {
+                    e.allowed = true;
+                    return;
+                }
+
+                if (PinHardware.pinStatus == clsPin.PIN_STATUS.RELEASE)
+                {
+                    e.allowed = true;
+                    return;
+                }
+                await PinHardware?.Release();
+                //確認
+                bool isPinRelease = PinHardware.pinStatus == clsPin.PIN_STATUS.RELEASE;
+                e.allowed = isPinRelease;
+                e.errorMessage = isPinRelease ? "" : "浮動牙叉 PIN 非 Release 狀態，禁止伸縮牙叉動作";
+            }
+            catch (Exception ex)
+            {
+                e.allowed = false;
+                e.errorMessage = ex.Message;
+            }
         }
 
         public async Task<bool> ResetVerticalDriver()
@@ -518,6 +579,12 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             await WagoDO.SetState(DO_ITEM.Vertical_Belt_SensorBypass, false);
             return (true, "");
         }
+
+        public class PinHardwareInitStatusWrapper
+        {
+            public ManualResetEvent pinInitWaitResetEvent = new ManualResetEvent(false);
+            public bool IsPinInitDone { get; set; } = false;
+        }
         protected override async Task<(bool confirm, string message)> InitializeActions(CancellationTokenSource cancellation)
         {
             if (cancellation.IsCancellationRequested)
@@ -549,15 +616,16 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     return (false, "使用者取消牙叉初始化動作");
                 }
             }
+            bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
 
-            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token);
+            PinHardwareInitStatusWrapper pinHardwareInitStatus = new PinHardwareInitStatusWrapper();
+
+            Task<(bool pin_init_done, string message)> forkFloatHarwarePinInitTask = ForkFloatHardwarePinInitProcess(cancellation.Token, pinHardwareInitStatus);
             Task<(bool forklifer_init_done, string message)> forkVerticalInitTask = VerticalForkInitProcess(cancellation.Token, ForkLifter.IsForkDriverStateUnknown && _resumeForkInitProcessWhenDriverStateIsKnown);
-            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token);
+            Task<(bool forklifer_init_done, string message)> forkHorizonInitTask = HorizonForkInitProcess(cancellation.Token, _isNeedInterlock ? pinHardwareInitStatus : null);
 
             _actions.Add(forkFloatHarwarePinInitTask);
-
             _actions.Add(forkVerticalInitTask);
-
             _actions.Add(forkHorizonInitTask);
 
             Task.WaitAll(_actions.ToArray());
@@ -589,53 +657,100 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
         }
 
 
-        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess(CancellationToken token)
+        internal async Task<(bool, string)> ForkFloatHardwarePinInitProcess(CancellationToken token, PinHardwareInitStatusWrapper pinHardwareInitStatus)
         {
-            if (PinHardware == null)
-                return (true, "浮動牙叉定位PIN裝置未裝載");
-
-            if (Parameters.ForkAGV.IsPinDisabledTemptary)
+            try
             {
-                SendNotifyierToFrontend($"注意! 浮動牙叉暫時被禁用中");
-                return (true, "浮動牙叉定位PIN裝置已暫時禁用");
+                if (PinHardware == null)
+                {
+                    pinHardwareInitStatus.IsPinInitDone = true;
+                    return (true, "浮動牙叉定位PIN裝置未裝載");
+                }
+
+                if (Parameters.ForkAGV.IsPinDisabledTemptary)
+                {
+                    pinHardwareInitStatus.IsPinInitDone = true;
+                    SendNotifyierToFrontend($"注意! 浮動牙叉暫時被禁用中");
+                    return (true, "浮動牙叉定位PIN裝置已暫時禁用");
+                }
+                if (_isForkInitBypass)
+                {
+                    pinHardwareInitStatus.IsPinInitDone = true;
+                    LogDebugMessage("Fork Init Bypass Enabled, Skip Pin Initialize Action", true);
+                    return (true, "Fork Init Bypass Enabled, Skip Pin Initialize Action");
+                }
+                return await Task.Run(async () =>
+                {
+                    bool _isNeedInterlock = Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+                    //浮動牙叉 PIN 與伸縮牙叉需戶鎖時，若伸縮牙叉位置不在 HOME 或是末端，判斷當下若 PIN 是 LOCK 的則須將伸縮牙叉伸出到末端；若 PIN是 RELEASE的則可以直接將伸縮牙叉縮回到 HOME.
+                    if (_isNeedInterlock && ForkLifter.CurrentForkARMLocation == FORK_ARM_LOCATIONS.UNKNOWN)
+                    {
+                        (bool success, string message) resetResult = await ForkLifter.ForkHorizonResetAsync();
+                        if (!resetResult.success)
+                            return resetResult;
+
+                        bool isPinLock = PinHardware.pinStatus == clsPin.PIN_STATUS.LOCK;
+
+                        if (isPinLock)
+                        {
+                            (bool confirm, AlarmCodes alarmCode) forkExtendResult = await ForkLifter.ForkExtendOutAsync();
+                            if (!forkExtendResult.confirm)
+                                return (false, forkExtendResult.alarmCode.ToString());
+                        }
+                        else
+                        {
+                            (bool confirm, string message) forkShortenResult = await ForkLifter.ForkShortenInAsync();
+                            if (!forkShortenResult.confirm)
+                                return forkShortenResult;
+
+                        }
+                    }
+
+                    using var initMsgUpdater = CreateInitMsgUpdater();
+                    (bool pin_init_done, string message) _pin_init_result = (false, "");
+                    await initMsgUpdater.Update("PIN-模組初始化中...");
+
+                    try
+                    {
+                        await PinHardware.Init(token);
+                        await initMsgUpdater.Update("PIN-Lock 中...");
+                        await PinHardware.Lock(token);
+                        _pin_init_result = (true, "");
+                        pinHardwareInitStatus.IsPinInitDone = true;
+                    }
+
+                    catch (TaskCanceledException ex)
+                    {
+                        _pin_init_result = (false, ex.Message);
+                        pinHardwareInitStatus.IsPinInitDone = false;
+                    }
+
+                    catch (TimeoutException)
+                    {
+                        _pin_init_result = (false, "Pin Action Timeout");
+                        pinHardwareInitStatus.IsPinInitDone = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        _pin_init_result = (false, ex.Message);
+                        pinHardwareInitStatus.IsPinInitDone = false;
+                    }
+                    finally
+                    {
+                    }
+                    return _pin_init_result;
+                });
             }
-            if (_isForkInitBypass)
+            catch (Exception ex)
             {
-                LogDebugMessage("Fork Init Bypass Enabled, Skip Pin Initialize Action", true);
-                return (true, "Fork Init Bypass Enabled, Skip Pin Initialize Action");
+                pinHardwareInitStatus.IsPinInitDone = false;
+                return (false, ex.Message);
             }
-            return await Task.Run(async () =>
+            finally
             {
-                using var initMsgUpdater = CreateInitMsgUpdater();
-                (bool pin_init_done, string message) _pin_init_result = (false, "");
-                await initMsgUpdater.Update("PIN-模組初始化中...");
+                pinHardwareInitStatus.pinInitWaitResetEvent.Set();
+            }
 
-                try
-                {
-                    await PinHardware.Init(token);
-                    await initMsgUpdater.Update("PIN-Lock 中...");
-                    await PinHardware.Lock(token);
-                    _pin_init_result = (true, "");
-                }
-
-                catch (TaskCanceledException ex)
-                {
-                    _pin_init_result = (false, ex.Message);
-                }
-
-                catch (TimeoutException)
-                {
-                    _pin_init_result = (false, "Pin Action Timeout");
-                }
-                catch (Exception ex)
-                {
-                    _pin_init_result = (false, ex.Message);
-                }
-                finally
-                {
-                }
-                return _pin_init_result;
-            });
         }
 
         private bool _resumeForkInitProcessWhenDriverStateIsKnown = false;
@@ -733,8 +848,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                 return _forklift_init_result;
             });
         }
-
-        internal async Task<(bool, string)> HorizonForkInitProcess(CancellationToken token)
+        internal async Task<(bool, string)> HorizonForkInitProcess(CancellationToken token, PinHardwareInitStatusWrapper pinHardwareInitStatus = null)
         {
             if (!Parameters.ForkAGV.IsForkIsExtendable)
             {
@@ -748,6 +862,17 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
             }
             return await Task.Run(async () =>
             {
+                bool _isPinInterlock = pinHardwareInitStatus != null;
+                if (_isPinInterlock)
+                {
+                    pinHardwareInitStatus.pinInitWaitResetEvent.WaitOne();
+                    if (pinHardwareInitStatus.IsPinInitDone == false)
+                    {
+                        return (false, "浮動牙叉 PIN 初始化未完成，因此不可進行伸縮牙叉初始化");
+                    }
+                    //須將浮動牙叉 PIN Release 才可以進行後續伸縮牙叉動作，否則會干涉
+                    await PinHardware.Release();
+                }
                 using var initMsgUpdater = CreateInitMsgUpdater();
                 try
                 {
@@ -756,7 +881,15 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.Vehicles
                     if (!resetResult.success)
                         return resetResult;
                     await initMsgUpdater.Update("伸縮牙叉縮回中...");
-                    return await ForkLifter.ForkShortenInAsync();
+                    (bool confirm, string message) result = await ForkLifter.ForkShortenInAsync();
+
+                    if (result.confirm && _isPinInterlock)
+                    {
+                        //伸縮牙叉初始化完成後，將浮動牙叉 PIN LOCK
+                        await PinHardware.Lock();
+                    }
+
+                    return result;
                 }
                 catch (Exception ex)
                 {

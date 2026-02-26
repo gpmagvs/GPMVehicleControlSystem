@@ -8,6 +8,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
 {
     public class HorizonForkActionService : ForkActionServiceBase
     {
+
+
         public HorizonForkActionService(Vehicle vehicle, RosSocket rosSocket) : base(vehicle, rosSocket)
         {
             logger = LogManager.GetCurrentClassLogger();
@@ -48,6 +50,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices
         /// <returns></returns>
         public async Task<(bool success, string message)> Extend(bool waitActionDone = true)
         {
+
             WaitActionDoneFlag = waitActionDone;
             try
             {

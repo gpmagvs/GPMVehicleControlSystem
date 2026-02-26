@@ -73,6 +73,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public override async Task<(bool confirm, AlarmCodes)> ForkExtendOutAsync(bool wait_reach_end = true)
         {
+            (bool allowed, string message) = BeforeForkActionStartInvoke(ForkActionStartEventArgs.FORK_ACTION_TYPE.EXTEND);
+            if (!allowed)
+            {
+                logger.Warn($"伸縮牙叉'伸出'動作執行前確認狀態失敗:{message}.");
+                return (false, AlarmCodes.Pin_Module_Pos_Check_Fail);
+            }
+
             await horizonForkService.Stop();
             await Task.Delay(100);
             (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Extend(wait_reach_end);
@@ -85,6 +92,13 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         public override async Task<(bool confirm, string message)> ForkShortenInAsync(bool wait_reach_home = true, CancellationToken cancellationToken = default)
         {
+            (bool allowed, string message) = BeforeForkActionStartInvoke(ForkActionStartEventArgs.FORK_ACTION_TYPE.RETRACT);
+            if (!allowed)
+            {
+                logger.Warn($"伸縮牙叉'縮回'動作執行前確認狀態失敗:{message}.");
+                return (false, message);
+            }
+
             await horizonForkService.Stop();
             await Task.Delay(100);
             (bool confirm, string message) actionResult = await (horizonForkService as HorizonForkActionService).Retract(wait_reach_home);

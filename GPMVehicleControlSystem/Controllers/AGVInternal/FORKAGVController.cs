@@ -4,6 +4,7 @@ using GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using static GPMVehicleControlSystem.Models.VehicleControl.Vehicles.ForkAGV;
 using static SQLite.SQLite3;
 
 namespace GPMVehicleControlSystem.Controllers.AGVInternal
@@ -25,7 +26,19 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpPost("HorizonInit")]
         public async Task HorizonInit()
         {
-            agv.HorizonForkInitProcess(new CancellationToken());
+            bool pinInterlock = agv.Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+            PinHardwareInitStatusWrapper pinHardwareInitStatus = null;
+            if (pinInterlock)
+            {
+                pinHardwareInitStatus = new PinHardwareInitStatusWrapper()
+                {
+                    IsPinInitDone = false,
+                    pinInitWaitResetEvent = new ManualResetEvent(false)
+                };
+
+                agv.ForkFloatHardwarePinInitProcess(new CancellationToken(), pinHardwareInitStatus);
+            }
+            agv.HorizonForkInitProcess(new CancellationToken(), pinHardwareInitStatus);
         }
 
         [HttpPost("ForkVerticalInitActionResume")]

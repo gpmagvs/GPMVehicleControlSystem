@@ -14,6 +14,18 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 {
     public partial class clsForkLifter : CarComponent, IDIOUsagable
     {
+        public class ForkActionStartEventArgs : EventArgs
+        {
+            public enum FORK_ACTION_TYPE
+            {
+                RETRACT,
+                EXTEND,
+            }
+            public FORK_ACTION_TYPE action { get; set; } = FORK_ACTION_TYPE.EXTEND;
+            public bool allowed { get; set; } = false;
+            public string errorMessage { get; set; } = string.Empty;
+        }
+        public event EventHandler<ForkActionStartEventArgs> BeforeForkActionStart;
         public enum FORK_LOCATIONS
         {
             UP_HARDWARE_LIMIT,
@@ -645,5 +657,23 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         }
 
+        protected (bool allowed, string message) BeforeForkActionStartInvoke(ForkActionStartEventArgs.FORK_ACTION_TYPE actionType)
+        {
+            if (BeforeForkActionStart != null)
+            {
+                var args = new ForkActionStartEventArgs
+                {
+                    allowed = false,
+                    action = actionType
+                };
+                BeforeForkActionStart.Invoke(this, args);
+
+                if (!args.allowed)
+                    return (false, args.errorMessage);
+                return (true, "");
+            }
+
+            return (true, "");
+        }
     }
 }

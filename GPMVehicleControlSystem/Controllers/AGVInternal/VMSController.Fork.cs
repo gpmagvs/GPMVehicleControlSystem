@@ -391,8 +391,8 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         [HttpGet("Fork/Pin/Init")]
         public async Task<IActionResult> PinInit()
         {
-            forkAgv.PinHardware?.Init();
-            return Ok();
+            bool success = await forkAgv.PinHardware?.Init();
+            return Ok(new { confirm = success, message = success ? "" : "Pin 初始化失敗" });
         }
 
         [HttpGet("Fork/Pin/Lock")]

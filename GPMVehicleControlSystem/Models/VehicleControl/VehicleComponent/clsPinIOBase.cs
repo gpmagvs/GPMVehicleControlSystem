@@ -13,30 +13,52 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
     public class clsPinIOBase : clsPin
     {
         public override bool isRosBase => false;
-        clsDOModule wagoOuput;
+        clsDOModule wagoOutput;
         DO_ITEM floatOutput = DO_ITEM.Fork_Floating;
 
         public override RosSocket rosSocket { get; set; } = null;
-        public clsPinIOBase(clsDOModule wagoOuput) : base()
+
+        public override PIN_STATUS pinStatus
         {
-            this.wagoOuput = wagoOuput;
+            get
+            {
+                var outputDict = wagoOutput.VCSOutputs.ToDictionary(v => v.Output, v => v.State);
+                if (!outputDict.TryGetValue(floatOutput, out bool state))
+                    return PIN_STATUS.UNKNOW;
+
+                bool isLock = !state;
+                return isLock ? PIN_STATUS.LOCK : PIN_STATUS.RELEASE;
+            }
+        }
+        public clsPinIOBase(clsDOModule wagoOutput) : base()
+        {
+            this.wagoOutput = wagoOutput;
         }
 
-        public override Task Init(CancellationToken token = default)
+        public override async Task<bool> Init(CancellationToken token = default)
         {
-            return Task.CompletedTask;
+            if (!BeforePinActionStartInvoke(PIN_STATUS.INITIALIZING))
+                return false;
+
+            return true;
         }
 
         public override async Task Lock(CancellationToken token = default)
         {
-            var success = await wagoOuput.SetState(floatOutput, false);
+            if (!BeforePinActionStartInvoke(PIN_STATUS.LOCK))
+                return;
+
+            var success = await wagoOutput.SetState(floatOutput, false);
             if (!success)
                 throw new Exception("浮動牙叉 LOCK 失敗-請確認 output 輸出控制");
         }
 
         public override async Task Release(CancellationToken token = default)
         {
-            var success = await wagoOuput.SetState(floatOutput, true); if (!success)
+            if (!BeforePinActionStartInvoke(PIN_STATUS.RELEASE))
+                return;
+
+            var success = await wagoOutput.SetState(floatOutput, true); if (!success)
                 throw new Exception("浮動牙叉 Release 失敗-請確認 output 輸出控制");
         }
     }
