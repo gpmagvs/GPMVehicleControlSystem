@@ -37,7 +37,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task<bool> Init(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.INITIALIZING))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.INITIALIZING))
                 return false;
 
             return true;
@@ -45,7 +45,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task Lock(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.LOCK))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.LOCK))
                 return;
 
             var success = await wagoOutput.SetState(floatOutput, false);
@@ -55,7 +55,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public override async Task Release(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.RELEASE))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.RELEASE))
                 return;
 
             var success = await wagoOutput.SetState(floatOutput, true); if (!success)

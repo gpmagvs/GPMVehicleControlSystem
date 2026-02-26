@@ -1,4 +1,5 @@
-﻿using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
+﻿using AGVSystemCommonNet6.Vehicle_Control.VCS_ALARM;
+using GPMVehicleControlSystem.Models.VehicleControl.AGVControl;
 using GPMVehicleControlSystem.Models.VehicleControl.AGVControl.ForkServices;
 using GPMVehicleControlSystem.Models.VehicleControl.Vehicles;
 using GPMVehicleControlSystem.Models.WorkStation;
@@ -136,22 +137,30 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
         {
             (bool confirm, string message) result = (false, "");
             forkAgv.logger.LogTrace($"[VMSController.Fork] Horizon Fork Action: {action} pose:{pose} speed:{speed}");
+            var _forkLifter = forkAgv.ForkLifter;
             HorizonForkActionService service = (HorizonForkActionService)(forkAgv.AGVC as ForkAGVController).HorizonActionService;
-
             if (action == "home" || action == "orig")
-                result = await service.Home();
-
+                result = await _forkLifter.ForkShortenInAsync();
+            //result = await service.Home();
             if (action == "stop")
-                result = await service.Stop();
-
+            {
+                bool success = await _forkLifter.ForkARMStop();
+                result = (success, success ? "" : "Stop Error");
+            }
             if (action == "init")
                 result = await service.Init();
 
             if (action == "up_limit")
-                result = await service.Extend();
+            {
+                (bool confirm, AlarmCodes alc) = await _forkLifter.ForkExtendOutAsync();
+                result = (confirm, confirm ? "" : alc.ToString());
+            }
 
             if (action == "down_limit")
-                result = await service.Retract();
+            {
+                result = await _forkLifter.ForkShortenInAsync();
+                //result = await service.Retract();
+            }
 
             if (action == "pose")
                 result = await service.Pose(target: pose, speed: speed);
@@ -424,6 +433,80 @@ namespace GPMVehicleControlSystem.Controllers.AGVInternal
             {
                 confirm = true
             });
+        }
+        [HttpGet("Fork/Pin/Orig")]
+        public async Task<IActionResult> PinOrig()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Orig();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
+        [HttpGet("Fork/Pin/Up")]
+        public async Task<IActionResult> PinUp()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Up();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
+        [HttpGet("Fork/Pin/Down")]
+        public async Task<IActionResult> PinDown()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Down();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
+        [HttpGet("Fork/Pin/Reset")]
+        public async Task<IActionResult> PinReset()
+        {
+            if (forkAgv.PinHardware == null)
+                return Ok(new
+                {
+                    confirm = false,
+                    message = "AGV沒有安裝浮動牙叉"
+                });
+            await forkAgv.PinHardware?.Reset();
+            return Ok(new
+            {
+                confirm = true
+            });
+        }
+
+        [HttpGet("Fork/ForkEXTENDActionInterlockTest")]
+        public async Task<IActionResult> ForkEXTENDActionInterlockTest()
+        {
+            var pinStatus = await forkAgv.ForkLifter.ForkEXTENDActionInterlockTest();
+            return Ok($"Finish_{pinStatus.ToString()}");
+        }
+
+        [HttpGet("Fork/ForkRETRACTActionInterlockTest")]
+        public async Task<IActionResult> ForkRETRACTActionInterlockTest()
+        {
+            var pinStatus = await forkAgv.ForkLifter.ForkRETRACTActionInterlockTest();
+            return Ok($"Finish_{pinStatus.ToString()}");
         }
     }
 }

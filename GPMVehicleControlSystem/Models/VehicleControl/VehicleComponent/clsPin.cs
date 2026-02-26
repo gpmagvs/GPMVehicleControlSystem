@@ -14,7 +14,8 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
             public bool allowed { get; set; } = false;
         }
 
-        public event EventHandler<BeforePinActionStartEventArgs> BeforePinActionStart;
+        public delegate Task<BeforePinActionStartEventArgs> BeforePinActionStartDelegate(BeforePinActionStartEventArgs args);
+        public BeforePinActionStartDelegate BeforePinActionStart;
 
         public enum PIN_STATUS
         {
@@ -74,7 +75,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         {
         }
 
-        protected bool BeforePinActionStartInvoke(PIN_STATUS action)
+        protected async Task<bool> BeforePinActionStartInvokeAsync(PIN_STATUS action)
         {
             if (BeforePinActionStart != null)
             {
@@ -83,19 +84,24 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
                     allowed = false,
                     action = action
                 };
-                BeforePinActionStart.Invoke(this, args);
+                args = await BeforePinActionStart(args);
                 return args.allowed;
             }
             return true;
         }
 
+        public virtual async Task<bool> Reset(CancellationToken token = default)
+        {
+            pin_command.command = "reset";
+            return await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+        }
         // <summary>
         /// 清除異常初始化回到原點
         /// </summary>
         /// <returns></returns>
         public virtual async Task<bool> Init(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.INITIALIZING))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.INITIALIZING))
                 return false;
 
             pin_command.command = "init";
@@ -104,7 +110,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
 
         public virtual async Task Lock(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.LOCK))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.LOCK))
                 return;
 
             pin_command.command = "lock";
@@ -112,14 +118,31 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent
         }
         public virtual async Task Release(CancellationToken token = default)
         {
-            if (!BeforePinActionStartInvoke(PIN_STATUS.RELEASE))
+            if (!await BeforePinActionStartInvokeAsync(PIN_STATUS.RELEASE))
                 return;
 
             pin_command.command = "release";
             await _CallPinCommandActionService(pin_command, cancelToken: token);
         }
 
+        public virtual async Task<bool> Orig(CancellationToken token = default)
+        {
+            pin_command.command = "orig";
+            return await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+        }
 
+
+        public virtual async Task<bool> Up(CancellationToken token = default)
+        {
+            pin_command.command = "up";
+            return await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+        }
+
+        public virtual async Task<bool> Down(CancellationToken token = default)
+        {
+            pin_command.command = "down";
+            return await _CallPinCommandActionService(pin_command, 30, cancelToken: token);
+        }
         private async Task<bool> _CallPinCommandActionService(PinCommandRequest request, int timeout = 10, CancellationToken cancelToken = default)
         {
             logger.Trace($"call service-> pin command={pin_command.ToJson(Newtonsoft.Json.Formatting.None)},wait agvc response...");

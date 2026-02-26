@@ -25,7 +25,32 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
             public bool allowed { get; set; } = false;
             public string errorMessage { get; set; } = string.Empty;
         }
-        public event EventHandler<ForkActionStartEventArgs> BeforeForkActionStart;
+        public delegate Task<ForkActionStartEventArgs> BeforeForkActionStartDelegate(ForkActionStartEventArgs args);
+        public BeforeForkActionStartDelegate BeforeForkActionStart;
+
+        public async Task<clsPin.PIN_STATUS?> ForkEXTENDActionInterlockTest()
+        {
+            (bool allowed, string message) = await BeforeForkActionStartInvokeAsync(ForkActionStartEventArgs.FORK_ACTION_TYPE.EXTEND);
+            if (!allowed)
+            {
+                forkAGV.LogDebugMessage(message, true);
+                return forkAGV.PinHardware?.pinStatus;
+            }
+            forkAGV.LogDebugMessage("FORK_ACTION_TYPE.EXTEND Interlock 測試 OK", true);
+            return forkAGV.PinHardware?.pinStatus;
+        }
+        public async Task<clsPin.PIN_STATUS?> ForkRETRACTActionInterlockTest()
+        {
+            (bool allowed, string message) = await BeforeForkActionStartInvokeAsync(ForkActionStartEventArgs.FORK_ACTION_TYPE.RETRACT);
+            if (!allowed)
+            {
+                forkAGV.LogDebugMessage(message, true);
+                return forkAGV.PinHardware?.pinStatus;
+            }
+            forkAGV.LogDebugMessage("FORK_ACTION_TYPE.RETRACT Interlock 測試 OK", true);
+            return forkAGV.PinHardware?.pinStatus;
+        }
+
         public enum FORK_LOCATIONS
         {
             UP_HARDWARE_LIMIT,
@@ -657,7 +682,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
 
         }
 
-        protected (bool allowed, string message) BeforeForkActionStartInvoke(ForkActionStartEventArgs.FORK_ACTION_TYPE actionType)
+        protected async Task<(bool allowed, string message)> BeforeForkActionStartInvokeAsync(ForkActionStartEventArgs.FORK_ACTION_TYPE actionType)
         {
             if (BeforeForkActionStart != null)
             {
@@ -666,7 +691,7 @@ namespace GPMVehicleControlSystem.Models.VehicleControl.VehicleComponent.Forks
                     allowed = false,
                     action = actionType
                 };
-                BeforeForkActionStart.Invoke(this, args);
+                args = await BeforeForkActionStart(args);
 
                 if (!args.allowed)
                     return (false, args.errorMessage);

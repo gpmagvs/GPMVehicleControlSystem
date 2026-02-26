@@ -476,13 +476,14 @@ namespace GPMVehicleControlSystem.Models.TaskExecute
                     var forkShortenRet = await ForkLifter.ForkShortenInAsync();
                     if (!forkShortenRet.confirm)
                         return (false, new List<AlarmCodes>() { AlarmCodes.Fork_Arm_Action_Error });
-                }
-                else
-                    tasks.Add(Task.Run(async () =>
+
+                    if (PinHardware?.pinStatus != clsPin.PIN_STATUS.LOCK)
                     {
-                        Agv.HandshakeStatusText = "AGV動作中-牙叉縮回";
-                        await ForkLifter.ForkShortenInAsync();
-                    }));
+                        bool _needInterlock = Agv.Parameters.ForkAGV.IsFloatingPinLockHorizonForkArm;
+                        if (!_needInterlock || (_needInterlock && ForkLifter.CurrentForkARMLocation == FORK_ARM_LOCATIONS.HOME))
+                            await PinHardware?.Lock();
+                    }
+                }
 
             }
 
